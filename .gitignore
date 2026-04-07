@@ -29,3 +29,6 @@ Thumbs.db
 
 # 🧪 Jest cache
 jest.config.js.tmp
+
+# 🔐 Oracle Wallet (SENSITIVE)
+wallet/

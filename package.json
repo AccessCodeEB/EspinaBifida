@@ -4,11 +4,11 @@
   "description": "a01541324 a00839182 a01286259 a01383804 a00840653",
   "main": "index.js",
   "type": "module",
-"scripts": {
-  "dev": "nodemon src/server.js",
-  "start": "node src/server.js",
-  "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
-},
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AccessCodeEB/EspinaBifida.git"
@@ -23,7 +23,8 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "oracledb": "^6.10.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
