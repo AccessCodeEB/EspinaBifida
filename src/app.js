@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import { errorHandler } from "./middleware/errorHandler.js";
+import beneficiariosRoutes from "./modules/beneficiarios/beneficiarios.routes.js";
 
 dotenv.config();
 
@@ -15,8 +16,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// aquí irán todas las rutas
-// app.use("/beneficiarios", beneficiariosRoutes);
+app.use("/beneficiarios", beneficiariosRoutes);
 
 app.use(errorHandler);
 
