@@ -1,4 +1,4 @@
-import * as MembresiasModel from "./membresias.model.js";
+import * as MembresiasModel from "../models/membresias.model.js";
 
 function parseISODate(dateStr) {
   if (typeof dateStr !== "string") return null;

@@ -5,7 +5,7 @@ import {
   createCita,
   updateCita,
   deleteCita,
-} from "./citas.controller.js";
+} from "../controllers/citas.controller.js";
 
 const router = express.Router();
 

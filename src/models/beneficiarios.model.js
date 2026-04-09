@@ -1,4 +1,4 @@
-import { getConnection } from "../../config/db.js";
+import { getConnection } from "../config/db.js";
 
 export async function findAll() {
   const conn = await getConnection();
@@ -40,7 +40,7 @@ export async function create(data) {
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
          MUNICIPIO_NACIMIENTO, HOSPITAL_NACIMIENTO,
-         TIPO_SANGRE, USA_VALVULA, NOTAS, ACTIVO, FECHA_ALTA
+         TIPO_SANGRE, USA_VALVULA, NOTAS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
@@ -48,7 +48,7 @@ export async function create(data) {
          :telefonoCasa, :telefonoCelular, :correoElectronico,
          :contactoEmergencia, :telefonoEmergencia,
          :municipioNacimiento, :hospitalNacimiento,
-         :tipoSangre, :usaValvula, :notas, 1, SYSDATE
+         :tipoSangre, :usaValvula, :notas
        )`,
       data,
       { autoCommit: true }

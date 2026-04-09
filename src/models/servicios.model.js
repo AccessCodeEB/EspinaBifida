@@ -1,4 +1,4 @@
-import { getConnection } from "../../config/db.js";
+import { getConnection } from "../config/db.js";
 
 // Validar que beneficiario existe y está activo
 export async function findBeneficiarioActivo(curp) {

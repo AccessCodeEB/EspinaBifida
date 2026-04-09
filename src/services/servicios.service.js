@@ -1,4 +1,4 @@
-import * as ServiciosModel from "./servicios.model.js";
+import * as ServiciosModel from "../models/servicios.model.js";
 
 // Validar beneficiario activo y crear servicio
 export async function createConValidacion(data) {

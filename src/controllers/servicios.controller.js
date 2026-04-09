@@ -1,4 +1,4 @@
-import * as ServiciosService from "./servicios.service.js";
+import * as ServiciosService from "../services/servicios.service.js";
 
 export async function getByCurp(req, res, next) {
   try {

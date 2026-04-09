@@ -2,7 +2,7 @@ import express from "express";
 import {
   createMembresia,
   getMembresiaStatus,
-} from "./membresias.controller.js";
+} from "../controllers/membresias.controller.js";
 
 const router = express.Router();
 

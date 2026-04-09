@@ -1,4 +1,4 @@
-import * as BeneficiarioModel from "./beneficiarios.model.js";
+import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 
 export const getAll = () =>
   BeneficiarioModel.findAll();

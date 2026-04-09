@@ -1,4 +1,4 @@
-import { getConnection } from "../../config/db.js";
+import { getConnection } from "../config/db.js";
 
 export async function findBeneficiarioByCurp(curp) {
   const conn = await getConnection();

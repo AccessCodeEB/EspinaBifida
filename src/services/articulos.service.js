@@ -1,4 +1,4 @@
-import * as ArticulosModel from "./articulos.model.js";
+import * as ArticulosModel from "../models/articulos.model.js";
 
 function normalizeData(data = {}) {
   const normalized = {

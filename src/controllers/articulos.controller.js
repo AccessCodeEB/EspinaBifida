@@ -1,4 +1,4 @@
-import * as ArticulosService from "./articulos.service.js";
+import * as ArticulosService from "../services/articulos.service.js";
 
 export async function getAll(req, res, next) {
   try {

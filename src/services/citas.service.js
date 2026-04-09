@@ -1,4 +1,4 @@
-import * as citasModel from "./citas.model.js";
+import * as citasModel from "../models/citas.model.js";
 
 const ESTATUS_VALIDOS = ["PROGRAMADA", "COMPLETADA", "CANCELADA"];
 

@@ -4,11 +4,11 @@ import dotenv from "dotenv";
 
 // Importar rutas para carpeta de modulos
 import { errorHandler } from "./middleware/errorHandler.js";
-import beneficiariosRoutes from "./modules/beneficiarios/beneficiarios.routes.js";
-import serviciosRoutes from "./modules/servicios/servicios.routes.js";
-import articulosRoutes from "./modules/inventario/articulos.routes.js";
-import citasRoutes from "./modules/citas/citas.routes.js";
-import membresiasRoutes from "./modules/membresias/membresias.routes.js";
+import beneficiariosRoutes from "./routes/beneficiarios.routes.js";
+import serviciosRoutes from "./routes/servicios.routes.js";
+import articulosRoutes from "./routes/articulos.routes.js";
+import citasRoutes from "./routes/citas.routes.js";
+import membresiasRoutes from "./routes/membresias.routes.js";
 
 dotenv.config();
 

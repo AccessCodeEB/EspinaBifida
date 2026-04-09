@@ -1,4 +1,4 @@
-import * as BeneficiarioService from "./beneficiarios.service.js";
+import * as BeneficiarioService from "../services/beneficiarios.service.js";
 
 export async function getAll(req, res, next) {
   try {

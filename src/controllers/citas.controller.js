@@ -1,4 +1,4 @@
-import * as citasService from "./citas.service.js";
+import * as citasService from "../services/citas.service.js";
 
 export const getCitas = async (req, res, next) => {
   try {
