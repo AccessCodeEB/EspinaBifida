@@ -9,6 +9,7 @@ import serviciosRoutes from "./routes/servicios.routes.js";
 import articulosRoutes from "./routes/articulos.routes.js";
 import citasRoutes from "./routes/citas.routes.js";
 import membresiasRoutes from "./routes/membresias.routes.js";
+import inventarioRoutes from "./routes/inventario.routes.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/servicios", serviciosRoutes);
 app.use("/articulos", articulosRoutes);
 app.use("/citas", citasRoutes);
 app.use("/membresias", membresiasRoutes);
+app.use("/", inventarioRoutes);
 
 app.use(errorHandler);
 

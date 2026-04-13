@@ -1,4 +1,5 @@
 import * as ArticulosModel from "../models/articulos.model.js";
+import * as InventarioService from "./inventario.service.js";
 
 function normalizeData(data = {}) {
   const normalized = {
@@ -56,5 +57,7 @@ export const create = (data) =>
 export const update = (id, data) =>
   ArticulosModel.update(id, normalizeData(data));
 
-export const deleteById = (id) =>
-  ArticulosModel.deleteById(id);
+export async function deleteById(id) {
+  await InventarioService.assertArticuloSinMovimientos(id);
+  return ArticulosModel.deleteById(id);
+}
