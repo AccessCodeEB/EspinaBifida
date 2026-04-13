@@ -10,6 +10,8 @@ import articulosRoutes from "./routes/articulos.routes.js";
 import citasRoutes from "./routes/citas.routes.js";
 import membresiasRoutes from "./routes/membresias.routes.js";
 import inventarioRoutes from "./routes/inventario.routes.js";
+import administradoresRoutes from "./routes/administradores.routes.js";
+import rolesRoutes from "./routes/roles.routes.js";
 
 dotenv.config();
 
@@ -22,12 +24,14 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.use("/beneficiarios", beneficiariosRoutes);
-app.use("/servicios", serviciosRoutes);
-app.use("/articulos", articulosRoutes);
-app.use("/citas", citasRoutes);
-app.use("/membresias", membresiasRoutes);
-app.use("/", inventarioRoutes);
+app.use("/administradores", administradoresRoutes);
+app.use("/roles",           rolesRoutes);
+app.use("/beneficiarios",   beneficiariosRoutes);
+app.use("/servicios",       serviciosRoutes);
+app.use("/articulos",       articulosRoutes);
+app.use("/citas",           citasRoutes);
+app.use("/membresias",      membresiasRoutes);
+app.use("/",                inventarioRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
