@@ -22,3 +22,13 @@ export const getMembresiaStatus = async (req, res, next) => {
   }
 };
 
+export const validarMembresiaActiva = async (req, res, next) => {
+  try {
+    const { curp } = req.params;
+    const result = await membresiasService.validarMembresiaActivaPorCurp(curp);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
