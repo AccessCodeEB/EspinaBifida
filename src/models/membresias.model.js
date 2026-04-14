@@ -40,6 +40,70 @@ export async function findLastByCurp(curp) {
   }
 }
 
+export async function hasPeriodOverlap(curp, fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT COUNT(1) AS TOTAL
+       FROM CREDENCIALES
+       WHERE CURP = :curp
+         AND FECHA_VIGENCIA_INICIO <= TO_DATE(:fechaFin, 'YYYY-MM-DD')
+         AND NVL(FECHA_VIGENCIA_FIN, DATE '9999-12-31') >= TO_DATE(:fechaInicio, 'YYYY-MM-DD')`,
+      {
+        curp,
+        fechaInicio,
+        fechaFin,
+      }
+    );
+    return Number(result.rows?.[0]?.TOTAL ?? 0) > 0;
+  } finally {
+    await conn.close();
+  }
+}
+
+export async function findMembresiaActivaByCurp(curp) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT
+         ID_CREDENCIAL,
+         CURP,
+         NUMERO_CREDENCIAL,
+         FECHA_EMISION,
+         FECHA_VIGENCIA_INICIO,
+         FECHA_VIGENCIA_FIN,
+         FECHA_ULTIMO_PAGO,
+         OBSERVACIONES
+       FROM CREDENCIALES
+       WHERE CURP = :curp
+         AND TRUNC(SYSDATE) BETWEEN FECHA_VIGENCIA_INICIO AND FECHA_VIGENCIA_FIN
+       ORDER BY FECHA_VIGENCIA_FIN DESC, ID_CREDENCIAL DESC
+       FETCH FIRST 1 ROWS ONLY`,
+      { curp }
+    );
+    return result.rows[0] ?? null;
+  } finally {
+    await conn.close();
+  }
+}
+
+export async function setBeneficiarioInactivo(curp) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `UPDATE BENEFICIARIOS
+       SET ESTATUS = 'Inactivo'
+       WHERE CURP = :curp
+         AND NVL(ESTATUS, 'Activo') NOT IN ('Inactivo', 'Baja')`,
+      { curp },
+      { autoCommit: true }
+    );
+    return result.rowsAffected ?? 0;
+  } finally {
+    await conn.close();
+  }
+}
+
 export async function cancelarPorCurp(curp) {
   const conn = await getConnection();
   try {
