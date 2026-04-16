@@ -1,26 +1,34 @@
 import oracledb from "oracledb";
 import path from "path";
-import dotenv from "dotenv";
-dotenv.config();
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
-process.env.TNS_ADMIN = path.join(process.cwd(), "wallet");
+let _pool = null;
 
-// 👇 IMPORTANTE
-if (!process.env.ORACLE_CLIENT_PATH) {
-  throw new Error("Missing ORACLE_CLIENT_PATH in .env");
-}
+export async function createPool() {
+  if (_pool) return; // idempotente
 
-oracledb.initOracleClient({
-  libDir: process.env.ORACLE_CLIENT_PATH
-});
+  process.env.TNS_ADMIN = path.join(process.cwd(), "wallet");
+  oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
 
-export async function getConnection() {
-  return await oracledb.getConnection({
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    connectString: process.env.DB_CONNECTION_STRING
+  _pool = await oracledb.createPool({
+    user:          process.env.DB_USER,
+    password:      process.env.DB_PASSWORD,
+    connectString: process.env.DB_CONNECTION_STRING,
+    poolMin:       2,
+    poolMax:       10,
+    poolIncrement: 1,
   });
 }
 
+export async function getConnection() {
+  if (!_pool) throw new Error("DB pool no inicializado — llama createPool() al arrancar");
+  return _pool.getConnection();
+}
+
+export async function closePool() {
+  if (_pool) {
+    await _pool.close(10); // drainTime = 10s
+    _pool = null;
+  }
+}

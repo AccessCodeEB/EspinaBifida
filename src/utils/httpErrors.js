@@ -1,61 +1,44 @@
 export class HttpError extends Error {
-  constructor(statusCode, message, details = undefined) {
+  constructor(statusCode, message, code, details = undefined) {
     super(message);
     this.name = "HttpError";
     this.statusCode = statusCode;
+    this.code = code;
     this.details = details;
   }
 }
 
-export function badRequest(message, details) {
-  return new HttpError(400, message, details);
-}
-
-export function notFound(message, details) {
-  return new HttpError(404, message, details);
-}
-
-export function conflict(message, details) {
-  return new HttpError(409, message, details);
-}
+export const badRequest   = (msg, code = "BAD_REQUEST",   details) => new HttpError(400, msg, code, details);
+export const unauthorized = (msg, code = "UNAUTHORIZED")            => new HttpError(401, msg, code);
+export const forbidden    = (msg, code = "FORBIDDEN")               => new HttpError(403, msg, code);
+export const notFound     = (msg, code = "NOT_FOUND")               => new HttpError(404, msg, code);
+export const conflict     = (msg, code = "CONFLICT")                => new HttpError(409, msg, code);
+export const internal     = (msg = "Error interno del servidor", code = "INTERNAL_ERROR") => new HttpError(500, msg, code);
 
 export function isHttpError(err) {
-  return err instanceof HttpError || Number.isInteger(err?.statusCode);
+  return err instanceof HttpError;
 }
 
 function getOracleErrorNum(err) {
-  if (Number.isInteger(err?.errorNum)) {
-    return err.errorNum;
-  }
-
+  if (Number.isInteger(err?.errorNum)) return err.errorNum;
   const match = /ORA-(\d{5})/.exec(String(err?.message ?? ""));
-  if (!match) return null;
-  return Number(match[1]);
+  return match ? Number(match[1]) : null;
 }
 
 export function mapOracleError(err) {
-  const errorNum = getOracleErrorNum(err);
-  if (!errorNum) return null;
+  const n = getOracleErrorNum(err);
+  if (!n) return null;
 
-  if (errorNum === 1) {
-    return conflict("Conflicto de datos: registro duplicado");
-  }
-
-  if (errorNum === 2291 || errorNum === 2292) {
-    return conflict("Conflicto de integridad referencial");
-  }
-
-  if (errorNum === 1400) {
-    return badRequest("Faltan campos obligatorios");
-  }
-
-  if (errorNum === 1722) {
-    return badRequest("Formato numerico invalido");
-  }
-
-  if (errorNum === 1830 || errorNum === 1840 || errorNum === 1841) {
-    return badRequest("Formato de fecha invalido");
-  }
+  if (n === 1)
+    return conflict("Conflicto de datos: registro duplicado", "DUPLICATE_RECORD");
+  if (n === 2291 || n === 2292)
+    return conflict("Conflicto de integridad referencial", "REFERENTIAL_INTEGRITY");
+  if (n === 1400)
+    return badRequest("Faltan campos obligatorios", "MISSING_REQUIRED_FIELDS");
+  if (n === 1722)
+    return badRequest("Formato numérico inválido", "INVALID_NUMBER_FORMAT");
+  if (n === 1830 || n === 1840 || n === 1841)
+    return badRequest("Formato de fecha inválido", "INVALID_DATE_FORMAT");
 
   return null;
 }

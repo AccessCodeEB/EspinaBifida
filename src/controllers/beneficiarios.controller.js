@@ -1,9 +1,9 @@
 import * as BeneficiarioService from "../services/beneficiarios.service.js";
+import { notFound } from "../utils/httpErrors.js";
 
 export async function getAll(req, res, next) {
   try {
-    const data = await BeneficiarioService.getAll();
-    res.json(data);
+    res.json(await BeneficiarioService.getAll());
   } catch (err) {
     next(err);
   }
@@ -12,7 +12,7 @@ export async function getAll(req, res, next) {
 export async function getById(req, res, next) {
   try {
     const data = await BeneficiarioService.getById(req.params.curp);
-    if (!data) return res.status(404).json({ error: "Beneficiario no encontrado" });
+    if (!data) throw notFound("Beneficiario no encontrado", "BENEFICIARIO_NOT_FOUND");
     res.json(data);
   } catch (err) {
     next(err);

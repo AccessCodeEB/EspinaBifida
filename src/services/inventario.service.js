@@ -1,51 +1,47 @@
 import * as InventarioModel from "../models/inventario.model.js";
-import { AppError } from "../middleware/errorHandler.js";
+import { badRequest, conflict } from "../utils/httpErrors.js";
 
 function normalizeMovimientoData(data = {}) {
   const idArticulo = Number(data.idArticulo);
   if (Number.isNaN(idArticulo)) {
-    throw new AppError("idArticulo debe ser numerico", 400);
+    throw badRequest("idArticulo debe ser numérico", "INVALID_ID");
   }
 
   const tipo = String(data.tipo || "").trim().toUpperCase();
   if (!["ENTRADA", "SALIDA"].includes(tipo)) {
-    throw new AppError("tipo debe ser ENTRADA o SALIDA", 400);
+    throw badRequest("tipo debe ser ENTRADA o SALIDA", "INVALID_MOVIMIENTO_TIPO");
   }
 
   const cantidad = Number(data.cantidad);
   if (Number.isNaN(cantidad) || cantidad <= 0) {
-    throw new AppError("cantidad debe ser un numero mayor a 0", 400);
+    throw badRequest("cantidad debe ser un número mayor a 0", "INVALID_CANTIDAD");
   }
 
-  const motivo = data.motivo === undefined || data.motivo === null
-    ? null
-    : String(data.motivo).trim();
+  const motivo =
+    data.motivo === undefined || data.motivo === null
+      ? null
+      : String(data.motivo).trim();
 
-  return {
-    idArticulo,
-    tipo,
-    cantidad,
-    motivo
-  };
+  return { idArticulo, tipo, cantidad, motivo };
 }
 
 function mapInventarioRow(row) {
   return {
     idArticulo: row.ID_ARTICULO,
-    nombre: row.DESCRIPCION,
-    stock: Number(row.INVENTARIO_ACTUAL || 0)
+    nombre:     row.DESCRIPCION,
+    stock:      Number(row.INVENTARIO_ACTUAL || 0),
   };
 }
 
 function mapMovimientoRow(row) {
   return {
     idMovimiento: row.ID_MOVIMIENTO,
-    idArticulo: row.ID_ARTICULO,
-    articulo: row.DESCRIPCION,
-    tipo: row.TIPO_MOVIMIENTO,
-    cantidad: Number(row.CANTIDAD || 0),
-    motivo: row.MOTIVO,
-    fecha: row.FECHA
+    idArticulo:   row.ID_ARTICULO,
+    articulo:     row.DESCRIPCION,
+    tipo:         row.TIPO_MOVIMIENTO,
+    cantidad:     Number(row.CANTIDAD || 0),
+    motivo:       row.MOTIVO,
+    fecha:        row.FECHA,
   };
 }
 
@@ -65,8 +61,11 @@ export async function getMovimientos() {
 }
 
 export async function assertArticuloSinMovimientos(idArticulo) {
-  const totalMovimientos = await InventarioModel.countMovimientosByArticulo(idArticulo);
-  if (totalMovimientos > 0) {
-    throw new AppError("No se puede eliminar el articulo porque tiene movimientos registrados", 409);
+  const total = await InventarioModel.countMovimientosByArticulo(idArticulo);
+  if (total > 0) {
+    throw conflict(
+      "No se puede eliminar el artículo porque tiene movimientos registrados",
+      "ARTICULO_HAS_MOVIMIENTOS"
+    );
   }
 }

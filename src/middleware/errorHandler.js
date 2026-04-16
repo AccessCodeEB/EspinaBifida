@@ -1,6 +1,6 @@
-import { isHttpError, mapOracleError, notFound } from "../utils/httpErrors.js";
+import { HttpError, isHttpError, mapOracleError } from "../utils/httpErrors.js";
 
-// Backward-compatible custom error used by existing services.
+// Clase legada — conservada para compatibilidad con código existente.
 export class AppError extends Error {
   constructor(message, statusCode, details = undefined) {
     super(message);
@@ -10,24 +10,59 @@ export class AppError extends Error {
   }
 }
 
-export function notFoundHandler(req, res, next) {
-  next(notFound(`Ruta no encontrada: ${req.method} ${req.originalUrl}`));
+function statusToDefaultCode(status) {
+  const map = {
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    409: "CONFLICT",
+    500: "INTERNAL_ERROR",
+  };
+  return map[status] ?? "ERROR";
 }
 
-export function errorHandler(err, req, res, next) {
-  const mappedError = isHttpError(err) ? err : mapOracleError(err);
+export function notFoundHandler(req, res, next) {
+  const err = new HttpError(
+    404,
+    `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
+    "ROUTE_NOT_FOUND"
+  );
+  next(err);
+}
 
-  const statusCode = mappedError?.statusCode ?? 500;
-  const message = mappedError?.message ?? "Internal Server Error";
+export function errorHandler(err, req, res, _next) {
+  let statusCode = 500;
+  let code       = "INTERNAL_ERROR";
+  let message    = "Error interno del servidor";
+  let details;
+
+  if (isHttpError(err)) {
+    statusCode = err.statusCode;
+    code       = err.code;
+    message    = err.message;
+    details    = err.details;
+  } else if (err instanceof AppError) {
+    statusCode = err.statusCode ?? 500;
+    code       = statusToDefaultCode(statusCode);
+    message    = err.message;
+    details    = err.details;
+  } else {
+    const mapped = mapOracleError(err);
+    if (mapped) {
+      statusCode = mapped.statusCode;
+      code       = mapped.code;
+      message    = mapped.message;
+    }
+    // statusCode >= 500 → message stays as "Error interno del servidor"
+  }
 
   if (statusCode >= 500) {
-    console.error(err);
+    console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
   }
 
-  const response = { error: message };
-  if (mappedError?.details) {
-    response.details = mappedError.details;
-  }
+  const body = { code, message };
+  if (details !== undefined) body.details = details;
 
-  res.status(statusCode).json(response);
+  res.status(statusCode).json(body);
 }
