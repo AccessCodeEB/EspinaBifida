@@ -61,6 +61,7 @@ const servicioBase = {
 // ─── Setup ────────────────────────────────────────────────────────────────────
 beforeEach(() => {
   jest.clearAllMocks();
+  mockExecute.mockReset(); // limpia también los mockResolvedValueOnce pendientes sin borrar getConnection
   mockClose.mockResolvedValue(undefined);
   mockCommit.mockResolvedValue(undefined);
   mockRollback.mockResolvedValue(undefined);
@@ -104,18 +105,21 @@ describe("Flujo feliz: beneficiario → membresía → servicio", () => {
   });
 
   test("POST /api/v1/servicios crea servicio para beneficiario activo", async () => {
-    // findBeneficiarioActivo → ESTATUS Activo
+    // findBeneficiarioActivo → ESTATUS Activo (SPRINT 2: sin NUMERO_CREDENCIAL)
     mockExecute.mockResolvedValueOnce({
       rows: [{
-        ESTATUS:            "Activo",
-        NUMERO_CREDENCIAL:  "CRED-001",
-        NOMBRES:            "Juan",
-        APELLIDO_PATERNO:   "García",
+        ESTATUS:          "Activo",
+        NOMBRES:          "Juan",
+        APELLIDO_PATERNO: "García",
       }],
     });
+    // findMembresiaActivaByCurp → membresía activa (SPRINT 2: nueva validación)
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ID_CREDENCIAL: 1, CURP: CURP_VALIDA, NUMERO_CREDENCIAL: "CRED-001" }],
+    });
+    // SELECT NEXT_ID para generar ID_SERVICIO (SPRINT 2: nuevo paso en create)
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });
     // INSERT SERVICIOS
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
-    // INSERT HISTORIAL_SERVICIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
