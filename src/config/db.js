@@ -3,6 +3,10 @@ import path from "path";
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
+// CLOB/NCLOB como string (NOTAS, etc.). Si no, node-oracledb devuelve un Lob y
+// Express/React pueden exponer un objeto interno y romper el renderizado.
+oracledb.fetchAsString = [oracledb.CLOB, oracledb.NCLOB];
+
 let _pool = null;
 
 export async function createPool() {

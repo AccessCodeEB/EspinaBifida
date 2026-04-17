@@ -1,5 +1,5 @@
 import * as citasService from "../services/citas.service.js";
-import { toCamel } from "../utils/dbTransform.js";
+import { toCamel, safeClobString } from "../utils/dbTransform.js";
 
 const ESTATUS_MAP = {
   PROGRAMADA:  "Pendiente",
@@ -37,7 +37,7 @@ function mapCita(row) {
     fecha:         fechaStr,
     hora:          horaStr,
     estatus,
-    notas:         r.notas,
+    notas:         safeClobString(r.notas),
   };
 }
 

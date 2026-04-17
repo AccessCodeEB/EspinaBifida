@@ -28,3 +28,14 @@ export function toCamelArray(rows) {
   if (!Array.isArray(rows)) return [];
   return rows.map(toCamel);
 }
+
+/**
+ * CLOB/NCLOB pueden llegar como instancia Lob (objeto con _impl, etc.).
+ * Nunca deben pasarse a JSON/React como tal. Preferir oracledb.fetchAsString en db.js.
+ */
+export function safeClobString(value) {
+  if (value == null) return value;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}

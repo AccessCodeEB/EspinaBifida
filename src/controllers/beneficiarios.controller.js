@@ -1,5 +1,5 @@
 import * as BeneficiarioService from "../services/beneficiarios.service.js";
-import { toCamel, toCamelArray } from "../utils/dbTransform.js";
+import { toCamel, toCamelArray, safeClobString } from "../utils/dbTransform.js";
 import { notFound } from "../utils/httpErrors.js";
 
 function mapBeneficiario(row) {
@@ -28,7 +28,7 @@ function mapBeneficiario(row) {
     municipioNacimiento: b.municipioNacimiento,
     hospitalNacimiento:  b.hospitalNacimiento,
     usaValvula:      b.usaValvula === "S" || b.usaValvula === 1 || b.usaValvula === "1",
-    notas:           b.notas,
+    notas:           safeClobString(b.notas),
     estatus:         b.estatus ?? "Activo",
     membresiaEstatus: b.membresiaEstatus ?? "Sin membresia",
     tipo:            b.tipo ?? null,

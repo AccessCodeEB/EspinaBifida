@@ -239,15 +239,15 @@ export function BeneficiariosSection() {
 
       {/* ── Dialog: Nueva Alta ─────────────────────────────────────────────── */}
       <Dialog open={showAltaDialog} onOpenChange={(open) => { if (!isSaving) { setShowAltaDialog(open); if (!open) setAltaErrors({}) } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-none shadow-2xl">
-          <div className="sticky top-0 z-10 bg-background border-b border-border/40 px-6 py-4">
+        <DialogContent className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
+          <div className="shrink-0 z-10 bg-background border-b border-border/40 px-6 py-4">
             <DialogHeader>
               <DialogTitle className="text-lg">Nueva Alta de Beneficiario</DialogTitle>
               <DialogDescription>Complete los datos obligatorios (<span className="text-destructive font-semibold">*</span>) para registrar el perfil.</DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="px-6 py-8 space-y-6 bg-muted/20">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 space-y-6 bg-muted/20">
             {altaErrors._global && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
                 <XCircle className="size-4 shrink-0" />{altaErrors._global}
@@ -395,7 +395,7 @@ export function BeneficiariosSection() {
             </SectionCard>
           </div>
 
-          <div className="sticky bottom-0 bg-background border-t border-border/40 px-6 py-4 flex justify-end gap-3">
+          <div className="shrink-0 bg-background border-t border-border/40 px-6 py-4 flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => { setShowAltaDialog(false); setAltaErrors({}) }} disabled={isSaving}>Cancelar</Button>
             <Button type="button" onClick={handleAltaSubmit} disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Beneficiario"}</Button>
           </div>
@@ -404,8 +404,8 @@ export function BeneficiariosSection() {
 
       {/* ── Dialog: Expediente ────────────────────────────────────────────── */}
       <Dialog open={showExpedienteDialog} onOpenChange={setShowExpedienteDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl">
-          <div className="bg-slate-50/50 dark:bg-muted/10 px-8 py-6 flex items-center justify-between gap-6 border-b border-border/40">
+        <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,900px)] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
+          <div className="shrink-0 bg-slate-50/50 dark:bg-muted/10 px-8 py-6 flex items-center justify-between gap-6 border-b border-border/40">
             <div className="flex min-w-0 flex-1 items-center gap-4">
               <div className="size-16 rounded-full bg-[#e6f0ff] flex items-center justify-center text-[#005bb5] font-bold text-2xl">
                 {selectedBeneficiario?.nombres.charAt(0)}
@@ -428,7 +428,7 @@ export function BeneficiariosSection() {
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-8 pt-6">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide p-8 pt-6">
             <Tabs defaultValue="datos" className="w-full">
               <TabsList className="w-full justify-start bg-transparent p-0 h-auto gap-2 border-b border-border/40 pb-4">
                 {["datos", "historial", "documentos"].map((tab) => (
@@ -536,8 +536,8 @@ export function BeneficiariosSection() {
 
       {/* ── Dialog: Editar ────────────────────────────────────────────────── */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide p-0 gap-0 border-none shadow-2xl">
-          <div className="sticky top-0 z-10 bg-background border-b border-border/40 px-6 py-4">
+        <DialogContent className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
+          <div className="shrink-0 z-10 bg-background border-b border-border/40 px-6 py-4">
             <DialogHeader>
               <DialogTitle className="text-lg">Editar Beneficiario</DialogTitle>
               <DialogDescription>
@@ -550,229 +550,273 @@ export function BeneficiariosSection() {
             </DialogHeader>
           </div>
 
-          <div className="px-6 py-8 space-y-6 bg-muted/20">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
+            <div className="px-6 py-8 space-y-6 bg-muted/20">
 
-            {/* Estado de membresía */}
-            <div className="flex items-center justify-between rounded-xl border border-border/60 bg-background p-5 shadow-sm">
-              <div className="space-y-1">
-                <Label className="text-sm font-semibold text-foreground">Estado de Membresía</Label>
-                <p className="text-xs text-muted-foreground">
-                  {editForm.estatus === "Activo"   && "Al corriente — puede recibir servicios."}
-                  {editForm.estatus === "Inactivo" && "Sin pago en el último mes — membresía suspendida."}
-                  {editForm.estatus === "Baja"     && "Baja permanente por falta de pago (más de 3 meses)."}
-                </p>
-              </div>
-              <div className="flex items-center gap-4 shrink-0">
-                {editForm.estatus === "Baja" ? (
-                  confirmDelete ? (
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="destructive" onClick={handleHardDelete} disabled={isSaving}>
-                        {isSaving ? "Eliminando..." : "Confirmar"}
+              {/* Estado de membresía */}
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-background p-5 shadow-sm">
+                <div className="space-y-1">
+                  <Label className="text-sm font-semibold text-foreground">Estado de Membresía</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {editForm.estatus === "Activo"   && "Al corriente — puede recibir servicios."}
+                    {editForm.estatus === "Inactivo" && "Sin pago en el último mes — membresía suspendida."}
+                    {editForm.estatus === "Baja"     && "Baja permanente por falta de pago (más de 3 meses)."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  {editForm.estatus === "Baja" ? (
+                    confirmDelete ? (
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="destructive" onClick={handleHardDelete} disabled={isSaving}>
+                          {isSaving ? "Eliminando..." : "Confirmar"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)} disabled={isSaving}>Cancelar</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setConfirmDelete(true)}>
+                        <XCircle className="size-4 mr-2" />Eliminar
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)} disabled={isSaving}>Cancelar</Button>
-                    </div>
+                    )
                   ) : (
-                    <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setConfirmDelete(true)}>
-                      <XCircle className="size-4 mr-2" />Eliminar
-                    </Button>
-                  )
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium ${editForm.estatus === "Activo" ? "text-success" : "text-muted-foreground"}`}>
-                      {editForm.estatus}
-                    </span>
-                    <Switch
-                      checked={editForm.estatus === "Activo"}
-                      onCheckedChange={(checked) => handleEditChange("estatus", checked ? "Activo" : "Inactivo")}
-                      className="data-[state=checked]:bg-success"
-                    />
-                  </div>
-                )}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${editForm.estatus === "Activo" ? "text-success" : "text-muted-foreground"}`}>
+                        {editForm.estatus}
+                      </span>
+                      <Switch
+                        checked={editForm.estatus === "Activo"}
+                        onCheckedChange={(checked) => handleEditChange("estatus", checked ? "Activo" : "Inactivo")}
+                        className="data-[state=checked]:bg-success"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Información Personal */}
+              <SectionCard title="Información Personal" icon={User}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <FieldWrap id="edit-nombres" error={editErrors.nombres}>
+                    <Label>Nombres</Label>
+                    <Input value={editForm.nombres ?? ""} onChange={(e) => handleEditChange("nombres", e.target.value)} className={editErrors.nombres ? "border-destructive" : ""} />
+                  </FieldWrap>
+                  <FieldWrap id="edit-apellidoPaterno" error={editErrors.apellidoPaterno}>
+                    <Label>Apellido Paterno</Label>
+                    <Input value={editForm.apellidoPaterno ?? ""} onChange={(e) => handleEditChange("apellidoPaterno", e.target.value)} className={editErrors.apellidoPaterno ? "border-destructive" : ""} />
+                  </FieldWrap>
+                  <FieldWrap id="edit-apellidoMaterno" error={editErrors.apellidoMaterno}>
+                    <Label>Apellido Materno</Label>
+                    <Input value={editForm.apellidoMaterno ?? ""} onChange={(e) => handleEditChange("apellidoMaterno", e.target.value)} className={editErrors.apellidoMaterno ? "border-destructive" : ""} />
+                  </FieldWrap>
+                  <FieldWrap id="edit-curp" error={editErrors.curp}>
+                    <Label>CURP</Label>
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input value={editForm.curp ?? ""} onChange={(e) => handleEditChange("curp", e.target.value.toUpperCase())} className={`uppercase pl-9 font-mono ${editErrors.curp ? "border-destructive" : ""}`} />
+                    </div>
+                  </FieldWrap>
+                  <FieldWrap id="edit-fechaNacimiento" error={editErrors.fechaNacimiento}>
+                    <Label>Fecha de Nacimiento</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      <Input type="date" value={editForm.fechaNacimiento ?? ""} onChange={(e) => handleEditChange("fechaNacimiento", e.target.value)} className={`pl-9 ${editErrors.fechaNacimiento ? "border-destructive" : ""}`} />
+                    </div>
+                  </FieldWrap>
+                  <FieldWrap id="edit-genero" error={editErrors.genero}>
+                    <Label>Género</Label>
+                    <Select value={editForm.genero ?? ""} onValueChange={(v) => handleEditChange("genero", v)}>
+                      <SelectTrigger className={editErrors.genero ? "border-destructive" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="M">Masculino</SelectItem>
+                        <SelectItem value="F">Femenino</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FieldWrap>
+                  <FieldWrap id="edit-tipoSangre" error={editErrors.tipoSangre}>
+                    <Label>Tipo de Sangre</Label>
+                    <div className="relative">
+                      <Droplet className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input value={editForm.tipoSangre ?? ""} onChange={(e) => handleEditChange("tipoSangre", e.target.value)} placeholder="Ej. O+" className={`pl-9 ${editErrors.tipoSangre ? "border-destructive" : ""}`} />
+                    </div>
+                  </FieldWrap>
+                  <div className="space-y-1.5">
+                    <Label>Nombre del Padre / Madre</Label>
+                    <IconInput icon={Users}><Input value={editForm.nombrePadreMadre ?? ""} onChange={(e) => handleEditChange("nombrePadreMadre", e.target.value)} className="pl-9" /></IconInput>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Dirección */}
+              <SectionCard title="Dirección" icon={MapPin}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Calle y número</Label>
+                    <Input value={editForm.calle ?? ""} onChange={(e) => handleEditChange("calle", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Colonia</Label>
+                    <Input value={editForm.colonia ?? ""} onChange={(e) => handleEditChange("colonia", e.target.value)} />
+                  </div>
+                  <FieldWrap id="edit-cp" error={editErrors.cp}>
+                    <Label>CP</Label>
+                    <Input value={editForm.cp ?? ""} onChange={(e) => handleEditChange("cp", e.target.value)} className={editErrors.cp ? "border-destructive" : ""} />
+                  </FieldWrap>
+                  <div className="space-y-1.5">
+                    <Label>Ciudad</Label>
+                    <Input value={editForm.ciudad ?? ""} onChange={(e) => handleEditChange("ciudad", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Municipio</Label>
+                    <Input value={editForm.municipio ?? ""} onChange={(e) => handleEditChange("municipio", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Estado</Label>
+                    <Input value={editForm.estado ?? ""} onChange={(e) => handleEditChange("estado", e.target.value)} />
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Contacto */}
+              <SectionCard title="Contacto" icon={Phone}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <FieldWrap id="edit-telefonoCasa" error={editErrors.telefonoCasa}>
+                    <Label>Teléfono Casa</Label>
+                    <IconInput icon={Phone}><Input value={editForm.telefonoCasa ?? ""} onChange={(e) => handleEditChange("telefonoCasa", e.target.value)} className={`pl-9 ${editErrors.telefonoCasa ? "border-destructive" : ""}`} /></IconInput>
+                  </FieldWrap>
+                  <FieldWrap id="edit-telefonoCelular" error={editErrors.telefonoCelular}>
+                    <Label>Teléfono Celular</Label>
+                    <IconInput icon={Phone}><Input value={editForm.telefonoCelular ?? ""} onChange={(e) => handleEditChange("telefonoCelular", e.target.value)} className={`pl-9 ${editErrors.telefonoCelular ? "border-destructive" : ""}`} /></IconInput>
+                  </FieldWrap>
+                  <FieldWrap id="edit-correoElectronico" error={editErrors.correoElectronico} className="sm:col-span-2">
+                    <Label>Correo Electrónico</Label>
+                    <IconInput icon={Mail}><Input type="email" value={editForm.correoElectronico ?? ""} onChange={(e) => handleEditChange("correoElectronico", e.target.value)} className={`pl-9 ${editErrors.correoElectronico ? "border-destructive" : ""}`} /></IconInput>
+                  </FieldWrap>
+                </div>
+              </SectionCard>
+
+              {/* Contacto de Emergencia */}
+              <SectionCard title="Contacto de Emergencia" icon={HeartPulse}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Nombre</Label>
+                    <IconInput icon={User}><Input value={editForm.contactoEmergencia ?? ""} onChange={(e) => handleEditChange("contactoEmergencia", e.target.value)} className="pl-9" /></IconInput>
+                  </div>
+                  <FieldWrap id="edit-telefonoEmergencia" error={editErrors.telefonoEmergencia}>
+                    <Label>Teléfono</Label>
+                    <IconInput icon={Phone}><Input value={editForm.telefonoEmergencia ?? ""} onChange={(e) => handleEditChange("telefonoEmergencia", e.target.value)} className={`pl-9 ${editErrors.telefonoEmergencia ? "border-destructive" : ""}`} /></IconInput>
+                  </FieldWrap>
+                </div>
+              </SectionCard>
+
+              {/* Médico / Diagnóstico */}
+              <SectionCard title="Médico / Diagnóstico" icon={Stethoscope}>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Tipo de Espina Bífida</Label>
+                    <Select value={editForm.tipo ?? ""} onValueChange={(v) => handleEditChange("tipo", v)}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mielomeningocele">Mielomeningocele</SelectItem>
+                        <SelectItem value="Meningocele">Meningocele</SelectItem>
+                        <SelectItem value="Oculta">Oculta</SelectItem>
+                        <SelectItem value="Lipomeningocele">Lipomeningocele</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <FieldWrap id="edit-usaValvula" error={editErrors.usaValvula}>
+                    <Label>¿Usa válvula?</Label>
+                    <Select value={editForm.usaValvula === undefined ? "" : editForm.usaValvula ? "si" : "no"} onValueChange={(v) => handleEditChange("usaValvula", v === "si")}>
+                      <SelectTrigger className={editErrors.usaValvula ? "border-destructive" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="si">Sí</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FieldWrap>
+                  <div className="space-y-1.5">
+                    <Label>Municipio de Nacimiento</Label>
+                    <Input value={editForm.municipioNacimiento ?? ""} onChange={(e) => handleEditChange("municipioNacimiento", e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Hospital de Nacimiento</Label>
+                    <Input value={editForm.hospitalNacimiento ?? ""} onChange={(e) => handleEditChange("hospitalNacimiento", e.target.value)} />
+                  </div>
+                  <FieldWrap id="edit-notas" error={editErrors.notas} className="sm:col-span-2">
+                    <Label>Notas</Label>
+                    <IconInput icon={FileText} alignTop><Input value={editForm.notas ?? ""} onChange={(e) => handleEditChange("notas", e.target.value)} placeholder="Observaciones adicionales" className={`pl-9 ${editErrors.notas ? "border-destructive" : ""}`} /></IconInput>
+                  </FieldWrap>
+                </div>
+              </SectionCard>
             </div>
 
-            {/* Información Personal */}
-            <SectionCard title="Información Personal" icon={User}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FieldWrap id="edit-nombres" error={editErrors.nombres}>
-                  <Label>Nombres</Label>
-                  <Input value={editForm.nombres ?? ""} onChange={(e) => handleEditChange("nombres", e.target.value)} className={editErrors.nombres ? "border-destructive" : ""} />
-                </FieldWrap>
-                <FieldWrap id="edit-apellidoPaterno" error={editErrors.apellidoPaterno}>
-                  <Label>Apellido Paterno</Label>
-                  <Input value={editForm.apellidoPaterno ?? ""} onChange={(e) => handleEditChange("apellidoPaterno", e.target.value)} className={editErrors.apellidoPaterno ? "border-destructive" : ""} />
-                </FieldWrap>
-                <FieldWrap id="edit-apellidoMaterno" error={editErrors.apellidoMaterno}>
-                  <Label>Apellido Materno</Label>
-                  <Input value={editForm.apellidoMaterno ?? ""} onChange={(e) => handleEditChange("apellidoMaterno", e.target.value)} className={editErrors.apellidoMaterno ? "border-destructive" : ""} />
-                </FieldWrap>
-                <FieldWrap id="edit-curp" error={editErrors.curp}>
-                  <Label>CURP</Label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input value={editForm.curp ?? ""} onChange={(e) => handleEditChange("curp", e.target.value.toUpperCase())} className={`uppercase pl-9 font-mono ${editErrors.curp ? "border-destructive" : ""}`} />
-                  </div>
-                </FieldWrap>
-                <FieldWrap id="edit-fechaNacimiento" error={editErrors.fechaNacimiento}>
-                  <Label>Fecha de Nacimiento</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                    <Input type="date" value={editForm.fechaNacimiento ?? ""} onChange={(e) => handleEditChange("fechaNacimiento", e.target.value)} className={`pl-9 ${editErrors.fechaNacimiento ? "border-destructive" : ""}`} />
-                  </div>
-                </FieldWrap>
-                <FieldWrap id="edit-genero" error={editErrors.genero}>
-                  <Label>Género</Label>
-                  <Select value={editForm.genero ?? ""} onValueChange={(v) => handleEditChange("genero", v)}>
-                    <SelectTrigger className={editErrors.genero ? "border-destructive" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="F">Femenino</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FieldWrap>
-                <FieldWrap id="edit-tipoSangre" error={editErrors.tipoSangre}>
-                  <Label>Tipo de Sangre</Label>
-                  <div className="relative">
-                    <Droplet className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input value={editForm.tipoSangre ?? ""} onChange={(e) => handleEditChange("tipoSangre", e.target.value)} placeholder="Ej. O+" className={`pl-9 ${editErrors.tipoSangre ? "border-destructive" : ""}`} />
-                  </div>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Nombre del Padre / Madre</Label>
-                  <IconInput icon={Users}><Input value={editForm.nombrePadreMadre ?? ""} onChange={(e) => handleEditChange("nombrePadreMadre", e.target.value)} className="pl-9" /></IconInput>
-                </div>
+            {saveError && (
+              <div id="edit-error-banner" className="mx-6 mb-4 rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-xs text-destructive flex items-center gap-2">
+                <XCircle className="size-3.5 shrink-0" />{saveError}
               </div>
-            </SectionCard>
-
-            {/* Dirección */}
-            <SectionCard title="Dirección" icon={MapPin}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Calle y número</Label>
-                  <Input value={editForm.calle ?? ""} onChange={(e) => handleEditChange("calle", e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Colonia</Label>
-                  <Input value={editForm.colonia ?? ""} onChange={(e) => handleEditChange("colonia", e.target.value)} />
-                </div>
-                <FieldWrap id="edit-cp" error={editErrors.cp}>
-                  <Label>CP</Label>
-                  <Input value={editForm.cp ?? ""} onChange={(e) => handleEditChange("cp", e.target.value)} className={editErrors.cp ? "border-destructive" : ""} />
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Ciudad</Label>
-                  <Input value={editForm.ciudad ?? ""} onChange={(e) => handleEditChange("ciudad", e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Municipio</Label>
-                  <Input value={editForm.municipio ?? ""} onChange={(e) => handleEditChange("municipio", e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Estado</Label>
-                  <Input value={editForm.estado ?? ""} onChange={(e) => handleEditChange("estado", e.target.value)} />
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* Contacto */}
-            <SectionCard title="Contacto" icon={Phone}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FieldWrap id="edit-telefonoCasa" error={editErrors.telefonoCasa}>
-                  <Label>Teléfono Casa</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoCasa ?? ""} onChange={(e) => handleEditChange("telefonoCasa", e.target.value)} className={`pl-9 ${editErrors.telefonoCasa ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-                <FieldWrap id="edit-telefonoCelular" error={editErrors.telefonoCelular}>
-                  <Label>Teléfono Celular</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoCelular ?? ""} onChange={(e) => handleEditChange("telefonoCelular", e.target.value)} className={`pl-9 ${editErrors.telefonoCelular ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-                <FieldWrap id="edit-correoElectronico" error={editErrors.correoElectronico} className="sm:col-span-2">
-                  <Label>Correo Electrónico</Label>
-                  <IconInput icon={Mail}><Input type="email" value={editForm.correoElectronico ?? ""} onChange={(e) => handleEditChange("correoElectronico", e.target.value)} className={`pl-9 ${editErrors.correoElectronico ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
-
-            {/* Contacto de Emergencia */}
-            <SectionCard title="Contacto de Emergencia" icon={HeartPulse}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Nombre</Label>
-                  <IconInput icon={User}><Input value={editForm.contactoEmergencia ?? ""} onChange={(e) => handleEditChange("contactoEmergencia", e.target.value)} className="pl-9" /></IconInput>
-                </div>
-                <FieldWrap id="edit-telefonoEmergencia" error={editErrors.telefonoEmergencia}>
-                  <Label>Teléfono</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoEmergencia ?? ""} onChange={(e) => handleEditChange("telefonoEmergencia", e.target.value)} className={`pl-9 ${editErrors.telefonoEmergencia ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
-
-            {/* Médico / Diagnóstico */}
-            <SectionCard title="Médico / Diagnóstico" icon={Stethoscope}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Tipo de Espina Bífida</Label>
-                  <Select value={editForm.tipo ?? ""} onValueChange={(v) => handleEditChange("tipo", v)}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mielomeningocele">Mielomeningocele</SelectItem>
-                      <SelectItem value="Meningocele">Meningocele</SelectItem>
-                      <SelectItem value="Oculta">Oculta</SelectItem>
-                      <SelectItem value="Lipomeningocele">Lipomeningocele</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FieldWrap id="edit-usaValvula" error={editErrors.usaValvula}>
-                  <Label>¿Usa válvula?</Label>
-                  <Select value={editForm.usaValvula === undefined ? "" : editForm.usaValvula ? "si" : "no"} onValueChange={(v) => handleEditChange("usaValvula", v === "si")}>
-                    <SelectTrigger className={editErrors.usaValvula ? "border-destructive" : ""}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="si">Sí</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Municipio de Nacimiento</Label>
-                  <Input value={editForm.municipioNacimiento ?? ""} onChange={(e) => handleEditChange("municipioNacimiento", e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Hospital de Nacimiento</Label>
-                  <Input value={editForm.hospitalNacimiento ?? ""} onChange={(e) => handleEditChange("hospitalNacimiento", e.target.value)} />
-                </div>
-                <FieldWrap id="edit-notas" error={editErrors.notas} className="sm:col-span-2">
-                  <Label>Notas</Label>
-                  <IconInput icon={FileText} alignTop><Input value={editForm.notas ?? ""} onChange={(e) => handleEditChange("notas", e.target.value)} placeholder="Observaciones adicionales" className={`pl-9 ${editErrors.notas ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
+            )}
           </div>
 
-          {saveError && (
-            <div id="edit-error-banner" className="mx-6 mb-0 rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-2.5 text-xs text-destructive flex items-center gap-2">
-              <XCircle className="size-3.5 shrink-0" />{saveError}
-            </div>
-          )}
-
-          <div className="sticky bottom-0 bg-background border-t border-border/40 px-6 py-4 flex items-center justify-between gap-3">
+          {/* ── Footer de Editar con flujo In-Place Centrado ── */}
+          <div className="shrink-0 bg-background border-t border-border/40 px-4 py-4 sm:px-6 flex items-center min-h-[72px]">
             {confirmEditDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">¿Eliminar permanentemente?</span>
-                <button type="button" onClick={handleEditDelete} disabled={isSaving} className="inline-flex items-center gap-1 rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors">
-                  {isSaving ? "Eliminando..." : "Sí, eliminar"}
-                </button>
-                <button type="button" onClick={() => setConfirmEditDelete(false)} disabled={isSaving} className="inline-flex items-center rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              // ESTADO DE ELIMINACIÓN: Centrado y oculta los demás botones
+              <div className="w-full flex items-center justify-center gap-3 animate-in fade-in duration-300">
+                <span className="text-sm font-medium text-muted-foreground mr-1 hidden sm:inline-block">
+                  ¿Estás seguro?
+                </span>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setConfirmEditDelete(false)} 
+                  disabled={isSaving}
+                  className="border-border/60 text-muted-foreground hover:text-foreground shadow-sm"
+                >
                   Cancelar
-                </button>
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={handleEditDelete} 
+                  disabled={isSaving}
+                  className="px-6 shadow-sm"
+                >
+                  {isSaving ? "Eliminando..." : "Sí, eliminar"}
+                </Button>
               </div>
             ) : (
-              <button type="button" onClick={() => { setSaveError(null); setConfirmEditDelete(true) }} disabled={isSaving} className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-50">
-                <XCircle className="size-3.5" />Eliminar
-              </button>
+              // ESTADO NORMAL: Eliminar a la izquierda, Guardar a la derecha
+              <div className="w-full flex items-center justify-between animate-in fade-in duration-300">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => { setSaveError(null); setConfirmEditDelete(true) }} 
+                  disabled={isSaving} 
+                  className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50 transition-colors shadow-sm"
+                >
+                  <XCircle className="size-4" />
+                  <span className="hidden sm:inline">Eliminar</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => { setShowEditDialog(false); setConfirmEditDelete(false); setSaveError(null) }} 
+                    disabled={isSaving}
+                    className="shadow-sm"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={handleSaveEdit} 
+                    disabled={isSaving}
+                    className="shadow-sm"
+                  >
+                    {isSaving ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                </div>
+              </div>
             )}
-            <div className="flex gap-2 shrink-0">
-              <Button type="button" variant="outline" onClick={() => { setShowEditDialog(false); setConfirmEditDelete(false); setSaveError(null) }} disabled={isSaving}>Cancelar</Button>
-              <Button type="button" onClick={handleSaveEdit} disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Cambios"}</Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

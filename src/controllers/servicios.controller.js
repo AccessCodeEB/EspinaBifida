@@ -1,5 +1,5 @@
 import * as ServiciosService from "../services/servicios.service.js";
-import { toCamel } from "../utils/dbTransform.js";
+import { toCamel, safeClobString } from "../utils/dbTransform.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 
 function formatMonto(valor) {
@@ -22,7 +22,7 @@ function mapServicio(row) {
     fecha:     fechaStr,
     monto:     formatMonto(r.costo),
     membresia: r.membresiaEstatus ?? "Vencida",
-    notas:     r.notas,
+    notas:     safeClobString(r.notas),
   };
 }
 
