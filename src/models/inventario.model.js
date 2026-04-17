@@ -87,7 +87,8 @@ export async function findInventarioActual() {
   const conn = await getConnection();
   try {
     const result = await conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL
+      `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
+              CUOTA_RECUPERACION, INVENTARIO_ACTUAL
        FROM ARTICULOS
        ORDER BY DESCRIPCION`
     );

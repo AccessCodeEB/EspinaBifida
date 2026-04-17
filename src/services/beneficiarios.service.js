@@ -12,7 +12,6 @@ const CAMPOS_OBLIGATORIOS = [
   "nombres",
   "apellidoPaterno",
   "apellidoMaterno",
-  "fechaNacimiento",
 ];
 
 function sanitizar(data) {
@@ -92,7 +91,44 @@ function validarFormatos(data) {
   }
 }
 
+// Validación permisiva para UPDATE — solo valida enums, no formato libre
+function validarFormatosUpdate(data) {
+  if (data.genero && !["M", "F"].includes(data.genero)) {
+    throw badRequest("GENERO debe ser 'M' o 'F'", "INVALID_GENERO");
+  }
+  if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
+    throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
+  }
+  if (data.notas && data.notas.length > 500) {
+    throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
+  }
+}
+
 export const getAll = () => BeneficiarioModel.findAll();
+
+export async function hardDelete(curp) {
+  validarCurp(curp);
+  const existente = await BeneficiarioModel.findById(curp);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${curp}`);
+  }
+  await BeneficiarioModel.hardDelete(curp);
+}
+
+export async function toggleEstatus(curp, estatus) {
+  validarCurp(curp);
+  if (!["Activo", "Inactivo"].includes(estatus)) {
+    throw badRequest("Estatus debe ser 'Activo' o 'Inactivo'");
+  }
+  const existente = await BeneficiarioModel.findById(curp);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${curp}`);
+  }
+  if (existente.ESTATUS === "Baja") {
+    throw conflict("No se puede modificar un beneficiario con estatus 'Baja'");
+  }
+  await BeneficiarioModel.updateEstatus(curp, estatus);
+}
 
 export const getById = (curp) => BeneficiarioModel.findById(curp);
 
@@ -115,7 +151,7 @@ export async function update(curp, data) {
   validarCurp(curp);
   data = sanitizar(data);
   validarCamposObligatorios(data);
-  validarFormatos(data);
+  validarFormatosUpdate(data);
 
   const existente = await BeneficiarioModel.findById(curp);
   if (!existente) {

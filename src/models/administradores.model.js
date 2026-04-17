@@ -40,7 +40,7 @@ export async function findByEmail(email) {
               a.PASSWORD_HASH, a.ACTIVO, r.NOMBRE_ROL
        FROM   ADMINISTRADORES a
        JOIN   ROLES r ON r.ID_ROL = a.ID_ROL
-       WHERE  a.EMAIL = :email`,
+       WHERE  LOWER(TRIM(a.EMAIL)) = :email`,
       { email }
     );
     return result.rows[0] ?? null;

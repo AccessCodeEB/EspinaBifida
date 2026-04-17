@@ -1,5 +1,36 @@
 import { getConnection } from "../config/db.js";
 
+export async function findAll() {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT s.ID_SERVICIO,
+              s.CURP,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO,
+              NVL(cat.NOMBRE, 'Servicio ' || s.ID_TIPO_SERVICIO) AS TIPO_SERVICIO,
+              s.FECHA,
+              s.COSTO,
+              s.MONTO_PAGADO,
+              s.NOTAS,
+              CASE
+                WHEN EXISTS (
+                  SELECT 1 FROM CREDENCIALES c
+                  WHERE c.CURP = s.CURP
+                    AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+                ) THEN 'Activa'
+                ELSE 'Vencida'
+              END AS MEMBRESIA_ESTATUS
+       FROM SERVICIOS s
+       LEFT JOIN BENEFICIARIOS b ON b.CURP = s.CURP
+       LEFT JOIN SERVICIOS_CATALOGO cat ON cat.ID_TIPO_SERVICIO = s.ID_TIPO_SERVICIO
+       ORDER BY s.FECHA DESC`
+    );
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // Validar que beneficiario existe y está activo
 export async function findBeneficiarioActivo(curp) {
   const conn = await getConnection();

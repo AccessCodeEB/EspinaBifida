@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "concurrently --names \"BACK,FRONT\" --prefix-colors \"blue,green\" \"nodemon src/server.js\" \"sh -c 'cd frontend && npm run dev'\"",
     "start": "node src/server.js",
+    "frontend:build": "cd frontend && npm run build",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "export:ddl": "node scripts/export-schema-ddl.js",
@@ -36,6 +37,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "jest": "^29.7.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2"

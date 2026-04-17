@@ -6,15 +6,17 @@ export const findAll = async () => {
   try {
     const result = await connection.execute(`
       SELECT
-        ID_CITA,
-        CURP,
-        ID_TIPO_SERVICIO,
-        ESPECIALISTA,
-        FECHA,
-        ESTATUS,
-        NOTAS
-      FROM CITAS
-      ORDER BY FECHA DESC
+        c.ID_CITA,
+        c.CURP,
+        c.ID_TIPO_SERVICIO,
+        c.ESPECIALISTA,
+        c.FECHA,
+        c.ESTATUS,
+        c.NOTAS,
+        b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO
+      FROM CITAS c
+      LEFT JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+      ORDER BY c.FECHA DESC
     `);
 
     return result.rows;

@@ -1,16 +1,16 @@
 import express from "express";
 import {
+  getAll,
   createMembresia,
   getMembresiaStatus,
   validarMembresiaActiva,
 } from "../controllers/membresias.controller.js";
-import { verifyToken, checkRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.post("/",            verifyToken, checkRole(1, 2), createMembresia);
-router.get("/:curp/activa", verifyToken,                  validarMembresiaActiva);
-router.get("/:curp",        verifyToken,                  getMembresiaStatus);
+router.get("/",             getAll);
+router.post("/",            createMembresia);
+router.get("/:curp/activa", validarMembresiaActiva);
+router.get("/:curp",        getMembresiaStatus);
 
 export default router;
-
