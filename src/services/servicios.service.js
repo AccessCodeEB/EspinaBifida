@@ -41,6 +41,8 @@ function parseAndValidateDate(dateStr, fieldName) {
   return value;
 }
 
+export const getAll = () => ServiciosModel.findAll();
+
 export async function createConValidacion(data) {
   const curp = String(data.curp ?? "").trim().toUpperCase();
   const idTipoServicio = parseNumber(data.idTipoServicio, "idTipoServicio");

@@ -1,5 +1,31 @@
 import { getConnection } from "../config/db.js";
 
+export async function findAll() {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT c.CURP,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO, '') AS NOMBRE_COMPLETO,
+              c.NUMERO_CREDENCIAL,
+              c.FECHA_VIGENCIA_INICIO,
+              c.FECHA_VIGENCIA_FIN,
+              c.FECHA_ULTIMO_PAGO,
+              c.OBSERVACIONES,
+              CASE
+                WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30 THEN 'Activa'
+                WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30 THEN 'Por vencer'
+                ELSE 'Vencida'
+              END AS ESTATUS_MEMBRESIA
+       FROM CREDENCIALES c
+       JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+       ORDER BY c.FECHA_VIGENCIA_FIN DESC`
+    );
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 export async function findBeneficiarioByCurp(curp) {
   const conn = await getConnection();
   try {

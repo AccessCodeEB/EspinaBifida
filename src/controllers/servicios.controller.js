@@ -1,5 +1,39 @@
 import * as ServiciosService from "../services/servicios.service.js";
+import { toCamel } from "../utils/dbTransform.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
+
+function formatMonto(valor) {
+  const n = Number(valor ?? 0);
+  return `$${n.toFixed(2)}`;
+}
+
+function mapServicio(row) {
+  const r = toCamel(row);
+  let fechaStr = "";
+  if (r.fecha) {
+    const d = r.fecha instanceof Date ? r.fecha : new Date(r.fecha);
+    fechaStr = isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
+  }
+  return {
+    id:        r.idServicio,
+    folio:     r.curp,
+    nombre:    r.nombreBeneficiario?.trim() ?? r.curp,
+    servicio:  r.tipoServicio ?? "Servicio",
+    fecha:     fechaStr,
+    monto:     formatMonto(r.costo),
+    membresia: r.membresiaEstatus ?? "Vencida",
+    notas:     r.notas,
+  };
+}
+
+export async function getAll(req, res, next) {
+  try {
+    const rows = await ServiciosService.getAll();
+    res.json(rows.map(mapServicio));
+  } catch (err) {
+    next(err);
+  }
+}
 
 function parseIdServicio(value) {
   const parsed = Number(value);

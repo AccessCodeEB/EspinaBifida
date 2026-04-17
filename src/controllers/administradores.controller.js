@@ -1,4 +1,19 @@
 import * as AdminService from "../services/administradores.service.js";
+import { toCamel } from "../utils/dbTransform.js";
+
+function mapAdminPublic(row) {
+  if (!row) return null;
+  const a = toCamel(row);
+  return {
+    idAdmin:        a.idAdmin,
+    idRol:          a.idRol,
+    nombreCompleto: a.nombreCompleto,
+    email:          a.email,
+    activo:         a.activo,
+    fechaCreacion:  a.fechaCreacion,
+    nombreRol:      a.nombreRol,
+  };
+}
 
 export async function login(req, res, next) {
   try {
@@ -12,7 +27,8 @@ export async function login(req, res, next) {
 
 export async function getAll(req, res, next) {
   try {
-    res.json(await AdminService.getAll());
+    const rows = await AdminService.getAll();
+    res.json(rows.map((row) => mapAdminPublic(row)));
   } catch (err) {
     next(err);
   }
@@ -20,7 +36,8 @@ export async function getAll(req, res, next) {
 
 export async function getById(req, res, next) {
   try {
-    res.json(await AdminService.getById(Number(req.params.idAdmin)));
+    const row = await AdminService.getById(Number(req.params.idAdmin));
+    res.json(mapAdminPublic(row));
   } catch (err) {
     next(err);
   }

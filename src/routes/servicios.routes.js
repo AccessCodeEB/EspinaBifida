@@ -3,6 +3,9 @@ import * as ServiciosController from "../controllers/servicios.controller.js";
 
 const router = Router();
 
+// GET /servicios - Listar todos los servicios
+router.get("/", ServiciosController.getAll);
+
 // POST /servicios - Crear nuevo servicio (con validación de membresía activa)
 router.post("/", ServiciosController.create);
 

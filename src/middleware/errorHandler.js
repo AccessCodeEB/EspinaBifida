@@ -53,8 +53,11 @@ export function errorHandler(err, req, res, _next) {
       statusCode = mapped.statusCode;
       code       = mapped.code;
       message    = mapped.message;
+    } else if (err?.code === "NJS-044") {
+      statusCode = 400;
+      code       = "BIND_ERROR";
+      message    = "Uno o más campos contienen un valor no aceptado. Revisa los datos e intenta de nuevo.";
     }
-    // statusCode >= 500 → message stays as "Error interno del servidor"
   }
 
   if (statusCode >= 500) {

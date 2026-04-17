@@ -1,12 +1,42 @@
 import * as membresiasService from "../services/membresias.service.js";
+import { toCamel } from "../utils/dbTransform.js";
+
+function formatMonto(valor) {
+  if (valor == null) return "$0.00";
+  const n = Number(valor);
+  return `$${n.toFixed(2)}`;
+}
+
+function mapMembresia(row) {
+  const r = toCamel(row);
+  const estatus = r.estatusMembresia ?? "Vencida";
+  return {
+    folio:       r.curp,
+    nombre:      r.nombreCompleto ?? "",
+    fechaInicio: r.fechaVigenciaInicio,
+    vigencia:    r.fechaVigenciaFin,
+    estatus,
+    ultimoPago:  r.fechaUltimoPago ?? r.fechaVigenciaInicio,
+    monto:       "$500.00",
+    porPagar:    estatus === "Activa" ? "$0.00" : "$500.00",
+    numeroCredencial: r.numeroCredencial,
+    observaciones:    r.observaciones,
+  };
+}
+
+export const getAll = async (req, res, next) => {
+  try {
+    const rows = await membresiasService.getAll();
+    res.json(rows.map(mapMembresia));
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const createMembresia = async (req, res, next) => {
   try {
     const result = await membresiasService.registrarMembresia(req.body);
-    res.status(201).json({
-      message: "Membresía registrada correctamente",
-      result,
-    });
+    res.status(201).json({ message: "Membresía registrada correctamente", result });
   } catch (error) {
     next(error);
   }
@@ -31,4 +61,3 @@ export const validarMembresiaActiva = async (req, res, next) => {
     next(error);
   }
 };
-

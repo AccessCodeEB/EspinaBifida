@@ -34,17 +34,37 @@ function validarPassword(password) {
   }
 }
 
+function normalizePasswordHash(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
 export async function login(email, password) {
   if (!email || !password) throw badRequest("Email y contraseña son requeridos");
 
-  const admin = await AdminModel.findByEmail(email.trim().toLowerCase());
+  const emailNorm = email.trim().toLowerCase();
+  const admin = await AdminModel.findByEmail(emailNorm);
   if (!admin) throw new AppError("Credenciales inválidas", 401);
 
   if (admin.ACTIVO === 0 || admin.ACTIVO === "0") {
     throw new AppError("Cuenta desactivada. Contacta al administrador", 403);
   }
 
-  const passwordValida = await bcrypt.compare(password, admin.PASSWORD_HASH);
+  const stored = normalizePasswordHash(admin.PASSWORD_HASH);
+  let passwordValida = false;
+
+  if (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$")) {
+    passwordValida = await bcrypt.compare(password, stored);
+  } else if (stored.length > 0) {
+    // Legado: contraseña guardada en texto plano u otro formato — migrar a bcrypt al validar
+    if (stored === password) {
+      passwordValida = true;
+      const nuevoHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await AdminModel.updatePassword(admin.ID_ADMIN, nuevoHash);
+    }
+  }
+
   if (!passwordValida) throw new AppError("Credenciales inválidas", 401);
 
   const token = generarToken(admin);

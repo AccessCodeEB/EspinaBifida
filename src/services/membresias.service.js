@@ -59,6 +59,10 @@ function mapMembresiaPublica(credencial) {
   };
 }
 
+export async function getAll() {
+  return MembresiasModel.findAll();
+}
+
 export async function validarMembresiaActivaPorCurp(curpParam) {
   const curp = curpParam ? String(curpParam).trim().toUpperCase() : "";
   if (!curp) {
