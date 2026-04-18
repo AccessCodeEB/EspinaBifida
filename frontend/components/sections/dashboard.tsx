@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Users, CreditCard, ClipboardList, Package, CalendarDays } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { getInventario } from "@/services/inventario"
 import {
   BarChart,
   Bar,
@@ -18,8 +19,10 @@ import {
   Tooltip,
 } from "recharts"
 
+const INVENTARIO_BAJO_UMBRAL = 3
+
 // Reintegramos los colores originales de tus tarjetas
-const statsCards = [
+const staticStatsCards = [
   {
     title: "Beneficiarios Activos",
     value: "247",
@@ -45,10 +48,11 @@ const statsCards = [
   },
   {
     title: "Inventario Bajo",
-    value: "5",
-    description: "Artículos requieren atención",
+    value: "--",
+    description: `Artículos con ${INVENTARIO_BAJO_UMBRAL} o menos`,
     icon: Package,
     color: "bg-destructive text-destructive-foreground",
+    iconClassName: "text-white",
   },
 ]
 
@@ -69,6 +73,41 @@ const locationData = [
 
 export function DashboardSection() {
   const [activeBar, setActiveBar] = useState<{ mes: string; atenciones: number } | null>(null)
+  const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    getInventario()
+      .then((items) => {
+        if (cancelled) return
+        const lowCount = items.filter((item) => Number(item.cantidad ?? 0) <= INVENTARIO_BAJO_UMBRAL).length
+        setInventarioBajoCount(lowCount)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setInventarioBajoCount(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const statsCards = staticStatsCards.map((card) => {
+    if (card.title !== "Inventario Bajo") return card
+
+    const value = inventarioBajoCount === null ? "--" : String(inventarioBajoCount)
+    const description = inventarioBajoCount === null
+      ? "No se pudo cargar inventario"
+      : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`
+
+    return {
+      ...card,
+      value,
+      description,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -98,7 +137,7 @@ export function DashboardSection() {
               </CardTitle>
               {/* Contenedor de color más pequeño y sutil (size-9) */}
               <div className={`flex size-9 items-center justify-center rounded-lg shadow-sm ${card.color}`}>
-                <card.icon className="size-4.5" />
+                <card.icon className={`size-4.5 ${card.iconClassName ?? ""}`} />
               </div>
             </CardHeader>
             <CardContent>

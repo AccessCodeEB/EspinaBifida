@@ -40,19 +40,19 @@ const VALID_SECTIONS = new Set([
 
 function SectionContent({ section }: { section: string }) {
   switch (section) {
-    case "dashboard":      return <DashboardSection />
-    case "beneficiarios":  return <BeneficiariosSection />
-    case "membresias":     return <MembresiasSection />
-    case "servicios":      return <ServiciosSection />
-    case "inventario":     return <InventarioSection />
-    case "citas":          return <CitasSection />
-    case "reportes":       return <ReportesSection />
-    case "preregistro":    return <PreregistroSection />
-    default:               return <DashboardSection />
+    case "dashboard":     return <DashboardSection />
+    case "beneficiarios": return <BeneficiariosSection />
+    case "membresias":    return <MembresiasSection />
+    case "servicios":     return <ServiciosSection />
+    case "inventario":    return <InventarioSection />
+    case "citas":         return <CitasSection />
+    case "reportes":      return <ReportesSection />
+    case "preregistro":   return <PreregistroSection />
+    default:              return <DashboardSection />
   }
 }
 
-/** Derive initials from a full name (first two words). */
+/** Obtiene las iniciales de las primeras dos palabras del nombre. */
 function getInitials(name: string): string {
   return name
     .split(" ")
@@ -65,8 +65,15 @@ function HomeContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
 
-  // ── Auth (fuente de verdad para sesión y datos del usuario) ─────────
-  const { isAuthenticated, isLoading: authLoading, session, login: authLogin, logout: authLogout, updateSession } = useAuth()
+  // ── Auth — fuente de verdad para sesión y datos del usuario ─────────
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    session,
+    login: authLogin,
+    logout: authLogout,
+    updateSession,
+  } = useAuth()
 
   // ── Sección activa ──────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState(() => {
@@ -89,7 +96,7 @@ function HomeContent() {
   const [showEditProfile, setShowEditProfile] = useState(false)
   const [darkMode,        setDarkMode]        = useState(false)
 
-  // ── Datos del usuario desde la sesión JWT (sin llamadas extra) ───────
+  // ── Datos del usuario desde el JWT (sin llamadas extra al backend) ───
   const userName     = session?.nombreCompleto ?? ""
   const userRole     = session?.nombreRol      ?? ""
   const userInitials = getInitials(userName)
@@ -112,18 +119,18 @@ function HomeContent() {
     <div className={darkMode ? "dark" : ""}>
       <div className="min-h-screen w-full bg-background">
 
-        {/* ── Header ────────────────────────────────────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────── */}
         <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
           <FloatingNav activeSection={activeSection} onSectionChange={handleSectionChange} />
 
           <div className="ml-auto flex items-center gap-3">
-            {/* Nombre y rol del usuario */}
+            {/* Nombre y rol */}
             <div className="hidden flex-col items-end sm:flex">
               <span className="text-sm font-medium text-foreground leading-tight">{userName}</span>
               <span className="text-xs text-muted-foreground leading-tight">{userRole}</span>
             </div>
 
-            {/* Avatar con iniciales */}
+            {/* Avatar */}
             <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
               <span className="text-sm font-bold">{userInitials}</span>
             </div>
@@ -146,7 +153,7 @@ function HomeContent() {
                 sideOffset={12}
                 className="w-72 rounded-2xl border border-border/40 bg-background/95 p-2 shadow-2xl backdrop-blur-md"
               >
-                {/* Cabecera con info del usuario */}
+                {/* Info del usuario */}
                 <DropdownMenuLabel className="flex items-center gap-3 px-3 py-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                     <span className="text-sm font-bold">{userInitials}</span>
@@ -203,14 +210,14 @@ function HomeContent() {
           </div>
         </header>
 
-        {/* ── Contenido ─────────────────────────────────────────────── */}
+        {/* ── Contenido ───────────────────────────────────────────── */}
         <div className="p-4 md:p-6 lg:p-8">
           <SectionContent section={activeSection} />
         </div>
 
       </div>
 
-      {/* ── Diálogo flotante: Editar perfil ──────────────────────── */}
+      {/* ── Diálogo flotante: Editar perfil ─────────────────────── */}
       <EditProfileDialog
         open={showEditProfile}
         onOpenChange={setShowEditProfile}

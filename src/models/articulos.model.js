@@ -53,6 +53,8 @@ export async function create(data) {
 export async function update(id, data) {
   const conn = await getConnection();
   try {
+    const { idArticulo: _idArticulo, ...updateData } = data;
+
     await conn.execute(
       `UPDATE ARTICULOS SET
          DESCRIPCION = :descripcion,
@@ -62,7 +64,7 @@ export async function update(id, data) {
          MANEJA_INVENTARIO = :manejaInventario,
          ID_CATEGORIA = :idCategoria
        WHERE ID_ARTICULO = :id`,
-      { ...data, id },
+      { ...updateData, id },
       { autoCommit: true }
     );
   } finally {

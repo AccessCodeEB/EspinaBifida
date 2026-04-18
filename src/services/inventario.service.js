@@ -26,22 +26,34 @@ function normalizeMovimientoData(data = {}) {
 }
 
 function mapInventarioRow(row) {
+  const inventarioActual = Number(row.INVENTARIO_ACTUAL || 0);
+
   return {
-    idArticulo: row.ID_ARTICULO,
-    nombre:     row.DESCRIPCION,
-    stock:      Number(row.INVENTARIO_ACTUAL || 0),
+    idArticulo:       row.ID_ARTICULO,
+    descripcion:      row.DESCRIPCION,
+    unidad:           row.UNIDAD,
+    cuotaRecuperacion: row.CUOTA_RECUPERACION,
+    inventarioActual,
+    // Compatibilidad legacy para consumidores que aún esperan esta forma.
+    nombre:           row.DESCRIPCION,
+    stock:            inventarioActual,
   };
 }
 
 function mapMovimientoRow(row) {
+  const cantidad = Number(row.CANTIDAD || 0);
+
   return {
-    idMovimiento: row.ID_MOVIMIENTO,
-    idArticulo:   row.ID_ARTICULO,
-    articulo:     row.DESCRIPCION,
-    tipo:         row.TIPO_MOVIMIENTO,
-    cantidad:     Number(row.CANTIDAD || 0),
-    motivo:       row.MOTIVO,
-    fecha:        row.FECHA,
+    idMovimiento:  row.ID_MOVIMIENTO,
+    idArticulo:    row.ID_ARTICULO,
+    descripcion:   row.DESCRIPCION,
+    tipoMovimiento: row.TIPO_MOVIMIENTO,
+    cantidad,
+    motivo:        row.MOTIVO,
+    fecha:         row.FECHA,
+    // Compatibilidad legacy para consumidores que aún esperan esta forma.
+    articulo:      row.DESCRIPCION,
+    tipo:          row.TIPO_MOVIMIENTO,
   };
 }
 
