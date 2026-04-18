@@ -6,7 +6,14 @@
 
 import { tokenStorage } from "@/lib/token"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
+/**
+ * Backend Express (por defecto puerto 3000). NO usar el puerto del front (3001):
+ * si las peticiones van al mismo Next, la respuesta es HTML y falla JSON.parse.
+ */
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(
+  /\/$/,
+  ""
+)
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -32,8 +39,9 @@ async function request<T>(
     },
   })
 
+  const text = await res.text().catch(() => "")
+
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText)
     let message = text
     try {
       const parsed = JSON.parse(text) as { message?: string; error?: string }
@@ -48,7 +56,20 @@ async function request<T>(
   // 204 No Content — no intentar parsear JSON
   if (res.status === 204) return undefined as T
 
-  return res.json() as Promise<T>
+  const trimmed = text.trim()
+  if (trimmed === "") return undefined as T
+
+  try {
+    return JSON.parse(trimmed) as T
+  } catch {
+    const htmlHint = trimmed.startsWith("<")
+      ? " El servidor respondió HTML en lugar de JSON. Comprueba NEXT_PUBLIC_API_URL (debe ser el backend, p. ej. http://localhost:3000)."
+      : ""
+    throw new ApiError(
+      502,
+      `Respuesta no JSON desde ${url}.${htmlHint}`
+    )
+  }
 }
 
 export const apiClient = {

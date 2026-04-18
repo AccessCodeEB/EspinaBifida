@@ -1,12 +1,17 @@
-# 🔐 Environment variables
+# 🔐 Variables de entorno con secretos (no versionar)
+# Nota: no usar `.env.*` suelto — ignoraría también `.env.example` (plantilla sin secretos).
 .env
-.env.*
+**/.env.local
+**/.env.*.local
+
+# Plantillas de ejemplo (sí versionar)
+!.env.example
+!**/.env.example
 
 # 📦 Node modules
 node_modules/
 frontend/node_modules/
 frontend/.next/
-frontend/.env.local
 
 # 🧪 Coverage
 coverage/

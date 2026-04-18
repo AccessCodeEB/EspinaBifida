@@ -41,6 +41,12 @@ npm install
 npm run dev
 ```
 
+### Frontend (Next.js) y variables públicas
+
+- **Express (API)** suele ir en el puerto **3000**; **Next** en **3001**. Las peticiones del navegador deben apuntar al API, no al propio Next (si no, la respuesta es HTML y falla el JSON).
+- En el repo va **`frontend/.env.example`**: plantilla **sin secretos**, para que el equipo sepa qué variable existe. **Sí se versiona.**
+- **`frontend/.env.local`** (u overrides locales) **no** se versiona: créalo solo si necesitas otro host/puerto; está en `.gitignore`.
+
 ---
 
 ## Estructura del proyecto

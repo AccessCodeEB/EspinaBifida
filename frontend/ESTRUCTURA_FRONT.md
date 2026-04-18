@@ -83,9 +83,9 @@ Accesscode_PR/
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | URL base del backend JS/Oracle | `http://localhost:3001` |
+| `NEXT_PUBLIC_API_URL` | URL base del backend JS/Oracle (Express) | `http://localhost:3000` |
 
-> Copia `.env.local.example` como `.env.local` y ajusta el valor.
+> Copia `frontend/.env.example` como `frontend/.env.local` si necesitas otro host/puerto.
 
 ---
 
@@ -129,14 +129,14 @@ Backend JS + Oracle DB
 
 ---
 
-## Rewrites en desarrollo
+## Rewrites en desarrollo (opcional)
 
-`next.config.mjs` incluye un rewrite que redirige `/api/*` → backend, evitando CORS en local:
+`next.config.mjs` puede redirigir peticiones a **Next** (`/api/*` en el puerto del front) hacia el backend. El cliente en `lib/api-client.ts` usa por defecto **`http://localhost:3000`** (API directa con CORS ya permitido en Express).
 
 ```
-Browser → localhost:3000/api/beneficiarios
+Browser → localhost:3001/api/beneficiarios
                  ↓ (rewrite Next.js)
-         localhost:3001/beneficiarios
+         localhost:3000/beneficiarios
 ```
 
 En producción, configura el proxy a nivel de servidor web (nginx, etc.).
