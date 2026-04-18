@@ -26,6 +26,16 @@ export interface MovimientoPayload {
   motivo: string
 }
 
+export interface NuevoArticuloPayload {
+  idArticulo: number
+  descripcion: string
+  unidad: string
+  cuotaRecuperacion: number
+  inventarioActual: number
+  manejaInventario: "S" | "N"
+  idCategoria: number
+}
+
 /** GET /inventario */
 export function getInventario() {
   return apiClient.get<ArticuloInventario[]>("/inventario")
@@ -39,4 +49,14 @@ export function getMovimientos() {
 /** POST /inventario/movimientos */
 export function registrarMovimiento(data: MovimientoPayload) {
   return apiClient.post<{ message: string; data: MovimientoInventario }>("/inventario/movimientos", data)
+}
+
+/** POST /articulos */
+export function crearArticulo(data: NuevoArticuloPayload) {
+  return apiClient.post<{ message: string }>("/articulos", data)
+}
+
+/** DELETE /articulos/:id */
+export function eliminarArticulo(idArticulo: string | number) {
+  return apiClient.delete<{ message: string }>(`/articulos/${idArticulo}`)
 }

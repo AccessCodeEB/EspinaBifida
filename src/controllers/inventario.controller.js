@@ -1,37 +1,97 @@
 import * as InventarioService from "../services/inventario.service.js";
-import { toCamel } from "../utils/dbTransform.js";
+
+function pickValue(row, keys) {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null) return row[key];
+  }
+  return undefined;
+}
 
 function formatCuota(valor) {
   const n = Number(valor ?? 0);
   return `$${n.toFixed(2)}`;
 }
 
+function normalizeUnidad(valor) {
+  const raw = String(valor ?? "").trim();
+  if (!raw) return "PZA.";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  const upper = raw.toUpperCase();
+  if (upper === "PIEZA" || upper === "PZA" || upper === "PZA.") {
+    return "PZA.";
+  }
+
+  return raw;
+}
+
 function mapArticulo(row) {
-  const r = toCamel(row);
+  const idArticulo = pickValue(row, ["idArticulo", "ID_ARTICULO", "idarticulo"]);
+  const descripcion = pickValue(row, ["descripcion", "DESCRIPCION", "nombre", "NOMBRE"]);
+  const unidad = pickValue(row, ["unidad", "UNIDAD"]);
+  const cuotaRecuperacion = pickValue(row, [
+    "cuotaRecuperacion",
+    "CUOTA_RECUPERACION",
+    "cuotarecuperacion",
+  ]);
+  const inventarioActual = pickValue(row, [
+    "inventarioActual",
+    "INVENTARIO_ACTUAL",
+    "inventarioactual",
+    "stock",
+    "STOCK",
+  ]);
+
   return {
-    clave:       r.idArticulo,
-    descripcion: r.descripcion ?? "",
-    unidad:      r.unidad ?? "Pieza",
-    cuota:       formatCuota(r.cuotaRecuperacion),
-    cantidad:    Number(r.inventarioActual ?? 0),
+    clave:       idArticulo,
+    descripcion: descripcion ?? "",
+    unidad:      normalizeUnidad(unidad),
+    cuota:       formatCuota(cuotaRecuperacion),
+    cantidad:    Number(inventarioActual ?? 0),
     minimo:      0,
   };
 }
 
 function mapMovimiento(row) {
-  const r = toCamel(row);
+  const fechaRaw = pickValue(row, ["fecha", "FECHA"]);
   let fechaStr = "";
-  if (r.fecha) {
-    const d = r.fecha instanceof Date ? r.fecha : new Date(r.fecha);
-    fechaStr = isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
+  if (fechaRaw) {
+    const d = fechaRaw instanceof Date ? fechaRaw : new Date(fechaRaw);
+    fechaStr = isNaN(d.getTime()) ? String(fechaRaw).slice(0, 10) : d.toISOString().slice(0, 10);
   }
+
   return {
-    id:          r.idMovimiento,
-    idArticulo:  r.idArticulo,
-    descripcion: r.descripcion,
-    tipo:        r.tipoMovimiento,
-    cantidad:    Number(r.cantidad ?? 0),
-    motivo:      r.motivo,
+    id:          pickValue(row, ["idMovimiento", "ID_MOVIMIENTO", "idmovimiento"]),
+    idArticulo:  pickValue(row, ["idArticulo", "ID_ARTICULO", "idarticulo"]),
+    descripcion: pickValue(row, ["descripcion", "DESCRIPCION", "articulo", "ARTICULO"]),
+    tipo:        pickValue(row, ["tipoMovimiento", "TIPO_MOVIMIENTO", "tipomovimiento", "tipo", "TIPO"]),
+    cantidad:    Number(pickValue(row, ["cantidad", "CANTIDAD"]) ?? 0),
+    motivo:      pickValue(row, ["motivo", "MOTIVO"]),
     fecha:       fechaStr,
   };
 }

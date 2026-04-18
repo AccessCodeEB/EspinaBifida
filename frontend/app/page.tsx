@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Settings, Moon, User, Save, Lock, Send, CheckCircle, Shield, LogOut } from "lucide-react"
 import { FloatingNav } from "@/components/app-sidebar"
 import { useCurrentUser } from "@/hooks/use-current-user"
@@ -64,6 +64,13 @@ export default function Page() {
   const [showEditData, setShowEditData] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode)
+    return () => {
+      document.documentElement.classList.remove("dark")
+    }
+  }, [darkMode])
+
   const {
     needsLogin,
     loginForm, setLoginForm,
@@ -83,7 +90,7 @@ export default function Page() {
   } = useAdminData(showEditData)
 
   return (
-    <div className={darkMode ? "dark" : ""}>
+    <div>
       <div className="min-h-screen w-full bg-background">
         <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
           <FloatingNav activeSection={activeSection} onSectionChange={setActiveSection} />
