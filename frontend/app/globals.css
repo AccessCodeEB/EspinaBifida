@@ -147,14 +147,7 @@
 }
 
 @layer components {
-  /* Sonner: bloque centrado en vertical (viewport), sin anclar arriba */
-  [data-sonner-toaster].sonner-app-toaster {
-    top: 50% !important;
-    bottom: auto !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translate(-50%, -50%) !important;
-  }
+  /* Sonner: no forzar posición aquí; respeta `position` del <Toaster> (p. ej. top-center). */
 
   /* Salida más estable: menos propiedades animadas, sin interacción al desmontar */
   [data-sonner-toaster] [data-sonner-toast] {
