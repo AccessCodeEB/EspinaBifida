@@ -41,6 +41,32 @@ function parseAndValidateDate(dateStr, fieldName) {
   return value;
 }
 
+function normalizeConsumos(consumos) {
+  if (consumos === undefined || consumos === null) return [];
+  if (!Array.isArray(consumos)) {
+    throw badRequest("consumos debe ser un arreglo");
+  }
+
+  return consumos.map((item, index) => {
+    const idProducto = Number(item?.idProducto ?? item?.idArticulo);
+    const cantidad = Number(item?.cantidad);
+
+    if (!Number.isInteger(idProducto) || idProducto <= 0) {
+      throw badRequest(`consumos[${index}].idProducto debe ser entero positivo`);
+    }
+
+    if (Number.isNaN(cantidad) || cantidad <= 0) {
+      throw badRequest(`consumos[${index}].cantidad debe ser mayor a 0`);
+    }
+
+    return {
+      idProducto,
+      cantidad,
+      motivo: item?.motivo ? String(item.motivo).trim() : null,
+    };
+  });
+}
+
 export const getAll = () => ServiciosModel.findAll();
 
 export async function createConValidacion(data) {
@@ -72,6 +98,7 @@ export async function createConValidacion(data) {
     data.referenciaTipo !== undefined && data.referenciaTipo !== null
       ? String(data.referenciaTipo).trim().toUpperCase()
       : null;
+  const consumos = normalizeConsumos(data.consumos);
 
   const beneficiario = await ServiciosModel.findBeneficiarioActivo(curp);
 
@@ -90,7 +117,7 @@ export async function createConValidacion(data) {
     throw conflict("El beneficiario no tiene membresia activa");
   }
 
-  const idServicio = await ServiciosModel.create({
+  const payload = {
     curp,
     idTipoServicio,
     costo,
@@ -98,7 +125,15 @@ export async function createConValidacion(data) {
     referenciaId,
     referenciaTipo,
     notas: data.notas ?? null,
-  });
+  };
+
+  let idServicio;
+  if (consumos.length > 0) {
+    const result = await ServiciosModel.createWithInventarioTransaction(payload, consumos);
+    idServicio = result.idServicio;
+  } else {
+    idServicio = await ServiciosModel.create(payload);
+  }
 
   return {
     message: "Servicio creado exitosamente",

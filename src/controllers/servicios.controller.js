@@ -85,7 +85,16 @@ export async function getDetailed(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const { curp, idTipoServicio, costo, montoPagado, referenciaId, referenciaTipo, notas } = req.body;
+    const {
+      curp,
+      idTipoServicio,
+      costo,
+      montoPagado,
+      referenciaId,
+      referenciaTipo,
+      notas,
+      consumos,
+    } = req.body;
 
     // Validar campos requeridos
     if (!curp || !idTipoServicio || costo === undefined) {
@@ -99,7 +108,8 @@ export async function create(req, res, next) {
       montoPagado: montoPagado ?? 0,
       referenciaId: referenciaId || null,
       referenciaTipo: referenciaTipo || null,
-      notas: notas || null
+      notas: notas || null,
+      consumos: consumos ?? [],
     });
 
     res.status(201).json(resultado);

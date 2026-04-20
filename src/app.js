@@ -9,6 +9,7 @@ import articulosRoutes        from "./routes/articulos.routes.js";
 import citasRoutes            from "./routes/citas.routes.js";
 import membresiasRoutes       from "./routes/membresias.routes.js";
 import inventarioRoutes       from "./routes/inventario.routes.js";
+import inventarioV1Routes     from "./routes/inventario.v1.routes.js";
 import administradoresRoutes  from "./routes/administradores.routes.js";
 import rolesRoutes            from "./routes/roles.routes.js";
 
@@ -29,10 +30,12 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 app.use("/beneficiarios",  beneficiariosRoutes);
 app.use("/servicios",      serviciosRoutes);
+app.use("/api/v1/servicios", serviciosRoutes);
 app.use("/articulos",      articulosRoutes);
 app.use("/citas",          citasRoutes);
 app.use("/membresias",     membresiasRoutes);
 app.use("/inventario",     inventarioRoutes);
+app.use("/api/v1",         inventarioV1Routes);
 app.use("/administradores",administradoresRoutes);
 app.use("/roles",          rolesRoutes);
 

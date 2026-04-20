@@ -64,6 +64,14 @@ export function errorHandler(err, req, res, _next) {
     console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
   }
 
+  if (code === "INSUFFICIENT_STOCK") {
+    return res.status(422).json({
+      error: "Stock insuficiente",
+      code: "INSUFFICIENT_STOCK",
+      disponible: Number(details?.disponible ?? 0),
+    });
+  }
+
   const body = { code, message };
   if (details !== undefined) body.details = details;
 

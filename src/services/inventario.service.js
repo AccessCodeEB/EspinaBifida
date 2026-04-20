@@ -2,9 +2,10 @@ import * as InventarioModel from "../models/inventario.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
 
 function normalizeMovimientoData(data = {}) {
-  const idArticulo = Number(data.idArticulo);
+  const rawIdProducto = data.idProducto ?? data.idArticulo;
+  const idArticulo = Number(rawIdProducto);
   if (Number.isNaN(idArticulo)) {
-    throw badRequest("idArticulo debe ser numérico", "INVALID_ID");
+    throw badRequest("idProducto debe ser numérico", "INVALID_ID");
   }
 
   const tipo = String(data.tipo || "").trim().toUpperCase();
@@ -29,13 +30,14 @@ function mapInventarioRow(row) {
   const inventarioActual = Number(row.INVENTARIO_ACTUAL || 0);
 
   return {
+    idProducto:       row.ID_ARTICULO,
+    nombre:           row.DESCRIPCION,
+    stockActual:      inventarioActual,
+    unidad:           row.UNIDAD,
     idArticulo:       row.ID_ARTICULO,
     descripcion:      row.DESCRIPCION,
-    unidad:           row.UNIDAD,
     cuotaRecuperacion: row.CUOTA_RECUPERACION,
     inventarioActual,
-    // Compatibilidad legacy para consumidores que aún esperan esta forma.
-    nombre:           row.DESCRIPCION,
     stock:            inventarioActual,
   };
 }
@@ -44,6 +46,7 @@ function mapMovimientoRow(row) {
   const cantidad = Number(row.CANTIDAD || 0);
 
   return {
+    idProducto:    row.ID_ARTICULO,
     idMovimiento:  row.ID_MOVIMIENTO,
     idArticulo:    row.ID_ARTICULO,
     descripcion:   row.DESCRIPCION,
@@ -51,7 +54,7 @@ function mapMovimientoRow(row) {
     cantidad,
     motivo:        row.MOTIVO,
     fecha:         row.FECHA,
-    // Compatibilidad legacy para consumidores que aún esperan esta forma.
+    stockResultante: Number(row.STOCK_RESULTANTE ?? 0),
     articulo:      row.DESCRIPCION,
     tipo:          row.TIPO_MOVIMIENTO,
   };
