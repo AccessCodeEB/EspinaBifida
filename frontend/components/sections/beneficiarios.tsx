@@ -65,17 +65,17 @@ function getEstatusBadge(estatus: string) {
   }
 }
 
-/** Anillo del avatar en tarjetas del grid: verde / amarillo / rojo según estatus (opacidad suave). */
-function tarjetaAvatarRing(estatus: string) {
+// NUEVO: Helper para los colores del contorno de la foto de perfil
+function getPhotoRingClasses(estatus?: string) {
   switch (estatus) {
     case "Activo":
-      return "ring-success/50"
+      return "bg-success/10 text-success ring-2 ring-offset-2 ring-offset-background ring-success"
     case "Inactivo":
-      return "ring-warning/50"
+      return "bg-warning/10 text-warning ring-2 ring-offset-2 ring-offset-background ring-warning"
     case "Baja":
-      return "ring-destructive/50"
+      return "bg-destructive/10 text-destructive ring-2 ring-offset-2 ring-offset-background ring-destructive"
     default:
-      return "ring-muted-foreground/35"
+      return "bg-muted text-muted-foreground ring-2 ring-offset-2 ring-offset-background ring-border"
   }
 }
 
@@ -122,7 +122,7 @@ function DetailGroup({ title, icon: Icon, children }: { title: string; icon: Rea
   const hasContent = React.Children.toArray(children).some((c) => React.isValidElement(c))
   if (!hasContent) return null
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-2xl border border-border/50 bg-muted/20 p-6 shadow-sm transition-all hover:bg-muted/30">
       <div className="flex items-center gap-2.5 mb-5 border-b border-border/50 pb-3">
         <div className="p-1.5 bg-background border border-border/50 rounded-lg text-primary shadow-sm">
           <Icon className="size-4" />
@@ -195,16 +195,7 @@ export function BeneficiariosSection() {
     handleAltaChange, handleAltaSubmit, handleDarDeBaja,
     fotoUploading, handleUploadFotoBeneficiario, handleDeleteFotoBeneficiario,
     altaFotoPreview, handleAltaFotoSelected,
-    fotoBustByCurp,
   } = useBeneficiarios()
-
-  useEffect(() => {
-    if (!credencialBeneficiario) return
-    const key = (credencialBeneficiario.curp ?? credencialBeneficiario.folio).toUpperCase()
-    const row = beneficiarios.find((b) => (b.curp ?? b.folio).toUpperCase() === key)
-    if (!row || row.fotoPerfilUrl === credencialBeneficiario.fotoPerfilUrl) return
-    setCredencialBeneficiario(row)
-  }, [beneficiarios, credencialBeneficiario])
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
@@ -272,28 +263,18 @@ export function BeneficiariosSection() {
         </Button>
       </div>
 
-      {/* ── Grid de tarjetas ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Grid de tarjetas (columnas de 264px, sin huecos por fracciones del viewport) ── */}
+      <div className="grid justify-center gap-2 sm:gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,264px),264px))]">
         {filtered.map((b) => {
           const initials = `${b.nombres[0] || ""}${b.apellidoPaterno[0] || ""}`
           const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
-          const curpKey = (b.curp ?? b.folio).toUpperCase()
-          const cardPhoto = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined, fotoBustByCurp[curpKey])
+          const cardPhoto = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined)
           return (
-            <Card key={b.folio} className="flex flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
-              <div
-                className={cn(
-                  "mb-2 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary text-lg font-bold ring-4 shadow-sm",
-                  tarjetaAvatarRing(b.estatus)
-                )}
-              >
+            <Card key={b.folio} className="flex w-full min-w-0 flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
+              <div className={cn("mb-3 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold shadow-sm", getPhotoRingClasses(b.estatus))}>
                 {cardPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={cardPhoto}
-                    alt=""
-                    className={cn("size-full object-cover", b.estatus === "Baja" && "grayscale")}
-                  />
+                  <img src={cardPhoto} alt="" className="size-full object-cover" />
                 ) : (
                   initials
                 )}
@@ -304,20 +285,20 @@ export function BeneficiariosSection() {
                 <MapPin className="size-3 shrink-0" />
                 <span className="text-xs truncate">{b.ciudad}, {b.estado}</span>
               </div>
-              <div className="mt-5 flex items-center justify-between gap-3 w-full">
+              <div className="mt-5 flex w-full items-center justify-center gap-2">
                 <Button
                   variant="outline" size="sm"
-                  className="flex-1 h-8 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
                   onClick={() => { setSelectedBeneficiario(b); setShowExpedienteDialog(true) }}
                 >
-                  <Eye className="size-3.5 mr-1.5" />Detalles
+                  <Eye className="size-3.5 shrink-0" />Detalles
                 </Button>
                 <Button
                   variant="outline" size="sm"
-                  className="flex-1 h-8 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
                   onClick={() => setCredencialBeneficiario(b)}
                 >
-                  <CreditCard className="size-3.5 mr-1.5" />Credencial
+                  <CreditCard className="size-3.5 shrink-0" />Credencial
                 </Button>
               </div>
             </Card>
@@ -334,25 +315,24 @@ export function BeneficiariosSection() {
           className="max-w-4xl w-[calc(100vw-2rem)] max-h-[min(90vh,900px)] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl sm:rounded-3xl"
         >
           {selectedBeneficiario && (() => {
-            const expCurp = (selectedBeneficiario.curp ?? selectedBeneficiario.folio).toUpperCase()
-            const expBust = fotoBustByCurp[expCurp] ?? 0
-            return (
+             // Solo leemos la URL de la foto; no se sube nada desde esta vista.
+             const fotoUrl = resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
+             return (
             <>
               {/* Encabezado del Expediente */}
               <div className="shrink-0 bg-background border-b border-border/40 px-6 py-6 sm:px-8">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <ProfilePhotoUpload
-                      variant="detail"
-                      size="lg"
-                      imageRevision={expBust}
-                      fotoPerfilUrl={selectedBeneficiario.fotoPerfilUrl}
-                      fallbackText={`${selectedBeneficiario.nombres[0] || ""}${selectedBeneficiario.apellidoPaterno[0] || ""}`}
-                      uploading={fotoUploading}
-                      disabled={selectedBeneficiario.estatus === "Baja"}
-                      grayscale={selectedBeneficiario.estatus === "Baja"}
-                      onFileSelected={(file) => handleUploadFotoBeneficiario(expCurp, file)}
-                    />
+                    
+                    {/* FOTO DE PERFIL ESTÁTICA (Lectura) CON ANILLO DE ESTATUS */}
+                    <div className={cn("flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm", getPhotoRingClasses(selectedBeneficiario.estatus))}>
+                      {fotoUrl ? (
+                         // eslint-disable-next-line @next/next/no-img-element
+                        <img src={fotoUrl} alt="Perfil" className="size-full object-cover" />
+                      ) : (
+                        `${selectedBeneficiario.nombres[0] || ""}${selectedBeneficiario.apellidoPaterno[0] || ""}`
+                      )}
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <DialogTitle className="text-2xl font-bold text-foreground">
@@ -382,7 +362,7 @@ export function BeneficiariosSection() {
               </div>
 
               {/* Contenido del Expediente */}
-              <div className="flex-1 min-h-0 overflow-y-auto bg-background px-6 py-6 sm:px-8 scrollbar-hide">
+              <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8 scrollbar-hide">
                 <div className="space-y-6 pb-2">
                   <DetailGroup title="Información Personal" icon={User}>
                     <DetailField label="Nombres" value={selectedBeneficiario.nombres} />
@@ -445,8 +425,8 @@ export function BeneficiariosSection() {
                 </Button>
               </div>
             </>
-            )
-          })()}
+          )}
+          )()}
         </DialogContent>
       </Dialog>
 
@@ -459,11 +439,7 @@ export function BeneficiariosSection() {
       >
         <DialogContent className="max-w-md w-[calc(100vw-2rem)] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-2xl">
           {credencialBeneficiario && (() => {
-            const credKey = (credencialBeneficiario.curp ?? credencialBeneficiario.folio).toUpperCase()
-            const credPhoto = resolvePublicUploadUrl(
-              credencialBeneficiario.fotoPerfilUrl ?? undefined,
-              fotoBustByCurp[credKey]
-            )
+            const credPhoto = resolvePublicUploadUrl(credencialBeneficiario.fotoPerfilUrl ?? undefined)
             return (
             <>
               <div className="border-b border-border/50 bg-primary/5 px-6 py-4">
@@ -487,17 +463,11 @@ export function BeneficiariosSection() {
                     </span>
                   </div>
                   <div className="flex gap-4 p-4">
-                    <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-lg font-bold text-primary ring-2 ring-primary/15">
+                    {/* FOTO EN CREDENCIAL CON ANILLO DE ESTATUS */}
+                    <div className={cn("flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl text-lg font-bold shadow-sm", getPhotoRingClasses(credencialBeneficiario.estatus))}>
                       {credPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={credPhoto}
-                          alt=""
-                          className={cn(
-                            "size-full object-cover",
-                            credencialBeneficiario.estatus === "Baja" && "grayscale"
-                          )}
-                        />
+                        <img src={credPhoto} alt="" className="size-full object-cover" />
                       ) : (
                         <>
                           {(credencialBeneficiario.nombres[0] || "")}
@@ -936,7 +906,7 @@ export function BeneficiariosSection() {
             </DialogHeader>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 pt-5 pb-8 space-y-6 bg-muted/10">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 space-y-6 bg-muted/10">
             {saveError && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
                 <XCircle className="size-4 shrink-0" />{saveError}
@@ -997,28 +967,32 @@ export function BeneficiariosSection() {
               {/* DISEÑO MEJORADO: Foto de Perfil en Editar */}
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <div className="shrink-0">
+                  <div className="shrink-0 relative group">
                     <ProfilePhotoUpload
                       variant="form"
                       size="md"
-                      imageRevision={fotoBustByCurp[String(editForm.curp ?? editForm.folio ?? "").toUpperCase()] || 0}
                       fotoPerfilUrl={editForm.fotoPerfilUrl}
                       fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
                       uploading={fotoUploading}
                       disabled={editForm.estatus === "Baja"}
-                      grayscale={editForm.estatus === "Baja"}
                       onFileSelected={(file) =>
                         handleUploadFotoBeneficiario(
                           String(editForm.curp ?? editForm.folio ?? "").toUpperCase(),
                           file
                         )
                       }
-                      onRemovePhotoRequest={
-                        editForm.estatus !== "Baja" && editForm.fotoPerfilUrl
-                          ? () => setRemoveFotoConfirmOpen(true)
-                          : undefined
-                      }
                     />
+                    {/* Botón flotante para eliminar foto si existe */}
+                    {editForm.fotoPerfilUrl && !fotoUploading && editForm.estatus !== "Baja" && (
+                      <button
+                        type="button"
+                        onClick={() => setRemoveFotoConfirmOpen(true)}
+                        className="absolute -top-2 -right-2 bg-background border border-border text-destructive p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
+                        title="Eliminar foto"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
@@ -1227,7 +1201,8 @@ export function BeneficiariosSection() {
           </div>
         </DialogContent>
       </Dialog>
-
+      
+      {/* ── Dialog: Confirmación de Borrado de Foto ─────────────────────── */}
       <AlertDialog open={removeFotoConfirmOpen} onOpenChange={setRemoveFotoConfirmOpen}>
         <AlertDialogContent className="w-full max-w-xs gap-3 p-5 sm:max-w-xs">
           <AlertDialogHeader>
@@ -1265,6 +1240,7 @@ export function BeneficiariosSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
     </div>
   )
 }
