@@ -36,9 +36,45 @@ export interface NuevoArticuloPayload {
   idCategoria: number
 }
 
+function toArticuloInventario(row: Record<string, unknown>): ArticuloInventario {
+  const clave =
+    (row.clave as string | number | undefined) ??
+    (row.idProducto as string | number | undefined) ??
+    (row.idArticulo as string | number | undefined) ??
+    "";
+
+  const descripcion =
+    (row.descripcion as string | undefined) ??
+    (row.nombre as string | undefined) ??
+    "";
+
+  const unidad = String(row.unidad ?? "PZA.");
+
+  const cuotaRaw = row.cuota ?? row.cuotaRecuperacion ?? 0;
+  const cuota =
+    typeof cuotaRaw === "string"
+      ? cuotaRaw
+      : `$${Number(cuotaRaw || 0).toFixed(2)}`;
+
+  const cantidadRaw = row.cantidad ?? row.stockActual ?? row.inventarioActual ?? row.stock ?? 0;
+  const cantidad = Number(cantidadRaw || 0);
+
+  const minimo = Number(row.minimo ?? 0);
+
+  return {
+    clave,
+    descripcion,
+    unidad,
+    cuota,
+    cantidad,
+    minimo,
+  };
+}
+
 /** GET /inventario */
-export function getInventario() {
-  return apiClient.get<ArticuloInventario[]>("/inventario")
+export async function getInventario() {
+  const rows = await apiClient.get<Record<string, unknown>[]>("/inventario")
+  return rows.map(toArticuloInventario)
 }
 
 /** GET /inventario/movimientos */

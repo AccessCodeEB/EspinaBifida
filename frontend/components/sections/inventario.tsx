@@ -36,6 +36,7 @@ import {
 
 type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
 type SortDirection = "asc" | "desc"
+const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 
 export function InventarioSection() {
   const [inventario, setInventario]   = useState<ArticuloInventario[]>([])
@@ -60,6 +61,8 @@ export function InventarioSection() {
     inventarioActual: "0",
     idCategoria: "1",
   })
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>("PZA.")
+  const [unidadNueva, setUnidadNueva] = useState<string>("")
   const [deleteArticuloId, setDeleteArticuloId] = useState("")
   const [deletePickerOpen, setDeletePickerOpen] = useState(false)
   const [articuloError, setArticuloError] = useState<string | null>(null)
@@ -85,6 +88,8 @@ export function InventarioSection() {
   const unidadesDisponibles = Array.from(
     new Set(inventario.map((item) => item.unidad).filter((u) => String(u ?? "").trim() !== ""))
   ).sort((a, b) => a.localeCompare(b, "es"))
+  const unidadesParaAlta = Array.from(new Set(["PZA.", ...unidadesDisponibles]))
+    .sort((a, b) => a.localeCompare(b, "es"))
 
   const activeUnidadFilter = unidadFilterIndex >= 0 ? unidadesDisponibles[unidadFilterIndex] : null
 
@@ -239,7 +244,20 @@ export function InventarioSection() {
       inventarioActual: "0",
       idCategoria: "1",
     })
+    setUnidadSeleccionada("PZA.")
+    setUnidadNueva("")
     setShowAgregarDialog(true)
+  }
+
+  function handleUnidadSeleccion(value: string) {
+    setUnidadSeleccionada(value)
+
+    if (value === OTRA_UNIDAD_VALUE) {
+      return
+    }
+
+    setUnidadNueva("")
+    setArticuloForm((prev) => ({ ...prev, unidad: value }))
   }
 
   function openEliminarArticulo() {
@@ -275,7 +293,12 @@ export function InventarioSection() {
       setArticuloError("La descripción es obligatoria.")
       return
     }
-    if (!articuloForm.unidad.trim()) {
+    const unidadFinal =
+      unidadSeleccionada === OTRA_UNIDAD_VALUE
+        ? unidadNueva.trim()
+        : articuloForm.unidad.trim()
+
+    if (!unidadFinal) {
       setArticuloError("La unidad es obligatoria.")
       return
     }
@@ -299,7 +322,7 @@ export function InventarioSection() {
       await crearArticulo({
         idArticulo,
         descripcion: articuloForm.descripcion.trim(),
-        unidad: articuloForm.unidad.trim(),
+        unidad: unidadFinal,
         cuotaRecuperacion,
         inventarioActual,
         manejaInventario: "S",
@@ -569,10 +592,26 @@ export function InventarioSection() {
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label>Unidad</Label>
-                <Input
-                  value={articuloForm.unidad}
-                  onChange={(e) => setArticuloForm((p) => ({ ...p, unidad: e.target.value }))}
-                />
+                <Select value={unidadSeleccionada} onValueChange={handleUnidadSeleccion}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una unidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidadesParaAlta.map((unidad, idx) => (
+                      <SelectItem key={`unidad-${idx}-${unidad}`} value={unidad}>
+                        {unidad}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={OTRA_UNIDAD_VALUE}>Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+                {unidadSeleccionada === OTRA_UNIDAD_VALUE && (
+                  <Input
+                    placeholder="Escribe la nueva unidad"
+                    value={unidadNueva}
+                    onChange={(e) => setUnidadNueva(e.target.value)}
+                  />
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Categoría (ID)</Label>
