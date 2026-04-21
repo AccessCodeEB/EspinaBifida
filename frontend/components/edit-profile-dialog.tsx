@@ -263,7 +263,6 @@ export function EditProfileDialog({
                     <div className="text-center sm:text-left space-y-1">
                       <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
                         Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
                       </p>
                     </div>

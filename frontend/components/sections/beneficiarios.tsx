@@ -916,12 +916,13 @@ export function BeneficiariosSection() {
             {/* ── Tarjeta de Estado de Membresía ── */}
             <div className="rounded-xl border border-border/60 bg-background shadow-sm overflow-hidden mb-6">
               {editForm.estatus === "Baja" ? (
-                <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/30">
+                <div className="flex flex-col gap-4 bg-muted/30 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="text-base font-semibold text-muted-foreground flex items-center gap-2">
-                      <XCircle className="size-5" /> Beneficiario en estado de baja
+                    <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                      <XCircle className="size-5 shrink-0 text-destructive" aria-hidden />
+                      Beneficiario en estado de baja
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Para eliminar el expediente permanentemente, usa el botón rojo en la parte inferior.
                     </p>
                   </div>
@@ -929,7 +930,7 @@ export function BeneficiariosSection() {
                     type="button"
                     variant="outline"
                     onClick={() => handleEditChange("estatus", "Inactivo")}
-                    className="shrink-0 bg-background"
+                    className="shrink-0 self-start bg-background sm:self-auto"
                   >
                     Restaurar expediente
                   </Button>
@@ -967,7 +968,7 @@ export function BeneficiariosSection() {
               {/* DISEÑO MEJORADO: Foto de Perfil en Editar */}
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <div className="shrink-0 relative group">
+                  <div className="shrink-0">
                     <ProfilePhotoUpload
                       variant="form"
                       size="md"
@@ -981,23 +982,16 @@ export function BeneficiariosSection() {
                           file
                         )
                       }
+                      onRemovePhotoRequest={
+                        editForm.fotoPerfilUrl && editForm.estatus !== "Baja"
+                          ? () => setRemoveFotoConfirmOpen(true)
+                          : undefined
+                      }
                     />
-                    {/* Botón flotante para eliminar foto si existe */}
-                    {editForm.fotoPerfilUrl && !fotoUploading && editForm.estatus !== "Baja" && (
-                      <button
-                        type="button"
-                        onClick={() => setRemoveFotoConfirmOpen(true)}
-                        className="absolute -top-2 -right-2 bg-background border border-border text-destructive p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
-                        title="Eliminar foto"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    )}
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
                       Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>
