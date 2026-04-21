@@ -36,11 +36,9 @@ beforeEach(() => {
 describe("Criterios de aceptación - inventario", () => {
   test("Scenario 1: descuenta stock al registrar servicio con consumo", async () => {
     mockExecute
+      // findBeneficiarioActivoConMembresia — consulta JOIN atómica (beneficiario + membresía)
       .mockResolvedValueOnce({
-        rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez" }],
-      })
-      .mockResolvedValueOnce({
-        rows: [{ ID_CREDENCIAL: 1, CURP: "CURP123456HDFABC01" }],
+        rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001" }],
       })
       .mockResolvedValueOnce({ rows: [{ NEXT_ID: 10 }] })
       .mockResolvedValueOnce({ rowsAffected: 1 })
@@ -48,13 +46,16 @@ describe("Criterios de aceptación - inventario", () => {
       .mockResolvedValueOnce({ rowsAffected: 1 })
       .mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).post("/api/v1/servicios").send({
-      curp: "CURP123456HDFABC01",
-      idTipoServicio: 1,
-      costo: 100,
-      montoPagado: 0,
-      consumos: [{ idProducto: 1, cantidad: 3 }],
-    });
+    const res = await request(app)
+      .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        curp: "CURP123456HDFABC01",
+        idTipoServicio: 1,
+        costo: 100,
+        montoPagado: 0,
+        consumos: [{ idProducto: 1, cantidad: 3 }],
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/creado/i);
