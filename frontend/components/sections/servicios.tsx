@@ -46,6 +46,7 @@ export function ServiciosSection() {
   const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string } | null>(null)
   const [tipoServicioSeleccionado, setTipoServicioSeleccionado] = useState("")
   const [montoServicio, setMontoServicio] = useState("")
+  const [descripcionOtro, setDescripcionOtro] = useState("")
   const [fechaServicio, setFechaServicio] = useState(() => new Date().toISOString().split("T")[0])
   const [fechaError, setFechaError] = useState("")
   const [registroError, setRegistroError] = useState("")
@@ -103,6 +104,7 @@ export function ServiciosSection() {
     : null
   const tipoServicioSeleccionadoLabel =
     TIPOS_SERVICIO_SUGERIDOS.find((tipo) => tipo.idTipoServicio === idTipoServicioNumerico)?.nombre ?? ""
+  const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros"
 
   const busquedaNormalizada = busquedaBeneficiario.trim().toLowerCase()
   const sugerenciasBeneficiarios = busquedaNormalizada
@@ -181,6 +183,11 @@ export function ServiciosSection() {
       return
     }
 
+    if (requiereDescripcionOtro && !descripcionOtro.trim()) {
+      setRegistroError("Debe especificar en qué consiste el servicio para la opción 'Otros'")
+      return
+    }
+
     if (fechaEsFutura) {
       setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores.")
       return
@@ -196,6 +203,9 @@ export function ServiciosSection() {
         idTipoServicio: idTipoServicioNumerico,
         costo: montoNum,
         montoPagado: 0,
+        notas: requiereDescripcionOtro
+          ? `Servicio otros: ${descripcionOtro.trim()}`
+          : undefined,
       })
 
       const serviciosActualizados = await getServicios()
@@ -206,6 +216,7 @@ export function ServiciosSection() {
       setBusquedaBeneficiario("")
       setTipoServicioSeleccionado("")
       setMontoServicio("")
+      setDescripcionOtro("")
       setFechaServicio(hoy)
     } catch (err) {
       setRegistroError(err instanceof Error ? err.message : "Error al registrar el servicio")
@@ -229,6 +240,7 @@ export function ServiciosSection() {
           setBusquedaBeneficiario("")
           setTipoServicioSeleccionado("")
           setMontoServicio("")
+          setDescripcionOtro("")
           setFechaServicio(hoy)
           setFechaError("")
           setRegistroError("")
@@ -397,6 +409,25 @@ export function ServiciosSection() {
                 </p>
               )}
             </div>
+
+            {requiereDescripcionOtro && (
+              <div className="flex flex-col gap-2">
+                <Label className="text-base">Especificar servicio</Label>
+                <Input
+                  placeholder="Describe qué servicio se brindó..."
+                  className="h-12 text-base"
+                  value={descripcionOtro}
+                  required
+                  onChange={(e) => {
+                    setDescripcionOtro(e.target.value)
+                    if (registroError) setRegistroError("")
+                  }}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Campo obligatorio para registrar la información del servicio de tipo "Otros".
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
