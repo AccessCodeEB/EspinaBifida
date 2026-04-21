@@ -201,7 +201,7 @@ export function ProfilePhotoUpload({
               >
                 {displaySrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={imgKey} src={displaySrc} alt="" className="pointer-events-none size-full object-cover" />
+                  <img key={imgKey} src={displaySrc} alt="" className="pointer-events-none size-full object-contain object-center" />
                 ) : (
                   <span className="select-none">{fallbackText.slice(0, 2).toUpperCase()}</span>
                 )}
@@ -261,7 +261,7 @@ export function ProfilePhotoUpload({
               >
                 {displaySrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={imgKey} src={displaySrc} alt="" className="pointer-events-none size-full object-cover" />
+                  <img key={imgKey} src={displaySrc} alt="" className="pointer-events-none size-full object-contain object-center" />
                 ) : (
                   <span className="select-none">{fallbackText.slice(0, 2).toUpperCase()}</span>
                 )}

@@ -283,7 +283,7 @@ export function BeneficiariosSection() {
               <div className={cn("mb-3 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold shadow-sm", getPhotoRingClasses(b.estatus))}>
                 {cardPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cardPhoto} alt="" className="size-full object-cover" />
+                  <img src={cardPhoto} alt="" className="size-full object-contain object-center" />
                 ) : (
                   initials
                 )}
@@ -347,7 +347,7 @@ export function BeneficiariosSection() {
                         <img
                           src={fotoUrl}
                           alt="Perfil del beneficiario"
-                          className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-110"
+                          className="size-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                         <ZoomIn className="absolute size-6 text-white opacity-0 drop-shadow-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100" strokeWidth={2} />
@@ -492,15 +492,24 @@ export function BeneficiariosSection() {
                     </span>
                   </div>
                   <div className="flex gap-4 p-4">
-                    <div className={cn("flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl text-lg font-bold shadow-sm", getPhotoRingClasses(credencialBeneficiario.estatus))}>
+                    <div
+                      className={cn(
+                        "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl text-lg font-bold shadow-sm",
+                        getPhotoRingClasses(credencialBeneficiario.estatus)
+                      )}
+                    >
                       {credPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={credPhoto} alt="" className="size-full object-cover" />
+                        <img
+                          src={credPhoto}
+                          alt=""
+                          className="absolute inset-0 size-full object-contain object-center bg-muted/40"
+                        />
                       ) : (
-                        <>
+                        <div className="flex size-full items-center justify-center">
                           {(credencialBeneficiario.nombres?.[0] ?? "")}
                           {(credencialBeneficiario.apellidoPaterno?.[0] ?? "")}
-                        </>
+                        </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
@@ -570,14 +579,15 @@ export function BeneficiariosSection() {
                       fallbackText={`${altaForm.nombres?.[0] ?? "?"}${altaForm.apellidoPaterno?.[0] ?? ""}`}
                       uploading={isSaving}
                       disabled={isSaving}
+                      enableCrop={false}
                       onFileSelected={handleAltaFotoSelected}
                     />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Selecciona una imagen clara del beneficiario. <br className="hidden sm:block" />
-                      Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
+                      Se sube tal cual (sin recorte circular). <br className="hidden sm:block" />
+                      Formatos: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>
                 </div>
@@ -1026,6 +1036,7 @@ export function BeneficiariosSection() {
                       fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
                       uploading={fotoUploading}
                       disabled={editForm.estatus === "Baja"}
+                      enableCrop={false}
                       onFileSelected={(file) =>
                         handleUploadFotoBeneficiario(
                           String(editForm.curp ?? editForm.folio ?? "").toUpperCase(),
@@ -1053,8 +1064,8 @@ export function BeneficiariosSection() {
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
-                      Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
+                      Se sube tal cual (sin recorte). Haz clic en la imagen o elige archivo. <br className="hidden sm:block" />
+                      Formatos: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>
                 </div>
@@ -1323,10 +1334,11 @@ export function BeneficiariosSection() {
       >
         <DialogContent
           showCloseButton={false}
-          overlayClassName="z-[190] bg-black/80 backdrop-blur-sm"
+          overlayClassName="z-[190] bg-black/75"
           className={cn(
-            "z-[200] max-h-[100vh] w-auto gap-0 border-none bg-transparent p-0 shadow-none",
-            "translate-x-[-50%] translate-y-[-50%] outline-none",
+            "z-[200] max-h-[min(92vh,900px)] w-[min(96vw,56rem)] max-w-[min(96vw,56rem)] gap-0 overflow-hidden border border-white/15",
+            "bg-black/92 p-2 shadow-2xl sm:rounded-xl sm:p-4",
+            "translate-x-[-50%] translate-y-[-50%]",
           )}
         >
           <DialogTitle className="sr-only">Foto de perfil ampliada</DialogTitle>
@@ -1334,18 +1346,18 @@ export function BeneficiariosSection() {
             type="button"
             variant="ghost"
             size="icon"
-            className="fixed right-4 top-4 z-[210] size-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            className="absolute right-1 top-1 z-10 size-9 rounded-full text-white hover:bg-white/15 hover:text-white sm:right-2 sm:top-2"
             onClick={() => setFotoPerfilZoomOpen(false)}
             aria-label="Cerrar vista ampliada"
           >
-            <X className="size-6" />
+            <X className="size-5" />
           </Button>
           {fotoZoomUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={fotoZoomUrl}
               alt="Foto de perfil"
-              className="mx-auto aspect-square max-h-[min(85vh,800px)] w-auto object-cover rounded-full shadow-2xl"
+              className="mx-auto max-h-[min(85vh,820px)] w-full object-contain rounded-lg"
             />
           ) : null}
         </DialogContent>
