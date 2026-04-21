@@ -25,6 +25,10 @@ function sanitizar(data) {
   for (const campo of campos) {
     if (data[campo]) data[campo] = String(data[campo]).trim();
   }
+  if (Object.prototype.hasOwnProperty.call(data, "tipoSangre")) {
+    const t = String(data.tipoSangre ?? "").trim();
+    data.tipoSangre = t === "" ? null : t;
+  }
   return data;
 }
 
@@ -44,6 +48,27 @@ function validarCurp(curp) {
   if (!curp || !CURP_REGEX.test(curp)) {
     throw badRequest("CURP con formato inválido", "INVALID_CURP");
   }
+}
+
+/**
+ * CURP oficial (18) o clave alfanumérica ya guardada como PK (registros legados).
+ * No usar {8} solo: palabras como "INVALIDA" pasarían; mínimo 9 o exactamente 18.
+ */
+const CURP_RUTA_LEGADO_REGEX = /^[A-Z0-9]{9,24}$/;
+
+function normalizarCurpRuta(curp) {
+  return String(curp ?? "").trim().toUpperCase();
+}
+
+/** Valida el identificador que viene en la URL (params). Más permiso que `validarCurp` del cuerpo en alta. */
+function validarCurpRuta(curp) {
+  const c = normalizarCurpRuta(curp);
+  if (!c) throw badRequest("CURP con formato inválido", "INVALID_CURP");
+  if (CURP_REGEX.test(c)) return c;
+  if (CURP_RUTA_LEGADO_REGEX.test(c)) return c;
+  // 8 caracteres solo si incluye al menos un dígito (evita palabras tipo "INVALIDA")
+  if (c.length === 8 && /^[A-Z0-9]{8}$/.test(c) && /\d/.test(c)) return c;
+  throw badRequest("CURP con formato inválido", "INVALID_CURP");
 }
 
 function validarFormatos(data) {
@@ -66,7 +91,7 @@ function validarFormatos(data) {
     throw badRequest("GENERO debe ser 'M' o 'F'", "INVALID_GENERO");
   }
   if (data.tipoSangre && !TIPOS_SANGRE.includes(data.tipoSangre)) {
-    throw badRequest(`TIPO_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
+    throw badRequest(`TIPOS_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
   }
   if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
     throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
@@ -100,6 +125,9 @@ function validarFormatosUpdate(data) {
   if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
     throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
   }
+  if (data.tipoSangre && !TIPOS_SANGRE.includes(data.tipoSangre)) {
+    throw badRequest(`TIPOS_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
+  }
   if (data.notas && data.notas.length > 500) {
     throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
   }
@@ -108,27 +136,31 @@ function validarFormatosUpdate(data) {
 export const getAll = () => BeneficiarioModel.findAll();
 
 export async function hardDelete(curp) {
-  validarCurp(curp);
-  const existente = await BeneficiarioModel.findById(curp);
+  const id = validarCurpRuta(curp);
+  const existente = await BeneficiarioModel.findById(id);
   if (!existente) {
-    throw notFound(`No existe un beneficiario con la CURP ${curp}`);
+    throw notFound(`No existe un beneficiario con la CURP ${id}`);
   }
-  await BeneficiarioModel.hardDelete(curp);
+  await BeneficiarioModel.hardDelete(id);
 }
 
 export async function toggleEstatus(curp, estatus) {
-  validarCurp(curp);
+  const id = validarCurpRuta(curp);
   if (!["Activo", "Inactivo"].includes(estatus)) {
     throw badRequest("Estatus debe ser 'Activo' o 'Inactivo'");
   }
-  const existente = await BeneficiarioModel.findById(curp);
+  const existente = await BeneficiarioModel.findById(id);
   if (!existente) {
-    throw notFound(`No existe un beneficiario con la CURP ${curp}`);
+    throw notFound(`No existe un beneficiario con la CURP ${id}`);
   }
-  await BeneficiarioModel.updateEstatus(curp, estatus);
+  await BeneficiarioModel.updateEstatus(id, estatus);
 }
 
-export const getById = (curp) => BeneficiarioModel.findById(curp);
+export function getById(curp) {
+  const id = normalizarCurpRuta(curp);
+  if (!id) return Promise.resolve(null);
+  return BeneficiarioModel.findById(id);
+}
 
 export async function create(data) {
   data = sanitizar(data);
@@ -146,35 +178,34 @@ export async function create(data) {
 }
 
 export async function update(curp, data) {
-  validarCurp(curp);
+  const id = validarCurpRuta(curp);
   data = sanitizar(data);
   validarCamposObligatorios(data);
   validarFormatosUpdate(data);
 
-  const existente = await BeneficiarioModel.findById(curp);
+  const existente = await BeneficiarioModel.findById(id);
   if (!existente) {
-    throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
+    throw notFound(`No existe un beneficiario con la CURP ${id}`, "BENEFICIARIO_NOT_FOUND");
   }
   data.estatus = existente.ESTATUS;
-  return BeneficiarioModel.update(curp, data);
+  return BeneficiarioModel.update(id, data);
 }
 
 export async function deactivate(curp) {
-  validarCurp(curp);
+  const id = validarCurpRuta(curp);
 
-  const existente = await BeneficiarioModel.findById(curp);
+  const existente = await BeneficiarioModel.findById(id);
   if (!existente) {
-    throw notFound(`No existe un beneficiario con la CURP ${curp}`, "BENEFICIARIO_NOT_FOUND");
+    throw notFound(`No existe un beneficiario con la CURP ${id}`, "BENEFICIARIO_NOT_FOUND");
   }
 
-  await BeneficiarioModel.deactivate(curp);
-  await MembresiasModel.cancelarPorCurp(curp);
+  await BeneficiarioModel.deactivate(id);
+  await MembresiasModel.cancelarPorCurp(id);
 }
 
 /** Tras multer: `filename` es el nombre en disco bajo uploads/profiles */
 export async function updateFotoPerfilByUpload(curpParam, filename) {
-  const curp = String(curpParam).trim().toUpperCase();
-  validarCurp(curp);
+  const curp = validarCurpRuta(curpParam);
 
   const existente = await BeneficiarioModel.findById(curp);
   if (!existente) {
@@ -191,8 +222,7 @@ export async function updateFotoPerfilByUpload(curpParam, filename) {
 
 /** Quita la foto en BD y borra el archivo bajo uploads/profiles si aplica */
 export async function clearFotoPerfil(curpParam) {
-  const curp = String(curpParam).trim().toUpperCase();
-  validarCurp(curp);
+  const curp = validarCurpRuta(curpParam);
 
   const existente = await BeneficiarioModel.findById(curp);
   if (!existente) {

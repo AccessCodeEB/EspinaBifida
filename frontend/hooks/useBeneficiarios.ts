@@ -19,7 +19,13 @@ const EMAIL_RE     = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TEL_RE       = /^\d{10}$/
 const CP_RE        = /^\d{5}$/
 const CURP_RE      = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/
-const TIPOS_SANGRE = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+/** Valores permitidos por CHECK en BD (columna TIPOS_SANGRE) y en la API como `tipoSangre`. */
+export const TIPOS_SANGRE_OPCIONES: string[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+
+function normalizeTipoSangre(raw: string | null | undefined): string {
+  const t = String(raw ?? "").trim()
+  return TIPOS_SANGRE_OPCIONES.includes(t) ? t : ""
+}
 
 const TOAST_OK =
   "border border-border/70 bg-popover text-popover-foreground shadow-md"
@@ -67,6 +73,21 @@ const ALTA_FORM_INICIAL = {
   notas: "", estatus: "Activo", tipo: "",
 }
 
+/** Tarjetas: Activo → Inactivo → Baja; otros al final. */
+function estatusOrdenTarjetas(estatus: string | undefined): number {
+  if (estatus === "Activo") return 0
+  if (estatus === "Inactivo") return 1
+  if (estatus === "Baja") return 2
+  return 3
+}
+
+/** Clave estable para ordenar por CURP (si falta, folio). */
+function curpClaveOrden(b: Beneficiario): string {
+  const c = String(b.curp ?? "").trim().toUpperCase()
+  if (c) return c
+  return String(b.folio ?? "").trim().toUpperCase()
+}
+
 // ─── Helpers de lógica pura ───────────────────────────────────────────────────
 function parseBackendError(raw: string): Record<string, string> {
   let code = ""
@@ -87,6 +108,7 @@ function parseBackendError(raw: string): Record<string, string> {
     case "DATE_IN_FUTURE":          return { fechaNacimiento:     "No fecha futura" }
     case "DATE_TOO_OLD":            return { fechaNacimiento:     "Fecha muy antigua" }
     case "INVALID_CURP":            return { curp:                "CURP inválida" }
+    case "INVALID_TIPO_SANGRE":     return { tipoSangre:         "Elige un tipo de sangre válido" }
     case "MISSING_REQUIRED_FIELDS": {
       const errs: Record<string, string> = {}
       if (msg.includes("nombres"))         errs.nombres         = "Obligatorio"
@@ -125,8 +147,10 @@ function validateEditForm(
     if (me) errs.apellidoMaterno = me
   }
 
-  const curp = String(form.curp ?? "").trim().toUpperCase()
-  if (curp && !CURP_RE.test(curp)) errs.curp = "CURP inválida"
+  if (changed("curp")) {
+    const curp = String(form.curp ?? "").trim().toUpperCase()
+    if (curp && !CURP_RE.test(curp)) errs.curp = "CURP inválida"
+  }
 
   const email = String(form.correoElectronico ?? "").trim()
   if (email && !EMAIL_RE.test(email)) {
@@ -136,7 +160,7 @@ function validateEditForm(
 
   if (changed("tipoSangre")) {
     const ts = String(form.tipoSangre ?? "").trim()
-    if (ts && !TIPOS_SANGRE.includes(ts)) errs.tipoSangre = "Tipo inválido"
+    if (ts && !TIPOS_SANGRE_OPCIONES.includes(ts)) errs.tipoSangre = "Tipo inválido"
   }
   if (String(form.telefonoCelular ?? "").trim()) {
     const pe = errPhoneField(form.telefonoCelular, false)
@@ -239,6 +263,9 @@ function validateAlta(form: typeof ALTA_FORM_INICIAL): Record<string, string> {
 
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
+  const tsAlta = String(form.tipoSangre ?? "").trim()
+  if (tsAlta && !TIPOS_SANGRE_OPCIONES.includes(tsAlta)) errs.tipoSangre = "Tipo inválido"
+
   return errs
 }
 
@@ -309,13 +336,20 @@ export function useBeneficiarios() {
   }, [])
 
   // ── Filtrado y conteos ────────────────────────────────────────────────────
-  const filtered = beneficiarios.filter((b) => {
-    const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
-    const term   = searchTerm.toLowerCase()
-    const matchesSearch  = nombre.toLowerCase().includes(term) || b.folio.toLowerCase().includes(term) || b.ciudad.toLowerCase().includes(term)
-    const matchesEstatus = filtroEstatus === "Todos" || b.estatus === filtroEstatus
-    return matchesSearch && matchesEstatus
-  })
+  const filtered = beneficiarios
+    .filter((b) => {
+      const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
+      const term   = searchTerm.toLowerCase()
+      const matchesSearch  = nombre.toLowerCase().includes(term) || b.folio.toLowerCase().includes(term) || b.ciudad.toLowerCase().includes(term)
+      const matchesEstatus = filtroEstatus === "Todos" || b.estatus === filtroEstatus
+      return matchesSearch && matchesEstatus
+    })
+    .sort((a, b) => {
+      const da = estatusOrdenTarjetas(a.estatus)
+      const db = estatusOrdenTarjetas(b.estatus)
+      if (da !== db) return da - db
+      return curpClaveOrden(a).localeCompare(curpClaveOrden(b), "es")
+    })
 
   const conteos = {
     Todos:    beneficiarios.length,
@@ -327,7 +361,7 @@ export function useBeneficiarios() {
   // ── Edición ───────────────────────────────────────────────────────────────
   function openEdit(b: Beneficiario) {
     setSelectedBeneficiario(b)
-    setEditForm({ ...b })
+    setEditForm({ ...b, tipoSangre: normalizeTipoSangre(b.tipoSangre) })
     setConfirmDelete(false)
     setConfirmEditDelete(false)
     setSaveError(null)
@@ -412,8 +446,15 @@ export function useBeneficiarios() {
     setEditErrors({})
     setIsSaving(true)
     try {
+      const tipoSangrePayload = (() => {
+        const t = editForm.tipoSangre
+        if (t === undefined || t === null) return null
+        const s = String(t).trim()
+        return s === "" ? null : s
+      })()
       await updateBeneficiario(editForm.folio, {
         ...editForm,
+        tipoSangre: tipoSangrePayload,
         usaValvula: (editForm.usaValvula ? "S" : "N") as unknown as boolean,
       })
 
@@ -504,6 +545,12 @@ export function useBeneficiarios() {
       const casaDigits = String(altaForm.telefonoCasa ?? "").replace(/\D/g, "")
       const emergenciaDigits = String(altaForm.telefonoEmergencia ?? "").replace(/\D/g, "")
       const cpDigits = String(altaForm.cp ?? "").replace(/\D/g, "")
+      const tipoSangreAlta = (() => {
+        const t = altaForm.tipoSangre
+        if (t === undefined || t === null) return null
+        const s = String(t).trim()
+        return s === "" ? null : s
+      })()
       await createBeneficiario({
         ...altaForm,
         curp:     altaForm.curp.toUpperCase(),
@@ -512,6 +559,7 @@ export function useBeneficiarios() {
         telefonoEmergencia: emergenciaDigits,
         cp: cpDigits,
         correoElectronico: String(altaForm.correoElectronico ?? "").trim(),
+        tipoSangre: tipoSangreAlta,
         usaValvula: (altaForm.usaValvula ? "S" : "N") as unknown as boolean,
         tipo:     "",
         ciudad:   altaForm.ciudad,

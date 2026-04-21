@@ -5,7 +5,7 @@ import {
   Search, Plus, Eye, Edit, CreditCard, FileText, MapPin,
   Download, CheckCircle, XCircle, AlertTriangle, User, Users, Loader2,
   Phone, HeartPulse, Stethoscope, ClipboardList, Mail,
-  Calendar, Hash, Droplet, Activity, ArrowLeft, Save, Trash2
+  Calendar, Hash, Activity, ArrowLeft, Save, Trash2
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,7 +28,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { useBeneficiarios } from "@/hooks/useBeneficiarios"
+import { useBeneficiarios, TIPOS_SANGRE_OPCIONES } from "@/hooks/useBeneficiarios"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
@@ -266,8 +266,8 @@ export function BeneficiariosSection() {
       {/* ── Grid de tarjetas (columnas de 264px, sin huecos por fracciones del viewport) ── */}
       <div className="grid justify-center gap-2 sm:gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,264px),264px))]">
         {filtered.map((b) => {
-          const initials = `${b.nombres[0] || ""}${b.apellidoPaterno[0] || ""}`
-          const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
+          const initials = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
+          const nombre = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""} ${b.apellidoMaterno ?? ""}`.trim()
           const cardPhoto = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined)
           return (
             <Card key={b.folio} className="flex w-full min-w-0 flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
@@ -330,7 +330,7 @@ export function BeneficiariosSection() {
                          // eslint-disable-next-line @next/next/no-img-element
                         <img src={fotoUrl} alt="Perfil" className="size-full object-cover" />
                       ) : (
-                        `${selectedBeneficiario.nombres[0] || ""}${selectedBeneficiario.apellidoPaterno[0] || ""}`
+                        `${selectedBeneficiario.nombres?.[0] ?? ""}${selectedBeneficiario.apellidoPaterno?.[0] ?? ""}`
                       )}
                     </div>
 
@@ -470,8 +470,8 @@ export function BeneficiariosSection() {
                         <img src={credPhoto} alt="" className="size-full object-cover" />
                       ) : (
                         <>
-                          {(credencialBeneficiario.nombres[0] || "")}
-                          {(credencialBeneficiario.apellidoPaterno[0] || "")}
+                          {(credencialBeneficiario.nombres?.[0] ?? "")}
+                          {(credencialBeneficiario.apellidoPaterno?.[0] ?? "")}
                         </>
                       )}
                     </div>
@@ -626,6 +626,30 @@ export function BeneficiariosSection() {
                     </SelectContent>
                   </Select>
                 </div>
+                <FieldWrap error={altaErrors?.tipoSangre}>
+                  <Label htmlFor="alta-tipo-sangre">Tipo de sangre</Label>
+                  <Select
+                    value={altaForm.tipoSangre ? altaForm.tipoSangre : "__none__"}
+                    onValueChange={(v) => handleAltaChange("tipoSangre", v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger
+                      id="alta-tipo-sangre"
+                      className={cn(
+                        "bg-background",
+                        altaErrors?.tipoSangre && "border-destructive",
+                        !altaForm.tipoSangre && "text-muted-foreground"
+                      )}
+                    >
+                      <SelectValue placeholder="Sin especificar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-muted-foreground">Sin especificar</SelectItem>
+                      {TIPOS_SANGRE_OPCIONES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldWrap>
               </div>
             </SectionCard>
 
@@ -1040,13 +1064,30 @@ export function BeneficiariosSection() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Tipo de Sangre</Label>
-                  <div className="relative">
-                    <Droplet className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input value={editForm.tipoSangre ?? ""} onChange={(e) => handleEditChange("tipoSangre", e.target.value)} className="pl-9 bg-background" />
-                  </div>
-                </div>
+                <FieldWrap error={editErrors?.tipoSangre}>
+                  <Label htmlFor="edit-tipo-sangre">Tipo de sangre</Label>
+                  <Select
+                    value={editForm.tipoSangre ? editForm.tipoSangre : "__none__"}
+                    onValueChange={(v) => handleEditChange("tipoSangre", v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger
+                      id="edit-tipo-sangre"
+                      className={cn(
+                        "bg-background",
+                        editErrors?.tipoSangre && "border-destructive",
+                        !editForm.tipoSangre && "text-muted-foreground"
+                      )}
+                    >
+                      <SelectValue placeholder="Sin especificar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-muted-foreground">Sin especificar</SelectItem>
+                      {TIPOS_SANGRE_OPCIONES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldWrap>
                 <div className="space-y-1.5">
                   <Label>Nombre del Padre / Madre</Label>
                   <div className="relative">
@@ -1188,7 +1229,7 @@ export function BeneficiariosSection() {
                 <ArrowLeft className="size-4" />
                 Regresar
               </Button>
-              <Button onClick={handleSaveEdit} disabled={isSaving} className="bg-[#005bb5] hover:bg-[#004a94] text-white">
+              <Button type="button" onClick={handleSaveEdit} disabled={isSaving} className="bg-[#005bb5] hover:bg-[#004a94] text-white">
                 {isSaving ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>

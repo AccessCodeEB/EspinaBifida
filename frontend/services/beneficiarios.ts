@@ -40,9 +40,13 @@ export function getBeneficiarios() {
   return apiClient.get<Beneficiario[]>("/beneficiarios")
 }
 
+function encFolio(folio: string) {
+  return encodeURIComponent(String(folio ?? "").trim())
+}
+
 /** GET /beneficiarios/:folio */
 export function getBeneficiario(folio: string) {
-  return apiClient.get<Beneficiario>(`/beneficiarios/${folio}`)
+  return apiClient.get<Beneficiario>(`/beneficiarios/${encFolio(folio)}`)
 }
 
 /** POST /beneficiarios */
@@ -52,22 +56,22 @@ export function createBeneficiario(data: Omit<Beneficiario, "folio">) {
 
 /** PUT /beneficiarios/:folio */
 export function updateBeneficiario(folio: string, data: Partial<Beneficiario>) {
-  return apiClient.put<Beneficiario>(`/beneficiarios/${folio}`, data)
+  return apiClient.put<Beneficiario>(`/beneficiarios/${encFolio(folio)}`, data)
 }
 
 /** PATCH /beneficiarios/:folio/estatus */
 export function updateEstatusBeneficiario(folio: string, estatus: "Activo" | "Inactivo") {
-  return apiClient.patch<{ message: string }>(`/beneficiarios/${folio}/estatus`, { estatus })
+  return apiClient.patch<{ message: string }>(`/beneficiarios/${encFolio(folio)}/estatus`, { estatus })
 }
 
 /** DELETE /beneficiarios/:folio — ocultar/baja lógica */
 export function deactivateBeneficiario(folio: string) {
-  return apiClient.delete<{ message: string }>(`/beneficiarios/${folio}`)
+  return apiClient.delete<{ message: string }>(`/beneficiarios/${encFolio(folio)}`)
 }
 
 /** DELETE /beneficiarios/:folio/eliminar — eliminación permanente (solo Baja) */
 export function deleteBeneficiario(folio: string) {
-  return apiClient.delete<{ message: string }>(`/beneficiarios/${folio}/eliminar`)
+  return apiClient.delete<{ message: string }>(`/beneficiarios/${encFolio(folio)}/eliminar`)
 }
 
 /** POST multipart /beneficiarios/:curp/foto-perfil — campo de archivo: `foto` */

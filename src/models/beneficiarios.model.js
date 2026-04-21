@@ -5,7 +5,7 @@ export async function findAll() {
   try {
     const result = await conn.execute(
       `SELECT b.NOMBRES, b.APELLIDO_PATERNO, b.APELLIDO_MATERNO,
-              b.CURP, b.GENERO, b.FECHA_NACIMIENTO, b.TIPO_SANGRE,
+              b.CURP, b.GENERO, b.FECHA_NACIMIENTO, b.TIPOS_SANGRE,
               b.NOMBRE_PADRE_MADRE, b.CALLE, b.COLONIA, b.CIUDAD,
               b.MUNICIPIO, b.ESTADO, b.CP,
               b.TELEFONO_CASA, b.TELEFONO_CELULAR, b.CORREO_ELECTRONICO,
@@ -74,7 +74,7 @@ export async function create(data) {
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
          MUNICIPIO_NACIMIENTO, HOSPITAL_NACIMIENTO,
-         TIPO_SANGRE, USA_VALVULA, NOTAS, ESTATUS
+         TIPOS_SANGRE, USA_VALVULA, NOTAS, ESTATUS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
@@ -151,7 +151,7 @@ export async function update(curp, data) {
          TELEFONO_EMERGENCIA   = :telefonoEmergencia,
          MUNICIPIO_NACIMIENTO  = :municipioNacimiento,
          HOSPITAL_NACIMIENTO   = :hospitalNacimiento,
-         TIPO_SANGRE           = :tipoSangre,
+         TIPOS_SANGRE          = :tipoSangre,
          USA_VALVULA           = :usaValvula,
          NOTAS                 = :notas,
          ESTATUS               = :estatus

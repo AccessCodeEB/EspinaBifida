@@ -12,7 +12,7 @@ function mapBeneficiario(row) {
     curp:            b.curp,
     fechaNacimiento: b.fechaNacimiento,
     genero:          b.genero,
-    tipoSangre:      b.tipoSangre,
+    tipoSangre:      b.tiposSangre ?? b.tipoSangre ?? null,
     nombrePadreMadre:  b.nombrePadreMadre,
     calle:           b.calle,
     colonia:         b.colonia,

@@ -454,7 +454,7 @@ describe("PUT /api/v1/beneficiarios/:curp — actualizar beneficiario", () => {
         TELEFONO_CASA: null, TELEFONO_CELULAR: null, CORREO_ELECTRONICO: null,
         CONTACTO_EMERGENCIA: null, TELEFONO_EMERGENCIA: null,
         MUNICIPIO_NACIMIENTO: null, HOSPITAL_NACIMIENTO: null,
-        TIPO_SANGRE: null, USA_VALVULA: null, NOTAS: null,
+        TIPOS_SANGRE: null, USA_VALVULA: null, NOTAS: null,
       }],
     });
     // UPDATE BENEFICIARIOS
