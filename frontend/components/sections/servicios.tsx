@@ -31,12 +31,16 @@ import {
 } from "@/components/ui/select"
 
 import { getServicios, type Servicio } from "@/services/servicios"
+import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 
 export function ServiciosSection() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
-  const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ folio: string; nombre: string; membresia: string } | null>(null)
+  const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string } | null>(null)
+  const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
+  const [loadingBeneficiarios, setLoadingBeneficiarios] = useState(false)
+  const [showSugerencias, setShowSugerencias] = useState(false)
   const [serviciosRegistrados, setServiciosRegistrados] = useState<Servicio[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +51,17 @@ export function ServiciosSection() {
       .catch(err => setError(err?.message ?? "Error al cargar servicios"))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!showRegistroDialog) return
+    if (beneficiarios.length > 0) return
+
+    setLoadingBeneficiarios(true)
+    getBeneficiarios()
+      .then((data) => setBeneficiarios(data))
+      .catch(() => setBeneficiarios([]))
+      .finally(() => setLoadingBeneficiarios(false))
+  }, [showRegistroDialog, beneficiarios.length])
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
@@ -67,14 +82,65 @@ export function ServiciosSection() {
       s.servicio.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleBuscarBeneficiario = () => {
-    if (busquedaBeneficiario.toLowerCase().includes("garcia") || busquedaBeneficiario === "EB-001") {
-      setBeneficiarioEncontrado({ folio: "EB-001", nombre: "Maria Garcia Lopez", membresia: "Activa" })
-    } else if (busquedaBeneficiario.toLowerCase().includes("perez") || busquedaBeneficiario === "EB-002") {
-      setBeneficiarioEncontrado({ folio: "EB-002", nombre: "Juan Perez Martinez", membresia: "Vencida" })
-    } else {
-      setBeneficiarioEncontrado(null)
+  const busquedaNormalizada = busquedaBeneficiario.trim().toLowerCase()
+  const sugerenciasBeneficiarios = busquedaNormalizada
+    ? beneficiarios
+        .filter((b) => {
+          const nombreCompleto = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.trim().toLowerCase()
+          const curp = String(b.curp ?? "").trim().toLowerCase()
+          return nombreCompleto.startsWith(busquedaNormalizada) || curp.startsWith(busquedaNormalizada)
+        })
+        .slice(0, 8)
+    : []
+
+  const mapBeneficiarioSeleccionado = (b: Beneficiario) => {
+    const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.replace(/\s+/g, " ").trim()
+    const membresia = String(b.membresiaEstatus ?? "").toLowerCase() === "activa" ? "Activa" : "Vencida"
+    return {
+      curp: String(b.curp ?? "").trim(),
+      nombre,
+      membresia,
     }
+  }
+
+  const handleBuscarBeneficiario = () => {
+    if (!busquedaNormalizada) {
+      setBeneficiarioEncontrado(null)
+      return
+    }
+
+    const matchExacto = beneficiarios.find((b) => {
+      const nombreCompleto = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.replace(/\s+/g, " ").trim().toLowerCase()
+      const curp = String(b.curp ?? "").trim().toLowerCase()
+      return nombreCompleto === busquedaNormalizada || curp === busquedaNormalizada
+    })
+
+    if (matchExacto) {
+      setBeneficiarioEncontrado(mapBeneficiarioSeleccionado(matchExacto))
+      setShowSugerencias(false)
+      return
+    }
+
+    const primeraSugerencia = sugerenciasBeneficiarios[0]
+    if (primeraSugerencia) {
+      setBeneficiarioEncontrado(mapBeneficiarioSeleccionado(primeraSugerencia))
+      setBusquedaBeneficiario(
+        `${primeraSugerencia.nombres} ${primeraSugerencia.apellidoPaterno} ${primeraSugerencia.apellidoMaterno}`
+          .replace(/\s+/g, " ")
+          .trim()
+      )
+      setShowSugerencias(false)
+      return
+    }
+
+    setBeneficiarioEncontrado(null)
+  }
+
+  const handleSeleccionarSugerencia = (b: Beneficiario) => {
+    const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.replace(/\s+/g, " ").trim()
+    setBusquedaBeneficiario(nombre)
+    setBeneficiarioEncontrado(mapBeneficiarioSeleccionado(b))
+    setShowSugerencias(false)
   }
 
   return (
@@ -153,16 +219,50 @@ export function ServiciosSection() {
           <div className="grid gap-4 py-4">
             <div className="flex flex-col gap-2">
               <Label className="text-base">Buscar Beneficiario</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Folio o nombre..."
-                  className="h-12 flex-1 text-base"
-                  value={busquedaBeneficiario}
-                  onChange={(e) => setBusquedaBeneficiario(e.target.value)}
-                />
-                <Button size="lg" variant="outline" onClick={handleBuscarBeneficiario}>
-                  <Search className="size-5" />
-                </Button>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="CURP o nombre..."
+                    className="h-12 flex-1 text-base"
+                    value={busquedaBeneficiario}
+                    onFocus={() => setShowSugerencias(true)}
+                    onChange={(e) => {
+                      setBusquedaBeneficiario(e.target.value)
+                      setShowSugerencias(true)
+                      if (!e.target.value.trim()) {
+                        setBeneficiarioEncontrado(null)
+                      }
+                    }}
+                  />
+                  <Button size="lg" variant="outline" onClick={handleBuscarBeneficiario}>
+                    <Search className="size-5" />
+                  </Button>
+                </div>
+
+                {showSugerencias && busquedaNormalizada && (
+                  <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-md border bg-background shadow-lg">
+                    {loadingBeneficiarios ? (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">Cargando beneficiarios...</p>
+                    ) : sugerenciasBeneficiarios.length > 0 ? (
+                      sugerenciasBeneficiarios.map((b) => {
+                        const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.replace(/\s+/g, " ").trim()
+                        return (
+                          <button
+                            key={b.curp ?? b.folio}
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
+                            onClick={() => handleSeleccionarSugerencia(b)}
+                          >
+                            <span className="font-medium">{nombre}</span>
+                            <span className="text-xs text-muted-foreground">{b.curp ?? "SIN CURP"}</span>
+                          </button>
+                        )
+                      })
+                    ) : (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">Sin coincidencias</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -171,7 +271,7 @@ export function ServiciosSection() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">{beneficiarioEncontrado.nombre}</p>
-                    <p className="text-sm text-muted-foreground">{beneficiarioEncontrado.folio}</p>
+                    <p className="text-sm text-muted-foreground">{beneficiarioEncontrado.curp || "SIN CURP"}</p>
                   </div>
                   <StatusIcon status={beneficiarioEncontrado.membresia} />
                 </div>
