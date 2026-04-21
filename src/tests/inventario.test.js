@@ -1,28 +1,15 @@
 import { jest } from "@jest/globals";
+import {
+  TEST_SECRET, mockExecute, mockCommit, mockRollback,
+  dbModuleMock, resetMocks,
+} from "./helpers/mockDb.js";
 
 // ─── Entorno ──────────────────────────────────────────────────────────────────
-const TEST_SECRET = "test-secret-espina-bifida";
 process.env.JWT_SECRET  = TEST_SECRET;
 process.env.CORS_ORIGIN = "http://localhost:3000";
 
 // ─── Mock de conexión Oracle ──────────────────────────────────────────────────
-const mockExecute  = jest.fn();
-const mockClose    = jest.fn().mockResolvedValue(undefined);
-const mockCommit   = jest.fn().mockResolvedValue(undefined);
-const mockRollback = jest.fn().mockResolvedValue(undefined);
-
-const mockConn = {
-  execute:  mockExecute,
-  close:    mockClose,
-  commit:   mockCommit,
-  rollback: mockRollback,
-};
-
-jest.unstable_mockModule("../config/db.js", () => ({
-  getConnection: jest.fn().mockResolvedValue(mockConn),
-  createPool:    jest.fn().mockResolvedValue(undefined),
-  closePool:     jest.fn().mockResolvedValue(undefined),
-}));
+jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 const { default: app }     = await import("../app.js");
 const { default: request } = await import("supertest");
@@ -40,13 +27,7 @@ const movimientoBase = {
 
 const articuloRow = { ID_ARTICULO: 101, INVENTARIO_ACTUAL: 10 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockExecute.mockReset();
-  mockClose.mockResolvedValue(undefined);
-  mockCommit.mockResolvedValue(undefined);
-  mockRollback.mockResolvedValue(undefined);
-});
+beforeEach(() => { resetMocks(); });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. POST /api/v1/movimientos — crear movimiento

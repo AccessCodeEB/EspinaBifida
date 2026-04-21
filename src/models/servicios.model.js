@@ -38,8 +38,29 @@ export async function findBeneficiarioActivo(curp) {
   try {
     const result = await conn.execute(
       `SELECT ESTATUS, NOMBRES, APELLIDO_PATERNO
-       FROM BENEFICIARIOS 
+       FROM BENEFICIARIOS
        WHERE CURP = :curp`,
+      { curp }
+    );
+    return result.rows[0] ?? null;
+  } finally {
+    await conn.close();
+  }
+}
+
+// Validar beneficiario activo y membresía vigente en una sola consulta atómica.
+// Evita la ventana TOCTOU que existe cuando se hacen dos llamadas separadas.
+export async function findBeneficiarioActivoConMembresia(curp) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT b.ESTATUS, b.NOMBRES, b.APELLIDO_PATERNO,
+              c.ID_CREDENCIAL, c.NUMERO_CREDENCIAL
+       FROM BENEFICIARIOS b
+       LEFT JOIN CREDENCIALES c
+         ON c.CURP = b.CURP
+        AND SYSDATE BETWEEN c.FECHA_VIGENCIA_INICIO AND c.FECHA_VIGENCIA_FIN
+       WHERE b.CURP = :curp`,
       { curp }
     );
     return result.rows[0] ?? null;
@@ -89,9 +110,9 @@ export async function findByCurpPaginated(curp, page = 1, limit = 10) {
 export async function create(data) {
   const conn = await getConnection();
   try {
+    // Use the Oracle sequence (atomic, no race condition under concurrency)
     const idResult = await conn.execute(
-      `SELECT NVL(MAX(ID_SERVICIO), 0) + 1 AS NEXT_ID
-       FROM SERVICIOS`
+      `SELECT SEQ_SERVICIOS.NEXTVAL AS NEXT_ID FROM DUAL`
     );
 
     const idServicio = Number(idResult.rows?.[0]?.NEXT_ID ?? 0);

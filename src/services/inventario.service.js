@@ -14,8 +14,8 @@ function normalizeMovimientoData(data = {}) {
   }
 
   const cantidad = Number(data.cantidad);
-  if (Number.isNaN(cantidad) || cantidad <= 0) {
-    throw badRequest("cantidad debe ser un número mayor a 0", "INVALID_CANTIDAD");
+  if (Number.isNaN(cantidad) || !Number.isInteger(cantidad) || cantidad <= 0) {
+    throw badRequest("cantidad debe ser un entero mayor a 0", "INVALID_CANTIDAD");
   }
 
   const motivo =

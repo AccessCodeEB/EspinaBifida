@@ -1,7 +1,10 @@
 import { jest } from "@jest/globals";
+import {
+  TEST_SECRET, mockExecute,
+  dbModuleMock, resetMocks,
+} from "./helpers/mockDb.js";
 
 // ─── Entorno ──────────────────────────────────────────────────────────────────
-const TEST_SECRET = "test-secret-espina-bifida";
 process.env.JWT_SECRET  = TEST_SECRET;
 process.env.CORS_ORIGIN = "http://localhost:3000";
 
@@ -16,30 +19,14 @@ jest.unstable_mockModule("bcryptjs", () => ({
 }));
 
 // ─── Mock de conexión Oracle ──────────────────────────────────────────────────
-const mockExecute  = jest.fn();
-const mockClose    = jest.fn().mockResolvedValue(undefined);
-const mockCommit   = jest.fn().mockResolvedValue(undefined);
-const mockRollback = jest.fn().mockResolvedValue(undefined);
-
-const mockConn = {
-  execute:  mockExecute,
-  close:    mockClose,
-  commit:   mockCommit,
-  rollback: mockRollback,
-};
-
-jest.unstable_mockModule("../config/db.js", () => ({
-  getConnection: jest.fn().mockResolvedValue(mockConn),
-  createPool:    jest.fn().mockResolvedValue(undefined),
-  closePool:     jest.fn().mockResolvedValue(undefined),
-}));
+jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 const { default: app }     = await import("../app.js");
 const { default: request } = await import("supertest");
 import jwt from "jsonwebtoken";
 
-const tokenAdmin = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
-const tokenUser  = jwt.sign({ idAdmin: 2, idRol: 2 }, TEST_SECRET);
+const tokenAdmin  = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
+const tokenUser   = jwt.sign({ idAdmin: 2, idRol: 2 }, TEST_SECRET);
 const CURP_VALIDA = "GAEJ900101HMNRRL09";
 
 const adminRow = {
@@ -52,14 +39,18 @@ const adminRow = {
   NOMBRE_ROL:      "SuperAdmin",
 };
 
-const citaRow = [1, CURP_VALIDA, 1, null, "2026-06-01 10:00:00", "PROGRAMADA", null];
+const citaRow = {
+  ID_CITA:          1,
+  CURP:             CURP_VALIDA,
+  ID_TIPO_SERVICIO: 1,
+  ESPECIALISTA:     null,
+  FECHA:            "2026-06-01 10:00:00",
+  ESTATUS:          "PROGRAMADA",
+  NOTAS:            null,
+};
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  mockExecute.mockReset();
-  mockClose.mockResolvedValue(undefined);
-  mockCommit.mockResolvedValue(undefined);
-  mockRollback.mockResolvedValue(undefined);
+  resetMocks();
   mockBcryptCompare.mockReset();
   mockBcryptHash.mockReset();
 });

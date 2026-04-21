@@ -1,5 +1,4 @@
 import * as ServiciosModel from "../models/servicios.model.js";
-import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
 
 // Validar beneficiario activo y crear servicio
@@ -100,7 +99,8 @@ export async function createConValidacion(data) {
       : null;
   const consumos = normalizeConsumos(data.consumos);
 
-  const beneficiario = await ServiciosModel.findBeneficiarioActivo(curp);
+  // Single query: check beneficiary status + active membership atomically (no TOCTOU gap)
+  const beneficiario = await ServiciosModel.findBeneficiarioActivoConMembresia(curp);
 
   if (!beneficiario) {
     throw notFound("Beneficiario no encontrado");
@@ -112,8 +112,7 @@ export async function createConValidacion(data) {
     );
   }
 
-  const membresiaActiva = await MembresiasModel.findMembresiaActivaByCurp(curp);
-  if (!membresiaActiva) {
+  if (!beneficiario.ID_CREDENCIAL) {
     throw conflict("El beneficiario no tiene membresia activa");
   }
 

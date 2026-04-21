@@ -1,31 +1,22 @@
 import { jest } from "@jest/globals";
+import {
+  TEST_SECRET, mockExecute, mockClose, mockCommit, mockRollback,
+  dbModuleMock, resetMocks,
+} from "./helpers/mockDb.js";
 
 // ─── Entorno ──────────────────────────────────────────────────────────────────
-process.env.JWT_SECRET  = "test-secret-espina-bifida";
+process.env.JWT_SECRET  = TEST_SECRET;
 process.env.CORS_ORIGIN = "http://localhost:3000";
 
 // ─── Mock de conexión Oracle ──────────────────────────────────────────────────
-const mockExecute  = jest.fn();
-const mockClose    = jest.fn().mockResolvedValue(undefined);
-const mockCommit   = jest.fn().mockResolvedValue(undefined);
-const mockRollback = jest.fn().mockResolvedValue(undefined);
-
-const mockConn = {
-  execute:  mockExecute,
-  close:    mockClose,
-  commit:   mockCommit,
-  rollback: mockRollback,
-};
-
-jest.unstable_mockModule("../config/db.js", () => ({
-  getConnection: jest.fn().mockResolvedValue(mockConn),
-  createPool:    jest.fn().mockResolvedValue(undefined),
-  closePool:     jest.fn().mockResolvedValue(undefined),
-}));
+jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 // ─── Importaciones dinámicas (deben ir DESPUÉS del mock) ──────────────────────
 const { default: app }     = await import("../app.js");
 const { default: request } = await import("supertest");
+import jwt from "jsonwebtoken";
+
+const tokenAdmin = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 const articuloBase = {
@@ -49,12 +40,7 @@ const articuloRow = {
 };
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockClose.mockResolvedValue(undefined);
-  mockCommit.mockResolvedValue(undefined);
-  mockRollback.mockResolvedValue(undefined);
-});
+beforeEach(() => { resetMocks(); });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. GET /api/v1/articulos
@@ -64,17 +50,26 @@ describe("GET /api/v1/articulos — listar todos", () => {
   test("devuelve lista de artículos (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
 
-    const res = await request(app).get("/api/v1/articulos");
+    const res = await request(app)
+      .get("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBe(1);
   });
 
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).get("/api/v1/articulos");
+    expect(res.status).toBe(401);
+  });
+
   test("devuelve arreglo vacío cuando no hay artículos (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get("/api/v1/articulos");
+    const res = await request(app)
+      .get("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -89,7 +84,9 @@ describe("GET /api/v1/articulos/:id — obtener por ID", () => {
   test("devuelve el artículo cuando existe (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
 
-    const res = await request(app).get("/api/v1/articulos/101");
+    const res = await request(app)
+      .get("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
   });
@@ -97,7 +94,9 @@ describe("GET /api/v1/articulos/:id — obtener por ID", () => {
   test("devuelve 404 cuando el artículo no existe", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get("/api/v1/articulos/9999");
+    const res = await request(app)
+      .get("/api/v1/articulos/9999")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/no encontrado/i);
@@ -109,11 +108,17 @@ describe("GET /api/v1/articulos/:id — obtener por ID", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("POST /api/v1/articulos — crear artículo", () => {
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).post("/api/v1/articulos").send(articuloBase);
+    expect(res.status).toBe(401);
+  });
+
   test("crea artículo correctamente (201)", async () => {
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(articuloBase);
 
     expect(res.status).toBe(201);
@@ -125,6 +130,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
 
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(sinId);
 
     expect(res.status).toBe(400);
@@ -133,6 +139,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   test("falla si manejaInventario es inválido → 400", async () => {
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, manejaInventario: "X" });
 
     expect(res.status).toBe(400);
@@ -141,6 +148,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   test("falla si cuotaRecuperacion es negativa → 400", async () => {
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, cuotaRecuperacion: -10 });
 
     expect(res.status).toBe(400);
@@ -149,6 +157,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   test("falla si inventarioActual es negativo → 400", async () => {
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, inventarioActual: -1 });
 
     expect(res.status).toBe(400);
@@ -157,16 +166,18 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   test("falla si idCategoria no es numérico → 400", async () => {
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, idCategoria: "abc" });
 
     expect(res.status).toBe(400);
   });
 
-  test("acepta manejaInventario 'N' (200/201)", async () => {
+  test("acepta manejaInventario 'N' (201)", async () => {
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, manejaInventario: "N" });
 
     expect(res.status).toBe(201);
@@ -177,6 +188,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
 
     const res = await request(app)
       .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, cuotaRecuperacion: 0 });
 
     expect(res.status).toBe(201);
@@ -196,6 +208,7 @@ describe("PUT /api/v1/articulos/:id — actualizar artículo", () => {
 
     const res = await request(app)
       .put("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, descripcion: "Silla eléctrica" });
 
     expect(res.status).toBe(200);
@@ -207,6 +220,7 @@ describe("PUT /api/v1/articulos/:id — actualizar artículo", () => {
 
     const res = await request(app)
       .put("/api/v1/articulos/9999")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(articuloBase);
 
     expect(res.status).toBe(404);
@@ -219,6 +233,7 @@ describe("PUT /api/v1/articulos/:id — actualizar artículo", () => {
 
     const res = await request(app)
       .put("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...articuloBase, manejaInventario: "Z" });
 
     expect(res.status).toBe(400);
@@ -238,16 +253,25 @@ describe("DELETE /api/v1/articulos/:id — eliminar artículo", () => {
     // DELETE
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).delete("/api/v1/articulos/101");
+    const res = await request(app)
+      .delete("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/eliminado/i);
   });
 
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).delete("/api/v1/articulos/101");
+    expect(res.status).toBe(401);
+  });
+
   test("devuelve 404 si el artículo no existe", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).delete("/api/v1/articulos/9999");
+    const res = await request(app)
+      .delete("/api/v1/articulos/9999")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/no encontrado/i);
@@ -259,7 +283,9 @@ describe("DELETE /api/v1/articulos/:id — eliminar artículo", () => {
     // countMovimientosByArticulo → 5
     mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 5 }] });
 
-    const res = await request(app).delete("/api/v1/articulos/101");
+    const res = await request(app)
+      .delete("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("ARTICULO_HAS_MOVIMIENTOS");

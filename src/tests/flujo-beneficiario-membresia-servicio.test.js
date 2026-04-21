@@ -1,29 +1,16 @@
 import { jest } from "@jest/globals";
 import jwt from "jsonwebtoken";
+import {
+  TEST_SECRET, mockExecute,
+  dbModuleMock, resetMocks,
+} from "./helpers/mockDb.js";
 
 // ─── Entorno ─────────────────────────────────────────────────────────────────
-const TEST_SECRET = "test-secret-espina-bifida";
 process.env.JWT_SECRET   = TEST_SECRET;
 process.env.CORS_ORIGIN  = "http://localhost:3000";
 
 // ─── Mock de conexión Oracle ──────────────────────────────────────────────────
-const mockExecute  = jest.fn();
-const mockClose    = jest.fn().mockResolvedValue(undefined);
-const mockCommit   = jest.fn().mockResolvedValue(undefined);
-const mockRollback = jest.fn().mockResolvedValue(undefined);
-
-const mockConn = {
-  execute:  mockExecute,
-  close:    mockClose,
-  commit:   mockCommit,
-  rollback: mockRollback,
-};
-
-jest.unstable_mockModule("../config/db.js", () => ({
-  getConnection: jest.fn().mockResolvedValue(mockConn),
-  createPool:    jest.fn().mockResolvedValue(undefined),
-  closePool:     jest.fn().mockResolvedValue(undefined),
-}));
+jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 // ─── Importaciones dinámicas (deben ir DESPUÉS del mock) ─────────────────────
 const { default: app }     = await import("../app.js");
@@ -59,13 +46,7 @@ const servicioBase = {
 };
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockExecute.mockReset(); // limpia también los mockResolvedValueOnce pendientes sin borrar getConnection
-  mockClose.mockResolvedValue(undefined);
-  mockCommit.mockResolvedValue(undefined);
-  mockRollback.mockResolvedValue(undefined);
-});
+beforeEach(() => { resetMocks(); });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. CASO FELIZ COMPLETO
@@ -105,25 +86,24 @@ describe("Flujo feliz: beneficiario → membresía → servicio", () => {
   });
 
   test("POST /api/v1/servicios crea servicio para beneficiario activo", async () => {
-    // findBeneficiarioActivo → ESTATUS Activo (SPRINT 2: sin NUMERO_CREDENCIAL)
+    // findBeneficiarioActivoConMembresia → consulta combinada (atómica, sin TOCTOU)
     mockExecute.mockResolvedValueOnce({
       rows: [{
         ESTATUS:          "Activo",
         NOMBRES:          "Juan",
         APELLIDO_PATERNO: "García",
+        ID_CREDENCIAL:    1,
+        NUMERO_CREDENCIAL:"CRED-001",
       }],
     });
-    // findMembresiaActivaByCurp → membresía activa (SPRINT 2: nueva validación)
-    mockExecute.mockResolvedValueOnce({
-      rows: [{ ID_CREDENCIAL: 1, CURP: CURP_VALIDA, NUMERO_CREDENCIAL: "CRED-001" }],
-    });
-    // SELECT NEXT_ID para generar ID_SERVICIO (SPRINT 2: nuevo paso en create)
+    // SEQ_SERVICIOS.NEXTVAL → ID atómico del sequence de Oracle
     mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });
     // INSERT SERVICIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(servicioBase);
 
     expect(res.status).toBe(201);
@@ -230,6 +210,7 @@ describe("Validación: datos inválidos → 400", () => {
   test("Servicio con costo negativo → 400", async () => {
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...servicioBase, costo: -50 });
     expect(res.status).toBe(400);
   });
@@ -237,6 +218,7 @@ describe("Validación: datos inválidos → 400", () => {
   test("Servicio sin campos requeridos → 400", async () => {
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ curp: CURP_VALIDA });
     expect(res.status).toBe(400);
   });
@@ -318,6 +300,7 @@ describe("Falla: servicio para beneficiario con estatus bloqueado", () => {
 
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(servicioBase);
 
     expect(res.status).toBeGreaterThanOrEqual(400);
@@ -335,6 +318,7 @@ describe("Falla: servicio para beneficiario con estatus bloqueado", () => {
 
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(servicioBase);
 
     expect(res.status).toBeGreaterThanOrEqual(400);
@@ -345,6 +329,7 @@ describe("Falla: servicio para beneficiario con estatus bloqueado", () => {
 
     const res = await request(app)
       .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(servicioBase);
 
     expect(res.status).toBe(404);

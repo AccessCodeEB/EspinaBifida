@@ -211,16 +211,10 @@ async function main() {
           objectType: "INDEX",
           listSql: `SELECT index_name AS OBJECT_NAME FROM user_indexes WHERE generated = 'N' ORDER BY index_name`,
         },
-        {
-          title: "CONSTRAINTS",
-          objectType: "CONSTRAINT",
-          listSql: `
-            SELECT constraint_name AS OBJECT_NAME
-            FROM user_constraints
-            WHERE constraint_type IN ('P', 'R', 'U')
-            ORDER BY constraint_name
-          `,
-        },
+        // NOTE: Constraints are exported as part of TABLE DDL above (CONSTRAINTS=TRUE
+        // and REF_CONSTRAINTS=TRUE are set via DBMS_METADATA.SET_TRANSFORM_PARAM).
+        // GET_DDL('CONSTRAINT', ...) is not a valid standalone Oracle API call and
+        // would produce error-comment lines for every constraint.
       ];
 
       for (const section of sections) {
