@@ -16,8 +16,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
+import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
 
-/** Deriva el estatus de membresía desde el estatus del beneficiario */
+/** Misma semántica que en Beneficiarios: estatus del expediente. */
 function getMembresiaEstatus(b: Beneficiario): "Activa" | "Inactiva" | "Cancelada" {
   if (b.estatus === "Activo") return "Activa"
   if (b.estatus === "Inactivo") return "Inactiva"
@@ -48,7 +49,8 @@ function EstatusBadge({ estatus }: { estatus: "Activa" | "Inactiva" | "Cancelada
 }
 
 export function MembresiasSection() {
-  const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
+  /** Lista completa (misma fuente que Beneficiarios) para conteos idénticos a los chips. */
+  const [todosBeneficiarios, setTodosBeneficiarios] = useState<Beneficiario[]>([])
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState<string | null>(null)
   const [searchTerm, setSearchTerm]       = useState("")
@@ -57,13 +59,12 @@ export function MembresiasSection() {
 
   useEffect(() => {
     getBeneficiarios()
-      .then((data) => {
-        // Excluimos los que están en Baja definitiva del listado principal
-        setBeneficiarios(data.filter((b) => b.estatus !== "Baja"))
-      })
+      .then((data) => setTodosBeneficiarios(data))
       .catch((err) => setError(err?.message ?? "Error al cargar membresías"))
       .finally(() => setLoading(false))
   }, [])
+
+  const beneficiarios = todosBeneficiarios.filter((b) => b.estatus !== "Baja")
 
   if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-muted-foreground text-sm">Cargando membresías...</p></div>
   if (error)   return <div className="flex h-64 items-center justify-center"><p className="text-destructive text-sm">{error}</p></div>
@@ -75,14 +76,15 @@ export function MembresiasSection() {
     return nombre.includes(term) || folio.includes(term)
   })
 
-  const activas   = beneficiarios.filter((b) => b.estatus === "Activo").length
-  const inactivas = beneficiarios.filter((b) => b.estatus === "Inactivo").length
+  const conteos = conteosEstatusBeneficiarios(todosBeneficiarios)
+  const activas   = conteos.Activo
+  const inactivas = conteos.Inactivo
 
   return (
     <div className="flex flex-col gap-8 pb-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Membresías</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gestión de membresías por estatus de beneficiario.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Los totales coinciden con la sección Beneficiarios (estatus Activo / Inactivo).</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

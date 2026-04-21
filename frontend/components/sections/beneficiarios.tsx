@@ -5,7 +5,7 @@ import {
   Search, Plus, Eye, Edit, CreditCard, FileText, MapPin,
   Download, CheckCircle, XCircle, AlertTriangle, User, Users, Loader2,
   Phone, HeartPulse, Stethoscope, ClipboardList, Mail,
-  Calendar, Hash, Activity, ArrowLeft, Save, Trash2
+  Calendar, Hash, Droplet, Activity, ArrowLeft, Save, Trash2, ZoomIn, X,
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -65,7 +65,7 @@ function getEstatusBadge(estatus: string) {
   }
 }
 
-// NUEVO: Helper para los colores del contorno de la foto de perfil
+// Helper para los colores del contorno de la foto de perfil
 function getPhotoRingClasses(estatus?: string) {
   switch (estatus) {
     case "Activo":
@@ -179,6 +179,7 @@ export function BeneficiariosSection() {
   const [overlayAction, setOverlayAction] = useState<"baja" | "eliminar" | null>(null)
   const [credencialBeneficiario, setCredencialBeneficiario] = useState<Beneficiario | null>(null)
   const [removeFotoConfirmOpen, setRemoveFotoConfirmOpen] = useState(false)
+  const [fotoPerfilZoomOpen, setFotoPerfilZoomOpen] = useState(false)
 
   const {
     beneficiarios, loading, error,
@@ -196,6 +197,14 @@ export function BeneficiariosSection() {
     fotoUploading, handleUploadFotoBeneficiario, handleDeleteFotoBeneficiario,
     altaFotoPreview, handleAltaFotoSelected,
   } = useBeneficiarios()
+
+  const fotoZoomUrl = selectedBeneficiario
+    ? resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
+    : undefined
+
+  useEffect(() => {
+    if (!showExpedienteDialog) setFotoPerfilZoomOpen(false)
+  }, [showExpedienteDialog])
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
@@ -263,7 +272,7 @@ export function BeneficiariosSection() {
         </Button>
       </div>
 
-      {/* ── Grid de tarjetas (columnas de 264px, sin huecos por fracciones del viewport) ── */}
+      {/* ── Grid de tarjetas ── */}
       <div className="grid justify-center gap-2 sm:gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,264px),264px))]">
         {filtered.map((b) => {
           const initials = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
@@ -315,7 +324,6 @@ export function BeneficiariosSection() {
           className="max-w-4xl w-[calc(100vw-2rem)] max-h-[min(90vh,900px)] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl sm:rounded-3xl"
         >
           {selectedBeneficiario && (() => {
-             // Solo leemos la URL de la foto; no se sube nada desde esta vista.
              const fotoUrl = resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
              return (
             <>
@@ -324,15 +332,36 @@ export function BeneficiariosSection() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-center gap-4">
                     
-                    {/* FOTO DE PERFIL ESTÁTICA (Lectura) CON ANILLO DE ESTATUS */}
-                    <div className={cn("flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm", getPhotoRingClasses(selectedBeneficiario.estatus))}>
-                      {fotoUrl ? (
-                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={fotoUrl} alt="Perfil" className="size-full object-cover" />
-                      ) : (
-                        `${selectedBeneficiario.nombres?.[0] ?? ""}${selectedBeneficiario.apellidoPaterno?.[0] ?? ""}`
-                      )}
-                    </div>
+                    {/* FOTO DE PERFIL CON HOVER Y ZOOM EN DETALLES */}
+                    {fotoUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setFotoPerfilZoomOpen(true)}
+                        className={cn(
+                          "group relative flex size-16 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm outline-none transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+                          getPhotoRingClasses(selectedBeneficiario.estatus)
+                        )}
+                        aria-label="Ampliar foto de perfil"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={fotoUrl}
+                          alt="Perfil del beneficiario"
+                          className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                        <ZoomIn className="absolute size-6 text-white opacity-0 drop-shadow-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100" strokeWidth={2} />
+                      </button>
+                    ) : (
+                      <div
+                        className={cn(
+                          "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold shadow-sm",
+                          getPhotoRingClasses(selectedBeneficiario.estatus)
+                        )}
+                      >
+                        {`${selectedBeneficiario.nombres?.[0] ?? ""}${selectedBeneficiario.apellidoPaterno?.[0] ?? ""}`}
+                      </div>
+                    )}
 
                     <div className="min-w-0 flex-1">
                       <DialogTitle className="text-2xl font-bold text-foreground">
@@ -463,7 +492,6 @@ export function BeneficiariosSection() {
                     </span>
                   </div>
                   <div className="flex gap-4 p-4">
-                    {/* FOTO EN CREDENCIAL CON ANILLO DE ESTATUS */}
                     <div className={cn("flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl text-lg font-bold shadow-sm", getPhotoRingClasses(credencialBeneficiario.estatus))}>
                       {credPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -531,7 +559,6 @@ export function BeneficiariosSection() {
             )}
             
             <SectionCard title="Información Personal" icon={User}>
-              {/* DISEÑO MEJORADO: Foto de Perfil en Crear */}
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
                   <div className="shrink-0">
@@ -989,10 +1016,9 @@ export function BeneficiariosSection() {
             {/* ────────────────────────────────────── */}
 
             <SectionCard title="Información Personal" icon={User}>
-              {/* DISEÑO MEJORADO: Foto de Perfil en Editar */}
               <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
                 <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <div className="shrink-0">
+                  <div className="shrink-0 relative group">
                     <ProfilePhotoUpload
                       variant="form"
                       size="md"
@@ -1012,10 +1038,22 @@ export function BeneficiariosSection() {
                           : undefined
                       }
                     />
+                    {/* Botón flotante para eliminar foto si existe */}
+                    {editForm.fotoPerfilUrl && !fotoUploading && editForm.estatus !== "Baja" && (
+                      <button
+                        type="button"
+                        onClick={() => setRemoveFotoConfirmOpen(true)}
+                        className="absolute -top-2 -right-2 bg-background border border-border text-destructive p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
+                        title="Eliminar foto"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
+                      Haz clic en la imagen o arrastra una nueva. <br className="hidden sm:block" />
                       Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>
@@ -1275,6 +1313,43 @@ export function BeneficiariosSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Vista ampliada de foto de perfil (expediente) */}
+      <Dialog
+        open={fotoPerfilZoomOpen && Boolean(fotoZoomUrl)}
+        onOpenChange={(open) => {
+          if (!open) setFotoPerfilZoomOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          overlayClassName="z-[190] bg-black/80 backdrop-blur-sm"
+          className={cn(
+            "z-[200] max-h-[100vh] w-auto gap-0 border-none bg-transparent p-0 shadow-none",
+            "translate-x-[-50%] translate-y-[-50%] outline-none",
+          )}
+        >
+          <DialogTitle className="sr-only">Foto de perfil ampliada</DialogTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="fixed right-4 top-4 z-[210] size-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            onClick={() => setFotoPerfilZoomOpen(false)}
+            aria-label="Cerrar vista ampliada"
+          >
+            <X className="size-6" />
+          </Button>
+          {fotoZoomUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fotoZoomUrl}
+              alt="Foto de perfil"
+              className="mx-auto aspect-square max-h-[min(85vh,800px)] w-auto object-cover rounded-full shadow-2xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

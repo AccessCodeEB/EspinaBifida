@@ -13,6 +13,7 @@ import {
   deleteBeneficiarioFotoPerfil,
   type Beneficiario,
 } from "@/services/beneficiarios"
+import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
 
 // ─── Constantes de validación ────────────────────────────────────────────────
 const EMAIL_RE     = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -351,12 +352,7 @@ export function useBeneficiarios() {
       return curpClaveOrden(a).localeCompare(curpClaveOrden(b), "es")
     })
 
-  const conteos = {
-    Todos:    beneficiarios.length,
-    Activo:   beneficiarios.filter((b) => b.estatus === "Activo").length,
-    Inactivo: beneficiarios.filter((b) => b.estatus === "Inactivo").length,
-    Baja:     beneficiarios.filter((b) => b.estatus === "Baja").length,
-  }
+  const conteos = conteosEstatusBeneficiarios(beneficiarios)
 
   // ── Edición ───────────────────────────────────────────────────────────────
   function openEdit(b: Beneficiario) {

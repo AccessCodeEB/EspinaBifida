@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { CreditCard, ClipboardList, Package, CalendarDays, ChevronLeft, ChevronRight, UserCheck, UserX } from "lucide-react"
+import React, { useEffect, useMemo, useState } from "react"
+import { CreditCard, ClipboardList, Package, CalendarDays, UserCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getInventario } from "@/services/inventario"
 import { getBeneficiarios } from "@/services/beneficiarios"
+import { conteosEstatusBeneficiarios, conteoMembresiasPorVencer } from "@/lib/beneficiarios-conteos"
 import {
   BarChart,
   Bar,
@@ -36,8 +37,8 @@ const locationData = [
   { name: "Foráneos", value: 79, fill: "#eab308" },
 ]
 
-/** Tarjeta estática de beneficiarios activos */
-function BeneficiariosCard({
+/** Solo membresías activas (estatus Activo), mismo criterio que Beneficiarios. */
+function MembresiasActivasCard({
   activosMembresia,
   loading,
 }: {
@@ -48,7 +49,7 @@ function BeneficiariosCard({
     <Card className="shadow-sm border-border/60 relative overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Membresías Activas
+          Membresías
         </CardTitle>
         <div className="flex size-9 items-center justify-center rounded-lg shadow-sm bg-primary text-primary-foreground transition-colors duration-300">
           <UserCheck className="size-4" />
@@ -60,7 +61,7 @@ function BeneficiariosCard({
           {loading ? "—" : activosMembresia === null ? "--" : String(activosMembresia)}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          {loading ? "Cargando datos…" : "Beneficiarios con membresía vigente"}
+          {loading ? "Cargando datos…" : "Membresías activas (estatus Activo, como en Beneficiarios)"}
         </p>
       </CardContent>
     </Card>
@@ -73,8 +74,7 @@ export function DashboardSection() {
 
   // Beneficiarios desde la API
   const [activosMembresia, setActivosMembresia] = useState<number | null>(null)
-  const [inactivosMembresia, setInactivosMembresia] = useState<number | null>(null)
-  const [bajaCount, setBajaCount] = useState<number | null>(null)
+  const [porVencerMembresia, setPorVencerMembresia] = useState<number | null>(null)
   const [loadingBenef, setLoadingBenef] = useState(true)
 
   useEffect(() => {
@@ -92,22 +92,17 @@ export function DashboardSection() {
         setInventarioBajoCount(null)
       })
 
-    // Beneficiarios reales — el estatus del beneficiario ES la fuente de verdad
     getBeneficiarios()
       .then((beneficiarios) => {
         if (cancelled) return
-        const activos = beneficiarios.filter((b) => b.estatus === "Activo").length
-        const inactivos = beneficiarios.filter((b) => b.estatus === "Inactivo").length
-        const bajas = beneficiarios.filter((b) => b.estatus === "Baja").length
-        setActivosMembresia(activos)
-        setInactivosMembresia(inactivos)
-        setBajaCount(bajas)
+        const c = conteosEstatusBeneficiarios(beneficiarios)
+        setActivosMembresia(c.Activo)
+        setPorVencerMembresia(conteoMembresiasPorVencer(beneficiarios))
       })
       .catch(() => {
         if (cancelled) return
         setActivosMembresia(null)
-        setInactivosMembresia(null)
-        setBajaCount(null)
+        setPorVencerMembresia(null)
       })
       .finally(() => {
         if (!cancelled) setLoadingBenef(false)
@@ -118,37 +113,41 @@ export function DashboardSection() {
     }
   }, [])
 
-  const inventarioCard = {
-    title: "Inventario Bajo",
-    value: inventarioBajoCount === null ? "--" : String(inventarioBajoCount),
-    description:
-      inventarioBajoCount === null
-        ? "No se pudo cargar inventario"
-        : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`,
-    icon: Package,
-    color: "bg-destructive text-destructive-foreground",
-    iconClassName: "text-white",
-  }
-
-  const staticCards = [
-    {
-      title: "Membresías por Vencer",
-      value: "18",
-      description: "En los próximos 30 días",
-      icon: CreditCard,
-      color: "bg-amber-500 text-white",
-      iconClassName: "",
-    },
-    {
-      title: "Servicios del Mes",
-      value: "83",
-      description: "Cierre proyectado: Febrero",
-      icon: ClipboardList,
-      color: "bg-primary text-primary-foreground",
-      iconClassName: "",
-    },
-    inventarioCard,
-  ]
+  const metricCards = useMemo(
+    () => [
+      {
+        title: "Membresías por Vencer",
+        value: porVencerMembresia === null ? "--" : String(porVencerMembresia),
+        description:
+          porVencerMembresia === null
+            ? "Cargando beneficiarios…"
+            : "Credencial por vencer en los próximos 30 días (sin baja)",
+        icon: CreditCard,
+        color: "bg-amber-500 text-white",
+        iconClassName: "",
+      },
+      {
+        title: "Servicios del Mes",
+        value: "83",
+        description: "Cierre proyectado: Febrero",
+        icon: ClipboardList,
+        color: "bg-primary text-primary-foreground",
+        iconClassName: "",
+      },
+      {
+        title: "Inventario Bajo",
+        value: inventarioBajoCount === null ? "--" : String(inventarioBajoCount),
+        description:
+          inventarioBajoCount === null
+            ? "No se pudo cargar inventario"
+            : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`,
+        icon: Package,
+        color: "bg-destructive text-destructive-foreground",
+        iconClassName: "text-white",
+      },
+    ],
+    [porVencerMembresia, inventarioBajoCount]
+  )
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -171,15 +170,10 @@ export function DashboardSection() {
       {/* Tarjetas de Métricas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Tarjeta especial de beneficiarios con slide */}
-        <BeneficiariosCard
-          activosMembresia={activosMembresia}
-          inactivosMembresia={inactivosMembresia}
-          bajaCount={bajaCount}
-          loading={loadingBenef}
-        />
+        <MembresiasActivasCard activosMembresia={activosMembresia} loading={loadingBenef} />
 
         {/* Tarjetas estáticas restantes */}
-        {staticCards.map((card) => (
+        {metricCards.map((card) => (
           <Card key={card.title} className="shadow-sm border-border/60">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
