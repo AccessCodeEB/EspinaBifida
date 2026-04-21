@@ -76,7 +76,7 @@ export function errorHandler(err, req, res, _next) {
     });
   }
 
-  const body = { code, message };
+  const body = { code, message, error: message };
   if (details !== undefined) body.details = details;
 
   res.status(statusCode).json(body);

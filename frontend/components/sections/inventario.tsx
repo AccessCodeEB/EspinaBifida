@@ -471,6 +471,7 @@ export function InventarioSection() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="text-foreground"
                         title="Modificar inventario"
                         onClick={() => openMovimiento(item)}
                       >

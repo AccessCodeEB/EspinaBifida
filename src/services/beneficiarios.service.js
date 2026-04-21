@@ -187,6 +187,14 @@ export async function update(curp, data) {
   if (!existente) {
     throw notFound(`No existe un beneficiario con la CURP ${id}`, "BENEFICIARIO_NOT_FOUND");
   }
+
+  if (existente.ESTATUS === "Baja") {
+    throw conflict(
+      `No se puede actualizar el beneficiario ${id} porque su estatus es Baja`,
+      "BENEFICIARIO_BAJA"
+    );
+  }
+
   data.estatus = existente.ESTATUS;
   return BeneficiarioModel.update(id, data);
 }

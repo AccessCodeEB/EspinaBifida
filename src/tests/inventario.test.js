@@ -86,7 +86,7 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
     expect(res.body.data.stockActual).toBe(17);
   });
 
-  test("devuelve 409 si stock insuficiente para SALIDA", async () => {
+  test("devuelve 422 si stock insuficiente para SALIDA", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 101, INVENTARIO_ACTUAL: 2 }] });
 
     const res = await request(app)
@@ -94,7 +94,7 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ ...movimientoBase, tipo: "SALIDA", cantidad: 10 });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(422);
     expect(mockRollback).toHaveBeenCalled();
   });
 

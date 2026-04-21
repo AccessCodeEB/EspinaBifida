@@ -1,6 +1,8 @@
 import { jest } from "@jest/globals";
+import jwt from "jsonwebtoken";
 
 process.env.JWT_SECRET = "test-secret-espina-bifida";
+const tokenAdmin = jwt.sign({ idAdmin: 1, idRol: 1 }, process.env.JWT_SECRET);
 
 const mockExecute = jest.fn();
 const mockClose = jest.fn().mockResolvedValue(undefined);
@@ -62,11 +64,14 @@ describe("Criterios de aceptación - inventario", () => {
   test("Scenario 2: stock insuficiente responde 422 con payload esperado", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 7, INVENTARIO_ACTUAL: 2 }] });
 
-    const res = await request(app).post("/api/v1/movimientos").send({
-      tipo: "SALIDA",
-      idProducto: 7,
-      cantidad: 5,
-    });
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        tipo: "SALIDA",
+        idProducto: 7,
+        cantidad: 5,
+      });
 
     expect(res.status).toBe(422);
     expect(res.body).toEqual({
@@ -82,11 +87,14 @@ describe("Criterios de aceptación - inventario", () => {
       .mockResolvedValueOnce({ rowsAffected: 1 })
       .mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).post("/api/v1/movimientos").send({
-      tipo: "ENTRADA",
-      idProducto: 101,
-      cantidad: 5,
-    });
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({
+        tipo: "ENTRADA",
+        idProducto: 101,
+        cantidad: 5,
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/registrado/i);
@@ -106,7 +114,9 @@ describe("Criterios de aceptación - inventario", () => {
       ],
     });
 
-    const res = await request(app).get("/api/v1/inventario");
+    const res = await request(app)
+      .get("/api/v1/inventario")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
