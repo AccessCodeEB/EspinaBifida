@@ -30,7 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { getServicios, type Servicio } from "@/services/servicios"
+import {
+  createServicio,
+  getMontoSugeridoPorTipoServicio,
+  getServicios,
+  TIPOS_SERVICIO_SUGERIDOS,
+  type Servicio,
+} from "@/services/servicios"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 
 export function ServiciosSection() {
@@ -38,8 +44,12 @@ export function ServiciosSection() {
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
   const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string } | null>(null)
+  const [tipoServicioSeleccionado, setTipoServicioSeleccionado] = useState("")
+  const [montoServicio, setMontoServicio] = useState("")
   const [fechaServicio, setFechaServicio] = useState(() => new Date().toISOString().split("T")[0])
   const [fechaError, setFechaError] = useState("")
+  const [registroError, setRegistroError] = useState("")
+  const [registroLoading, setRegistroLoading] = useState(false)
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [loadingBeneficiarios, setLoadingBeneficiarios] = useState(false)
   const [showSugerencias, setShowSugerencias] = useState(false)
@@ -85,6 +95,14 @@ export function ServiciosSection() {
   )
   const hoy = new Date().toISOString().split("T")[0]
   const fechaEsFutura = fechaServicio > hoy
+  const idTipoServicioNumerico = Number(tipoServicioSeleccionado)
+  const montoNum = Number(montoServicio)
+  const montoEsValido = montoServicio.trim() !== "" && Number.isFinite(montoNum) && montoNum >= 0
+  const montoSugerido = Number.isInteger(idTipoServicioNumerico)
+    ? getMontoSugeridoPorTipoServicio(idTipoServicioNumerico)
+    : null
+  const tipoServicioSeleccionadoLabel =
+    TIPOS_SERVICIO_SUGERIDOS.find((tipo) => tipo.idTipoServicio === idTipoServicioNumerico)?.nombre ?? ""
 
   const busquedaNormalizada = busquedaBeneficiario.trim().toLowerCase()
   const sugerenciasBeneficiarios = busquedaNormalizada
@@ -147,14 +165,53 @@ export function ServiciosSection() {
     setShowSugerencias(false)
   }
 
-  const handleRegistrarServicio = () => {
+  const handleRegistrarServicio = async () => {
+    if (!beneficiarioEncontrado) {
+      setRegistroError("Seleccione un beneficiario válido")
+      return
+    }
+
+    if (!Number.isInteger(idTipoServicioNumerico) || idTipoServicioNumerico <= 0) {
+      setRegistroError("Seleccione un tipo de servicio")
+      return
+    }
+
+    if (!montoEsValido) {
+      setRegistroError("Ingrese un monto válido")
+      return
+    }
+
     if (fechaEsFutura) {
       setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores.")
       return
     }
 
-    setFechaError("")
-    setShowRegistroDialog(false)
+    try {
+      setRegistroLoading(true)
+      setRegistroError("")
+      setFechaError("")
+
+      await createServicio({
+        curp: beneficiarioEncontrado.curp,
+        idTipoServicio: idTipoServicioNumerico,
+        costo: montoNum,
+        montoPagado: 0,
+      })
+
+      const serviciosActualizados = await getServicios()
+      setServiciosRegistrados(serviciosActualizados)
+
+      setShowRegistroDialog(false)
+      setBeneficiarioEncontrado(null)
+      setBusquedaBeneficiario("")
+      setTipoServicioSeleccionado("")
+      setMontoServicio("")
+      setFechaServicio(hoy)
+    } catch (err) {
+      setRegistroError(err instanceof Error ? err.message : "Error al registrar el servicio")
+    } finally {
+      setRegistroLoading(false)
+    }
   }
 
   return (
@@ -170,8 +227,11 @@ export function ServiciosSection() {
           setShowRegistroDialog(true)
           setBeneficiarioEncontrado(null)
           setBusquedaBeneficiario("")
+          setTipoServicioSeleccionado("")
+          setMontoServicio("")
           setFechaServicio(hoy)
           setFechaError("")
+          setRegistroError("")
         }}>
           <Plus className="size-5" />
           Nuevo Servicio
@@ -301,19 +361,41 @@ export function ServiciosSection() {
 
             <div className="flex flex-col gap-2">
               <Label className="text-base">Tipo de Servicio</Label>
-              <Select>
+              <Select
+                value={tipoServicioSeleccionado}
+                onValueChange={(value) => {
+                  setTipoServicioSeleccionado(value)
+                  setRegistroError("")
+
+                  const nuevoMonto = getMontoSugeridoPorTipoServicio(Number(value))
+                  if (nuevoMonto !== null) {
+                    setMontoServicio(String(nuevoMonto.toFixed(2)))
+                  } else {
+                    setMontoServicio("")
+                  }
+                }}
+              >
                 <SelectTrigger className="h-12 text-base">
                   <SelectValue placeholder="Seleccionar servicio" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="consulta">Consulta Medica</SelectItem>
-                  <SelectItem value="terapia">Terapia Fisica</SelectItem>
-                  <SelectItem value="donacion">Donacion Material</SelectItem>
-                  <SelectItem value="panales">Paquete de Panales</SelectItem>
-                  <SelectItem value="silla">Silla de Ruedas</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
+                  {TIPOS_SERVICIO_SUGERIDOS.map((tipo) => (
+                    <SelectItem key={tipo.idTipoServicio} value={String(tipo.idTipoServicio)}>
+                      {tipo.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {montoSugerido !== null && (
+                <p className="text-sm text-muted-foreground">
+                  Monto sugerido para {tipoServicioSeleccionadoLabel}: ${montoSugerido.toFixed(2)}
+                </p>
+              )}
+              {tipoServicioSeleccionadoLabel === "Otros" && (
+                <p className="text-sm text-muted-foreground">
+                  Este servicio no tiene monto sugerido automático.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -335,9 +417,24 @@ export function ServiciosSection() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-base">Monto</Label>
-                <Input placeholder="$0.00" className="h-12 text-base" />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="$0.00"
+                  className="h-12 text-base"
+                  value={montoServicio}
+                  onChange={(e) => {
+                    setMontoServicio(e.target.value)
+                    if (registroError) setRegistroError("")
+                  }}
+                />
               </div>
             </div>
+
+            {registroError && (
+              <p className="text-sm font-medium text-destructive">{registroError}</p>
+            )}
 
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" size="lg" className="text-base" onClick={() => setShowRegistroDialog(false)}>
@@ -346,10 +443,18 @@ export function ServiciosSection() {
               <Button
                 size="lg"
                 className="text-base"
-                disabled={!beneficiarioEncontrado || beneficiarioEncontrado.membresia === "Vencida" || fechaEsFutura}
+                disabled={
+                  registroLoading ||
+                  !beneficiarioEncontrado ||
+                  beneficiarioEncontrado.membresia === "Vencida" ||
+                  fechaEsFutura ||
+                  !Number.isInteger(idTipoServicioNumerico) ||
+                  idTipoServicioNumerico <= 0 ||
+                  !montoEsValido
+                }
                 onClick={handleRegistrarServicio}
               >
-                Registrar Servicio
+                {registroLoading ? "Registrando..." : "Registrar Servicio"}
               </Button>
             </div>
           </div>
