@@ -1,7 +1,7 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "")
 
 /**
- * Convierte ruta guardada en BD (/uploads/...) o URL absoluta en src usable por <img>.
+ * Convierte ruta guardada en BD (/uploads/...), URL absoluta o data URL en src usable por <img>.
  * `cacheBust` fuerza recarga del navegador al reemplazar la imagen con una nueva URL en el mismo path.
  */
 export function resolvePublicUploadUrl(
@@ -9,6 +9,8 @@ export function resolvePublicUploadUrl(
   cacheBust?: string | number | null
 ): string | undefined {
   if (!stored) return undefined
+  // data URL (base64): usar tal cual, sin prefijo de API
+  if (stored.startsWith("data:")) return stored
   let base: string
   if (stored.startsWith("http://") || stored.startsWith("https://")) base = stored
   else base = `${API_BASE}${stored.startsWith("/") ? stored : `/${stored}`}`
