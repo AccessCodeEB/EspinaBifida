@@ -18,6 +18,36 @@ import { ProfilePhotoCameraDialog } from "@/components/profile-photo-camera-dial
 const MAX_FILE_BYTES = 2 * 1024 * 1024
 const ACCEPT_RE = /^image\/(jpeg|png|webp|gif)$/i
 
+/** Redimensiona a máx 800×800 con calidad JPEG 0.82 para reducir el base64 antes de guardar en Oracle. */
+async function resizeImageFile(file: File, maxPx = 800, quality = 0.82): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1)
+      const w = Math.round(img.width * ratio)
+      const h = Math.round(img.height * ratio)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return reject(new Error("Canvas no disponible"))
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("No se pudo redimensionar"))
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }))
+        },
+        "image/jpeg",
+        quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Imagen inválida")) }
+    img.src = url
+  })
+}
+
 export interface ProfilePhotoUploadProps {
   fotoPerfilUrl?: string | null
   /** Incrementar tras subida exitosa para evitar caché del navegador con la misma ruta */
@@ -91,36 +121,6 @@ export function ProfilePhotoUpload({
     [onFileSelected, cancelCrop]
   )
 
-/** Redimensiona una imagen a máx 400×400 usando Canvas y la retorna como File JPEG comprimido. */
-async function resizeImageFile(file: File, maxPx = 400, quality = 0.75): Promise<File> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1)
-      const w = Math.round(img.width * ratio)
-      const h = Math.round(img.height * ratio)
-      const canvas = document.createElement("canvas")
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return reject(new Error("Canvas no disponible"))
-      ctx.drawImage(img, 0, 0, w, h)
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return reject(new Error("No se pudo redimensionar la imagen"))
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }))
-        },
-        "image/jpeg",
-        quality
-      )
-    }
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Imagen inválida")) }
-    img.src = url
-  })
-}
-
   const processImageFile = useCallback(
     async (file: File) => {
       if (!file || disabled || uploading) return
@@ -128,7 +128,7 @@ async function resizeImageFile(file: File, maxPx = 400, quality = 0.75): Promise
         toast.error("Formato no válido. Usa JPEG, PNG, WebP o GIF.")
         return
       }
-      // Redimensionar siempre antes de procesar (garantiza base64 pequeño para Oracle)
+      // Redimensionar antes de mostrar el crop (garantiza base64 manejable en Oracle)
       const resized = await resizeImageFile(file)
       if (!enableCrop) {
         await onFileSelected(resized)
