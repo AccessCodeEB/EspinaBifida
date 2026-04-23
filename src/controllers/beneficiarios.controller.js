@@ -34,7 +34,7 @@ function mapBeneficiario(row) {
     tipo:            b.tipo ?? null,
     fechaAlta:       b.fechaAlta,
     numeroCredencial: b.numeroCredencial,
-    fotoPerfilUrl:   b.fotoPerfilUrl ?? null,
+    fotoPerfilUrl:   safeClobString(b.fotoPerfilUrl) ?? null,
   };
 }
 
