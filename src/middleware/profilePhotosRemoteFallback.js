@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import express from "express";
+import { REPO_ROOT } from "../repoRoot.js";
 
-const cwd = process.cwd();
-const profilesDir = path.join(cwd, "uploads", "profiles");
+const profilesDir = path.join(REPO_ROOT, "uploads", "profiles");
 
 /** Solo nombres de archivo seguros (p. ej. ben-CURP-timestamp.jpg). */
 function safeProfileFilename(name) {

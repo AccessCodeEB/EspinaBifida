@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { REPO_ROOT } from "../repoRoot.js";
 
-const PROFILES_DIR = path.join(process.cwd(), "uploads", "profiles");
+const PROFILES_DIR = path.join(REPO_ROOT, "uploads", "profiles");
 
 /** Ruta relativa guardada en Oracle y servida como estático bajo /uploads/... */
 export function publicPathForStoredFile(filename) {

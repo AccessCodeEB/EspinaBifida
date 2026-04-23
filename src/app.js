@@ -2,15 +2,14 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import { fileURLToPath } from "url";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
+import { REPO_ROOT } from "./repoRoot.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.join(__dirname, "..");
-dotenv.config({ path: path.join(rootDir, ".env.defaults") });
-dotenv.config({ path: path.join(rootDir, ".env"), override: true });
+dotenv.config({ path: path.join(REPO_ROOT, ".env.defaults") });
+// Sin override: respeta variables ya definidas (p. ej. JWT_SECRET en CI o en tests).
+dotenv.config({ path: path.join(REPO_ROOT, ".env") });
 import beneficiariosRoutes   from "./routes/beneficiarios.routes.js";
 import beneficiariosV1Routes from "./routes/beneficiarios.v1.routes.js";
 import serviciosRoutes        from "./routes/servicios.routes.js";
@@ -34,7 +33,7 @@ app.use(cors({
 }));
 app.use(express.json());
 mountProfilePhotosRemoteFallback(app);
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/uploads", express.static(path.join(REPO_ROOT, "uploads")));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

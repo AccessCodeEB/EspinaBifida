@@ -2,8 +2,9 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 import { badRequest } from "../utils/httpErrors.js";
+import { REPO_ROOT } from "../repoRoot.js";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "profiles");
+const UPLOAD_DIR = path.join(REPO_ROOT, "uploads", "profiles");
 
 function ensureUploadDir() {
   if (!fs.existsSync(UPLOAD_DIR)) {

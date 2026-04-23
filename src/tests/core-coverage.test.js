@@ -15,6 +15,7 @@ import {
 import { AppError, notFoundHandler, errorHandler } from "../middleware/errorHandler.js";
 import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
 import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
+import { REPO_ROOT } from "../repoRoot.js";
 
 function makeRes() {
   const res = {
@@ -180,7 +181,7 @@ describe("profileFiles utils", () => {
   });
 
   test("elimina archivo existente en uploads/profiles", () => {
-    const profilesDir = path.join(process.cwd(), "uploads", "profiles");
+    const profilesDir = path.join(REPO_ROOT, "uploads", "profiles");
     fs.mkdirSync(profilesDir, { recursive: true });
     const fileName = `test-${Date.now()}.tmp`;
     const full = path.join(profilesDir, fileName);
