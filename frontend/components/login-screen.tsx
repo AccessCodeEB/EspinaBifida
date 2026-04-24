@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Eye, EyeOff, LogIn, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,8 +16,7 @@ interface LoginScreenProps {
 /**
  * Pantalla de login completa.
  * Usa el mismo sistema de diseño (tokens CSS, componentes UI, tipografía Inter)
- * que el resto del front.  No crea ninguna ruta extra: se renderiza en page.tsx
- * cuando no hay sesión activa.
+ * que el resto del front. Se usa en `/panel` cuando no hay sesión activa.
  */
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail]           = useState("")
@@ -188,7 +188,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Acceso exclusivo para administradores autorizados
+          Acceso exclusivo para administradores autorizados.
+          {" "}
+          <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
+            Volver al inicio público
+          </Link>
         </p>
       </div>
     </div>
