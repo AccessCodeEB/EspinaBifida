@@ -416,29 +416,30 @@ describe("DELETE /api/v1/citas/:id — cancelar cita", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/citas — ramas de mapCita no cubiertas", () => {
-  test("FECHA inválida (NaN) → rama else de isNaN: fechaStr desde String(fecha)", async () => {
-    // "2026-99-99" crea Invalid Date → else branch de isNaN
+  test("FECHA string y HORA string → mapeados directamente (200)", async () => {
+    // El nuevo mapCita usa typeof r.fecha === "string" y typeof r.hora === "string"
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ...citaRow, FECHA: "2026-99-99" }],
+      rows: [{ ...citaRow, FECHA: "2026-07-15", HORA: "10:30" }],
     });
 
     const res = await request(app).get("/api/v1/citas");
 
     expect(res.status).toBe(200);
-    expect(res.body[0].fecha).toBe("2026-99-99");
+    expect(res.body[0].fecha).toBe("2026-07-15");
+    expect(res.body[0].hora).toBe("10:30");
   });
 
-  test("FECHA inválida con T → hora tomada de parts[1]", async () => {
-    // "9999-99-99T10:30" crea Invalid Date (mes 99 inválido) pero tiene "T"
-    // → parts[1] = "10:30" → horaStr = "10:30"
+  test("FECHA no-string → fechaStr vacío; HORA no-string → horaStr vacío", async () => {
+    // typeof null === "string" = false → "" en ambos casos
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ...citaRow, FECHA: "9999-99-99T10:30" }],
+      rows: [{ ...citaRow, FECHA: null, HORA: null }],
     });
 
     const res = await request(app).get("/api/v1/citas");
 
     expect(res.status).toBe(200);
-    expect(res.body[0].hora).toBe("10:30");
+    expect(res.body[0].fecha).toBe("");
+    expect(res.body[0].hora).toBe("");
   });
 
   test("error de DB en getCitas → next(error) → 500", async () => {
