@@ -117,7 +117,7 @@ function parseBackendError(raw: string): Record<string, string> {
       if (msg.includes("apellidoMaterno")) errs.apellidoMaterno = "Obligatorio"
       return Object.keys(errs).length > 0 ? errs : { _global: msg }
     }
-    case "BENEFICIARIO_BAJA":  return { _global: "En baja: no editable" }
+    case "BENEFICIARIO_BAJA":  return { _global: "No se pudo guardar (estatus baja)" }
     case "BIND_ERROR":         return { _global: "Dato no aceptado" }
     case "INTERNAL_ERROR":     return { _global: "Error del servidor" }
     default:                   return { _global: msg || "Error al guardar" }
@@ -379,7 +379,13 @@ export function useBeneficiarios() {
   // ── Edición ───────────────────────────────────────────────────────────────
   function openEdit(b: Beneficiario) {
     setSelectedBeneficiario(b)
-    setEditForm({ ...b, tipoSangre: normalizeTipoSangre(b.tipoSangre) })
+    const pk = String(b.folio ?? b.curp ?? "").trim()
+    setEditForm({
+      ...b,
+      folio: pk || b.folio,
+      curp: pk || b.curp,
+      tipoSangre: normalizeTipoSangre(b.tipoSangre),
+    })
     setConfirmDelete(false)
     setConfirmEditDelete(false)
     setSaveError(null)
@@ -396,6 +402,17 @@ export function useBeneficiarios() {
   function matchesCurp(b: Beneficiario, curp: string) {
     const c = curp.toUpperCase()
     return (b.folio ?? "").toUpperCase() === c || (b.curp ?? "").toUpperCase() === c
+  }
+
+  /** CURP/folio del expediente abierto (prioriza selección; el formulario puede no traer `folio`). */
+  function beneficioIdParaMutaciones(): string | null {
+    const raw =
+      selectedBeneficiario?.folio ??
+      selectedBeneficiario?.curp ??
+      editForm.folio ??
+      editForm.curp
+    const id = String(raw ?? "").trim()
+    return id || null
   }
 
   async function handleUploadFotoBeneficiario(curp: string, file: File) {
@@ -451,7 +468,8 @@ export function useBeneficiarios() {
   }
 
   async function handleSaveEdit() {
-    if (!selectedBeneficiario || !editForm.folio) return
+    const saveId = beneficioIdParaMutaciones()
+    if (!selectedBeneficiario || !saveId) return
     setSaveError(null)
 
     const frontendErrs = validateEditForm({ ...editForm }, selectedBeneficiario)
@@ -464,28 +482,43 @@ export function useBeneficiarios() {
     setEditErrors({})
     setIsSaving(true)
     try {
+      const rawEstatus = String(editForm.estatus ?? "").trim()
+      const hadBajaAtOpen = selectedBeneficiario.estatus === "Baja"
+      const nuevoEstatus =
+        rawEstatus === "Activo" || rawEstatus === "Inactivo" ? rawEstatus : null
+
+      /** Salir de Baja: si el formulario pasa a Activo/Inactivo, PATCH antes del PUT. */
+      if (hadBajaAtOpen && nuevoEstatus) {
+        await updateEstatusBeneficiario(saveId, nuevoEstatus)
+        setSelectedBeneficiario((prev) =>
+          prev && matchesCurp(prev, saveId) ? { ...prev, estatus: nuevoEstatus } : prev
+        )
+      }
+
       const tipoSangrePayload = (() => {
         const t = editForm.tipoSangre
         if (t === undefined || t === null) return null
         const s = String(t).trim()
         return s === "" ? null : s
       })()
-      await updateBeneficiario(editForm.folio, {
+      await updateBeneficiario(saveId, {
         ...editForm,
+        folio: saveId,
+        curp: String(editForm.curp ?? saveId).trim() || saveId,
         tipoSangre: tipoSangrePayload ?? undefined,
         usaValvula: (editForm.usaValvula ? "S" : "N") as unknown as boolean,
       })
 
-      const nuevoEstatus = editForm.estatus as "Activo" | "Inactivo"
       if (
-        nuevoEstatus !== selectedBeneficiario.estatus &&
-        (nuevoEstatus === "Activo" || nuevoEstatus === "Inactivo")
+        !hadBajaAtOpen &&
+        nuevoEstatus &&
+        nuevoEstatus !== selectedBeneficiario.estatus
       ) {
-        await updateEstatusBeneficiario(editForm.folio, nuevoEstatus)
+        await updateEstatusBeneficiario(saveId, nuevoEstatus)
       }
 
       // Subir foto solo si el usuario la cambio durante la edicion
-      const curp = String(editForm.folio).toUpperCase()
+      const curp = saveId.toUpperCase()
       if (editFotoFileRef.current) {
         try {
           const { fotoPerfilUrl } = await uploadBeneficiarioFotoPerfil(curp, editFotoFileRef.current)
@@ -501,7 +534,9 @@ export function useBeneficiarios() {
       }
 
       setBeneficiarios((prev) =>
-        prev.map((b) => b.folio === editForm.folio ? { ...b, ...editForm } as Beneficiario : b)
+        prev.map((b) =>
+          matchesCurp(b, saveId) ? { ...b, ...editForm, folio: saveId } as Beneficiario : b
+        )
       )
       toast.success("Guardado correcto", { duration: 2800, className: TOAST_OK })
       setShowEditDialog(false)
@@ -516,48 +551,60 @@ export function useBeneficiarios() {
     }
   }
 
-  async function handleEditDelete() {
-    if (!editForm.folio) return
+  async function handleEditDelete(): Promise<boolean> {
+    const fid = beneficioIdParaMutaciones()
+    if (!fid) return false
     setIsSaving(true)
     try {
-      await deleteBeneficiario(editForm.folio)
-      setBeneficiarios((prev) => prev.filter((b) => b.folio !== editForm.folio))
+      await deleteBeneficiario(fid)
+      setBeneficiarios((prev) => prev.filter((b) => !matchesCurp(b, fid)))
       setConfirmEditDelete(false)
       setShowEditDialog(false)
+      return true
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : "Error al eliminar")
+      return false
     } finally {
       setIsSaving(false)
     }
   }
 
-  async function handleDarDeBaja() {
-    if (!editForm.folio) return
+  async function handleDarDeBaja(): Promise<boolean> {
+    const fid = beneficioIdParaMutaciones()
+    if (!fid) return false
     setIsSaving(true)
     setSaveError(null)
     try {
-      await deactivateBeneficiario(editForm.folio)
+      await deactivateBeneficiario(fid)
       setBeneficiarios((prev) =>
-        prev.map((b) => (b.folio === editForm.folio ? { ...b, estatus: "Baja" } as Beneficiario : b))
+        prev.map((b) => (matchesCurp(b, fid) ? { ...b, estatus: "Baja" } as Beneficiario : b))
       )
       setEditForm((prev) => ({ ...prev, estatus: "Baja" }))
+      setSelectedBeneficiario((prev) =>
+        prev && matchesCurp(prev, fid) ? { ...prev, estatus: "Baja" } : prev
+      )
+      return true
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : "Error al dar de baja")
+      return false
     } finally {
       setIsSaving(false)
     }
   }
 
-  async function handleHardDelete() {
-    if (!editForm.folio) return
+  async function handleHardDelete(): Promise<boolean> {
+    const fid = beneficioIdParaMutaciones()
+    if (!fid) return false
     setIsSaving(true)
     try {
-      await deleteBeneficiario(editForm.folio)
-      setBeneficiarios((prev) => prev.filter((b) => b.folio !== editForm.folio))
+      await deleteBeneficiario(fid)
+      setBeneficiarios((prev) => prev.filter((b) => !matchesCurp(b, fid)))
       setConfirmDelete(false)
       setShowEditDialog(false)
+      return true
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : "Error al eliminar")
+      return false
     } finally {
       setIsSaving(false)
     }

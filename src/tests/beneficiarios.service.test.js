@@ -5,6 +5,7 @@ const mockFindById       = jest.fn();
 const mockCreate         = jest.fn();
 const mockUpdate         = jest.fn();
 const mockDeactivate     = jest.fn();
+const mockUpdateEstatus  = jest.fn();
 const mockCancelarPorCurp = jest.fn();
 
 jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
@@ -13,6 +14,7 @@ jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
   create:     mockCreate,
   update:     mockUpdate,
   deactivate: mockDeactivate,
+  updateEstatus: mockUpdateEstatus,
 }));
 
 jest.unstable_mockModule("../models/membresias.model.js", () => ({
@@ -179,14 +181,16 @@ describe("update", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  test("beneficiario con estatus Baja → BENEFICIARIO_BAJA (409)", async () => {
+  test("beneficiario en Baja puede actualizar datos; se conserva ESTATUS Baja", async () => {
     mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Baja" });
+    mockUpdate.mockResolvedValue(1);
 
-    await expect(
-      Service.update(CURP_VALIDA, { ...baseUpdate })
-    ).rejects.toMatchObject({ code: "BENEFICIARIO_BAJA" });
+    await Service.update(CURP_VALIDA, { ...baseUpdate });
 
-    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      CURP_VALIDA,
+      expect.objectContaining({ estatus: "Baja" })
+    );
   });
 
   test("CURP inválida → INVALID_CURP (400) sin consultar BD", async () => {
@@ -249,5 +253,37 @@ describe("deactivate", () => {
     ).rejects.toMatchObject({ code: "INVALID_CURP" });
 
     expect(mockFindById).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// toggleEstatus — salida de Baja y no-op
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("toggleEstatus", () => {
+  test("Baja → Inactivo llama updateEstatus", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Baja" });
+    mockUpdateEstatus.mockResolvedValue(undefined);
+
+    await Service.toggleEstatus(CURP_VALIDA, "Inactivo");
+
+    expect(mockUpdateEstatus).toHaveBeenCalledWith(CURP_VALIDA, "Inactivo");
+  });
+
+  test("Baja → Activo llama updateEstatus", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Baja" });
+    mockUpdateEstatus.mockResolvedValue(undefined);
+
+    await Service.toggleEstatus(CURP_VALIDA, "Activo");
+
+    expect(mockUpdateEstatus).toHaveBeenCalledWith(CURP_VALIDA, "Activo");
+  });
+
+  test("Activo → Activo no llama updateEstatus (idempotente)", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+
+    await Service.toggleEstatus(CURP_VALIDA, "Activo");
+
+    expect(mockUpdateEstatus).not.toHaveBeenCalled();
   });
 });

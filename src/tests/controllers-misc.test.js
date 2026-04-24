@@ -579,16 +579,27 @@ describe("PUT /api/v1/beneficiarios/:curp — actualizar beneficiario", () => {
     expect(res.status).toBe(404);
   });
 
-  test("devuelve 409 si el beneficiario está de Baja", async () => {
+  test("permite actualizar beneficiario en Baja (200)", async () => {
     mockExecute.mockResolvedValueOnce({
-      rows: [{ CURP: CURP_VALIDA, ESTATUS: "Baja" }],
+      rows: [{
+        CURP: CURP_VALIDA, ESTATUS: "Baja",
+        NOMBRES: "Juan", APELLIDO_PATERNO: "García", APELLIDO_MATERNO: "López",
+        FECHA_NACIMIENTO: null, GENERO: null, NOMBRE_PADRE_MADRE: null,
+        CALLE: null, COLONIA: null, CIUDAD: null, MUNICIPIO: null, ESTADO: null, CP: null,
+        TELEFONO_CASA: null, TELEFONO_CELULAR: null, CORREO_ELECTRONICO: null,
+        CONTACTO_EMERGENCIA: null, TELEFONO_EMERGENCIA: null,
+        MUNICIPIO_NACIMIENTO: null, HOSPITAL_NACIMIENTO: null,
+        TIPOS_SANGRE: null, USA_VALVULA: null, NOTAS: null,
+      }],
     });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .put(`/api/v1/beneficiarios/${CURP_VALIDA}`)
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(updateBody);
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/actualizado/i);
   });
 });

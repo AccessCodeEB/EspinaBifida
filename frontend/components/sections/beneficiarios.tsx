@@ -587,14 +587,13 @@ export function BeneficiariosSection() {
                       fallbackText={`${altaForm.nombres?.[0] ?? "?"}${altaForm.apellidoPaterno?.[0] ?? ""}`}
                       uploading={isSaving}
                       disabled={isSaving}
-                      enableCrop={false}
                       onFileSelected={handleAltaFotoSelected}
                     />
                   </div>
                   <div className="text-center sm:text-left space-y-1">
                     <h4 className="text-sm font-bold text-foreground">Foto de perfil</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Se redimensiona automáticamente. <br className="hidden sm:block" />
+                      Ajusta el encuadre en el paso siguiente. <br className="hidden sm:block" />
                       Formatos: JPEG, PNG o WebP (máx. 2 MB).
                     </p>
                   </div>
@@ -937,7 +936,15 @@ export function BeneficiariosSection() {
                       <Button variant="outline" className="flex-1" onClick={() => setOverlayAction(null)} disabled={isSaving}>
                         Cancelar
                       </Button>
-                      <Button variant="destructive" className="flex-1" onClick={() => { handleDarDeBaja(); setOverlayAction(null); }} disabled={isSaving}>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={isSaving}
+                        onClick={async () => {
+                          const ok = await handleDarDeBaja()
+                          if (ok) setOverlayAction(null)
+                        }}
+                      >
                         Sí, dar de baja
                       </Button>
                     </div>
@@ -955,7 +962,15 @@ export function BeneficiariosSection() {
                       <Button variant="outline" className="flex-1" onClick={() => setOverlayAction(null)} disabled={isSaving}>
                         Cancelar
                       </Button>
-                      <Button variant="destructive" className="flex-1" onClick={() => { handleEditDelete(); setOverlayAction(null); }} disabled={isSaving}>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={isSaving}
+                        onClick={async () => {
+                          const ok = await handleEditDelete()
+                          if (ok) setOverlayAction(null)
+                        }}
+                      >
                         Sí, eliminar
                       </Button>
                     </div>
@@ -1043,11 +1058,9 @@ export function BeneficiariosSection() {
                     previewSrc={editFotoPreview}
                     fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
                     uploading={fotoUploading}
-                    disabled={editForm.estatus === "Baja"}
-                    enableCrop={true}
                     onFileSelected={handleEditFotoSelected}
                     onRemovePhotoRequest={
-                      (editForm.fotoPerfilUrl || editFotoPreview) && editForm.estatus !== "Baja"
+                      (editForm.fotoPerfilUrl || editFotoPreview)
                         ? () => setRemoveFotoConfirmOpen(true)
                         : undefined
                     }

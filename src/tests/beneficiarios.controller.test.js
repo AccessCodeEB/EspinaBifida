@@ -198,6 +198,29 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
     expect(res.status).toBe(200);
   });
 
+  test("desde Baja restaura a Inactivo (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ...beneficiarioRow, ESTATUS: "Baja" }] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch(`/beneficiarios/${CURP}/estatus`)
+      .send({ estatus: "Inactivo" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/Inactivo/i);
+  });
+
+  test("mismo estatus que ya tiene → 200 (sin segundo UPDATE)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [beneficiarioRow] });
+
+    const res = await request(app)
+      .patch(`/beneficiarios/${CURP}/estatus`)
+      .send({ estatus: "Activo" });
+
+    expect(res.status).toBe(200);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+  });
+
   test("devuelve 400 si estatus es 'Baja' (solo Activo/Inactivo permitidos)", async () => {
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)

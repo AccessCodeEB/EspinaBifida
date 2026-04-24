@@ -96,7 +96,7 @@ El token se obtiene en `POST /administradores/login` y contiene:
 | GET | `/beneficiarios` | ❌ | Listar todos |
 | GET | `/beneficiarios/:curp` | ❌ | Obtener uno por CURP |
 | POST | `/beneficiarios` | ❌ | Crear beneficiario |
-| PUT | `/beneficiarios/:curp` | ❌ | Actualizar (bloqueado si ESTATUS = 'Baja') |
+| PUT | `/beneficiarios/:curp` | ❌ | Actualizar datos (conserva `ESTATUS`; p. ej. sigue en Baja hasta PATCH estatus o DELETE) |
 | DELETE | `/beneficiarios/:curp` | ❌ | Dar de baja (ESTATUS = 'Baja' + cancela membresías) |
 
 **Body POST/PUT:**

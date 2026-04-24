@@ -146,6 +146,10 @@ export async function hardDelete(curp) {
   await BeneficiarioModel.hardDelete(id);
 }
 
+/**
+ * Cambia solo ESTATUS (p. ej. Activo ↔ Inactivo o salida de Baja tras restaurar expediente).
+ * Incluye el caso Baja → Activo/Inactivo (el PUT de datos sigue bloqueado hasta que deje de ser Baja).
+ */
 export async function toggleEstatus(curp, estatus) {
   const id = validarCurpRuta(curp);
   if (!["Activo", "Inactivo"].includes(estatus)) {
@@ -154,6 +158,10 @@ export async function toggleEstatus(curp, estatus) {
   const existente = await BeneficiarioModel.findById(id);
   if (!existente) {
     throw notFound(`No existe un beneficiario con la CURP ${id}`);
+  }
+  const prev = existente.ESTATUS ?? existente.estatus;
+  if (prev === estatus) {
+    return;
   }
   await BeneficiarioModel.updateEstatus(id, estatus);
 }
@@ -190,13 +198,7 @@ export async function update(curp, data) {
     throw notFound(`No existe un beneficiario con la CURP ${id}`, "BENEFICIARIO_NOT_FOUND");
   }
 
-  if (existente.ESTATUS === "Baja") {
-    throw conflict(
-      `No se puede actualizar el beneficiario ${id} porque su estatus es Baja`,
-      "BENEFICIARIO_BAJA"
-    );
-  }
-
+  /** Conserva ESTATUS en BD (Activo / Inactivo / Baja); el cliente no lo cambia por PUT. */
   data.estatus = existente.ESTATUS;
   return BeneficiarioModel.update(id, data);
 }

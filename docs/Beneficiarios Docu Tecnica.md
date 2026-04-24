@@ -125,10 +125,6 @@ Antes de insertar, se consulta si la CURP ya existe en la BD. Si existe → `409
 
 Si la CURP no existe en la BD → `404 Not Found`.
 
-#### Bloqueo por estatus 'Baja' (PUT)
-
-Si el beneficiario tiene `ESTATUS = 'Baja'`, no puede ser modificado → `409 Conflict`.
-
 ### ESTATUS asignado automáticamente
 
 - En `POST`: el service fuerza `estatus = 'Activo'`. El cliente **no puede** definirlo.
@@ -204,6 +200,6 @@ Errores genéricos de Oracle o del servidor responden con `500 Internal Server E
 | POST       | CURP duplicada | 409    | `{ "error": "Ya existe un beneficiario con la CURP ..." }`                |
 | GET /:curp | No existe      | 404    | `{ "error": "Beneficiario no encontrado" }`                               |
 | PUT        | No existe      | 404    | `{ "error": "No existe un beneficiario con la CURP ..." }`                |
-| PUT        | Estatus Baja   | 409    | `{ "error": "No se puede modificar un beneficiario con estatus 'Baja'" }` |
+| PUT        | Estatus Baja   | 200    | Permite editar datos; `ESTATUS` se conserva (sigue en Baja salvo `PATCH .../estatus`) |
 | DELETE     | No existe      | 404    | `{ "error": "No existe un beneficiario con la CURP ..." }`                |
 | DELETE     | Éxito          | 200    | `{ "message": "Beneficiario desactivado exitosamente" }`                  |
