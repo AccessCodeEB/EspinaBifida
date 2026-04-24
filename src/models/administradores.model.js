@@ -37,7 +37,7 @@ export async function findByEmail(email) {
   try {
     const result = await conn.execute(
       `SELECT a.ID_ADMIN, a.ID_ROL, a.NOMBRE_COMPLETO, a.EMAIL,
-              a.PASSWORD_HASH, a.ACTIVO, r.NOMBRE_ROL
+              a.PASSWORD_HASH, a.ACTIVO, a.FOTO_PERFIL_URL, r.NOMBRE_ROL
        FROM   ADMINISTRADORES a
        JOIN   ROLES r ON r.ID_ROL = a.ID_ROL
        WHERE  LOWER(TRIM(a.EMAIL)) = :email`,

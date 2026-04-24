@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { tokenStorage } from "@/lib/token"
-import { loginAdmin, type LoginResponse } from "@/services/administradores"
+import { getAdmin, loginAdmin, type LoginResponse } from "@/services/administradores"
 
 /** Tiempo tras quitar la pantalla de login (commit) antes de mostrar el toast */
 const TOAST_AFTER_LOGIN_CLOSE_MS = 1000
@@ -15,6 +15,10 @@ export interface AuthSession {
   nombreCompleto: string
   email:          string
   token:          string
+  /** Ruta o URL de foto en BD; null/undefined → avatar con iniciales */
+  fotoPerfilUrl?: string | null
+  /** Se incrementa al cambiar la foto para evitar caché del navegador */
+  profilePhotoRevision?: number
 }
 
 /**
@@ -43,15 +47,34 @@ export function useAuth() {
           tokenStorage.clear()
         } else {
           // Token vigente — restaurar sesión
+          const idAdmin = Number(payload.idAdmin)
           setSession({
-            idAdmin:        payload.idAdmin,
+            idAdmin:        idAdmin,
             idRol:          payload.idRol,
             nombreRol:      payload.nombreRol      ?? "Administrador",
             nombreCompleto: payload.nombreCompleto ?? "",
             email:          payload.email          ?? "",
             token,
+            fotoPerfilUrl:  payload.fotoPerfilUrl ?? null,
+            profilePhotoRevision: 0,
           })
           setIsAuth(true)
+          // Sincronizar con el servidor (foto y datos pueden cambiar sin nuevo JWT)
+          if (!Number.isNaN(idAdmin)) {
+            void getAdmin(idAdmin)
+              .then((data) => {
+                setSession((prev) => {
+                  if (!prev?.token || prev.idAdmin !== data.idAdmin) return prev
+                  return {
+                    ...prev,
+                    nombreCompleto: data.nombreCompleto,
+                    email:          data.email,
+                    fotoPerfilUrl:  data.fotoPerfilUrl ?? null,
+                  }
+                })
+              })
+              .catch(() => { /* el header sigue con datos del JWT */ })
+          }
         }
       } catch {
         // Token malformado — limpiar
@@ -91,6 +114,8 @@ export function useAuth() {
       nombreCompleto: res.admin.nombreCompleto,
       email:          res.admin.email,
       token:          res.token,
+      fotoPerfilUrl:  res.admin.fotoPerfilUrl ?? null,
+      profilePhotoRevision: 0,
     })
     setIsAuth(true)
   }, [])
@@ -105,11 +130,21 @@ export function useAuth() {
 
   /**
    * Actualiza datos de display de la sesión sin re-login.
-   * Usar tras un PUT exitoso al editar nombre/email del perfil.
+   * Tras PUT de perfil (nombre/email) o subida de foto (fotoPerfilUrl).
    */
-  const updateSession = useCallback((patch: Partial<Pick<AuthSession, "nombreCompleto" | "email">>) => {
-    setSession((prev) => prev ? { ...prev, ...patch } : prev)
-  }, [])
+  const updateSession = useCallback(
+    (patch: Partial<Pick<AuthSession, "nombreCompleto" | "email" | "fotoPerfilUrl">>) => {
+      setSession((prev) => {
+        if (!prev) return prev
+        let profilePhotoRevision = prev.profilePhotoRevision ?? 0
+        if (Object.prototype.hasOwnProperty.call(patch, "fotoPerfilUrl")) {
+          profilePhotoRevision += 1
+        }
+        return { ...prev, ...patch, profilePhotoRevision }
+      })
+    },
+    []
+  )
 
   return { session, isAuthenticated, isLoading, login, logout, updateSession }
 }

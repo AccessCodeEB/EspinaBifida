@@ -8,6 +8,7 @@ export interface LoginResponse {
     nombreRol:      string
     nombreCompleto: string
     email:          string
+    fotoPerfilUrl?: string | null
   }
 }
 

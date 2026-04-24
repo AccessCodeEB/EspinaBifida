@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { resolvePublicUploadUrl } from "@/lib/media-url"
 
 /** Secciones válidas de la SPA */
 const VALID_SECTIONS = new Set([
@@ -109,6 +110,11 @@ function HomeContent() {
   const userName = session?.nombreCompleto ?? ""
   const userRole = normalizeRoleLabel(session?.nombreRol ?? "")
   const userInitials = getInitials(userName)
+  const photoRev = session?.profilePhotoRevision ?? 0
+  const headerAvatarSrc = resolvePublicUploadUrl(
+    session?.fotoPerfilUrl ?? undefined,
+    photoRev > 0 ? photoRev : null
+  )
 
   // ── Guards ──────────────────────────────────────────────────────────
   if (authLoading) {
@@ -139,10 +145,22 @@ function HomeContent() {
               <span className="text-xs text-muted-foreground leading-tight">{userRole}</span>
             </div>
 
-            {/* Avatar */}
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-              <span className="text-sm font-bold">{userInitials}</span>
-            </div>
+            {/* Avatar: foto si existe; si no, iniciales (predeterminado) */}
+            {headerAvatarSrc ? (
+              <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/50 bg-muted shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  key={`${headerAvatarSrc}|${photoRev}`}
+                  src={headerAvatarSrc}
+                  alt=""
+                  className="size-full object-cover object-center"
+                />
+              </div>
+            ) : (
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                <span className="text-sm font-bold">{userInitials}</span>
+              </div>
+            )}
 
             {/* Dropdown de configuración */}
             <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
@@ -164,9 +182,21 @@ function HomeContent() {
               >
                 {/* Info del usuario */}
                 <DropdownMenuLabel className="flex items-center gap-3 px-3 py-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                    <span className="text-sm font-bold">{userInitials}</span>
-                  </div>
+                  {headerAvatarSrc ? (
+                    <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-muted shadow-sm">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        key={`menu-${headerAvatarSrc}|${photoRev}`}
+                        src={headerAvatarSrc}
+                        alt=""
+                        className="size-full object-cover object-center"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                      <span className="text-sm font-bold">{userInitials}</span>
+                    </div>
+                  )}
                   <div className="flex min-w-0 flex-col space-y-0.5 leading-none">
                     <span className="truncate text-base font-semibold tracking-tight text-foreground">{userName}</span>
                     <span className="truncate text-xs font-medium text-muted-foreground">{userRole}</span>
@@ -231,7 +261,9 @@ function HomeContent() {
         open={showEditProfile}
         onOpenChange={setShowEditProfile}
         adminId={session?.idAdmin ?? null}
+        sessionIdRol={session?.idRol ?? null}
         onProfileSaved={(nombreCompleto, email) => updateSession({ nombreCompleto, email })}
+        onFotoPerfilUpdated={(fotoPerfilUrl) => updateSession({ fotoPerfilUrl })}
       />
 
     </>

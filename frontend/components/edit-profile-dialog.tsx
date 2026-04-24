@@ -23,6 +23,7 @@ import {
   type Admin,
 } from "@/services/administradores"
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 // ── Tipos internos ──────────────────────────────────────────────────────────
@@ -47,8 +48,12 @@ interface EditProfileDialogProps {
   onOpenChange:   (open: boolean) => void
   /** idAdmin del usuario autenticado (viene de useAuth().session.idAdmin) */
   adminId:        number | null
+  /** idRol del JWT: solo rol 1 puede guardar nombre y correo; rol 2 puede foto y contraseña */
+  sessionIdRol:   number | null
   /** Callback para actualizar el nombre en el header tras guardar */
   onProfileSaved?: (nombreCompleto: string, email: string) => void
+  /** Tras subir foto: actualiza avatar en header (cache-bust vía sesión) */
+  onFotoPerfilUpdated?: (fotoPerfilUrl: string) => void
 }
 
 /**
@@ -61,8 +66,12 @@ export function EditProfileDialog({
   open,
   onOpenChange,
   adminId,
+  sessionIdRol,
   onProfileSaved,
+  onFotoPerfilUpdated,
 }: EditProfileDialogProps) {
+  /** Super Administrador: puede editar nombre y correo (coincide con PUT backend). */
+  const canEditNombreYCorreo = sessionIdRol === 1
 
   // ── Estado de carga inicial ─────────────────────────────────────────
   const [admin,        setAdmin]       = useState<Admin | null>(null)
@@ -112,7 +121,7 @@ export function EditProfileDialog({
 
   // ── Guardar perfil ──────────────────────────────────────────────────
   async function handleSave() {
-    if (!admin) return
+    if (!admin || !canEditNombreYCorreo) return
     if (!form.nombreCompleto.trim()) { setSaveError("El nombre es obligatorio");  return }
     if (!form.email.trim())          { setSaveError("El correo es obligatorio");   return }
 
@@ -251,6 +260,7 @@ export function EditProfileDialog({
                             const r = await uploadAdminFotoPerfil(admin.idAdmin, file)
                             setAdmin((p) => (p ? { ...p, fotoPerfilUrl: r.fotoPerfilUrl } : p))
                             setAdminFotoRevision((n) => n + 1)
+                            onFotoPerfilUpdated?.(r.fotoPerfilUrl)
                             toast.success("Foto de perfil actualizada")
                           } catch (e: unknown) {
                             toast.error(e instanceof Error ? e.message : "No se pudo subir la foto")
@@ -276,10 +286,16 @@ export function EditProfileDialog({
                     </Label>
                     <Input
                       id="ep-nombre"
+                      readOnly={!canEditNombreYCorreo}
                       value={form.nombreCompleto}
                       onChange={(e) => { setForm((p) => ({ ...p, nombreCompleto: e.target.value })); setSaveOk(false); setSaveError(null) }}
                       placeholder="Tu nombre"
-                      className="h-10 bg-card border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm transition-all"
+                      className={cn(
+                        "h-10 border-border/60 shadow-sm transition-all",
+                        canEditNombreYCorreo
+                          ? "bg-card focus-visible:ring-1 focus-visible:ring-primary/40"
+                          : "cursor-not-allowed bg-muted/50 text-muted-foreground"
+                      )}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -289,13 +305,25 @@ export function EditProfileDialog({
                     <Input
                       id="ep-email"
                       type="email"
+                      readOnly={!canEditNombreYCorreo}
                       value={form.email}
                       onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); setSaveOk(false); setSaveError(null) }}
                       placeholder="correo@ejemplo.com"
-                      className="h-10 bg-card border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm transition-all"
+                      className={cn(
+                        "h-10 border-border/60 shadow-sm transition-all",
+                        canEditNombreYCorreo
+                          ? "bg-card focus-visible:ring-1 focus-visible:ring-primary/40"
+                          : "cursor-not-allowed bg-muted/50 text-muted-foreground"
+                      )}
                     />
                   </div>
                 </div>
+
+                {!canEditNombreYCorreo && (
+                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                    Solo un Super Administrador puede modificar el nombre y el correo. Puedes actualizar tu foto de perfil y tu contraseña desde este mismo panel.
+                  </p>
+                )}
 
                 {saveError && (
                   <p className="mt-3 text-xs text-destructive">{saveError}</p>
@@ -307,18 +335,20 @@ export function EditProfileDialog({
                   </div>
                 )}
 
-                <Button
-                  id="ep-save"
-                  type="button"
-                  className="mt-4 w-full gap-2 h-10 shadow-sm"
-                  disabled={saving || loadingAdmin}
-                  onClick={handleSave}
-                >
-                  {saving
-                    ? <><Loader2 className="size-4 animate-spin" /> Guardando...</>
-                    : <><Save    className="size-4" />              Guardar cambios</>
-                  }
-                </Button>
+                {canEditNombreYCorreo && (
+                  <Button
+                    id="ep-save"
+                    type="button"
+                    className="mt-4 w-full gap-2 h-10 shadow-sm"
+                    disabled={saving || loadingAdmin}
+                    onClick={handleSave}
+                  >
+                    {saving
+                      ? <><Loader2 className="size-4 animate-spin" /> Guardando...</>
+                      : <><Save    className="size-4" />              Guardar cambios</>
+                    }
+                  </Button>
+                )}
               </section>
 
               <Separator className="bg-border/50" />

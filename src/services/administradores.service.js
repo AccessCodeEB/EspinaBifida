@@ -10,6 +10,7 @@ const SALT_ROUNDS = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function generarToken(admin) {
+  const foto = admin.FOTO_PERFIL_URL ?? admin.fotoPerfilUrl ?? null;
   return jwt.sign(
     {
       idAdmin:        admin.ID_ADMIN,
@@ -17,6 +18,7 @@ function generarToken(admin) {
       nombreCompleto: admin.NOMBRE_COMPLETO,
       email:          admin.EMAIL,
       nombreRol:      admin.NOMBRE_ROL,
+      fotoPerfilUrl:  foto,
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN ?? "8h" }
@@ -78,6 +80,7 @@ export async function login(email, password) {
       nombreRol:      admin.NOMBRE_ROL,
       nombreCompleto: admin.NOMBRE_COMPLETO,
       email:          admin.EMAIL,
+      fotoPerfilUrl:  admin.FOTO_PERFIL_URL ?? null,
     },
   };
 }
