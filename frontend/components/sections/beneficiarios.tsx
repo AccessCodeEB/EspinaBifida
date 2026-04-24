@@ -28,7 +28,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { useBeneficiarios, TIPOS_SANGRE_OPCIONES } from "@/hooks/useBeneficiarios"
+import { useBeneficiarios } from "@/hooks/useBeneficiarios"
+import { TIPOS_SANGRE_OPCIONES } from "@/lib/beneficiario-alta"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
