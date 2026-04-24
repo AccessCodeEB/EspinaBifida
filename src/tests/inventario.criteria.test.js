@@ -23,6 +23,7 @@ jest.unstable_mockModule("../config/db.js", () => ({
 }));
 
 const { default: app } = await import("../app.js");
+process.env.JWT_SECRET = "test-secret-espina-bifida"; // dotenv override: restituir secreto de prueba
 const { default: request } = await import("supertest");
 
 beforeEach(() => {

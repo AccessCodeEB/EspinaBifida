@@ -12,6 +12,7 @@ process.env.CORS_ORIGIN = "http://localhost:3000";
 jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 const { default: app }     = await import("../app.js");
+process.env.JWT_SECRET = TEST_SECRET; // dotenv override: restituir secreto de prueba
 const { default: request } = await import("supertest");
 import jwt from "jsonwebtoken";
 
