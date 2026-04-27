@@ -169,8 +169,7 @@ export async function createWithInventarioTransaction(data, consumos) {
   const conn = await getConnection();
   try {
     const idResult = await conn.execute(
-      `SELECT NVL(MAX(ID_SERVICIO), 0) + 1 AS NEXT_ID
-       FROM SERVICIOS`
+      `SELECT SEQ_SERVICIOS.NEXTVAL AS NEXT_ID FROM DUAL`
     );
 
     const idServicio = Number(idResult.rows?.[0]?.NEXT_ID ?? 0);
