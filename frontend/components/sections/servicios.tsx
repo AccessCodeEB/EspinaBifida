@@ -43,7 +43,7 @@ export function ServiciosSection() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
-  const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string } | null>(null)
+  const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<{ curp: string; nombre: string; membresia: string; estatus: string } | null>(null)
   const [tipoServicioSeleccionado, setTipoServicioSeleccionado] = useState("")
   const [montoServicio, setMontoServicio] = useState("")
   const [descripcionOtro, setDescripcionOtro] = useState("")
@@ -119,13 +119,19 @@ export function ServiciosSection() {
 
   const mapBeneficiarioSeleccionado = (b: Beneficiario) => {
     const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.replace(/\s+/g, " ").trim()
-    const membresia = String(b.membresiaEstatus ?? "").toLowerCase() === "activa" ? "Activa" : "Vencida"
+    const estatus = String(b.estatus ?? "").trim() || "Activo"
+    const membresia = estatus === "Activo" ? "Vigente" : "No vigente"
     return {
       curp: String(b.curp ?? "").trim(),
       nombre,
       membresia,
+      estatus,
     }
   }
+
+  const expedienteBloqueado = beneficiarioEncontrado
+    ? beneficiarioEncontrado.estatus === "Inactivo" || beneficiarioEncontrado.estatus === "Baja"
+    : false
 
   const handleBuscarBeneficiario = () => {
     if (!busquedaNormalizada) {
@@ -277,7 +283,7 @@ export function ServiciosSection() {
                 <TableHead className="text-sm font-semibold hidden md:table-cell">Servicio</TableHead>
                 <TableHead className="text-sm font-semibold hidden lg:table-cell">Fecha</TableHead>
                 <TableHead className="text-sm font-semibold hidden lg:table-cell">Monto</TableHead>
-                <TableHead className="text-sm font-semibold text-center">Membresia</TableHead>
+                <TableHead className="text-sm font-semibold text-center">Membresia (por status)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -289,7 +295,7 @@ export function ServiciosSection() {
                   <TableCell className="hidden lg:table-cell text-muted-foreground">{s.fecha}</TableCell>
                   <TableCell className="hidden lg:table-cell font-medium">{s.monto}</TableCell>
                   <TableCell className="text-center">
-                    <StatusIcon status={s.membresia} />
+                    <StatusIcon status={s.estatus} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -355,17 +361,29 @@ export function ServiciosSection() {
             </div>
 
             {beneficiarioEncontrado && (
-              <div className={`rounded-lg border p-4 ${beneficiarioEncontrado.membresia === "Activa" ? "border-success/50 bg-success/5" : "border-destructive/50 bg-destructive/5"}`}>
+              <div className={`rounded-lg border p-4 ${
+                expedienteBloqueado
+                  ? "border-destructive/50 bg-destructive/5"
+                  : "border-success/50 bg-success/5"
+              }`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-foreground">{beneficiarioEncontrado.nombre}</p>
                     <p className="text-sm text-muted-foreground">{beneficiarioEncontrado.curp || "SIN CURP"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Estatus: {beneficiarioEncontrado.estatus} | Membresia: {beneficiarioEncontrado.membresia}
+                    </p>
                   </div>
-                  <StatusIcon status={beneficiarioEncontrado.membresia} />
+                  <StatusIcon status={beneficiarioEncontrado.estatus} />
                 </div>
-                {beneficiarioEncontrado.membresia === "Vencida" && (
+                {expedienteBloqueado && (
                   <p className="mt-2 text-sm font-medium text-destructive">
-                    Atencion: La membresia esta vencida. Se requiere renovar antes de registrar servicios.
+                    Atencion: El beneficiario esta en estatus {beneficiarioEncontrado.estatus}. No se pueden registrar servicios.
+                  </p>
+                )}
+                {!expedienteBloqueado && (
+                  <p className="mt-2 text-sm font-medium text-success">
+                    Aviso: Membresia vigente por estatus Activo.
                   </p>
                 )}
               </div>
@@ -477,7 +495,7 @@ export function ServiciosSection() {
                 disabled={
                   registroLoading ||
                   !beneficiarioEncontrado ||
-                  beneficiarioEncontrado.membresia === "Vencida" ||
+                  expedienteBloqueado ||
                   fechaEsFutura ||
                   !Number.isInteger(idTipoServicioNumerico) ||
                   idTipoServicioNumerico <= 0 ||

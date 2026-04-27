@@ -6,8 +6,10 @@ type StatusType =
   | "Activa"
   | "Vencida"
   | "Por vencer"
+  | "Sin membresia"
   | "Activo"
   | "Inactivo"
+  | "Baja"
   | "Confirmada"
   | "Pendiente"
   | "Completada"
@@ -21,8 +23,10 @@ const statusConfig: Record<
   Activa:     { icon: CheckCircle,   bg: "bg-success",     label: "Activa" },
   Vencida:    { icon: XCircle,       bg: "bg-destructive", label: "Vencida" },
   "Por vencer": { icon: AlertTriangle, bg: "bg-warning",   label: "Por vencer" },
+  "Sin membresia": { icon: MinusCircle, bg: "bg-muted-foreground", label: "Sin membresia" },
   Activo:     { icon: CheckCircle,   bg: "bg-success",     label: "Activo" },
   Inactivo:   { icon: MinusCircle,   bg: "bg-muted-foreground", label: "Inactivo" },
+  Baja:       { icon: XCircle,       bg: "bg-destructive", label: "Baja" },
   Confirmada: { icon: CheckCircle,   bg: "bg-success",     label: "Confirmada" },
   Pendiente:  { icon: Clock,         bg: "bg-warning",     label: "Pendiente" },
   Completada: { icon: CheckCircle,   bg: "bg-primary",     label: "Completada" },

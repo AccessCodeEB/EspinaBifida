@@ -112,10 +112,6 @@ export async function createConValidacion(data) {
     );
   }
 
-  if (!beneficiario.ID_CREDENCIAL) {
-    throw conflict("El beneficiario no tiene membresia activa");
-  }
-
   const payload = {
     curp,
     idTipoServicio,

@@ -13,13 +13,25 @@ export async function findAll() {
               s.COSTO,
               s.MONTO_PAGADO,
               s.NOTAS,
+              NVL(b.ESTATUS, 'Activo') AS ESTATUS,
               CASE
                 WHEN EXISTS (
                   SELECT 1 FROM CREDENCIALES c
                   WHERE c.CURP = s.CURP
                     AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+                    AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30
                 ) THEN 'Activa'
-                ELSE 'Vencida'
+                WHEN EXISTS (
+                  SELECT 1 FROM CREDENCIALES c
+                  WHERE c.CURP = s.CURP
+                    AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+                    AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30
+                ) THEN 'Por vencer'
+                WHEN EXISTS (
+                  SELECT 1 FROM CREDENCIALES c
+                  WHERE c.CURP = s.CURP
+                ) THEN 'Vencida'
+                ELSE 'Sin membresia'
               END AS MEMBRESIA_ESTATUS
        FROM SERVICIOS s
        LEFT JOIN BENEFICIARIOS b ON b.CURP = s.CURP

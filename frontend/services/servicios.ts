@@ -27,7 +27,8 @@ export interface Servicio {
   fecha: string
   monto: string
   membresia: string
-  notas?: string
+    estatus: string
+    notas?: string
 }
 
 export interface NuevoServicioPayload {

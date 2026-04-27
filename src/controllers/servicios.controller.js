@@ -21,7 +21,8 @@ function mapServicio(row) {
     servicio:  r.tipoServicio ?? "Servicio",
     fecha:     fechaStr,
     monto:     formatMonto(r.costo),
-    membresia: r.membresiaEstatus ?? "Vencida",
+      estatus:   r.estatus ?? "Activo",
+      membresia: r.membresiaEstatus ?? "Sin membresia",
     notas:     safeClobString(r.notas),
   };
 }
