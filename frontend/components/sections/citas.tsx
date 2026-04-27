@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, CalendarDays, Check, Clock, X, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
+import { Plus, CalendarDays, Check, Clock, X, ChevronLeft, ChevronRight, AlertCircle, ChevronDown } from "lucide-react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -70,6 +71,8 @@ export function CitasSection() {
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [buscaBenef, setBuscaBenef] = useState("")
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [confirmStatus, setConfirmStatus] = useState<{ id: number, estatus: Cita["estatus"], name: string } | null>(null)
+  const [showBenefList, setShowBenefList] = useState(false)
 
   const loadCitas = useCallback(() => {
     setLoading(true)
@@ -105,12 +108,13 @@ export function CitasSection() {
   }, [citas])
 
   const benefFiltrados = useMemo(() => {
-    const q = buscaBenef.toLowerCase()
-    if (!q) return []
-    return beneficiarios.filter(b =>
+    const sorted = [...beneficiarios].sort((a, b) => a.nombres.localeCompare(b.nombres))
+    const q = buscaBenef.toLowerCase().trim()
+    if (!q) return sorted
+    return sorted.filter(b =>
       b.folio?.toLowerCase().includes(q) ||
       `${b.nombres} ${b.apellidoPaterno}`.toLowerCase().includes(q)
-    ).slice(0, 5)
+    )
   }, [beneficiarios, buscaBenef])
 
   function prevMonth() {
@@ -128,6 +132,7 @@ export function CitasSection() {
     setForm(EMPTY_FORM)
     setSaveError(null)
     setBuscaBenef("")
+    setShowBenefList(false)
     setShowDialog(true)
   }
 
@@ -164,8 +169,12 @@ export function CitasSection() {
     setUpdatingId(id)
     try {
       await updateEstatusCita(id, estatus)
+      toast.success(`Cita marcada como ${estatus}`)
       loadCitas()
-    } catch { /* silent */ } finally {
+      setConfirmStatus(null)
+    } catch {
+      toast.error("No se pudo actualizar el estatus de la cita.")
+    } finally {
       setUpdatingId(null)
     }
   }
@@ -251,7 +260,7 @@ export function CitasSection() {
                 <p className="text-sm text-muted-foreground">No hay citas para este día.</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
                 {citasDelDia.map(cita => (
                   <div key={cita.id} className="rounded-xl border border-border/60 bg-background p-4 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-start justify-between gap-4">
@@ -266,12 +275,12 @@ export function CitasSection() {
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-400 text-emerald-600 hover:bg-emerald-50"
                           disabled={updatingId === cita.id}
-                          onClick={() => handleUpdateEstatus(cita.id, "Confirmada")}>
+                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Confirmada", name: cita.beneficiario })}>
                           Confirmar
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-600 hover:bg-red-50"
                           disabled={updatingId === cita.id}
-                          onClick={() => handleUpdateEstatus(cita.id, "Cancelada")}>
+                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Cancelada", name: cita.beneficiario })}>
                           Cancelar
                         </Button>
                       </div>
@@ -280,12 +289,12 @@ export function CitasSection() {
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" variant="outline" className="h-7 text-xs border-blue-400 text-blue-600 hover:bg-blue-50"
                           disabled={updatingId === cita.id}
-                          onClick={() => handleUpdateEstatus(cita.id, "Completada")}>
+                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Completada", name: cita.beneficiario })}>
                           Marcar Completada
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-600 hover:bg-red-50"
                           disabled={updatingId === cita.id}
-                          onClick={() => handleUpdateEstatus(cita.id, "Cancelada")}>
+                          onClick={() => setConfirmStatus({ id: cita.id, estatus: "Cancelada", name: cita.beneficiario })}>
                           Cancelar
                         </Button>
                       </div>
@@ -308,7 +317,7 @@ export function CitasSection() {
           {proximas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No hay citas próximas programadas.</p>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2">
               {proximas.map(cita => (
                 <div key={cita.id} className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-4 transition-colors hover:border-primary/30 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1.5">
@@ -345,15 +354,27 @@ export function CitasSection() {
             {/* Beneficiario */}
             <div className="space-y-1.5 relative">
               <Label htmlFor="buscaBenef" className="text-sm font-semibold">Beneficiario</Label>
-              <Input
-                id="buscaBenef"
-                placeholder="Buscar por folio o nombre..."
-                className="bg-muted/30"
-                value={buscaBenef}
-                onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })) }}
-              />
-              {benefFiltrados.length > 0 && !form.curp && (
-                <div className="absolute z-10 mt-1 w-full rounded-xl border border-border/60 bg-background shadow-lg overflow-hidden">
+              <div className="relative">
+                <Input
+                  id="buscaBenef"
+                  placeholder="Buscar por folio o nombre..."
+                  className="bg-muted/30 pr-8"
+                  value={buscaBenef}
+                  onFocus={() => setShowBenefList(true)}
+                  onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })); setShowBenefList(true) }}
+                />
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-0 top-0 h-full w-8 text-muted-foreground hover:bg-transparent"
+                  onClick={() => setShowBenefList(!showBenefList)}
+                >
+                  <ChevronDown className="size-4" />
+                </Button>
+              </div>
+              {showBenefList && benefFiltrados.length > 0 && !form.curp && (
+                <div className="absolute z-10 mt-1 w-full max-h-60 rounded-xl border border-border/60 bg-background shadow-lg overflow-y-auto">
                   {benefFiltrados.map(b => (
                     <button
                       key={b.folio}
@@ -362,6 +383,7 @@ export function CitasSection() {
                       onClick={() => {
                         setForm(f => ({ ...f, curp: b.folio }))
                         setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`)
+                        setShowBenefList(false)
                       }}
                     >
                       <span className="font-semibold text-primary mr-2">{b.folio}</span>
@@ -438,6 +460,28 @@ export function CitasSection() {
             <Button type="button" variant="outline" onClick={() => setShowDialog(false)} disabled={saving}>Cancelar</Button>
             <Button type="button" onClick={handleGuardar} disabled={saving}>
               {saving ? "Guardando..." : "Guardar Cita"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmación de Estatus */}
+      <Dialog open={!!confirmStatus} onOpenChange={(open) => !open && setConfirmStatus(null)}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Confirmar cambio de estatus</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro que deseas marcar la cita de <strong>{confirmStatus?.name}</strong> como <span className="font-bold">{confirmStatus?.estatus}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setConfirmStatus(null)} disabled={updatingId !== null}>Cancelar</Button>
+            <Button 
+              variant={confirmStatus?.estatus === "Cancelada" ? "destructive" : "default"}
+              onClick={() => confirmStatus && handleUpdateEstatus(confirmStatus.id, confirmStatus.estatus)} 
+              disabled={updatingId !== null}
+            >
+              {updatingId !== null ? "Guardando..." : "Confirmar"}
             </Button>
           </div>
         </DialogContent>
