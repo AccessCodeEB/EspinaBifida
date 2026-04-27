@@ -41,11 +41,12 @@ describe("Criterios de aceptación - inventario", () => {
       .mockResolvedValueOnce({
         rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001" }],
       })
+      // SEQ_SERVICIOS.NEXTVAL
       .mockResolvedValueOnce({ rows: [{ NEXT_ID: 10 }] })
+      // INSERT INTO SERVICIOS
       .mockResolvedValueOnce({ rowsAffected: 1 })
-      .mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 1, INVENTARIO_ACTUAL: 50 }] })
-      .mockResolvedValueOnce({ rowsAffected: 1 })
-      .mockResolvedValueOnce({ rowsAffected: 1 });
+      // SP_REGISTRAR_MOVIMIENTO_INVENTARIO — consumo del artículo
+      .mockResolvedValueOnce({ outBinds: { stock_out: 47 } });
 
     const res = await request(app)
       .post("/api/v1/servicios")
@@ -64,7 +65,12 @@ describe("Criterios de aceptación - inventario", () => {
   });
 
   test("Scenario 2: stock insuficiente responde 422 con payload esperado", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 7, INVENTARIO_ACTUAL: 2 }] });
+    // SP lanza ORA-20002 cuando el stock es insuficiente
+    const oraErr = Object.assign(
+      new Error("ORA-20002: Stock insuficiente para SALIDA"),
+      { errorNum: 20002 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
 
     const res = await request(app)
       .post("/api/v1/movimientos")
@@ -76,18 +82,15 @@ describe("Criterios de aceptación - inventario", () => {
       });
 
     expect(res.status).toBe(422);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       error: "Stock insuficiente",
       code: "INSUFFICIENT_STOCK",
-      disponible: 2,
     });
   });
 
   test("Scenario 3: POST /api/v1/movimientos ENTRADA incrementa stock y responde 201", async () => {
-    mockExecute
-      .mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 101, INVENTARIO_ACTUAL: 10 }] })
-      .mockResolvedValueOnce({ rowsAffected: 1 })
-      .mockResolvedValueOnce({ rowsAffected: 1 });
+    // SP_REGISTRAR_MOVIMIENTO_INVENTARIO devuelve el stock resultante via OUT
+    mockExecute.mockResolvedValueOnce({ outBinds: { stock_out: 15 } });
 
     const res = await request(app)
       .post("/api/v1/movimientos")
