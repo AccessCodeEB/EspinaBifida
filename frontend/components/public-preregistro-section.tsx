@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
-import { createBeneficiario, uploadBeneficiarioFotoPerfil } from "@/services/beneficiarios"
+import { createBeneficiarioPublicSolicitud, uploadBeneficiarioFotoPerfil } from "@/services/beneficiarios"
 import {
   ALTA_FORM_INICIAL,
   TIPOS_SANGRE_OPCIONES,
@@ -164,7 +164,7 @@ export function PublicPreregistroSection({
     setSaving(true)
     try {
       const payload = buildAltaCreatePayload(form)
-      await createBeneficiario(payload)
+      await createBeneficiarioPublicSolicitud(payload)
       const curp = form.curp.toUpperCase()
       if (fotoFileRef.current) {
         try {

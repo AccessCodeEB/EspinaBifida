@@ -6,6 +6,8 @@ const mockCreate         = jest.fn();
 const mockUpdate         = jest.fn();
 const mockDeactivate     = jest.fn();
 const mockUpdateEstatus  = jest.fn();
+const mockUpdateEstatusAndNotas = jest.fn();
+const mockHardDelete     = jest.fn();
 const mockCancelarPorCurp = jest.fn();
 
 jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
@@ -15,6 +17,8 @@ jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
   update:     mockUpdate,
   deactivate: mockDeactivate,
   updateEstatus: mockUpdateEstatus,
+  updateEstatusAndNotas: mockUpdateEstatusAndNotas,
+  hardDelete: mockHardDelete,
 }));
 
 jest.unstable_mockModule("../models/membresias.model.js", () => ({
@@ -285,5 +289,99 @@ describe("toggleEstatus", () => {
     await Service.toggleEstatus(CURP_VALIDA, "Activo");
 
     expect(mockUpdateEstatus).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Solicitud pública / pre-registro (Inactivo + marcador; legado Pre-registro)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createPublicSolicitud", () => {
+  test("guarda Inactivo y prefija NOTAS con el marcador exacto", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+
+    await Service.createPublicSolicitud({
+      ...baseCreate,
+      genero: "M",
+      notas: "Texto familia",
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estatus: "Inactivo",
+        notas: "[SOLICITUD_PUBLICA_PRE_REG]\nTexto familia",
+      })
+    );
+  });
+
+  test("notas + marcador > 500 → NOTES_TOO_LONG", async () => {
+    const largo = "x".repeat(480);
+    await expect(
+      Service.createPublicSolicitud({
+        ...baseCreate,
+        genero: "M",
+        notas: largo,
+      })
+    ).rejects.toMatchObject({ code: "NOTES_TOO_LONG" });
+
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("approvePreRegistro", () => {
+  test("pasa a Activo y quita el marcador de NOTAS", async () => {
+    mockFindById.mockResolvedValue({
+      CURP: CURP_VALIDA,
+      ESTATUS: "Inactivo",
+      NOTAS: "[SOLICITUD_PUBLICA_PRE_REG]\nhola",
+    });
+    mockUpdateEstatusAndNotas.mockResolvedValue(undefined);
+
+    await Service.approvePreRegistro(CURP_VALIDA);
+
+    expect(mockUpdateEstatusAndNotas).toHaveBeenCalledWith(CURP_VALIDA, "Activo", "hola");
+  });
+
+  test("legacy Pre-registro en ESTATUS también aprueba", async () => {
+    mockFindById.mockResolvedValue({
+      CURP: CURP_VALIDA,
+      ESTATUS: "Pre-registro",
+      NOTAS: null,
+    });
+    mockUpdateEstatusAndNotas.mockResolvedValue(undefined);
+
+    await Service.approvePreRegistro(CURP_VALIDA);
+
+    expect(mockUpdateEstatusAndNotas).toHaveBeenCalledWith(CURP_VALIDA, "Activo", null);
+  });
+});
+
+describe("rejectPreRegistro", () => {
+  test("hardDelete solo si Inactivo + marcador", async () => {
+    mockFindById.mockResolvedValue({
+      CURP: CURP_VALIDA,
+      ESTATUS: "Inactivo",
+      NOTAS: "[SOLICITUD_PUBLICA_PRE_REG]",
+    });
+    mockHardDelete.mockResolvedValue(1);
+
+    await Service.rejectPreRegistro(CURP_VALIDA);
+
+    expect(mockHardDelete).toHaveBeenCalledWith(CURP_VALIDA);
+  });
+
+  test("Activo sin marcador → NOT_PENDING_PUBLIC", async () => {
+    mockFindById.mockResolvedValue({
+      CURP: CURP_VALIDA,
+      ESTATUS: "Activo",
+      NOTAS: "x",
+    });
+
+    await expect(Service.rejectPreRegistro(CURP_VALIDA)).rejects.toMatchObject({
+      code: "NOT_PENDING_PUBLIC",
+    });
+
+    expect(mockHardDelete).not.toHaveBeenCalled();
   });
 });

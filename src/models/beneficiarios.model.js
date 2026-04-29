@@ -216,6 +216,20 @@ export async function updateEstatus(curp, estatus) {
   }
 }
 
+/** Actualiza estatus y notas en una sola operación (p. ej. aprobar solicitud pública). */
+export async function updateEstatusAndNotas(curp, estatus, notas) {
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `UPDATE BENEFICIARIOS SET ESTATUS = :estatus, NOTAS = :notas WHERE CURP = :curp`,
+      { estatus, notas: notas ?? null, curp },
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+}
+
 export async function deactivate(curp) {
   const conn = await getConnection();
   try {

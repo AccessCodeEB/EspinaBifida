@@ -5,6 +5,49 @@ import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
+/** Coincide con `MARCADOR_SOLICITUD_PUBLICA_PENDIENTE` en `frontend/lib/solicitud-publica-beneficiario.ts`. */
+export const MARCADOR_SOLICITUD_PUBLICA_PENDIENTE = "[SOLICITUD_PUBLICA_PRE_REG]";
+
+const ESTATUS_PRE_REGISTRO_LEGACY = "Pre-registro";
+
+function construirNotasSolicitudPublica(textoUsuario) {
+  const t = String(textoUsuario ?? "").trim();
+  if (!t) return MARCADOR_SOLICITUD_PUBLICA_PENDIENTE;
+  return `${MARCADOR_SOLICITUD_PUBLICA_PENDIENTE}\n${t}`;
+}
+
+function validarLongitudNotasSolicitudPublica(textoUsuario) {
+  const armadas = construirNotasSolicitudPublica(textoUsuario);
+  if (armadas.length > 500) {
+    const marcaLen = MARCADOR_SOLICITUD_PUBLICA_PENDIENTE.length;
+    const maxUsuario = 500 - marcaLen - 1;
+    throw badRequest(
+      `Las notas no pueden superar los 500 caracteres en total. La solicitud pública reserva ${marcaLen + 1} caracteres para el marcador; puedes escribir hasta ${maxUsuario} caracteres en motivo o notas.`,
+      "NOTES_TOO_LONG"
+    );
+  }
+}
+
+/**
+ * Indica fila de BD pendiente de revisión: legado `Pre-registro` o Inactivo + marcador en NOTAS.
+ */
+export function esPendienteSolicitudPublica(row) {
+  const est = String(row?.ESTATUS ?? row?.estatus ?? "").trim();
+  const notas = String(row?.NOTAS ?? row?.notas ?? "");
+  if (est === ESTATUS_PRE_REGISTRO_LEGACY) return true;
+  return est === "Inactivo" && notas.includes(MARCADOR_SOLICITUD_PUBLICA_PENDIENTE);
+}
+
+function limpiarMarcadorNotasPublicas(notas) {
+  const s0 = String(notas ?? "");
+  const m = MARCADOR_SOLICITUD_PUBLICA_PENDIENTE;
+  if (s0 === m) return "";
+  const conNl = `${m}\n`;
+  if (s0.startsWith(conNl)) return s0.slice(conNl.length).trim();
+  if (s0.startsWith(m)) return s0.slice(m.length).replace(/^\s*\n?/, "").trim();
+  return s0.trim();
+}
+
 const CURP_REGEX   = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TEL_REGEX    = /^\d{10}$/;
@@ -185,6 +228,51 @@ export async function create(data) {
 
   data.estatus = "Activo";
   return BeneficiarioModel.create(data);
+}
+
+/** Alta desde sitio público: ESTATUS Inactivo + NOTAS con marcador (evita CHECK Oracle en "Pre-registro"). */
+export async function createPublicSolicitud(data) {
+  data = sanitizar(data);
+  validarCurp(data.curp);
+  validarCamposObligatorios(data);
+  const userNotas = data.notas;
+  validarLongitudNotasSolicitudPublica(userNotas);
+  const notasFinales = construirNotasSolicitudPublica(userNotas);
+  data = { ...data, notas: notasFinales };
+  validarFormatos(data);
+
+  const existente = await BeneficiarioModel.findById(data.curp);
+  if (existente) {
+    throw conflict(`Ya existe un beneficiario con la CURP ${data.curp}`, "DUPLICATE_CURP");
+  }
+
+  return BeneficiarioModel.create({ ...data, estatus: "Inactivo" });
+}
+
+export async function approvePreRegistro(curp) {
+  const id = validarCurpRuta(curp);
+  const existente = await BeneficiarioModel.findById(id);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${id}`);
+  }
+  if (!esPendienteSolicitudPublica(existente)) {
+    throw badRequest("No es una solicitud pública pendiente de aprobación", "NOT_PENDING_PUBLIC");
+  }
+  const raw = existente.NOTAS ?? existente.notas;
+  const limpio = limpiarMarcadorNotasPublicas(raw);
+  await BeneficiarioModel.updateEstatusAndNotas(id, "Activo", limpio || null);
+}
+
+export async function rejectPreRegistro(curp) {
+  const id = validarCurpRuta(curp);
+  const existente = await BeneficiarioModel.findById(id);
+  if (!existente) {
+    throw notFound(`No existe un beneficiario con la CURP ${id}`);
+  }
+  if (!esPendienteSolicitudPublica(existente)) {
+    throw badRequest("No es una solicitud pública pendiente de cancelación", "NOT_PENDING_PUBLIC");
+  }
+  await BeneficiarioModel.hardDelete(id);
 }
 
 export async function update(curp, data) {

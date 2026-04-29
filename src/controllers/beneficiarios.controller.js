@@ -118,6 +118,33 @@ export async function uploadFotoPerfil(req, res, next) {
   }
 }
 
+export async function createPublicSolicitud(req, res, next) {
+  try {
+    await BeneficiarioService.createPublicSolicitud(req.body);
+    res.status(201).json({ message: "Solicitud recibida; el equipo la revisará." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approvePreRegistro(req, res, next) {
+  try {
+    await BeneficiarioService.approvePreRegistro(req.params.curp);
+    res.json({ message: "Solicitud aprobada; el beneficiario quedó activo." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectPreRegistro(req, res, next) {
+  try {
+    await BeneficiarioService.rejectPreRegistro(req.params.curp);
+    res.json({ message: "Solicitud cancelada y expediente eliminado." });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function deleteFotoPerfil(req, res, next) {
   try {
     const curp = String(req.params.curp).trim().toUpperCase();

@@ -2,136 +2,287 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
-import { Heart, Moon, SunMedium } from "lucide-react"
+import { Moon, SunMedium, ArrowRight, ClipboardEdit, CalendarDays, Building2, HeartPulse } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { PublicPreregistroSection } from "@/components/public-preregistro-section"
+import { RevealOnMount, RevealOnView } from "@/components/reveal-motion"
+// @ts-expect-error: Ignora la falta de tipos ya que GradualBlur es un componente JS
+import GradualBlur from "@/components/ui/gradual-blur"
 
-/**
- * Página de inicio para visitantes: bienvenida y pre-registro debajo al pulsar el botón.
- * El acceso al panel (login) es la ruta `/panel`.
- */
 export function PublicSiteHome() {
   const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [preregVisible, setPreregVisible] = useState(false)
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
   const isDark = mounted && resolvedTheme === "dark"
 
-  const scrollToPrereg = useCallback(() => {
-    document.getElementById("pre-registro-inline")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  const handleStartRegistration = useCallback(() => {
+    setShowRegistrationForm(true)
+    setTimeout(() => {
+      document.getElementById("seccion-registro")?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 100)
   }, [])
 
-  const onLlenarPreregistro = useCallback(() => {
-    setPreregVisible(true)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToPrereg)
-    })
-  }, [scrollToPrereg])
-
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 55% at 50% -15%, oklch(0.55 0.14 250 / 0.14) 0%, transparent 65%), " +
-            "radial-gradient(ellipse 50% 40% at 100% 100%, oklch(0.78 0.12 85 / 0.12) 0%, transparent 55%)",
-        }}
-      />
-
-      <header className="relative z-10 flex items-center justify-between gap-4 border-b border-border/60 px-4 py-4 md:px-8">
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-border/30">
-            <Image
-              src="/logo-espina-bifida.png"
-              alt=""
-              width={36}
-              height={36}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-bold tracking-tight text-foreground">Asociación de Espina Bífida</p>
-            <p className="text-xs text-muted-foreground">Bienvenida</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-9 rounded-full border-border/60"
-            aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-          >
-            {isDark ? <SunMedium className="size-4" /> : <Moon className="size-4" />}
-          </Button>
-        </div>
-      </header>
-
-      <main className="relative z-10 flex w-full flex-1 flex-col">
-        <div className="flex flex-1 flex-col items-center justify-center px-4 py-16 md:min-h-[45vh] md:px-8 md:py-20">
-          <div className="mx-auto w-full max-w-xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-              <Heart className="size-3.5" aria-hidden />
-              Bienvenida
+    <div className="relative flex min-h-screen flex-col bg-white text-slate-900 font-sans dark:bg-slate-950 dark:text-slate-50">
+      
+      {/* Navegación */}
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-white/80 px-6 py-4 backdrop-blur-md md:px-12 dark:border-slate-800 dark:bg-slate-950/80">
+        <RevealOnMount className="flex w-full items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+              <Image
+                src="/logo-espina-bifida.png"
+                alt="Logo"
+                width={32}
+                height={32}
+                className="object-contain"
+                priority
+              />
             </div>
-            <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Estamos para acompañarte
-            </h1>
-            <p className="mx-auto mt-5 max-w-md text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
-              Si deseas vincular a una persona beneficiaria, puedes llenar el pre-registro aquí. El equipo de la
-              asociación revisará tus datos y se pondrá en contacto contigo.
-            </p>
+            <div className="leading-tight">
+              <p className="text-base font-bold tracking-tight text-[#0f4c81] dark:text-blue-400">Asociación de Espina Bífida</p>
+            </div>
+          </div>
+          
+          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex dark:text-slate-300">
+            <a href="#mision" className="transition-colors hover:text-[#0f4c81]">Misión</a>
+            <a href="#seccion-registro" className="transition-colors hover:text-[#0f4c81]">Registro</a>
+            <a href="#proceso" className="transition-colors hover:text-[#0f4c81]">Proceso</a>
+            <a href="#instalaciones" className="transition-colors hover:text-[#0f4c81]">Comunidad</a>
+          </nav>
 
+          <div className="flex items-center gap-4">
             <Button
               type="button"
-              size="lg"
-              className="mt-10 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
-              onClick={onLlenarPreregistro}
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-full transition-opacity duration-500"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
             >
-              Llenar pre-registro
+              {isDark ? <SunMedium className="size-4" /> : <Moon className="size-4" />}
+            </Button>
+            <Button 
+              className="rounded-full bg-[#0f4c81] px-6 text-white transition-all duration-300 hover:bg-[#0a365c]"
+              onClick={handleStartRegistration}
+            >
+              Pre-registro
             </Button>
           </div>
-        </div>
+        </RevealOnMount>
+      </header>
 
-        {preregVisible ? (
-          <section
-            id="pre-registro-inline"
-            className="scroll-mt-24 border-t border-border/50 bg-gradient-to-b from-muted/25 via-background to-muted/15 pb-16 pt-12 md:pb-24 md:pt-16"
-            aria-labelledby="titulo-pre-registro-inline"
-          >
-            <div className="mx-auto max-w-3xl px-4 md:px-8">
-              <h2
-                id="titulo-pre-registro-inline"
-                className="text-balance text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl"
-              >
-                Pre-registro de beneficiario
-              </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-sm leading-relaxed text-muted-foreground md:text-base">
-                Mismos datos que en la asociación. Si necesitas corregir algo después de enviar, comunícate con nosotros y
-                conserva tu CURP.
+      <main className="flex-1">
+        {/* Sección Hero */}
+        <section className="mx-auto w-full max-w-7xl px-6 py-12 md:py-20 lg:px-12">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <RevealOnMount delay={70} className="flex flex-col items-start text-left">
+              <h1 className="text-balance text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl lg:leading-[1.1] dark:text-white">
+                Apoyando cada paso de tu camino
+              </h1>
+              <p className="mt-6 max-w-lg text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+                Únete a una comunidad dedicada al cuidado de la Espina Bífida, ofreciendo apoyo empático, recursos esenciales y un entorno acogedor para familias e individuos.
               </p>
-              <div className="mt-10">
-                <PublicPreregistroSection
-                  embedded
-                  hideIntro
-                  scrollTargetOnSuccess="pre-registro-inline"
+              <Button
+                size="lg"
+                className="mt-8 rounded-full bg-[#0f4c81] px-8 text-base text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#0a365c]"
+                onClick={handleStartRegistration}
+              >
+                Iniciar pre-registro
+              </Button>
+            </RevealOnMount>
+            
+            <RevealOnMount delay={180} className="relative mx-auto w-full">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-xl ring-1 ring-slate-200 dark:ring-slate-800">
+                <img
+                  src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2053&auto=format&fit=crop"
+                  alt="Instalaciones de la asociación"
+                  className="h-full w-full object-cover"
+                />
+                {/* Gradual Blur superpuesto en la imagen */}
+                <GradualBlur
+                  target="parent"
+                  position="bottom"
+                  height="8rem"
+                  strength={3}
+                  divCount={6}
+                  curve="bezier"
+                  exponential
+                  opacity={1}
                 />
               </div>
+            </RevealOnMount>
+          </div>
+        </section>
+
+        {/* Sección 1: Nuestra Misión */}
+        <section id="mision" className="bg-[#f4f7fb] py-20 dark:bg-slate-900">
+          <RevealOnView>
+            <div className="mx-auto max-w-4xl px-6 text-center lg:px-12">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+                Nuestra Misión
+              </h2>
+              <p className="mt-6 text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                Existimos para proporcionar una red de atención integral y apoyo inquebrantable para individuos que viven con Espina Bífida y sus familias. A través de instalaciones accesibles, orientación experta y una comunidad profundamente conectada, nuestro objetivo es transformar los desafíos en triunfos compartidos.
+              </p>
             </div>
-          </section>
-        ) : null}
+          </RevealOnView>
+        </section>
+
+        {/* Sección 2: Registro Centrado */}
+        <section id="seccion-registro" className="scroll-mt-24 bg-white px-6 py-20 lg:px-12 dark:bg-slate-950">
+          <div className="mx-auto w-full max-w-4xl">
+            <RevealOnView>
+            {!showRegistrationForm ? (
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-12 text-center shadow-xl md:p-20 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900">
+                <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-blue-100 text-[#0f4c81] dark:bg-slate-800 dark:text-blue-400">
+                  <HeartPulse className="size-8" />
+                </div>
+                <h2 className="mb-4 text-3xl font-extrabold tracking-tight text-[#0f4c81] dark:text-white">
+                  Estamos para acompañarte
+                </h2>
+                <p className="mb-8 max-w-2xl text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+                  Si deseas vincular a una persona beneficiaria, puedes iniciar el proceso aquí. Haz clic en el botón a continuación para llenar tus datos y agendar tu primera cita. Nuestro equipo se pondrá en contacto contigo.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="rounded-full bg-[#0f4c81] px-10 text-lg font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#0a365c]"
+                  onClick={handleStartRegistration}
+                >
+                  ¡Agenda tu cita!
+                </Button>
+              </div>
+            ) : (
+              // Transición mejorada para el formulario (smooth fade-in y slide-up)
+              <RevealOnMount delay={100}>
+                <div className="animate-in fade-in slide-in-from-bottom-8 zoom-in-[0.98] duration-1000 ease-out fill-mode-both">
+                  <div className="mb-8 text-center">
+                    <h2 className="text-3xl font-extrabold tracking-tight text-[#0f4c81] dark:text-white">
+                      Pre-registro de beneficiario
+                    </h2>
+                    <p className="mt-4 text-slate-600 dark:text-slate-400">
+                      Mismos datos que en la asociación. Si necesitas corregir algo después de enviar, comunícate con nosotros y conserva tu CURP.
+                    </p>
+                  </div>
+                  {/* Contenedor del formulario centrado con fondo celestito */}
+                  <div className="mx-auto overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow-2xl dark:border-slate-800 dark:from-slate-800 dark:to-slate-900">
+                    <div className="p-6 md:p-10">
+                      <PublicPreregistroSection 
+                        embedded 
+                        hideIntro 
+                        scrollTargetOnSuccess="seccion-registro" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </RevealOnMount>
+            )}
+            </RevealOnView>
+          </div>
+        </section>
+
+        {/* Sección 3: El Proceso */}
+        <section id="proceso" className="mx-auto w-full max-w-7xl px-6 py-20 lg:px-12">
+          <RevealOnView>
+            <div className="mb-12 text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+                Tu camino con nosotros
+              </h2>
+            </div>
+          </RevealOnView>
+          <div className="grid gap-6 md:grid-cols-3">
+            <RevealOnView delay={0}>
+              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">1</span>
+                <div className="relative z-10">
+                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#1b5e96] text-white">
+                    <ClipboardEdit className="size-6" />
+                  </div>
+                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Registro en línea</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Completa el formulario de pre-registro para que podamos conocer tu caso y crear tu expediente inicial.</p>
+                </div>
+              </div>
+            </RevealOnView>
+            <RevealOnView delay={120}>
+              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">2</span>
+                <div className="relative z-10">
+                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#a3e6a6] text-[#0f4c81]">
+                    <CalendarDays className="size-6" />
+                  </div>
+                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Reservar cita</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Nuestro equipo se contactará contigo para agendar una consulta inicial y evaluar tus necesidades médicas y de apoyo.</p>
+                </div>
+              </div>
+            </RevealOnView>
+            <RevealOnView delay={240}>
+              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">3</span>
+                <div className="relative z-10">
+                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#64748b] text-white">
+                    <Building2 className="size-6" />
+                  </div>
+                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Visita la sede</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Te esperamos en nuestras instalaciones físicas, diseñadas 100% pensando en la accesibilidad y tu comodidad.</p>
+                </div>
+              </div>
+            </RevealOnView>
+          </div>
+        </section>
+
+        {/* Sección 4: Instalaciones y Comunidad */}
+        <section id="instalaciones" className="bg-[#f8fafc] py-20 dark:bg-slate-900">
+          <RevealOnView>
+            <div className="mx-auto w-full max-w-7xl px-6 lg:px-12">
+              <h2 className="mb-10 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+                Nuestras Instalaciones y Comunidad
+              </h2>
+              <div className="grid h-auto gap-4 md:h-[500px] md:grid-cols-4 md:grid-rows-2">
+                <div className="group relative col-span-1 overflow-hidden rounded-3xl bg-[#134e4a] md:col-span-2 md:row-span-2">
+                  <img src="https://images.unsplash.com/photo-1529156069898-49953eb1b5ce?q=80&w=2070&auto=format&fit=crop" className="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Comunidad" />
+                  <GradualBlur target="parent" position="bottom" height="6rem" strength={1.5} divCount={4} opacity={1} />
+                  <div className="absolute inset-0 flex flex-col justify-end p-8 z-10">
+                    <h3 className="mb-2 text-2xl font-bold text-white">Comunidad de Apoyo</h3>
+                    <p className="text-teal-100">Un espacio seguro para compartir y crecer juntos.</p>
+                  </div>
+                </div>
+                <div className="relative hidden overflow-hidden rounded-3xl bg-slate-800 md:col-span-2 md:block group">
+                  <img src="https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?q=80&w=2070&auto=format&fit=crop" className="absolute inset-0 h-full w-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Atención" />
+                </div>
+                <div className="flex overflow-hidden rounded-3xl bg-[#0f766e] p-6 text-center items-center justify-center transition-colors hover:bg-[#0d645e]">
+                  <p className="font-medium text-white">Atención Empática</p>
+                </div>
+                <div className="group flex cursor-pointer flex-col justify-end overflow-hidden rounded-3xl bg-[#1e3a8a] p-6 transition-colors duration-300 hover:bg-[#1e40af]">
+                  <p className="mb-4 text-lg font-medium text-white">Ver más</p>
+                  <div className="flex size-8 items-center justify-center rounded-full bg-white/20 text-white transition-all duration-300 group-hover:bg-white group-hover:text-[#1e3a8a]">
+                    <ArrowRight className="size-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </RevealOnView>
+        </section>
       </main>
 
-      <footer className="relative z-10 border-t border-border/40 py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Asociación de Espina Bífida
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
+        <RevealOnView rootMargin="0px 0px 0px 0px">
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-6 px-6 text-sm text-slate-500 md:flex-row lg:px-12">
+            <div className="text-center md:text-left">
+              <p className="mb-1 font-bold text-[#0f4c81] dark:text-blue-400">Asociación de Espina Bífida</p>
+              <p>© {new Date().getFullYear()} Todos los derechos reservados.</p>
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="transition-colors hover:text-[#0f4c81]">Privacidad</a>
+              <a href="#" className="transition-colors hover:text-[#0f4c81]">Accesibilidad</a>
+              <a href="#" className="transition-colors hover:text-[#0f4c81]">Contacto</a>
+            </div>
+          </div>
+        </RevealOnView>
       </footer>
     </div>
   )
