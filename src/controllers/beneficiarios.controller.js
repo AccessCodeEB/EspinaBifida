@@ -1,6 +1,7 @@
 import * as BeneficiarioService from "../services/beneficiarios.service.js";
 import { toCamel, safeClobString } from "../utils/dbTransform.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
+import { verifyTurnstileToken } from "../utils/verifyTurnstile.js";
 
 function mapBeneficiario(row) {
   const b = toCamel(row);
@@ -119,7 +120,9 @@ export async function uploadFotoPerfil(req, res, next) {
 
 export async function createPublicSolicitud(req, res, next) {
   try {
-    await BeneficiarioService.createPublicSolicitud(req.body);
+    const { turnstileToken, ...body } = req.body ?? {};
+    await verifyTurnstileToken(turnstileToken, req.ip);
+    await BeneficiarioService.createPublicSolicitud(body);
     res.status(201).json({ message: "Solicitud recibida; el equipo la revisará." });
   } catch (err) {
     next(err);

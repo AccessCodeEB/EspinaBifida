@@ -1,7 +1,7 @@
 import type { Beneficiario } from "@/services/beneficiarios"
 
 /** Umbral mínimo (inclusive): al menos este % de campos llenos = expediente “bien” sin alerta. */
-export const UMBRAL_EXPEDIENTE_COMPLETO_PCT = 80
+export const UMBRAL_EXPEDIENTE_COMPLETO_PCT = 75
 
 function strOk(v: string | undefined | null): boolean {
   return String(v ?? "").trim().length > 0

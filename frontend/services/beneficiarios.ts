@@ -54,7 +54,9 @@ export function createBeneficiario(data: Omit<Beneficiario, "folio">) {
 }
 
 /** POST /beneficiarios/solicitud-publica — alta como Inactivo + marcador en NOTAS (sitio público). */
-export function createBeneficiarioPublicSolicitud(data: Omit<Beneficiario, "folio">) {
+export function createBeneficiarioPublicSolicitud(
+  data: Omit<Beneficiario, "folio"> & { turnstileToken: string }
+) {
   return apiClient.post<{ message: string }>("/beneficiarios/solicitud-publica", data)
 }
 

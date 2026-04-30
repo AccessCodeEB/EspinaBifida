@@ -16,7 +16,11 @@ const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").re
 )
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public code?: string
+  ) {
     super(message)
     this.name = "ApiError"
   }
@@ -43,14 +47,16 @@ async function request<T>(
 
   if (!res.ok) {
     let message = text
+    let code: string | undefined
     try {
-      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      const parsed = JSON.parse(text) as { message?: string; error?: string; code?: string }
       if (typeof parsed?.message === "string") message = parsed.message
       else if (typeof parsed?.error === "string") message = parsed.error
+      if (typeof parsed?.code === "string") code = parsed.code
     } catch {
       /* usar texto crudo */
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, code)
   }
 
   // 204 No Content — no intentar parsear JSON
@@ -91,14 +97,16 @@ async function requestFormData<T>(path: string, form: FormData, init: RequestIni
 
   if (!res.ok) {
     let message = text
+    let code: string | undefined
     try {
-      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      const parsed = JSON.parse(text) as { message?: string; error?: string; code?: string }
       if (typeof parsed?.message === "string") message = parsed.message
       else if (typeof parsed?.error === "string") message = parsed.error
+      if (typeof parsed?.code === "string") code = parsed.code
     } catch {
       /* usar texto crudo */
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, code)
   }
 
   if (res.status === 204) return undefined as T

@@ -317,6 +317,11 @@ export function parseBeneficiarioApiError(raw: string): Record<string, string> {
       if (msg.includes("usaValvula")) errs.usaValvula = "Obligatorio"
       return Object.keys(errs).length > 0 ? errs : { _global: msg }
     }
+    case "CAPTCHA_REQUIRED":
+    case "CAPTCHA_FAILED":
+      return { turnstile: msg || "Completa la verificación humana e intenta de nuevo." }
+    case "CAPTCHA_CONFIG":
+      return { _global: msg || "Verificación humana no disponible. Intenta más tarde." }
     case "DUPLICATE_CURP":
       return { curp: "Esta CURP ya está registrada" }
     case "BENEFICIARIO_BAJA":

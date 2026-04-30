@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile"
 import Link from "next/link"
 import {
   Calendar,
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ApiError } from "@/lib/api-client"
 import { createBeneficiarioPublicSolicitud } from "@/services/beneficiarios"
 import {
   ALTA_FORM_INICIAL,
@@ -34,6 +36,14 @@ import {
   type BeneficiarioAltaForm,
 } from "@/lib/beneficiario-alta"
 import { cn } from "@/lib/utils"
+
+/**
+ * Clave de prueba Cloudflare (solo si no defines NEXT_PUBLIC_TURNSTILE_SITE_KEY en desarrollo).
+ * `3x…FF` fuerza un desafío interactivo para poder probar el flujo real; `1x…AA` siempre pasa sola.
+ * Cloudflare sigue mostrando aviso de entorno de prueba: es normal con claves dummy.
+ * @see https://developers.cloudflare.com/turnstile/reference/testing/
+ */
+const TURNSTILE_SITE_KEY_DEV = "3x00000000000000000000FF"
 
 function FieldShell({
   label,
@@ -119,6 +129,20 @@ export function PublicPreregistroSection({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileInstance | null>(null)
+
+  const turnstileSiteKey = useMemo(
+    () =>
+      (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim() ||
+      (process.env.NODE_ENV === "development" ? TURNSTILE_SITE_KEY_DEV : ""),
+    []
+  )
+
+  const turnstileDevFallback = useMemo(
+    () => process.env.NODE_ENV === "development" && !(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "").trim(),
+    []
+  )
 
   const change = useCallback((field: keyof BeneficiarioAltaForm, value: string | boolean) => {
     setForm((p) => ({ ...p, [field]: value }))
@@ -134,21 +158,49 @@ export function PublicPreregistroSection({
     setForm({ ...ALTA_FORM_INICIAL })
     setErrors({})
     setDone(false)
+    setTurnstileToken("")
+    turnstileRef.current?.reset()
+  }, [])
+
+  const onTurnstileSuccess = useCallback((token: string) => {
+    setTurnstileToken(token)
+    setErrors((e) => {
+      if (!e.turnstile) return e
+      const next = { ...e }
+      delete next.turnstile
+      return next
+    })
+  }, [])
+
+  const onTurnstileExpire = useCallback(() => {
+    setTurnstileToken("")
   }, [])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const v = validateAltaSolicitudPublica(form)
-    if (Object.keys(v).length > 0) {
-      setErrors(v)
-      const first = Object.keys(v).find((k) => k !== "_global")
-      if (first) document.getElementById(`prereg-${first}`)?.scrollIntoView({ behavior: "smooth", block: "center" })
+    const captchaErrs: Record<string, string> = {}
+    if (!turnstileSiteKey) {
+      captchaErrs._global =
+        "El envío no está disponible: falta configurar la verificación humana en el sitio (NEXT_PUBLIC_TURNSTILE_SITE_KEY)."
+    } else if (!turnstileToken.trim()) {
+      captchaErrs.turnstile = "Completa la verificación antes de enviar la solicitud."
+    }
+    const merged = { ...v, ...captchaErrs }
+    if (Object.keys(merged).length > 0) {
+      setErrors(merged)
+      const first = Object.keys(merged).find((k) => k !== "_global")
+      if (first === "turnstile") {
+        document.getElementById("prereg-turnstile")?.scrollIntoView({ behavior: "smooth", block: "center" })
+      } else if (first) {
+        document.getElementById(`prereg-${first}`)?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
       return
     }
     setErrors({})
     setSaving(true)
     try {
-      const payload = buildAltaCreatePayload(form)
+      const payload = { ...buildAltaCreatePayload(form), turnstileToken: turnstileToken.trim() }
       await createBeneficiarioPublicSolicitud(payload)
       setDone(true)
       requestAnimationFrame(() => {
@@ -158,8 +210,15 @@ export function PublicPreregistroSection({
         description: "La asociación revisará tus datos y se pondrá en contacto contigo.",
       })
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Error al enviar"
+      const raw =
+        err instanceof ApiError && err.code
+          ? JSON.stringify({ code: err.code, message: err.message })
+          : err instanceof Error
+            ? err.message
+            : "Error al enviar"
       setErrors(parseBeneficiarioApiError(raw))
+      setTurnstileToken("")
+      turnstileRef.current?.reset()
     } finally {
       setSaving(false)
     }
@@ -329,7 +388,8 @@ export function PublicPreregistroSection({
           description="Cómo localizarte y datos básicos para orientar el seguimiento."
           icon={Stethoscope}
         >
-          <div className="grid gap-5 sm:grid-cols-2">
+          <>
+            <div className="grid gap-5 sm:grid-cols-2">
             <FieldShell
               label="Correo electrónico"
               required
@@ -417,35 +477,65 @@ export function PublicPreregistroSection({
                 placeholder="Opcional. Información adicional para el equipo (respeta el límite de caracteres indicado si escribes mucho)."
               />
             </FieldShell>
-          </div>
-        </StepCard>
+            </div>
 
-        <div className="rounded-2xl border border-border/50 bg-card/90 p-6 text-center shadow-sm md:p-8">
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Al enviar, confirmas que la información es verídica. El resto del expediente (domicilio completo, emergencias,
-            foto, etc.) puede completarse después con la asociación.
-          </p>
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={saving}
-              className="flex min-w-[220px] items-center justify-center gap-2 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="size-5 animate-spin shrink-0" />
-                  Enviando…
-                </>
+            <div className="mt-8 border-t border-border/40 pt-6 text-center md:pt-8">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Al enviar, confirmas que la información es verídica. El resto del expediente (domicilio completo, emergencias,
+                foto, etc.) puede completarse después con la asociación.
+              </p>
+              {turnstileSiteKey ? (
+                <div
+                  id="prereg-turnstile"
+                  className="mt-6 flex flex-col items-center justify-center gap-2"
+                >
+                  {turnstileDevFallback ? (
+                    <p className="max-w-md text-center text-xs leading-relaxed text-muted-foreground">
+                      En local, sin <span className="font-mono text-[11px]">NEXT_PUBLIC_TURNSTILE_SITE_KEY</span>, se usa
+                      una clave de prueba de Cloudflare: el mensaje de «solo pruebas» es esperado. Con tus claves reales
+                      del panel de Turnstile desaparece y el comportamiento es el de producción.
+                    </p>
+                  ) : null}
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={turnstileSiteKey}
+                    options={{ theme: "auto" }}
+                    onSuccess={onTurnstileSuccess}
+                    onExpire={onTurnstileExpire}
+                    onError={onTurnstileExpire}
+                  />
+                  {errors.turnstile ? (
+                    <p className="text-xs font-medium text-destructive">{errors.turnstile}</p>
+                  ) : null}
+                </div>
               ) : (
-                <>
-                  <Send className="size-5 shrink-0" />
-                  Enviar solicitud
-                </>
+                <p className="mt-6 text-center text-sm font-medium text-destructive">
+                  No se puede enviar: falta la clave pública de verificación humana (NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+                </p>
               )}
-            </Button>
-          </div>
-        </div>
+              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={saving || !turnstileSiteKey}
+                  className="flex min-w-[220px] items-center justify-center gap-2 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin shrink-0" />
+                      Enviando…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-5 shrink-0" />
+                      Enviar solicitud
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </>
+        </StepCard>
       </form>
     </>
   )
