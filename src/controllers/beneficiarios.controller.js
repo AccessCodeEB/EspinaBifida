@@ -25,7 +25,6 @@ function mapBeneficiario(row) {
     correoElectronico:  b.correoElectronico,
     contactoEmergencia: b.contactoEmergencia,
     telefonoEmergencia: b.telefonoEmergencia,
-    municipioNacimiento: b.municipioNacimiento,
     hospitalNacimiento:  b.hospitalNacimiento,
     usaValvula:      b.usaValvula === "S" || b.usaValvula === 1 || b.usaValvula === "1",
     notas:           safeClobString(b.notas),

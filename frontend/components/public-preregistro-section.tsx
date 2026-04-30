@@ -1,13 +1,11 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import Link from "next/link"
 import {
   Calendar,
   CheckCircle2,
-  HeartPulse,
   Mail,
-  MapPin,
   Phone,
   Send,
   Stethoscope,
@@ -26,15 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
-import { createBeneficiarioPublicSolicitud, uploadBeneficiarioFotoPerfil } from "@/services/beneficiarios"
+import { createBeneficiarioPublicSolicitud } from "@/services/beneficiarios"
 import {
   ALTA_FORM_INICIAL,
-  TIPOS_SANGRE_OPCIONES,
   TIPOS_ESPINA_BIFIDA_OPCIONES,
   buildAltaCreatePayload,
   parseBeneficiarioApiError,
-  validateAlta,
+  validateAltaSolicitudPublica,
   type BeneficiarioAltaForm,
 } from "@/lib/beneficiario-alta"
 import { cn } from "@/lib/utils"
@@ -111,8 +107,7 @@ export interface PublicPreregistroSectionProps {
 }
 
 /**
- * Formulario público de pre-registro: mismos datos que el alta de beneficiario en el panel,
- * presentación amigable para familias y visitantes.
+ * Formulario público de pre-registro: solo datos mínimos obligatorios; el expediente completo se puede completar en el panel.
  */
 export function PublicPreregistroSection({
   embedded = false,
@@ -124,8 +119,6 @@ export function PublicPreregistroSection({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
-  const fotoFileRef = useRef<File | null>(null)
 
   const change = useCallback((field: keyof BeneficiarioAltaForm, value: string | boolean) => {
     setForm((p) => ({ ...p, [field]: value }))
@@ -137,24 +130,15 @@ export function PublicPreregistroSection({
     })
   }, [])
 
-  const resetFoto = useCallback(() => {
-    setFotoPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
-      return null
-    })
-    fotoFileRef.current = null
-  }, [])
-
   const resetAll = useCallback(() => {
     setForm({ ...ALTA_FORM_INICIAL })
     setErrors({})
     setDone(false)
-    resetFoto()
-  }, [resetFoto])
+  }, [])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const v = validateAlta(form)
+    const v = validateAltaSolicitudPublica(form)
     if (Object.keys(v).length > 0) {
       setErrors(v)
       const first = Object.keys(v).find((k) => k !== "_global")
@@ -166,17 +150,6 @@ export function PublicPreregistroSection({
     try {
       const payload = buildAltaCreatePayload(form)
       await createBeneficiarioPublicSolicitud(payload)
-      const curp = form.curp.toUpperCase()
-      if (fotoFileRef.current) {
-        try {
-          await uploadBeneficiarioFotoPerfil(curp, fotoFileRef.current)
-        } catch {
-          toast.message("Registro guardado", {
-            description: "No se pudo subir la foto; puedes enviarla más tarde con la asociación.",
-          })
-        }
-      }
-      resetFoto()
       setDone(true)
       requestAnimationFrame(() => {
         document.getElementById(scrollTargetOnSuccess)?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -214,8 +187,8 @@ export function PublicPreregistroSection({
       </div>
       <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Solicitud enviada</h2>
       <p className="mt-4 text-muted-foreground leading-relaxed">
-        Gracias por confiar en nosotros. Conserva tu CURP a la mano; el equipo de la asociación validará la información
-        y te contactará si necesitan algún dato adicional.
+        Gracias por confiar en nosotros. Conserva tu CURP a la mano; el equipo validará la solicitud. Podrás ampliar el
+        expediente cuando esté aprobado.
       </p>
       <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button type="button" variant="outline" className="rounded-full" onClick={resetAll}>
@@ -248,8 +221,8 @@ export function PublicPreregistroSection({
         Solicitud en línea
       </h2>
       <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-        Completa el siguiente formulario con los datos de la persona que desea vincularse a la asociación. Es el mismo
-        expediente que gestionamos internamente, pero pensado para que sea claro y sencillo desde casa.
+        Solo pedimos los datos esenciales para iniciar tu solicitud. Tras la aprobación, el equipo puede ayudarte a
+        completar domicilio, contactos adicionales y demás campos del expediente.
       </p>
     </div>
   ) : null
@@ -269,35 +242,10 @@ export function PublicPreregistroSection({
 
         <StepCard
           step={1}
-          title="Identidad"
-          description="Nombre completo, documento y datos básicos de salud."
+          title="Beneficiario y ubicación"
+          description="Identidad oficial y ciudad o estado donde vive."
           icon={User}
         >
-          <div className="mb-8 rounded-2xl border border-dashed border-primary/25 bg-primary/[0.04] p-5 md:p-6">
-            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-              <ProfilePhotoUpload
-                variant="form"
-                size="lg"
-                previewSrc={fotoPreview}
-                fotoPerfilUrl={null}
-                fallbackText={`${form.nombres?.[0] ?? "?"}`}
-                uploading={saving}
-                disabled={saving}
-                onFileSelected={(file) => {
-                  fotoFileRef.current = file
-                  setFotoPreview((prev) => {
-                    if (prev) URL.revokeObjectURL(prev)
-                    return URL.createObjectURL(file)
-                  })
-                }}
-              />
-              <p className="text-center text-sm leading-relaxed text-muted-foreground sm:text-left">
-                <span className="font-semibold text-foreground">Foto opcional.</span> Ayuda a reconocer el expediente;
-                puedes encuadrarla en el paso siguiente. Si prefieres no adjuntar imagen, puedes omitir este paso.
-              </p>
-            </div>
-          </div>
-
           <div className="grid gap-5 sm:grid-cols-2">
             <FieldShell label="Nombre(s)" required error={errors.nombres} htmlFor="prereg-nombres">
               <Input
@@ -334,7 +282,10 @@ export function PublicPreregistroSection({
                 value={form.curp}
                 onChange={(e) => change("curp", e.target.value.toUpperCase())}
                 maxLength={18}
-                className={cn("h-11 rounded-xl bg-background font-mono uppercase tracking-wide", errors.curp && "border-destructive")}
+                className={cn(
+                  "h-11 rounded-xl bg-background font-mono uppercase tracking-wide",
+                  errors.curp && "border-destructive"
+                )}
                 placeholder="18 caracteres"
                 autoComplete="off"
               />
@@ -350,82 +301,6 @@ export function PublicPreregistroSection({
                   className={cn("h-11 rounded-xl bg-background pl-10", errors.fechaNacimiento && "border-destructive")}
                 />
               </div>
-            </FieldShell>
-            <FieldShell label="Género" error={errors.genero} htmlFor="prereg-genero">
-              <Select value={form.genero} onValueChange={(v) => change("genero", v)}>
-                <SelectTrigger id="prereg-genero" className="h-11 rounded-xl bg-background">
-                  <SelectValue placeholder="Selecciona (opcional en BD; recomendado)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="M">Masculino</SelectItem>
-                  <SelectItem value="F">Femenino</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldShell>
-            <FieldShell label="Tipo de sangre" error={errors.tipoSangre} htmlFor="prereg-ts">
-              <Select
-                value={form.tipoSangre ? form.tipoSangre : "__none__"}
-                onValueChange={(v) => change("tipoSangre", v === "__none__" ? "" : v)}
-              >
-                <SelectTrigger id="prereg-ts" className={cn("h-11 rounded-xl bg-background", errors.tipoSangre && "border-destructive")}>
-                  <SelectValue placeholder="Sin especificar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Sin especificar</SelectItem>
-                  {TIPOS_SANGRE_OPCIONES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldShell>
-            <FieldShell label="Nombre del padre, madre o tutor" htmlFor="prereg-pm" className="sm:col-span-2">
-              <Input
-                id="prereg-pm"
-                value={form.nombrePadreMadre}
-                onChange={(e) => change("nombrePadreMadre", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Opcional"
-              />
-            </FieldShell>
-          </div>
-        </StepCard>
-
-        <StepCard
-          step={2}
-          title="Domicilio"
-          description="Dónde podemos localizar o enviar correspondencia."
-          icon={MapPin}
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FieldShell label="Calle y número" htmlFor="prereg-calle" className="sm:col-span-2">
-              <Input
-                id="prereg-calle"
-                value={form.calle}
-                onChange={(e) => change("calle", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Calle, número exterior e interior"
-                autoComplete="street-address"
-              />
-            </FieldShell>
-            <FieldShell label="Colonia" htmlFor="prereg-col">
-              <Input
-                id="prereg-col"
-                value={form.colonia}
-                onChange={(e) => change("colonia", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Colonia"
-              />
-            </FieldShell>
-            <FieldShell label="Código postal" error={errors.cp} htmlFor="prereg-cp">
-              <Input
-                id="prereg-cp"
-                value={form.cp}
-                onChange={(e) => change("cp", e.target.value)}
-                maxLength={8}
-                inputMode="numeric"
-                className={cn("h-11 rounded-xl bg-background", errors.cp && "border-destructive")}
-                placeholder="5 dígitos (opcional)"
-              />
             </FieldShell>
             <FieldShell label="Ciudad" required error={errors.ciudad} htmlFor="prereg-ciudad">
               <Input
@@ -445,39 +320,23 @@ export function PublicPreregistroSection({
                 placeholder="Estado"
               />
             </FieldShell>
-            <FieldShell label="Municipio" htmlFor="prereg-mun">
-              <Input
-                id="prereg-mun"
-                value={form.municipio}
-                onChange={(e) => change("municipio", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Opcional"
-              />
-            </FieldShell>
           </div>
         </StepCard>
 
         <StepCard
-          step={3}
-          title="Contacto"
-          description="Correo y teléfono fijo. El número celular lo pedimos en el paso de información clínica, junto con las notas."
-          icon={Phone}
+          step={2}
+          title="Contacto e información clínica"
+          description="Cómo localizarte y datos básicos para orientar el seguimiento."
+          icon={Stethoscope}
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            <FieldShell label="Teléfono de casa" error={errors.telefonoCasa} htmlFor="prereg-tc">
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="prereg-tc"
-                  value={form.telefonoCasa}
-                  onChange={(e) => change("telefonoCasa", e.target.value)}
-                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCasa && "border-destructive")}
-                  placeholder="10 dígitos (opcional)"
-                  inputMode="tel"
-                />
-              </div>
-            </FieldShell>
-            <FieldShell label="Correo electrónico" required error={errors.correoElectronico} htmlFor="prereg-mail" className="sm:col-span-2">
+            <FieldShell
+              label="Correo electrónico"
+              required
+              error={errors.correoElectronico}
+              htmlFor="prereg-mail"
+              className="min-w-0"
+            >
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -491,51 +350,26 @@ export function PublicPreregistroSection({
                 />
               </div>
             </FieldShell>
-          </div>
-        </StepCard>
-
-        <StepCard
-          step={4}
-          title="Contacto de emergencia"
-          description="Una persona a quien avisar si no podemos localizarte."
-          icon={HeartPulse}
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FieldShell label="Nombre completo" error={errors.contactoEmergencia} htmlFor="prereg-ce">
-              <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="prereg-ce"
-                  value={form.contactoEmergencia}
-                  onChange={(e) => change("contactoEmergencia", e.target.value)}
-                  className={cn("h-11 rounded-xl bg-background pl-10", errors.contactoEmergencia && "border-destructive")}
-                  placeholder="Opcional"
-                />
-              </div>
-            </FieldShell>
-            <FieldShell label="Teléfono" error={errors.telefonoEmergencia} htmlFor="prereg-te">
+            <FieldShell
+              label="Teléfono celular"
+              required
+              error={errors.telefonoCelular}
+              htmlFor="prereg-tcel"
+              className="min-w-0"
+            >
               <div className="relative">
                 <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="prereg-te"
-                  value={form.telefonoEmergencia}
-                  onChange={(e) => change("telefonoEmergencia", e.target.value)}
-                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoEmergencia && "border-destructive")}
-                  placeholder="10 dígitos (opcional)"
+                  id="prereg-tcel"
+                  value={form.telefonoCelular}
+                  onChange={(e) => change("telefonoCelular", e.target.value)}
+                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCelular && "border-destructive")}
+                  placeholder="10 dígitos"
                   inputMode="tel"
+                  autoComplete="tel"
                 />
               </div>
             </FieldShell>
-          </div>
-        </StepCard>
-
-        <StepCard
-          step={5}
-          title="Información clínica"
-          description="Notas, tipo de espina bífida y un celular de contacto nos ayudan a orientar el seguimiento."
-          icon={Stethoscope}
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
             <FieldShell label="¿Usa válvula?" required error={errors.usaValvula} htmlFor="prereg-valv">
               <Select
                 value={form.usaValvula === undefined ? "" : form.usaValvula ? "si" : "no"}
@@ -550,35 +384,7 @@ export function PublicPreregistroSection({
                 </SelectContent>
               </Select>
             </FieldShell>
-            <FieldShell label="Municipio de nacimiento" htmlFor="prereg-mn">
-              <Input
-                id="prereg-mn"
-                value={form.municipioNacimiento}
-                onChange={(e) => change("municipioNacimiento", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Opcional"
-              />
-            </FieldShell>
-            <FieldShell label="Hospital de nacimiento" htmlFor="prereg-hn" className="sm:col-span-2">
-              <Input
-                id="prereg-hn"
-                value={form.hospitalNacimiento}
-                onChange={(e) => change("hospitalNacimiento", e.target.value)}
-                className="h-11 rounded-xl bg-background"
-                placeholder="Opcional"
-              />
-            </FieldShell>
-            <FieldShell label="Motivo / notas breves" error={errors.notas} htmlFor="prereg-notas" className="sm:col-span-2">
-              <Textarea
-                id="prereg-notas"
-                value={form.notas}
-                onChange={(e) => change("notas", e.target.value)}
-                rows={4}
-                className={cn("rounded-xl bg-background resize-y min-h-[100px]", errors.notas && "border-destructive")}
-                placeholder="Información adicional que consideres importante (opcional, máx. 500 caracteres)"
-              />
-            </FieldShell>
-            <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo" className="sm:col-span-2">
+            <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo">
               <Select
                 value={form.tipo ? form.tipo : "__none__"}
                 onValueChange={(v) => change("tipo", v === "__none__" ? "" : v)}
@@ -596,27 +402,28 @@ export function PublicPreregistroSection({
                 </SelectContent>
               </Select>
             </FieldShell>
-            <FieldShell label="Número de teléfono celular" required error={errors.telefonoCelular} htmlFor="prereg-tcel" className="sm:col-span-2">
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="prereg-tcel"
-                  value={form.telefonoCelular}
-                  onChange={(e) => change("telefonoCelular", e.target.value)}
-                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCelular && "border-destructive")}
-                  placeholder="10 dígitos"
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-              </div>
+            <FieldShell
+              label="Motivo o notas breves"
+              error={errors.notas}
+              htmlFor="prereg-notas"
+              className="sm:col-span-2"
+            >
+              <Textarea
+                id="prereg-notas"
+                value={form.notas}
+                onChange={(e) => change("notas", e.target.value)}
+                rows={4}
+                className={cn("min-h-[100px] resize-y rounded-xl bg-background", errors.notas && "border-destructive")}
+                placeholder="Opcional. Información adicional para el equipo (respeta el límite de caracteres indicado si escribes mucho)."
+              />
             </FieldShell>
           </div>
         </StepCard>
 
         <div className="rounded-2xl border border-border/50 bg-card/90 p-6 text-center shadow-sm md:p-8">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Al enviar, confirmas que la información es verídica. Los datos se registran con el mismo criterio que en
-            nuestras oficinas. Si necesitas corregir algo después, comunícate con la asociación.
+            Al enviar, confirmas que la información es verídica. El resto del expediente (domicilio completo, emergencias,
+            foto, etc.) puede completarse después con la asociación.
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button

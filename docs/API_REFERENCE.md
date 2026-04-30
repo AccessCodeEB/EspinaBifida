@@ -120,7 +120,6 @@ El token se obtiene en `POST /administradores/login` y contiene:
   "correoElectronico": "juan@email.com",
   "contactoEmergencia": "María García",
   "telefonoEmergencia": "5511111111",
-  "municipioNacimiento": "Cuauhtémoc",
   "hospitalNacimiento": "Hospital General",
   "tipoSangre": "O+",
   "usaValvula": "N",

@@ -21,7 +21,6 @@ export interface Beneficiario {
   correoElectronico?: string
   contactoEmergencia?: string
   telefonoEmergencia?: string
-  municipioNacimiento?: string
   hospitalNacimiento?: string
   usaValvula?: boolean
   notas?: string

@@ -45,6 +45,17 @@ const baseCreate = {
   fechaNacimiento: "1990-01-01",
 };
 
+/** Cuerpo mínimo válido para `createPublicSolicitud` (además del marcador en notas). */
+const basePublicSolicitud = {
+  ...baseCreate,
+  ciudad: "Guadalajara",
+  estado: "Jalisco",
+  telefonoCelular: "3312345678",
+  correoElectronico: "juan@example.com",
+  tipo: "Oculta",
+  usaValvula: "S",
+};
+
 // Para update, curp va separado
 const baseUpdate = {
   nombres:         "Juan",
@@ -302,7 +313,7 @@ describe("createPublicSolicitud", () => {
     mockCreate.mockResolvedValue(undefined);
 
     await Service.createPublicSolicitud({
-      ...baseCreate,
+      ...basePublicSolicitud,
       genero: "M",
       notas: "Texto familia",
     });
@@ -319,12 +330,21 @@ describe("createPublicSolicitud", () => {
     const largo = "x".repeat(480);
     await expect(
       Service.createPublicSolicitud({
-        ...baseCreate,
+        ...basePublicSolicitud,
         genero: "M",
         notas: largo,
       })
     ).rejects.toMatchObject({ code: "NOTES_TOO_LONG" });
 
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("sin telefonoCelular → MISSING_REQUIRED_FIELDS", async () => {
+    mockFindById.mockResolvedValue(null);
+    const { telefonoCelular, ...rest } = basePublicSolicitud;
+    await expect(Service.createPublicSolicitud(rest)).rejects.toMatchObject({
+      code: "MISSING_REQUIRED_FIELDS",
+    });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 });

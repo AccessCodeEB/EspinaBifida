@@ -10,7 +10,7 @@ export async function findAll() {
               b.MUNICIPIO, b.ESTADO, b.CP,
               b.TELEFONO_CASA, b.TELEFONO_CELULAR, b.CORREO_ELECTRONICO,
               b.CONTACTO_EMERGENCIA, b.TELEFONO_EMERGENCIA,
-              b.MUNICIPIO_NACIMIENTO, b.HOSPITAL_NACIMIENTO,
+              b.HOSPITAL_NACIMIENTO,
               b.USA_VALVULA, b.TIPO, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
               CASE
                 WHEN EXISTS (
@@ -62,7 +62,7 @@ export async function create(data) {
       calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
       contactoEmergencia, telefonoEmergencia,
-      municipioNacimiento, hospitalNacimiento,
+      hospitalNacimiento,
       tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
 
@@ -73,7 +73,7 @@ export async function create(data) {
          CALLE, COLONIA, CIUDAD, MUNICIPIO, ESTADO, CP,
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
-         MUNICIPIO_NACIMIENTO, HOSPITAL_NACIMIENTO,
+         HOSPITAL_NACIMIENTO,
          TIPOS_SANGRE, TIPO, USA_VALVULA, NOTAS, ESTATUS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
@@ -81,7 +81,7 @@ export async function create(data) {
          :calle, :colonia, :ciudad, :municipio, :estado, :cp,
          :telefonoCasa, :telefonoCelular, :correoElectronico,
          :contactoEmergencia, :telefonoEmergencia,
-         :municipioNacimiento, :hospitalNacimiento,
+         :hospitalNacimiento,
          :tipoSangre, :tipo, :usaValvula, :notas, :estatus
        )`,
       {
@@ -103,7 +103,6 @@ export async function create(data) {
         correoElectronico:   correoElectronico    ?? null,
         contactoEmergencia:  contactoEmergencia   ?? null,
         telefonoEmergencia:  telefonoEmergencia   ?? null,
-        municipioNacimiento: municipioNacimiento  ?? null,
         hospitalNacimiento:  hospitalNacimiento   ?? null,
         tipoSangre:          tipoSangre           ?? null,
         tipo:                tipo                 ?? null,
@@ -127,7 +126,7 @@ export async function update(curp, data) {
       calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
       contactoEmergencia, telefonoEmergencia,
-      municipioNacimiento, hospitalNacimiento,
+      hospitalNacimiento,
       tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
 
@@ -150,7 +149,6 @@ export async function update(curp, data) {
          CORREO_ELECTRONICO    = :correoElectronico,
          CONTACTO_EMERGENCIA   = :contactoEmergencia,
          TELEFONO_EMERGENCIA   = :telefonoEmergencia,
-         MUNICIPIO_NACIMIENTO  = :municipioNacimiento,
          HOSPITAL_NACIMIENTO   = :hospitalNacimiento,
          TIPOS_SANGRE          = :tipoSangre,
          TIPO                  = :tipo,
@@ -177,7 +175,6 @@ export async function update(curp, data) {
         correoElectronico:   correoElectronico    ?? null,
         contactoEmergencia:  contactoEmergencia   ?? null,
         telefonoEmergencia:  telefonoEmergencia   ?? null,
-        municipioNacimiento: municipioNacimiento  ?? null,
         hospitalNacimiento:  hospitalNacimiento   ?? null,
         tipoSangre:          tipoSangre           ?? null,
         tipo:                tipo                 ?? null,

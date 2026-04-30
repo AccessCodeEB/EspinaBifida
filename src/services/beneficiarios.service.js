@@ -65,7 +65,7 @@ function sanitizar(data) {
     "nombres", "apellidoPaterno", "apellidoMaterno",
     "nombrePadreMadre", "calle", "colonia", "ciudad",
     "municipio", "estado", "contactoEmergencia",
-    "municipioNacimiento", "hospitalNacimiento",
+    "hospitalNacimiento",
   ];
   for (const campo of campos) {
     if (data[campo]) data[campo] = String(data[campo]).trim();
@@ -88,6 +88,54 @@ function validarCamposObligatorios(data) {
   if (faltantes.length > 0) {
     throw badRequest(
       `Campos obligatorios faltantes: ${faltantes.join(", ")}`,
+      "MISSING_REQUIRED_FIELDS"
+    );
+  }
+}
+
+/** Normaliza boolean / numérico a S/N para validación y columnas Oracle. */
+function normalizarUsaValvulaBody(data) {
+  const v = data.usaValvula;
+  if (v === true || v === 1 || v === "1") {
+    data.usaValvula = "S";
+    return;
+  }
+  if (v === false || v === 0 || v === "0") {
+    data.usaValvula = "N";
+    return;
+  }
+  if (typeof v === "string") {
+    const u = v.trim().toUpperCase();
+    if (u === "S" || u === "N") data.usaValvula = u;
+  }
+}
+
+const CAMPOS_SOLICITUD_PUBLICA_MIN = [
+  "nombres",
+  "apellidoPaterno",
+  "apellidoMaterno",
+  "fechaNacimiento",
+  "ciudad",
+  "estado",
+  "telefonoCelular",
+  "correoElectronico",
+  "tipo",
+];
+
+function validarCamposMinimosSolicitudPublica(data) {
+  normalizarUsaValvulaBody(data);
+  const faltantes = CAMPOS_SOLICITUD_PUBLICA_MIN.filter(
+    (campo) => !data[campo] || String(data[campo]).trim() === ""
+  );
+  if (faltantes.length > 0) {
+    throw badRequest(
+      `Campos obligatorios faltantes: ${faltantes.join(", ")}`,
+      "MISSING_REQUIRED_FIELDS"
+    );
+  }
+  if (!data.usaValvula || !["S", "N"].includes(String(data.usaValvula))) {
+    throw badRequest(
+      "Campos obligatorios faltantes: usaValvula",
       "MISSING_REQUIRED_FIELDS"
     );
   }
@@ -239,6 +287,7 @@ export async function createPublicSolicitud(data) {
   data = sanitizar(data);
   validarCurp(data.curp);
   validarCamposObligatorios(data);
+  validarCamposMinimosSolicitudPublica(data);
   const userNotas = data.notas;
   validarLongitudNotasSolicitudPublica(userNotas);
   const notasFinales = construirNotasSolicitudPublica(userNotas);

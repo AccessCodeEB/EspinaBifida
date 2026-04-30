@@ -49,10 +49,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   getBeneficiarios,
+  getBeneficiario,
   aprobarPreRegistroBeneficiario,
   rechazarPreRegistroBeneficiario,
   type Beneficiario,
 } from "@/services/beneficiarios"
+import { BeneficiariosEditDialog } from "@/components/beneficiarios-edit-dialog"
+import { useBeneficiarios } from "@/hooks/useBeneficiarios"
 import { esSolicitudPublicaPendiente, MARCADOR_SOLICITUD_PUBLICA_PENDIENTE } from "@/lib/solicitud-publica-beneficiario"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { labelTipoEspinaBifida } from "@/lib/beneficiario-alta"
@@ -81,6 +84,37 @@ export function PreregistroSection() {
   // Estados para los pop-ups de confirmación
   const [confirmRechazar, setConfirmRechazar] = useState(false)
   const [confirmAprobar, setConfirmAprobar] = useState(false)
+  /** Tras aprobar con éxito: ofrecer abrir el editor de expediente completo. */
+  const [completarExpediente, setCompletarExpediente] = useState<{
+    curp: string
+    nombre: string
+  } | null>(null)
+
+  const [overlayAction, setOverlayAction] = useState<"baja" | "eliminar" | null>(null)
+  const [removeFotoConfirmOpen, setRemoveFotoConfirmOpen] = useState(false)
+
+  const {
+    showEditDialog,
+    setShowEditDialog,
+    isSaving,
+    saveError,
+    setSaveError,
+    editErrors,
+    editForm,
+    handleEditChange,
+    handleSaveEdit,
+    handleEditDelete,
+    handleDarDeBaja,
+    selectedBeneficiario,
+    setSelectedBeneficiario,
+    beneficiarios: beneficiariosEditList,
+    fotoUploading,
+    editFotoPreview,
+    handleEditFotoSelected,
+    handleDeleteFotoBeneficiario,
+    openEdit,
+  } = useBeneficiarios()
+
   /** Índice dentro de `pendientes` para la tarjeta «Revisión rápida» */
   const [quickReviewIndex, setQuickReviewIndex] = useState(0)
 
@@ -162,6 +196,7 @@ export function PreregistroSection() {
   async function onAprobarConfirmado() {
     if (!selected) return
     const id = String(selected.folio ?? selected.curp ?? "").trim().toUpperCase()
+    const nombre = nombreCompleto(selected)
     setAccionCurp(id)
     try {
       await aprobarPreRegistroBeneficiario(id)
@@ -170,6 +205,7 @@ export function PreregistroSection() {
       setShowDetalleDialog(false)
       setSelected(null)
       await load()
+      setCompletarExpediente({ curp: id, nombre })
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "No se pudo aprobar")
     } finally {
@@ -202,7 +238,7 @@ export function PreregistroSection() {
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
             Preregistro público
           </h1>
-          <p className="mt-1 text-base text-muted-foreground">
+          <p className="mt-1 text-base text-foreground">
             Gestión de solicitudes recibidas desde el portal web.
           </p>
         </div>
@@ -227,8 +263,10 @@ export function PreregistroSection() {
                 <Clock className="size-6" />
               </div>
               <div className="flex flex-col justify-center">
-                <p className="text-sm font-medium text-muted-foreground tracking-tight">Pendientes de revisión</p>
-                <p className="text-3xl font-bold tracking-tighter text-foreground leading-tight">{pendientes.length}</p>
+                <p className="text-sm font-medium tracking-tight text-muted-foreground">Pendientes de revisión</p>
+                <p className="text-3xl font-bold tracking-tighter leading-tight text-foreground">
+                  {pendientes.length}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -251,8 +289,8 @@ export function PreregistroSection() {
                 <RefreshCw className="size-6" aria-hidden />
               </div>
               <div className="flex min-w-0 flex-1 flex-col justify-center">
-                <p className="text-sm font-semibold text-foreground tracking-tight">Refrescar página</p>
-                <p className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
+                <p className="text-sm font-semibold tracking-tight text-muted-foreground">Refrescar página</p>
+                <p className="mt-1 text-sm font-medium leading-snug text-foreground">
                   Click para recargar la pagina y ver los datos mas actualizados
                 </p>
               </div>
@@ -287,13 +325,13 @@ export function PreregistroSection() {
 
                       {/* Datos del Solicitante */}
                       <div className="min-w-0">
-                        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                        <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           Solicitante
                         </p>
                         <h3 className="mb-1.5 text-xl font-extrabold leading-none tracking-tight text-foreground sm:text-2xl">
                           {nombreCompleto(solicitudRapida)}
                         </h3>
-                        <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                        <p className="flex items-center gap-1.5 text-sm font-normal leading-relaxed text-foreground">
                           <span className="inline-block size-2 rounded-full bg-emerald-500"></span>
                           {solicitudRapida.ciudad ? `${solicitudRapida.ciudad}, ` : ""}
                           {solicitudRapida.estado ?? "Sin ubicación"}
@@ -301,12 +339,12 @@ export function PreregistroSection() {
                       </div>
                     </div>
 
-                    <div className="relative min-h-0 flex-1 overflow-hidden rounded-r-lg border-l-2 border-muted bg-slate-50/50 py-2.5 pl-4 pr-3 dark:bg-slate-800/20">
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    <div className="relative min-h-0 flex-1 overflow-hidden rounded-r-lg border-l-2 border-muted py-2.5 pl-4 pr-3">
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Motivo / Notas breves
                       </p>
                       <div className="max-h-[72px] overflow-y-auto overscroll-contain pr-1">
-                        <p className="text-sm italic leading-relaxed text-foreground/80">
+                        <p className="text-sm font-normal leading-relaxed text-foreground">
                           &quot;
                           {notasSinMarcador(solicitudRapida.notas) ||
                             "Sin observaciones adicionales reportadas por el usuario."}
@@ -315,18 +353,18 @@ export function PreregistroSection() {
                       </div>
                       <div className="mt-3 space-y-2">
                         <div>
-                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Tipo de espina bífida
                           </p>
-                          <p className="text-sm font-semibold text-foreground">
+                          <p className="text-sm font-normal leading-relaxed text-foreground">
                             {labelTipoEspinaBifida(solicitudRapida.tipo)}
                           </p>
                         </div>
                         <div>
-                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Número de teléfono
                           </p>
-                          <p className="text-sm font-semibold tabular-nums text-foreground">
+                          <p className="text-sm font-normal leading-relaxed text-foreground">
                             {solicitudRapida.telefonoCelular?.trim() || "—"}
                           </p>
                         </div>
@@ -393,7 +431,7 @@ export function PreregistroSection() {
 
                 {/* Navegación entre solicitudes: inferior derecha */}
                 <div className="mt-auto flex shrink-0 items-center justify-end gap-1 pt-2">
-                  <span className="mr-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+                  <span className="mr-1 text-sm font-normal leading-relaxed text-foreground">
                     {quickReviewIndex + 1}/{pendientes.length}
                   </span>
                   <Button
@@ -428,8 +466,8 @@ export function PreregistroSection() {
                <div className="flex size-14 items-center justify-center rounded-full bg-slate-100 mb-4 dark:bg-slate-800 ring-4 ring-slate-50 dark:ring-slate-900/50">
                 <Check className="size-6 text-slate-400" />
               </div>
-              <p className="text-lg font-semibold text-foreground">Todo al día</p>
-              <p className="text-sm text-muted-foreground mt-1.5 max-w-[250px]">
+              <p className="text-lg font-semibold text-muted-foreground">Todo al día</p>
+              <p className="mt-1.5 max-w-[250px] text-sm text-foreground">
                 No tienes solicitudes pendientes en la cola de revisión.
               </p>
             </Card>
@@ -474,24 +512,26 @@ export function PreregistroSection() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 text-foreground">
               <Loader2 className="size-10 animate-spin text-foreground/80 mb-4" />
-              <p className="text-sm font-medium">Cargando solicitudes...</p>
+              <p className="text-sm font-medium text-foreground">Cargando solicitudes...</p>
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    <TableHead className="h-12 text-sm font-semibold text-foreground">Nombre</TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground md:table-cell">
+                    <TableHead className="h-12 text-sm font-semibold text-muted-foreground">Nombre</TableHead>
+                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground md:table-cell">
                       CURP
                     </TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground lg:table-cell">
+                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground lg:table-cell">
                       Correo
                     </TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-foreground lg:table-cell">
+                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground lg:table-cell">
                       Teléfono
                     </TableHead>
-                    <TableHead className="h-12 text-center text-sm font-semibold text-foreground">Acciones</TableHead>
+                    <TableHead className="h-12 text-center text-sm font-semibold text-muted-foreground">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -500,7 +540,9 @@ export function PreregistroSection() {
                     return (
                       <TableRow key={curp} className="hover:bg-muted/30 transition-colors">
                         <TableCell className="font-medium text-foreground">{nombreCompleto(b)}</TableCell>
-                        <TableCell className="hidden font-mono text-sm text-foreground md:table-cell">{curp}</TableCell>
+                        <TableCell className="hidden text-sm font-medium text-blue-600 dark:text-blue-400 md:table-cell">
+                          {curp}
+                        </TableCell>
                         <TableCell className="hidden text-sm text-foreground lg:table-cell">
                           {b.correoElectronico ?? "—"}
                         </TableCell>
@@ -562,8 +604,8 @@ export function PreregistroSection() {
               <div className="flex size-16 items-center justify-center rounded-full bg-muted/50 mb-4">
                 <Inbox className="size-8 text-muted-foreground/60" />
               </div>
-              <p className="text-lg font-semibold text-foreground">No se encontraron solicitudes</p>
-              <p className="text-sm text-foreground max-w-sm mt-1">
+              <p className="text-lg font-semibold text-muted-foreground">No se encontraron solicitudes</p>
+              <p className="mt-1 max-w-sm text-sm text-foreground">
                 {searchTerm 
                   ? "No hay expedientes que coincidan con tu búsqueda. Intenta con otros términos." 
                   : "Actualmente no hay solicitudes pendientes de revisión."}
@@ -586,54 +628,54 @@ export function PreregistroSection() {
       <Dialog open={showDetalleDialog} onOpenChange={setShowDetalleDialog}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Detalle de solicitud</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl font-bold text-muted-foreground">Detalle de solicitud</DialogTitle>
+            <DialogDescription className="text-foreground">
               {selected?.fechaAlta ? `Fecha de registro: ${selected.fechaAlta}` : "Información de pre-registro enviada por el usuario"}
             </DialogDescription>
           </DialogHeader>
           {selected ? (
             <div className="grid gap-4 py-4">
               <div className="rounded-xl border border-border bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Nombre completo</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre completo</p>
                 <p className="text-lg font-bold text-foreground">{nombreCompleto(selected)}</p>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">CURP</p>
-                  <p className="font-mono text-base font-medium">{selected.folio}</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">CURP</p>
+                  <p className="text-base font-medium text-blue-600 dark:text-blue-400">{selected.folio}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Estatus en BD</p>
-                  <p className="text-base font-medium">{selected.estatus}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Correo Electrónico</p>
-                  <p className="text-base font-medium break-all">{selected.correoElectronico ?? "No especificado"}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Teléfono</p>
-                  <p className="text-base font-medium">{selected.telefonoCelular ?? "No especificado"}</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estatus en BD</p>
+                  <p className="text-base font-medium text-foreground">{selected.estatus}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Estado / Provincia</p>
-                  <p className="text-base font-medium">{selected.estado ?? "No especificado"}</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Correo Electrónico</p>
+                  <p className="text-base font-medium break-all text-foreground">{selected.correoElectronico ?? "No especificado"}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Ciudad</p>
-                  <p className="text-base font-medium">{selected.ciudad ?? "No especificado"}</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Teléfono</p>
+                  <p className="text-base font-medium text-foreground">{selected.telefonoCelular ?? "No especificado"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estado / Provincia</p>
+                  <p className="text-base font-medium text-foreground">{selected.estado ?? "No especificado"}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ciudad</p>
+                  <p className="text-base font-medium text-foreground">{selected.ciudad ?? "No especificado"}</p>
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Notas / Motivo de consulta</p>
-                <p className="text-base whitespace-pre-wrap text-foreground/90 leading-relaxed">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notas / Motivo de consulta</p>
+                <p className="text-base whitespace-pre-wrap leading-relaxed text-foreground">
                   {notasSinMarcador(selected.notas) || "Sin observaciones adicionales."}
                 </p>
                 <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Tipo de espina bífida</p>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tipo de espina bífida</p>
                   <p className="text-base font-medium text-foreground">{labelTipoEspinaBifida(selected.tipo)}</p>
                 </div>
               </div>
@@ -651,9 +693,13 @@ export function PreregistroSection() {
       <AlertDialog open={confirmRechazar} onOpenChange={setConfirmRechazar}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Rechazar y eliminar solicitud?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará el expediente de <span className="font-semibold text-foreground">{selected ? nombreCompleto(selected) : "este usuario"}</span> de forma permanente. Esta acción no se puede deshacer.
+            <AlertDialogTitle className="text-muted-foreground">¿Rechazar y eliminar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription className="text-foreground">
+              Se eliminará el expediente de{" "}
+              <span className="font-semibold text-foreground">
+                {selected ? nombreCompleto(selected) : "este usuario"}
+              </span>{" "}
+              de forma permanente. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -672,9 +718,13 @@ export function PreregistroSection() {
       <AlertDialog open={confirmAprobar} onOpenChange={setConfirmAprobar}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Aprobar solicitud?</AlertDialogTitle>
-            <AlertDialogDescription>
-              El expediente de <span className="font-semibold text-foreground">{selected ? nombreCompleto(selected) : "este usuario"}</span> será aprobado y pasará a ser un beneficiario activo en el sistema.
+            <AlertDialogTitle className="text-muted-foreground">¿Aprobar solicitud?</AlertDialogTitle>
+            <AlertDialogDescription className="text-foreground">
+              El expediente de{" "}
+              <span className="font-semibold text-foreground">
+                {selected ? nombreCompleto(selected) : "este usuario"}
+              </span>{" "}
+              será aprobado y pasará a ser un beneficiario activo en el sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -688,6 +738,85 @@ export function PreregistroSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={completarExpediente !== null}
+        onOpenChange={(open) => {
+          if (!open) setCompletarExpediente(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-muted-foreground">
+              ¿Completar información del beneficiario?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-foreground">
+                <p>
+                  Puedes abrir ahora el editor del expediente para agregar domicilio completo, contacto de emergencia,
+                  tipo de sangre y demás datos opcionales.
+                </p>
+                <p className="font-semibold text-foreground">
+                  {completarExpediente?.nombre ?? ""}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel
+              className="mt-0"
+              onClick={() => setCompletarExpediente(null)}
+            >
+              Más tarde
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#005bb5] text-white hover:bg-[#004a94]"
+              onClick={() => {
+                const curp = completarExpediente?.curp
+                setCompletarExpediente(null)
+                if (!curp) return
+                void (async () => {
+                  try {
+                    const b = await getBeneficiario(curp)
+                    openEdit(b)
+                  } catch (e: unknown) {
+                    toast.error(e instanceof Error ? e.message : "No se pudo cargar el expediente")
+                  }
+                })()
+              }}
+            >
+              Llenar ahora
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <BeneficiariosEditDialog
+        inlineMode
+        onEditDialogClose={() => void load()}
+        showEditDialog={showEditDialog}
+        setShowEditDialog={setShowEditDialog}
+        isSaving={isSaving}
+        overlayAction={overlayAction}
+        setOverlayAction={setOverlayAction}
+        handleDarDeBaja={handleDarDeBaja}
+        handleEditDelete={handleEditDelete}
+        editForm={editForm}
+        handleEditChange={handleEditChange}
+        editErrors={editErrors}
+        saveError={saveError}
+        setSaveError={setSaveError}
+        handleSaveEdit={handleSaveEdit}
+        selectedBeneficiario={selectedBeneficiario}
+        setSelectedBeneficiario={setSelectedBeneficiario}
+        beneficiarios={beneficiariosEditList}
+        fotoUploading={fotoUploading}
+        editFotoPreview={editFotoPreview}
+        handleEditFotoSelected={handleEditFotoSelected}
+        handleDeleteFotoBeneficiario={handleDeleteFotoBeneficiario}
+        removeFotoConfirmOpen={removeFotoConfirmOpen}
+        setRemoveFotoConfirmOpen={setRemoveFotoConfirmOpen}
+      />
 
     </div>
   )
