@@ -37,12 +37,10 @@ import {
 } from "@/lib/beneficiario-alta"
 import { cn } from "@/lib/utils"
 
-const AMBER = "#E8B043"
-const NAVY  = "#0f4c81"
-
 /**
  * Clave de prueba Cloudflare (solo si no defines NEXT_PUBLIC_TURNSTILE_SITE_KEY en desarrollo).
  * `3x…FF` fuerza un desafío interactivo para poder probar el flujo real; `1x…AA` siempre pasa sola.
+ * Cloudflare sigue mostrando aviso de entorno de prueba: es normal con claves dummy.
  * @see https://developers.cloudflare.com/turnstile/reference/testing/
  */
 const TURNSTILE_SITE_KEY_DEV = "3x00000000000000000000FF"
@@ -64,12 +62,12 @@ function FieldShell({
 }) {
   return (
     <div className={cn("space-y-2", className)}>
-      <Label htmlFor={htmlFor} className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+      <Label htmlFor={htmlFor} className="text-[13px] font-semibold text-foreground">
         {label}
-        {required ? <span className="text-red-500"> *</span> : null}
+        {required ? <span className="text-destructive"> *</span> : null}
       </Label>
       {children}
-      {error ? <p className="text-xs font-medium text-red-500">{error}</p> : null}
+      {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
     </div>
   )
 }
@@ -88,45 +86,38 @@ function StepCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      {/* Step header */}
-      <div className="flex items-start gap-4 border-b border-slate-100 p-6 dark:border-slate-800 md:p-8">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#0f4c81] dark:bg-slate-800 dark:text-blue-400">
-          <Icon className="size-5" aria-hidden />
+    <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card to-card/80 p-6 shadow-sm md:p-8">
+      <div className="absolute right-0 top-0 size-32 translate-x-8 -translate-y-8 rounded-full bg-primary/[0.06]" aria-hidden />
+      <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+          <Icon className="size-6" aria-hidden />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block h-1 w-5 rounded-full"
-              style={{ backgroundColor: AMBER }}
-            />
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">
-              Paso {step}
-            </p>
-          </div>
-          <h3 className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 dark:text-white">{title}</h3>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/80">
+            Paso {step}
+          </p>
+          <h3 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">{title}</h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
         </div>
       </div>
-      {/* Step body */}
-      <div className="p-6 md:p-8">{children}</div>
+      <div className="relative mt-8 border-t border-border/40 pt-8">{children}</div>
     </div>
   )
 }
 
 export interface PublicPreregistroSectionProps {
-  /** Si true, no envuelve en `<section>` (el padre define la sección). */
+  /** Si true, no envuelve en `<section>` (el padre define la sección, p. ej. «Panel administrativo»). */
   embedded?: boolean
-  /** Oculta el encabezado interno cuando el padre ya puso el título. */
+  /** Oculta el encabezado interno «Solicitud en línea» cuando el padre ya puso el título de sección. */
   hideIntro?: boolean
-  /** Elemento al que hacer scroll tras envío exitoso. */
+  /** Elemento al que hacer scroll tras envío exitoso (id del contenedor padre). */
   scrollTargetOnSuccess?: string
-  /** En modo embebido: segundo CTA del éxito cierra el contenedor. */
+  /** En modo embebido: segundo CTA del éxito cierra el contenedor (p. ej. diálogo) en lugar de ir al inicio. */
   onEmbeddedDismiss?: () => void
 }
 
 /**
- * Formulario público de pre-registro: solo datos mínimos obligatorios.
+ * Formulario público de pre-registro: solo datos mínimos obligatorios; el expediente completo se puede completar en el panel.
  */
 export function PublicPreregistroSection({
   embedded = false,
@@ -237,32 +228,29 @@ export function PublicPreregistroSection({
     embedded && onEmbeddedDismiss ? (
       <Button
         type="button"
-        style={{ backgroundColor: NAVY }}
-        className="rounded-md text-white hover:opacity-90"
+        className="rounded-full bg-[#005bb5] text-white hover:bg-[#004a94]"
         onClick={onEmbeddedDismiss}
       >
         Cerrar
       </Button>
     ) : (
-      <Button asChild style={{ backgroundColor: NAVY }} className="rounded-md text-white hover:opacity-90">
+      <Button asChild className="rounded-full bg-[#005bb5] text-white hover:bg-[#004a94]">
         <Link href="/">Volver al inicio</Link>
       </Button>
     )
 
   const successInner = (
     <div className="mx-auto max-w-lg px-4 py-12 text-center md:px-8">
-      <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-xl bg-amber-50 dark:bg-slate-800">
-        <CheckCircle2 className="size-7" style={{ color: AMBER }} />
+      <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
+        <CheckCircle2 className="size-9" />
       </div>
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white md:text-3xl">
-        Solicitud enviada
-      </h2>
-      <p className="mt-4 text-sm leading-7 text-slate-500 dark:text-slate-400">
+      <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Solicitud enviada</h2>
+      <p className="mt-4 text-muted-foreground leading-relaxed">
         Gracias por confiar en nosotros. Conserva tu CURP a la mano; el equipo validará la solicitud. Podrás ampliar el
         expediente cuando esté aprobado.
       </p>
       <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Button type="button" variant="outline" className="rounded-md" onClick={resetAll}>
+        <Button type="button" variant="outline" className="rounded-full" onClick={resetAll}>
           Enviar otra solicitud
         </Button>
         {successDismiss}
@@ -271,11 +259,13 @@ export function PublicPreregistroSection({
   )
 
   if (done) {
-    if (embedded) return <div className="w-full">{successInner}</div>
+    if (embedded) {
+      return <div className="w-full">{successInner}</div>
+    }
     return (
       <section
         id="pre-registro"
-        className="scroll-mt-24 border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950"
+        className="scroll-mt-24 border-t border-border/50 bg-gradient-to-b from-muted/30 to-background"
         aria-label="Solicitud enviada"
       >
         {successInner}
@@ -285,16 +275,11 @@ export function PublicPreregistroSection({
 
   const intro = !hideIntro ? (
     <div className="mx-auto max-w-3xl text-center">
-      <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#0f4c81] dark:text-blue-400">
-        Pre-registro
-      </p>
-      <h2
-        id="pre-registro-title"
-        className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-white md:text-4xl"
-      >
+      <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-primary">Pre-registro</p>
+      <h2 id="pre-registro-title" className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
         Solicitud en línea
       </h2>
-      <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400">
+      <p className="mx-auto mt-4 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
         Solo pedimos los datos esenciales para iniciar tu solicitud. Tras la aprobación, el equipo puede ayudarte a
         completar domicilio, contactos adicionales y demás campos del expediente.
       </p>
@@ -304,17 +289,16 @@ export function PublicPreregistroSection({
   const formBody = (
     <>
       {intro}
-      <form onSubmit={onSubmit} className={cn("mx-auto max-w-3xl space-y-6", hideIntro ? "" : "mt-12")}>
+      <form onSubmit={onSubmit} className={cn("mx-auto max-w-3xl space-y-10", hideIntro ? "" : "mt-12")}>
         {errors._global ? (
           <div
             role="alert"
-            className="rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+            className="rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm text-destructive"
           >
             {errors._global}
           </div>
         ) : null}
 
-        {/* Step 1 – Identity & Location */}
         <StepCard
           step={1}
           title="Beneficiario y ubicación"
@@ -327,33 +311,30 @@ export function PublicPreregistroSection({
                 id="prereg-nombres"
                 value={form.nombres}
                 onChange={(e) => change("nombres", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.nombres && "border-red-400")}
+                className={cn("h-11 rounded-xl bg-background", errors.nombres && "border-destructive")}
                 placeholder="Ej. Ana Lucía"
                 autoComplete="given-name"
               />
             </FieldShell>
-
             <FieldShell label="Apellido paterno" required error={errors.apellidoPaterno} htmlFor="prereg-ap-pat">
               <Input
                 id="prereg-ap-pat"
                 value={form.apellidoPaterno}
                 onChange={(e) => change("apellidoPaterno", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.apellidoPaterno && "border-red-400")}
+                className={cn("h-11 rounded-xl bg-background", errors.apellidoPaterno && "border-destructive")}
                 placeholder="Ej. Martínez"
                 autoComplete="family-name"
               />
             </FieldShell>
-
             <FieldShell label="Apellido materno" required error={errors.apellidoMaterno} htmlFor="prereg-ap-mat">
               <Input
                 id="prereg-ap-mat"
                 value={form.apellidoMaterno}
                 onChange={(e) => change("apellidoMaterno", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.apellidoMaterno && "border-red-400")}
+                className={cn("h-11 rounded-xl bg-background", errors.apellidoMaterno && "border-destructive")}
                 placeholder="Ej. Sánchez"
               />
             </FieldShell>
-
             <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp">
               <Input
                 id="prereg-curp"
@@ -361,96 +342,100 @@ export function PublicPreregistroSection({
                 onChange={(e) => change("curp", e.target.value.toUpperCase())}
                 maxLength={18}
                 className={cn(
-                  "h-11 rounded-lg bg-white font-mono uppercase tracking-wide dark:bg-slate-900",
-                  errors.curp && "border-red-400"
+                  "h-11 rounded-xl bg-background font-mono uppercase tracking-wide",
+                  errors.curp && "border-destructive"
                 )}
                 placeholder="18 caracteres"
                 autoComplete="off"
               />
             </FieldShell>
-
             <FieldShell label="Fecha de nacimiento" required error={errors.fechaNacimiento} htmlFor="prereg-fn">
               <div className="relative">
-                <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="prereg-fn"
                   type="date"
                   value={form.fechaNacimiento}
                   onChange={(e) => change("fechaNacimiento", e.target.value)}
-                  className={cn("h-11 rounded-lg bg-white pl-10 dark:bg-slate-900", errors.fechaNacimiento && "border-red-400")}
+                  className={cn("h-11 rounded-xl bg-background pl-10", errors.fechaNacimiento && "border-destructive")}
                 />
               </div>
             </FieldShell>
-
             <FieldShell label="Ciudad" required error={errors.ciudad} htmlFor="prereg-ciudad">
               <Input
                 id="prereg-ciudad"
                 value={form.ciudad}
                 onChange={(e) => change("ciudad", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.ciudad && "border-red-400")}
+                className={cn("h-11 rounded-xl bg-background", errors.ciudad && "border-destructive")}
                 placeholder="Ciudad"
               />
             </FieldShell>
-
             <FieldShell label="Estado" required error={errors.estado} htmlFor="prereg-edo">
               <Input
                 id="prereg-edo"
                 value={form.estado}
                 onChange={(e) => change("estado", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.estado && "border-red-400")}
+                className={cn("h-11 rounded-xl bg-background", errors.estado && "border-destructive")}
                 placeholder="Estado"
               />
             </FieldShell>
           </div>
         </StepCard>
 
-        {/* Step 2 – Contact & Clinical Info */}
         <StepCard
           step={2}
           title="Contacto e información clínica"
           description="Cómo localizarte y datos básicos para orientar el seguimiento."
           icon={Stethoscope}
         >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FieldShell label="Correo electrónico" required error={errors.correoElectronico} htmlFor="prereg-mail">
+          <>
+            <div className="grid gap-5 sm:grid-cols-2">
+            <FieldShell
+              label="Correo electrónico"
+              required
+              error={errors.correoElectronico}
+              htmlFor="prereg-mail"
+              className="min-w-0"
+            >
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="prereg-mail"
                   type="email"
                   value={form.correoElectronico}
                   onChange={(e) => change("correoElectronico", e.target.value)}
-                  className={cn("h-11 rounded-lg bg-white pl-10 dark:bg-slate-900", errors.correoElectronico && "border-red-400")}
+                  className={cn("h-11 rounded-xl bg-background pl-10", errors.correoElectronico && "border-destructive")}
                   placeholder="nombre@correo.com"
                   autoComplete="email"
                 />
               </div>
             </FieldShell>
-
-            <FieldShell label="Teléfono celular" required error={errors.telefonoCelular} htmlFor="prereg-tcel">
+            <FieldShell
+              label="Teléfono celular"
+              required
+              error={errors.telefonoCelular}
+              htmlFor="prereg-tcel"
+              className="min-w-0"
+            >
               <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="prereg-tcel"
                   value={form.telefonoCelular}
                   onChange={(e) => change("telefonoCelular", e.target.value)}
-                  className={cn("h-11 rounded-lg bg-white pl-10 dark:bg-slate-900", errors.telefonoCelular && "border-red-400")}
+                  className={cn("h-11 rounded-xl bg-background pl-10", errors.telefonoCelular && "border-destructive")}
                   placeholder="10 dígitos"
                   inputMode="tel"
                   autoComplete="tel"
                 />
               </div>
             </FieldShell>
-
             <FieldShell label="¿Usa válvula?" required error={errors.usaValvula} htmlFor="prereg-valv">
               <Select
-                value={form.usaValvula === undefined ? undefined : form.usaValvula ? "si" : "no"}
+                value={form.usaValvula === undefined ? "" : form.usaValvula ? "si" : "no"}
                 onValueChange={(v) => change("usaValvula", v === "si")}
               >
-                <SelectTrigger
-                  id="prereg-valv"
-                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.usaValvula && "border-red-400")}
-                >
+                <SelectTrigger id="prereg-valv" className={cn("h-11 rounded-xl bg-background", errors.usaValvula && "border-destructive")}>
                   <SelectValue placeholder="Selecciona una opción" />
                 </SelectTrigger>
                 <SelectContent>
@@ -459,26 +444,24 @@ export function PublicPreregistroSection({
                 </SelectContent>
               </Select>
             </FieldShell>
-
             <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo">
               <Select
-                value={form.tipo || undefined}
-                onValueChange={(v) => change("tipo", v)}
+                value={form.tipo ? form.tipo : "__none__"}
+                onValueChange={(v) => change("tipo", v === "__none__" ? "" : v)}
               >
-                <SelectTrigger
-                  id="prereg-tipo"
-                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.tipo && "border-red-400")}
-                >
+                <SelectTrigger id="prereg-tipo" className={cn("h-11 rounded-xl bg-background", errors.tipo && "border-destructive")}>
                   <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Selecciona un tipo</SelectItem>
                   {TIPOS_ESPINA_BIFIDA_OPCIONES.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </FieldShell>
-
             <FieldShell
               label="Motivo o notas breves"
               error={errors.notas}
@@ -490,81 +473,81 @@ export function PublicPreregistroSection({
                 value={form.notas}
                 onChange={(e) => change("notas", e.target.value)}
                 rows={4}
-                className={cn(
-                  "min-h-[100px] resize-y rounded-lg bg-white dark:bg-slate-900",
-                  errors.notas && "border-red-400"
-                )}
-                placeholder="Opcional. Información adicional para el equipo."
+                className={cn("min-h-[100px] resize-y rounded-xl bg-background", errors.notas && "border-destructive")}
+                placeholder="Opcional. Información adicional para el equipo (respeta el límite de caracteres indicado si escribes mucho)."
               />
             </FieldShell>
-          </div>
-
-          {/* Submit area */}
-          <div className="mt-8 border-t border-slate-100 pt-6 text-center dark:border-slate-800 md:pt-8">
-            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Al enviar, confirmas que la información es verídica. El expediente completo (domicilio, contactos de
-              emergencia, foto, etc.) puede completarse después con la asociación.
-            </p>
-
-            {turnstileSiteKey ? (
-              <div id="prereg-turnstile" className="mt-6 flex flex-col items-center justify-center gap-2">
-                {turnstileDevFallback ? (
-                  <p className="max-w-md text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-                    En local, sin <span className="font-mono text-[11px]">NEXT_PUBLIC_TURNSTILE_SITE_KEY</span>, se usa
-                    una clave de prueba de Cloudflare: el aviso de «solo pruebas» es esperado.
-                  </p>
-                ) : null}
-                <Turnstile
-                  ref={turnstileRef}
-                  siteKey={turnstileSiteKey}
-                  options={{ theme: "auto" }}
-                  onSuccess={onTurnstileSuccess}
-                  onExpire={onTurnstileExpire}
-                  onError={onTurnstileExpire}
-                />
-                {errors.turnstile ? (
-                  <p className="text-xs font-medium text-red-500">{errors.turnstile}</p>
-                ) : null}
-              </div>
-            ) : (
-              <p className="mt-6 text-center text-sm font-medium text-red-500">
-                No se puede enviar: falta la clave pública de verificación humana (NEXT_PUBLIC_TURNSTILE_SITE_KEY).
-              </p>
-            )}
-
-            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button
-                type="submit"
-                size="lg"
-                disabled={saving || !turnstileSiteKey}
-                style={saving || !turnstileSiteKey ? {} : { backgroundColor: AMBER, color: "#ffffff" }}
-                className="flex min-w-[220px] items-center justify-center gap-2 rounded-md px-10 text-base font-bold shadow-sm hover:opacity-90 disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="size-5 shrink-0 animate-spin" />
-                    Enviando…
-                  </>
-                ) : (
-                  <>
-                    <Send className="size-5 shrink-0" />
-                    Enviar solicitud
-                  </>
-                )}
-              </Button>
             </div>
-          </div>
+
+            <div className="mt-8 border-t border-border/40 pt-6 text-center md:pt-8">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Al enviar, confirmas que la información es verídica. El resto del expediente (domicilio completo, emergencias,
+                foto, etc.) puede completarse después con la asociación.
+              </p>
+              {turnstileSiteKey ? (
+                <div
+                  id="prereg-turnstile"
+                  className="mt-6 flex flex-col items-center justify-center gap-2"
+                >
+                  {turnstileDevFallback ? (
+                    <p className="max-w-md text-center text-xs leading-relaxed text-muted-foreground">
+                      En local, sin <span className="font-mono text-[11px]">NEXT_PUBLIC_TURNSTILE_SITE_KEY</span>, se usa
+                      una clave de prueba de Cloudflare: el mensaje de «solo pruebas» es esperado. Con tus claves reales
+                      del panel de Turnstile desaparece y el comportamiento es el de producción.
+                    </p>
+                  ) : null}
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={turnstileSiteKey}
+                    options={{ theme: "auto" }}
+                    onSuccess={onTurnstileSuccess}
+                    onExpire={onTurnstileExpire}
+                    onError={onTurnstileExpire}
+                  />
+                  {errors.turnstile ? (
+                    <p className="text-xs font-medium text-destructive">{errors.turnstile}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-6 text-center text-sm font-medium text-destructive">
+                  No se puede enviar: falta la clave pública de verificación humana (NEXT_PUBLIC_TURNSTILE_SITE_KEY).
+                </p>
+              )}
+              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={saving || !turnstileSiteKey}
+                  className="flex min-w-[220px] items-center justify-center gap-2 rounded-full bg-[#005bb5] px-10 text-base text-white hover:bg-[#004a94]"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin shrink-0" />
+                      Enviando…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-5 shrink-0" />
+                      Enviar solicitud
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </>
         </StepCard>
       </form>
     </>
   )
 
-  if (embedded) return <div className="w-full">{formBody}</div>
+  if (embedded) {
+    return <div className="w-full">{formBody}</div>
+  }
 
   return (
     <section
       id="pre-registro"
-      className="scroll-mt-24 border-t border-slate-100 bg-white px-4 py-16 dark:border-slate-800 dark:bg-slate-950 md:px-8 md:py-24"
+      className="scroll-mt-24 border-t border-border/50 bg-gradient-to-b from-muted/25 via-background to-muted/20 px-4 py-16 md:px-8 md:py-24"
       aria-labelledby={hideIntro ? undefined : "pre-registro-title"}
       aria-label={hideIntro ? "Formulario de pre-registro de beneficiarios" : undefined}
     >
