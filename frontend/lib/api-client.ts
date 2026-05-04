@@ -4,16 +4,8 @@
  * consistencia en headers, manejo de errores y autenticación.
  */
 
+import { resolveApiFetchUrl } from "@/lib/api-base"
 import { tokenStorage } from "@/lib/token"
-
-/**
- * Backend Express (por defecto puerto 3000). NO usar el puerto del front (3001):
- * si las peticiones van al mismo Next, la respuesta es HTML y falla JSON.parse.
- */
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(
-  /\/$/,
-  ""
-)
 
 export class ApiError extends Error {
   constructor(
@@ -30,7 +22,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${BASE_URL}${path}`
+  const url = resolveApiFetchUrl(path)
   const token = tokenStorage.get()
 
   const res = await fetch(url, {
@@ -79,7 +71,7 @@ async function request<T>(
 }
 
 async function requestFormData<T>(path: string, form: FormData, init: RequestInit = {}): Promise<T> {
-  const url = `${BASE_URL}${path}`
+  const url = resolveApiFetchUrl(path)
   const token = tokenStorage.get()
 
   const res = await fetch(url, {
