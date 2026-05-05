@@ -10,7 +10,7 @@ export default function PreRegistro() {
       </p>
 
       <div className="bg-white p-6 rounded-xl shadow">
-        <p className="text-gray-500">Vista inicial en construcción 🚀</p>
+        <p className="text-gray-500">Vista inicial en construcción </p>
       </div>
     </div>
   );
