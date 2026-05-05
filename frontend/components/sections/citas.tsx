@@ -12,7 +12,6 @@ import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
 import { CitasCalendarView } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
-
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
   "Dra. Patricia Solís - Rehabilitación",
@@ -53,6 +52,25 @@ export function CitasSection() {
     loadCitas()
     getBeneficiarios().then(setBeneficiarios).catch(() => {})
   }, [loadCitas])
+
+  const today = useMemo(() => new Date(), [])
+
+  const stats = useMemo(() => {
+    const todayStr = today.toISOString().split("T")[0]
+    const hoy = citas.filter(c => c.fecha === todayStr).length
+    const weekDates: string[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today)
+      const day = today.getDay()
+      const mon = new Date(today)
+      mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1))
+      d.setDate(mon.getDate() + i)
+      weekDates.push(d.toISOString().split("T")[0])
+    }
+    const semana = citas.filter(c => weekDates.includes(c.fecha)).length
+    const pendientes = citas.filter(c => c.estatus === "Pendiente").length
+    return { hoy, semana, pendientes }
+  }, [citas, today])
 
   // Smooth view transition
   function switchView(view: ActiveView) {
@@ -108,12 +126,31 @@ export function CitasSection() {
   return (
     <div className="flex flex-col gap-6 pb-8">
       {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Citas</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestión de citas con especialistas.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Stats compactos */}
+          {!loading && (
+            <div className="hidden sm:flex items-center gap-3 mr-1 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="font-bold text-foreground">{stats.hoy}</span>
+                <span className="text-muted-foreground">hoy</span>
+              </span>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-bold text-primary">{stats.semana}</span>
+                <span className="text-muted-foreground">semana</span>
+              </span>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-bold text-amber-400">{stats.pendientes}</span>
+                <span className="text-muted-foreground">pendientes</span>
+              </span>
+            </div>
+          )}
           {/* Toggle pill */}
           <div className="flex items-center rounded-xl border border-border/50 bg-muted/30 p-1 gap-1">
             <button
@@ -161,7 +198,7 @@ export function CitasSection() {
           className={viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}
         >
           {activeView === "calendar" ? (
-            <CitasCalendarView citas={citas} onReload={loadCitas} />
+            <CitasCalendarView citas={citas} onReload={loadCitas} stats={stats} />
           ) : (
             <CitasListView citas={citas} beneficiarios={beneficiarios} />
           )}
