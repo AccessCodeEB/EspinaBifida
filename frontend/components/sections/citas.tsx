@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCitas, createCita, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
-import { CitasCalendarView } from "@/components/sections/citas-calendar-view"
+import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
@@ -104,6 +104,9 @@ export function CitasSection() {
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
+    // PART 2 #1 #2 #3 — validate work hours + doctor overlap
+    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista)
+    if (slotError) { setSaveError(slotError); return }
     setSaving(true); setSaveError(null)
     try {
       await createCita({
