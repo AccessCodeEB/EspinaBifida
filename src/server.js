@@ -1,6 +1,7 @@
 import { createPool, closePool } from "./config/db.js";
 import app from "./app.js";
 import { runMigration001 } from "./migrations/001_foto_perfil_clob.js";
+import { runMigration002 } from "./migrations/002_reportes_generados.js";
 
 const REQUIRED_ENV = [
   "DB_USER",
@@ -21,6 +22,7 @@ const PORT = process.env.PORT ?? "3000";
 createPool()
   .then(async () => {
     await runMigration001();
+    await runMigration002();
     const server = app.listen(Number(PORT), () =>
       console.log(`Server running on port ${PORT}`)
     );
