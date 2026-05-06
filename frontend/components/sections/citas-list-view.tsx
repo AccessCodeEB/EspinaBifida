@@ -35,12 +35,12 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
-function SortBtn({ field, current, dir, onClick }: { field: SortField; current: SortField; dir: SortDir; onClick: () => void }) {
+function SortIndicator({ field, current, dir }: { field: SortField; current: SortField; dir: SortDir }) {
   const active = current === field
   return (
-    <button onClick={onClick} className="inline-flex items-center gap-0.5 ml-1 opacity-50 hover:opacity-100 transition-opacity">
+    <span className="inline-flex items-center gap-0.5 ml-1 opacity-50 group-hover:opacity-100 transition-opacity" aria-hidden>
       {active && dir === "asc" ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-    </button>
+    </span>
   )
 }
 
@@ -137,17 +137,17 @@ export function CitasListView({ citas, beneficiarios }: Props) {
         {/* Header */}
         <div className="grid grid-cols-[80px_1fr_1fr_120px_130px] gap-4 px-5 py-3 bg-muted/30 border-b border-border/40">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Folio</span>
-          <button className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("beneficiario")}>
-            <User className="size-3.5 mr-1.5" />Paciente<SortBtn field="beneficiario" current={sortField} dir={sortDir} onClick={() => toggleSort("beneficiario")} />
+          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("beneficiario")}>
+            <User className="size-3.5 mr-1.5" />Paciente<SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
           </button>
-          <button className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("especialista")}>
-            Doctor<SortBtn field="especialista" current={sortField} dir={sortDir} onClick={() => toggleSort("especialista")} />
+          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("especialista")}>
+            Doctor<SortIndicator field="especialista" current={sortField} dir={sortDir} />
           </button>
-          <button className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("fecha")}>
-            <Calendar className="size-3.5 mr-1.5" />Fecha<SortBtn field="fecha" current={sortField} dir={sortDir} onClick={() => toggleSort("fecha")} />
+          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("fecha")}>
+            <Calendar className="size-3.5 mr-1.5" />Fecha<SortIndicator field="fecha" current={sortField} dir={sortDir} />
           </button>
-          <button className="flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("estatus")}>
-            Estatus<SortBtn field="estatus" current={sortField} dir={sortDir} onClick={() => toggleSort("estatus")} />
+          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("estatus")}>
+            Estatus<SortIndicator field="estatus" current={sortField} dir={sortDir} />
           </button>
         </div>
 

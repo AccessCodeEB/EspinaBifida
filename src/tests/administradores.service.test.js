@@ -37,9 +37,22 @@ jest.unstable_mockModule("../utils/profileFiles.js", () => ({
   unlinkOldProfileIfSafe:  jest.fn(),
 }));
 
+jest.unstable_mockModule("fs", () => ({
+  default: {
+    readFileSync: jest.fn(() => Buffer.from("fake-bytes")),
+    unlinkSync: jest.fn(),
+  },
+}));
+
 // Importaciones después de los mocks (ESM)
 process.env.JWT_SECRET = "test-secret-espina-bifida";
 const Service = await import("../services/administradores.service.js");
+
+const fakeUploadedFile = Object.freeze({
+  path: "/tmp/espina-test-profile.bin",
+  mimetype: "image/jpeg",
+  filename: "upload.jpg",
+});
 
 const adminRow = {
   ID_ADMIN:        1,
@@ -179,7 +192,7 @@ describe("updateFotoPerfilByUpload", () => {
     const caller = { idAdmin: 2, idRol: 2 }; // distinto admin, sin rol 1
 
     await expect(
-      Service.updateFotoPerfilByUpload(1, "foto.jpg", caller)
+      Service.updateFotoPerfilByUpload(1, fakeUploadedFile, caller)
     ).rejects.toMatchObject({ statusCode: 403 });
 
     expect(mockFindById).not.toHaveBeenCalled();
@@ -188,21 +201,20 @@ describe("updateFotoPerfilByUpload", () => {
   test("superAdmin (rol 1) puede actualizar foto de otro admin", async () => {
     const caller = { idAdmin: 99, idRol: 1 };
     mockFindById.mockResolvedValueOnce(adminRow);
-    const { updateFotoPerfilUrl } = await import("../models/administradores.model.js");
 
-    const result = await Service.updateFotoPerfilByUpload(1, "nueva.jpg", caller);
+    const result = await Service.updateFotoPerfilByUpload(1, fakeUploadedFile, caller);
 
     expect(result).toHaveProperty("fotoPerfilUrl");
-    expect(result.fotoPerfilUrl).toContain("nueva.jpg");
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
   });
 
   test("admin actualiza su propia foto (misma id)", async () => {
     const caller = { idAdmin: 1, idRol: 2 };
     mockFindById.mockResolvedValueOnce(adminRow);
 
-    const result = await Service.updateFotoPerfilByUpload(1, "mifoto.jpg", caller);
+    const result = await Service.updateFotoPerfilByUpload(1, fakeUploadedFile, caller);
 
-    expect(result.fotoPerfilUrl).toContain("mifoto.jpg");
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
   });
 
   test("lanza 404 si el admin no existe", async () => {
@@ -210,7 +222,7 @@ describe("updateFotoPerfilByUpload", () => {
     mockFindById.mockResolvedValueOnce(null);
 
     await expect(
-      Service.updateFotoPerfilByUpload(99, "foto.jpg", caller)
+      Service.updateFotoPerfilByUpload(99, fakeUploadedFile, caller)
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 });

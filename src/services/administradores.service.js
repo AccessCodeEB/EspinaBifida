@@ -1,16 +1,16 @@
+import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { notFound, badRequest, conflict, HttpError, forbidden } from "../utils/httpErrors.js";
-import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
+import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
 const SALT_ROUNDS = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function generarToken(admin) {
-  const foto = admin.FOTO_PERFIL_URL ?? admin.fotoPerfilUrl ?? null;
   return jwt.sign(
     {
       idAdmin:        admin.ID_ADMIN,
@@ -18,7 +18,6 @@ function generarToken(admin) {
       nombreCompleto: admin.NOMBRE_COMPLETO,
       email:          admin.EMAIL,
       nombreRol:      admin.NOMBRE_ROL,
-      fotoPerfilUrl:  foto,
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN ?? "8h" }
@@ -162,19 +161,34 @@ export async function deactivate(idAdmin) {
   await AdminModel.deactivate(idAdmin);
 }
 
-/** Tras multer: `filename` es el nombre en disco. `caller` = req.user del JWT */
-export async function updateFotoPerfilByUpload(idAdmin, filename, caller) {
+/**
+ * Tras multer: convierte el archivo a data URL y lo guarda en Oracle (misma estrategia que beneficiarios).
+ * Así la foto viaja con la BD compartida y se ve en cualquier instancia del backend.
+ */
+export async function updateFotoPerfilByUpload(idAdmin, file, caller) {
   if (caller.idAdmin !== idAdmin && caller.idRol !== 1) {
     throw forbidden("No autorizado para modificar este perfil");
   }
 
+  if (!file?.path) throw badRequest("Archivo de imagen inválido", "MISSING_FILE_PATH");
+
   const admin = await AdminModel.findById(idAdmin);
   if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
 
-  const prev = admin.FOTO_PERFIL_URL;
-  const publicPath = publicPathForStoredFile(filename);
-  await AdminModel.updateFotoPerfilUrl(idAdmin, publicPath);
-  unlinkOldProfileIfSafe(prev);
+  const prev = admin.FOTO_PERFIL_URL ?? admin.fotoPerfilUrl;
+  const buffer = fs.readFileSync(file.path);
+  const mime = file.mimetype || "image/jpeg";
+  const dataUrl = `data:${mime};base64,${buffer.toString("base64")}`;
 
-  return { fotoPerfilUrl: publicPath };
+  if (prev && !String(prev).startsWith("data:")) unlinkOldProfileIfSafe(prev);
+
+  await AdminModel.updateFotoPerfilUrl(idAdmin, dataUrl);
+
+  try {
+    fs.unlinkSync(file.path);
+  } catch {
+    /* archivo temporal ya eliminado */
+  }
+
+  return { fotoPerfilUrl: dataUrl };
 }

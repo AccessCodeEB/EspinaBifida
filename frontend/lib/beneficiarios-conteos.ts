@@ -17,6 +17,11 @@ export function conteosEstatusBeneficiarios(rows: Beneficiario[]) {
   }
 }
 
+/** Solicitudes del portal web pendientes de aprobación (misma regla que Preregistro). */
+export function conteoSolicitudesPendientes(rows: Beneficiario[]): number {
+  return rows.filter((b) => esSolicitudPublicaPendiente(b)).length
+}
+
 /** Credencial en ventana ≤30 días (MEMBRESIA_ESTATUS = Por vencer). Excluye bajas. */
 export function conteoMembresiasPorVencer(rows: Beneficiario[]): number {
   return rows.filter((b) => {

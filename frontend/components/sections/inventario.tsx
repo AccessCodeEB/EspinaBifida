@@ -41,7 +41,7 @@ const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 function getCantidadTextClass(cantidad: number) {
   return cantidad < 10
     ? "text-red-600 dark:text-red-400"
-    : "text-emerald-600 dark:text-emerald-400"
+    : "text-foreground"
 }
 
 export function InventarioSection() {

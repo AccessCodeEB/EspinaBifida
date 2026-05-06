@@ -310,7 +310,7 @@ export function BeneficiariosSection({
           const completitud = calcularCompletitudExpediente(b)
           const alertaIncompleto = !completitud.cumpleUmbral
           return (
-            <Card key={b.folio} className="relative flex w-full min-w-0 flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
+            <Card key={b.folio} className="relative flex w-full min-w-0 flex-col items-center text-center rounded-xl border-border/40 bg-muted/20 shadow-xs p-6">
               {alertaIncompleto ? (
                 <TooltipPrimitive.Root>
                   <TooltipPrimitive.Trigger asChild>
@@ -364,14 +364,14 @@ export function BeneficiariosSection({
               <div className="mt-5 flex w-full items-center justify-center gap-2">
                 <Button
                   variant="outline" size="sm"
-                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-none rounded-lg gap-1"
                   onClick={() => { setSelectedBeneficiario(b); setShowExpedienteDialog(true) }}
                 >
                   <Eye className="size-3.5 shrink-0" />Detalles
                 </Button>
                 <Button
                   variant="outline" size="sm"
-                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-none rounded-lg gap-1"
                   onClick={() => setCredencialBeneficiario(b)}
                 >
                   <CreditCard className="size-3.5 shrink-0" />Credencial
