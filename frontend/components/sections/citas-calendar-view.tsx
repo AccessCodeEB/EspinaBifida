@@ -1,333 +1,298 @@
 "use client"
-
-import { useState, useMemo, useEffect, useRef } from "react"
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
+import { ChevronLeft, ChevronRight, CalendarDays, X, Check, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
 
-// ─── Grid constants ───────────────────────────────────────────────────────────
-const WORK_START   = 8    // visible work hours start (08:00)
-const WORK_END     = 20   // visible work hours end   (20:00)
-const GRID_START   = 7    // grid starts one hour before work
-const GRID_END     = 22   // grid ends two hours after work
-const CELL_H       = 48   // px per hour
+// ─── Grid config ──────────────────────────────────────────────────────────────
+const GRID_START   = 7    // 07:00
+const GRID_END     = 22   // 22:00
+const WORK_START   = 8    // disabled before this
+const WORK_END     = 20   // disabled after this
+const CELL_H       = 64   // px per hour — bigger = more readable
 const TOTAL_HOURS  = GRID_END - GRID_START
-const GRID_H       = CELL_H * TOTAL_HOURS
+const GRID_H       = CELL_H * TOTAL_HOURS   // 960px
 const HOURS        = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + GRID_START)
+const DEFAULT_MINS = 60   // assumed appointment duration
 
-// ─── Status palette — clean, left-border style ────────────────────────────────
-const S_BORDER: Record<string, string> = {
-  Confirmada: "border-l-emerald-400",
-  Pendiente:  "border-l-amber-400",
-  Completada: "border-l-sky-400",
-  Cancelada:  "border-l-red-400",
+// ─── Palettes ─────────────────────────────────────────────────────────────────
+const BORDER_L: Record<string, string> = {
+  Confirmada: "border-l-emerald-400", Pendiente: "border-l-amber-400",
+  Completada: "border-l-sky-400",     Cancelada: "border-l-red-400",
 }
-const S_DOT: Record<string, string> = {
-  Confirmada: "bg-emerald-400",
-  Pendiente:  "bg-amber-400",
-  Completada: "bg-sky-400",
-  Cancelada:  "bg-red-400",
+const BG_MUTED: Record<string, string> = {
+  Confirmada: "bg-emerald-500/10", Pendiente: "bg-amber-500/10",
+  Completada: "bg-sky-500/10",    Cancelada: "bg-red-500/10",
 }
-const S_TEXT: Record<string, string> = {
-  Confirmada: "text-emerald-400",
-  Pendiente:  "text-amber-400",
-  Completada: "text-sky-400",
-  Cancelada:  "text-red-400",
+const DOT_COLOR: Record<string, string> = {
+  Confirmada: "bg-emerald-400", Pendiente: "bg-amber-400",
+  Completada: "bg-sky-400",     Cancelada: "bg-red-400",
 }
-
-// ─── Locale constants ─────────────────────────────────────────────────────────
-const DIAS_CORTO = ["L","M","X","J","V","S","D"]
-const DIAS_LARGO = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
-const MESES      = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function sameDay(a: Date, b: Date) {
-  return a.getDate()===b.getDate() && a.getMonth()===b.getMonth() && a.getFullYear()===b.getFullYear()
-}
-function getMondayOf(d: Date): Date {
-  const c = new Date(d); c.setHours(0,0,0,0)
-  const day = c.getDay(); c.setDate(c.getDate() - (day===0?6:day-1)); return c
-}
-function getWeekFrom(mon: Date): Date[] {
-  return Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d })
-}
-function getDaysInMonth(y:number,m:number){ return new Date(y,m+1,0).getDate() }
-function getFirstDayOfWeek(y:number,m:number){ const d=new Date(y,m,1).getDay(); return d===0?6:d-1 }
-
-function toMinutes(hora: string){ const [h,m]=(hora||"08:00").split(":").map(Number); return h*60+m }
-
-/** Snap minutes to nearest 30-min slot */
-function snapTo30(mins: number){ return Math.round(mins/30)*30 }
-
-function timeToTop(hora: string): number {
-  const mins = toMinutes(hora)
-  return ((mins - GRID_START*60) / 60) * CELL_H
+const TEXT_COLOR: Record<string, string> = {
+  Confirmada: "text-emerald-300", Pendiente: "text-amber-300",
+  Completada: "text-sky-300",     Cancelada: "text-red-300",
 }
 
-function citasForDay(list: Cita[], y:number, m:number, d:number){
+// ─── Locale ───────────────────────────────────────────────────────────────────
+const DIAS_S = ["L","M","X","J","V","S","D"]
+const DIAS_L = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
+const MESES  = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function sameDay(a:Date,b:Date){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
+function getMondayOf(d:Date):Date{const c=new Date(d);c.setHours(0,0,0,0);const day=c.getDay();c.setDate(c.getDate()-(day===0?6:day-1));return c}
+function getWeekFrom(mon:Date):Date[]{return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d})}
+function getDaysInMonth(y:number,m:number){return new Date(y,m+1,0).getDate()}
+function getFirstDow(y:number,m:number){const d=new Date(y,m,1).getDay();return d===0?6:d-1}
+function toMins(hora:string){const[h,m]=(hora||"08:00").split(":").map(Number);return h*60+m}
+function snapTo30(m:number){return Math.round(m/30)*30}
+
+/** top in px from grid top */
+function minsToTop(mins:number):number{return((mins-GRID_START*60)/60)*CELL_H}
+/** height in px */
+function durToH(mins:number):number{return(mins/60)*CELL_H}
+
+function citasForDay(list:Cita[],y:number,m:number,d:number):Cita[]{
   return list.filter(c=>{
-    if(!c.fecha) return false
+    if(!c.fecha)return false
     const dt=new Date(c.fecha+"T12:00:00")
-    return dt.getFullYear()===y && dt.getMonth()===m && dt.getDate()===d
+    return dt.getFullYear()===y&&dt.getMonth()===m&&dt.getDate()===d
   }).sort((a,b)=>(a.hora||"").localeCompare(b.hora||""))
 }
 
-// ─── Overlap layout (Google Calendar style) ───────────────────────────────────
-const DEFAULT_DURATION = 30 // minutes
+// ─── Overlap layout (Google Calendar column algorithm) ────────────────────────
+interface LayoutItem{cita:Cita;top:number;height:number;left:number;widthPct:number}
 
-interface LayoutItem {
-  cita: Cita; top: number; height: number; left: number; width: number
-}
-
-function computeLayout(dayCitas: Cita[]): LayoutItem[] {
-  const items = dayCitas.map(c => ({
-    cita: c,
-    start: snapTo30(toMinutes(c.hora||"08:00")),
-    end:   snapTo30(toMinutes(c.hora||"08:00")) + DEFAULT_DURATION,
+function computeLayout(dayCitas:Cita[]):LayoutItem[]{
+  if(!dayCitas.length)return[]
+  const items=dayCitas.map(c=>({
+    cita:c,
+    s:snapTo30(toMins(c.hora||"08:00")),
+    e:snapTo30(toMins(c.hora||"08:00"))+DEFAULT_MINS,
   }))
-  const columns: (typeof items[0])[][] = []
-  for (const item of items) {
-    let placed = false
-    for (const col of columns) {
-      if (col[col.length-1].end <= item.start) { col.push(item); placed=true; break }
+  // assign columns
+  const cols:number[]=items.map(()=>-1)
+  const colEnds:number[]=[]
+  for(let i=0;i<items.length;i++){
+    let placed=false
+    for(let ci=0;ci<colEnds.length;ci++){
+      if(colEnds[ci]<=items[i].s){cols[i]=ci;colEnds[ci]=items[i].e;placed=true;break}
     }
-    if (!placed) columns.push([item])
+    if(!placed){cols[i]=colEnds.length;colEnds.push(items[i].e)}
   }
-  const totalCols = columns.length
-  const result: LayoutItem[] = []
-  columns.forEach((col, ci) => {
-    col.forEach(item => {
-      const top    = ((item.start - GRID_START*60)/60)*CELL_H
-      const height = Math.max(((item.end - item.start)/60)*CELL_H, 24)
-      result.push({ cita:item.cita, top, height, left:(ci/totalCols)*100, width:(1/totalCols)*100 })
-    })
-  })
-  return result
+  const totalCols=colEnds.length
+  return items.map((it,i)=>({
+    cita:it.cita,
+    top:Math.max(0,minsToTop(it.s)),
+    height:Math.max(durToH(DEFAULT_MINS),28),
+    left:(cols[i]/totalCols)*100,
+    widthPct:(1/totalCols)*100,
+  }))
 }
 
-// ─── Validate new appointment (same-doctor block) ─────────────────────────────
-function validateSlot(citas: Cita[], fecha: string, hora: string, especialista: string): string|null {
-  const newStart = snapTo30(toMinutes(hora))
-  const newEnd   = newStart + DEFAULT_DURATION
-  const h = newStart / 60
-  if (h < WORK_START || h >= WORK_END) return `Horario fuera del rango permitido (${WORK_START}:00–${WORK_END}:00)`
-  if (!especialista) return null
-  const dayC = citas.filter(c=>c.fecha===fecha && c.especialista===especialista && c.estatus!=="Cancelada")
-  for (const c of dayC) {
-    const s = snapTo30(toMinutes(c.hora))
-    const e = s + DEFAULT_DURATION
-    if (newStart < e && newEnd > s) return `Horario ocupado por ${especialista}`
+// ─── Doctor conflict validator ─────────────────────────────────────────────────
+export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string):string|null{
+  const s=snapTo30(toMins(hora))
+  const e=s+DEFAULT_MINS
+  const hStart=s/60
+  if(hStart<WORK_START||hStart>=WORK_END)return`Horario fuera del rango permitido (${WORK_START}:00–${WORK_END}:00)`
+  if(!especialista)return null
+  const conflicts=citas.filter(c=>c.fecha===fecha&&c.especialista===especialista&&c.estatus!=="Cancelada")
+  for(const c of conflicts){
+    const cs=snapTo30(toMins(c.hora));const ce=cs+DEFAULT_MINS
+    if(s<ce&&e>cs)return`Horario ocupado por ${especialista}`
   }
   return null
 }
 
-// ─── CurrentTimeLine ──────────────────────────────────────────────────────────
-function CurrentTimeLine() {
-  const [now, setNow] = useState(()=>new Date())
-  const ref = useRef<HTMLDivElement>(null)
-
+// ─── Current time indicator ───────────────────────────────────────────────────
+function NowLine(){
+  const[now,setNow]=useState(()=>new Date())
+  const ref=useRef<HTMLDivElement>(null)
   useEffect(()=>{
     ref.current?.scrollIntoView({behavior:"smooth",block:"center"})
-    const id = setInterval(()=>setNow(new Date()),30_000)
-    return ()=>clearInterval(id)
+    const id=setInterval(()=>setNow(new Date()),60_000)
+    return()=>clearInterval(id)
   },[])
-
-  // FIX #4: exact px position from grid top
-  const mins = now.getHours()*60 + now.getMinutes()
-  const top  = ((mins - GRID_START*60)/60)*CELL_H
-  if (top<0||top>GRID_H) return null
-
-  return (
-    <div ref={ref} className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
-      style={{top:`${top}px`}}>
-      <span className="size-2.5 rounded-full bg-primary shrink-0 shadow-[0_0_6px_2px_rgba(99,102,241,0.6)]"/>
-      <div className="h-px flex-1 bg-primary/80"/>
+  // exact px from GRID_START
+  const top=minsToTop(now.getHours()*60+now.getMinutes())
+  if(top<0||top>GRID_H)return null
+  return(
+    <div ref={ref} className="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style={{top:`${top}px`}}>
+      <span className="size-2.5 rounded-full bg-blue-500 shrink-0 shadow-[0_0_8px_2px_rgba(59,130,246,0.6)]"/>
+      <div className="h-[1.5px] flex-1 bg-blue-500/80"/>
     </div>
   )
 }
 
-// ─── AppCard ─────────────────────────────────────────────────────────────────
-function AppCard({ cita, height, onAction, updatingId }:{
-  cita:Cita; height:number
-  onAction:(id:number,estatus:Cita["estatus"])=>void
+// ─── Popover (click-based) ────────────────────────────────────────────────────
+function CitaPopover({cita,onClose,onAction,updatingId}:{
+  cita:Cita;onClose:()=>void
+  onAction:(id:number,e:Cita["estatus"])=>void
   updatingId:number|null
 }){
-  const [open,setOpen]=useState(false)
-  const border = S_BORDER[cita.estatus] ?? "border-l-slate-500"
-  const dot    = S_DOT[cita.estatus]   ?? "bg-slate-400"
-  const stText = S_TEXT[cita.estatus]  ?? "text-slate-400"
-  const compact = height < 36
-
-  return (
-    <div className="relative w-full h-full group" style={{zIndex:open?50:1}}
-      onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
-
-      {/* ── Compact card: clean transparent bg + left border accent ── */}
-      <div className={`w-full h-full rounded-r-md border border-border/30 border-l-4 ${border}
-        bg-[#0f172a]/80 backdrop-blur-sm px-2 py-1 text-[11px] leading-tight overflow-hidden cursor-pointer
-        transition-opacity duration-150 ${open?"opacity-0 pointer-events-none":"opacity-100"}
-        hover:bg-[#1e293b]/90`}>
-        <div className={`flex items-center gap-1.5 font-semibold ${stText}`}>
-          <span className={`size-1.5 rounded-full shrink-0 ${dot}`}/>
-          {cita.hora}
+  const dot=DOT_COLOR[cita.estatus]??"bg-slate-400"
+  const tc=TEXT_COLOR[cita.estatus]??"text-slate-300"
+  return(
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:items-start sm:justify-start" onClick={onClose}>
+      <div
+        className="relative m-4 sm:m-0 sm:absolute bg-[#0f172a]/98 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl w-72 p-4 space-y-3"
+        style={{boxShadow:"0 16px 48px rgba(0,0,0,0.7)"}}
+        onClick={e=>e.stopPropagation()}
+      >
+        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors" onClick={onClose}>
+          <X className="size-4"/>
+        </button>
+        {/* Status header */}
+        <div className="flex items-center gap-2">
+          <span className={`size-2.5 rounded-full ${dot}`}/>
+          <span className={`text-sm font-bold ${tc}`}>{cita.hora}</span>
+          <span className="ml-auto text-[10px] rounded-full border border-border/50 px-2 py-px text-muted-foreground">{cita.estatus}</span>
         </div>
-        {!compact&&<p className="text-foreground/80 truncate mt-0.5 text-[10px]">{cita.beneficiario}</p>}
+        {/* Patient */}
+        <div>
+          <p className="font-bold text-foreground leading-snug">{cita.beneficiario}</p>
+          {cita.especialista&&<p className="text-xs text-muted-foreground mt-0.5">{cita.especialista}</p>}
+        </div>
+        {cita.notas&&<p className="text-xs italic text-muted-foreground/70 border-t border-border/30 pt-2">"{cita.notas}"</p>}
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          {cita.estatus==="Pendiente"&&<>
+            <Button size="sm" className="h-7 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700"
+              disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Confirmada")}>
+              <Check className="size-3 mr-1"/>Confirmar
+            </Button>
+            <Button size="sm" variant="destructive" className="h-7 text-xs flex-1"
+              disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}>
+              <X className="size-3 mr-1"/>Cancelar
+            </Button>
+          </>}
+          {cita.estatus==="Confirmada"&&<>
+            <Button size="sm" className="h-7 text-xs flex-1 bg-sky-600 hover:bg-sky-700"
+              disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Completada")}>
+              Completar
+            </Button>
+            <Button size="sm" variant="destructive" className="h-7 text-xs flex-1"
+              disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}>
+              <X className="size-3 mr-1"/>Cancelar
+            </Button>
+          </>}
+        </div>
       </div>
-
-      {/* ── Pop-out expanded (glassmorphism) ── */}
-      {open&&(
-        <div className={`absolute left-0 top-0 z-50 min-w-[200px] max-w-[240px] rounded-r-xl
-          rounded-tl-none rounded-bl-none border border-border/40 border-l-4 ${border}
-          bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl text-xs
-          animate-in fade-in zoom-in-95 duration-150`}
-          style={{boxShadow:"0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)"}}
-          onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
-          <div className="p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <span className={`size-2 rounded-full ${dot}`}/>
-              <span className={`font-bold text-sm ${stText}`}>{cita.hora}</span>
-              <span className="ml-auto rounded-full border border-border/40 px-1.5 py-px text-[9px] font-medium text-muted-foreground">
-                {cita.estatus}
-              </span>
-            </div>
-            <p className="font-semibold text-foreground leading-snug">{cita.beneficiario}</p>
-            {cita.especialista&&<p className="text-muted-foreground text-[10px]">{cita.especialista}</p>}
-            {cita.notas&&<p className="italic text-muted-foreground/60 text-[10px] border-t border-border/30 pt-2">"{cita.notas}"</p>}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {cita.estatus==="Pendiente"&&<>
-                <ABtn label="Confirmar" color="emerald" disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Confirmada")}/>
-                <ABtn label="Cancelar"  color="red"     disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}/>
-              </>}
-              {cita.estatus==="Confirmada"&&<>
-                <ABtn label="Completar" color="sky"  disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Completada")}/>
-                <ABtn label="Cancelar"  color="red"  disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}/>
-              </>}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-function ABtn({label,color,onClick,disabled}:{label:string;color:string;onClick:()=>void;disabled:boolean}){
-  const c:Record<string,string>={
-    emerald:"bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30",
-    red:    "bg-red-500/20     text-red-300     border-red-500/40     hover:bg-red-500/30",
-    sky:    "bg-sky-500/20     text-sky-300     border-sky-500/40     hover:bg-sky-500/30",
-  }
+// ─── Appointment block (click → popover) ──────────────────────────────────────
+function AppBlock({cita,height,widthPct,left,onSelect}:{
+  cita:Cita;height:number;widthPct:number;left:number;onSelect:(c:Cita)=>void
+}){
+  const border=BORDER_L[cita.estatus]??"border-l-slate-500"
+  const bg=BG_MUTED[cita.estatus]??"bg-slate-500/10"
+  const tc=TEXT_COLOR[cita.estatus]??"text-slate-300"
+  const dot=DOT_COLOR[cita.estatus]??"bg-slate-400"
+  const showName=height>=40
   return(
-    <button disabled={disabled} onClick={e=>{e.stopPropagation();onClick()}}
-      className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition-colors disabled:opacity-40 ${c[color]}`}>
-      {label}
-    </button>
+    <div
+      className={`absolute cursor-pointer rounded-r-md border-l-4 border-t border-b border-r border-border/20 ${border} ${bg}
+        px-1.5 py-1 overflow-hidden select-none hover:brightness-125 transition-all`}
+      style={{top:0,left:0,width:"100%",height:"100%"}}
+      onClick={e=>{e.stopPropagation();onSelect(cita)}}
+    >
+      <div className={`flex items-center gap-1 text-[11px] font-semibold ${tc} leading-none`}>
+        <span className={`size-1.5 rounded-full shrink-0 ${dot}`}/>
+        <span className="truncate">{cita.hora}</span>
+      </div>
+      {showName&&<p className="text-[10px] text-foreground/70 truncate mt-0.5 leading-tight">{cita.beneficiario}</p>}
+    </div>
   )
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
-interface Props {
-  citas: Cita[]
-  onReload: ()=>void
-  stats: {hoy:number;semana:number;pendientes:number}
-}
+interface Props{citas:Cita[];onReload:()=>void;stats:{hoy:number;semana:number;pendientes:number}}
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export function CitasCalendarView({citas,onReload,stats}:Props){
-  const [weekAnchor,setWeekAnchor]=useState<Date>(()=>getMondayOf(new Date()))
-  const [calYear,setCalYear]     =useState(()=>new Date().getFullYear())
-  const [calMonth,setCalMonth]   =useState(()=>new Date().getMonth())
-  const today=useMemo(()=>{const d=new Date();d.setHours(0,0,0,0);return d},[])
+  const todayRef=useMemo(()=>{const d=new Date();d.setHours(0,0,0,0);return d},[])
+  const[weekAnchor,setWeekAnchor]=useState<Date>(()=>getMondayOf(new Date()))
+  const[calYear,setCalYear]=useState(()=>new Date().getFullYear())
+  const[calMonth,setCalMonth]=useState(()=>new Date().getMonth())
+  const[selectedCita,setSelectedCita]=useState<Cita|null>(null)
+  const[updatingId,setUpdatingId]=useState<number|null>(null)
 
   const weekDates=useMemo(()=>getWeekFrom(weekAnchor),[weekAnchor])
-  const isThisWeek=weekDates.some(d=>sameDay(d,today))
+  const isThisWeek=weekDates.some(d=>sameDay(d,todayRef))
 
   function prevMonth(){if(calMonth===0){setCalYear(y=>y-1);setCalMonth(11)}else setCalMonth(m=>m-1)}
   function nextMonth(){if(calMonth===11){setCalYear(y=>y+1);setCalMonth(0)}else setCalMonth(m=>m+1)}
 
   function handleDayClick(d:Date){
-    setWeekAnchor(getMondayOf(d)); setCalYear(d.getFullYear()); setCalMonth(d.getMonth())
+    setWeekAnchor(getMondayOf(d));setCalYear(d.getFullYear());setCalMonth(d.getMonth())
   }
 
-  // ── Build mini-cal grid with overflow days (PART 1 #1) ──────────────────────
-  const miniCalCells = useMemo(()=>{
-    const firstDay = getFirstDayOfWeek(calYear,calMonth)
-    const daysInMonth = getDaysInMonth(calYear,calMonth)
-    const prevDays = getDaysInMonth(calYear,calMonth===0?11:calMonth-1)
-    const cells: {date:Date;outOfMonth:boolean}[] = []
-
-    // Fill leading days from previous month
-    for(let i=firstDay-1;i>=0;i--){
-      const d=new Date(calYear,calMonth,0-i)
-      cells.push({date:d,outOfMonth:true})
-    }
-    // Current month
-    for(let i=1;i<=daysInMonth;i++) cells.push({date:new Date(calYear,calMonth,i),outOfMonth:false})
-    // Trailing days to fill last row (always complete 6 rows = 42 cells)
-    let nextDay=1
-    while(cells.length%7!==0) cells.push({date:new Date(calYear,calMonth+1,nextDay++),outOfMonth:true})
-
+  // Mini-cal: full rows with prev/next overflow days
+  const miniCells=useMemo(()=>{
+    const fd=getFirstDow(calYear,calMonth)
+    const dim=getDaysInMonth(calYear,calMonth)
+    const cells:{date:Date;out:boolean}[]=[]
+    for(let i=fd-1;i>=0;i--){const d=new Date(calYear,calMonth,0-i);cells.push({date:d,out:true})}
+    for(let i=1;i<=dim;i++)cells.push({date:new Date(calYear,calMonth,i),out:false})
+    let nd=1
+    while(cells.length%7!==0)cells.push({date:new Date(calYear,calMonth+1,nd++),out:true})
     return cells
   },[calYear,calMonth])
 
   const citasSemana=useMemo(()=>
-    weekDates.map(d=>({
-      date:d,
-      items:computeLayout(citasForDay(citas,d.getFullYear(),d.getMonth(),d.getDate()))
-    })),[citas,weekDates])
-
-  const [updatingId,setUpdatingId]=useState<number|null>(null)
-  const [confirmPending,setConfirmPending]=useState<{id:number;estatus:Cita["estatus"];name:string}|null>(null)
+    weekDates.map(d=>({date:d,layout:computeLayout(citasForDay(citas,d.getFullYear(),d.getMonth(),d.getDate()))}))
+  ,[citas,weekDates])
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
     setUpdatingId(id)
     try{
       await updateEstatusCita(id,estatus)
       toast.success(`Cita marcada como ${estatus}`)
-      onReload(); setConfirmPending(null)
-    }catch{toast.error("No se pudo actualizar el estatus.")}
+      onReload();setSelectedCita(null)
+    }catch{toast.error("No se pudo actualizar.")}
     finally{setUpdatingId(null)}
   }
 
   return(
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
 
-      {/* ── LEFT PANEL ──────────────────────────────────────────────────── */}
+      {/* ── LEFT ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4">
-
-        {/* Mini-calendar */}
         <div className="rounded-2xl border border-border/50 bg-card p-3">
+          {/* Month nav */}
           <div className="flex items-center justify-between mb-2">
             <button onClick={prevMonth} className="rounded-lg p-1 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
             <span className="text-xs font-bold">{MESES[calMonth]} {calYear}</span>
             <button onClick={nextMonth} className="rounded-lg p-1 hover:bg-muted transition-colors"><ChevronRight className="size-4"/></button>
           </div>
-          {/* Day headers */}
           <div className="grid grid-cols-7 text-center mb-1">
-            {DIAS_CORTO.map(d=><span key={d} className="text-[9px] font-semibold text-muted-foreground">{d}</span>)}
+            {DIAS_S.map(d=><span key={d} className="text-[9px] font-semibold text-muted-foreground">{d}</span>)}
           </div>
-          {/* PART 1 #1 — full rows with overflow days */}
           <div className="grid grid-cols-7 gap-y-0.5">
-            {miniCalCells.map(({date,outOfMonth},idx)=>{
-              const dayCitas=citasForDay(citas,date.getFullYear(),date.getMonth(),date.getDate())
-              const hasActivity=dayCitas.length>0
-              const isInWeek=weekDates.some(w=>sameDay(w,date))
-              const isToday=sameDay(date,today)
+            {miniCells.map(({date,out},idx)=>{
+              const dc=citasForDay(citas,date.getFullYear(),date.getMonth(),date.getDate())
+              const dotCount=Math.min(dc.length,3)
+              const inWeek=weekDates.some(w=>sameDay(w,date))
+              const isToday=sameDay(date,todayRef)
               return(
-                <div key={idx} className="flex flex-col items-center">
+                <div key={idx} className="flex flex-col items-center gap-px">
                   <button
                     onClick={()=>handleDayClick(date)}
                     className={`flex size-6 items-center justify-center rounded-full text-[11px] font-medium transition-all
-                      ${outOfMonth?"text-muted-foreground/30 hover:bg-muted/50"
+                      ${out?"text-muted-foreground/25 hover:bg-muted/30"
                         :isToday?"bg-primary text-primary-foreground shadow-sm"
-                        :isInWeek?"bg-primary/20 text-primary"
+                        :inWeek?"bg-primary/20 text-primary"
                         :"text-foreground hover:bg-muted"}`}
                   >{date.getDate()}</button>
-                  {/* PART 1 #2 — subtle single-color dot (primary/teal) */}
-                  <div className="h-1.5 flex items-center justify-center">
-                    {hasActivity&&!outOfMonth&&(
-                      <span className={`size-1 rounded-full ${isToday?"bg-primary-foreground":"bg-primary/60"}`}/>
-                    )}
+                  {/* 1-3 dots, subtle primary */}
+                  <div className="flex gap-px h-1.5 items-center">
+                    {!out&&Array.from({length:dotCount}).map((_,i)=>(
+                      <span key={i} className={`size-1 rounded-full ${isToday?"bg-primary-foreground/80":"bg-primary/50"}`}/>
+                    ))}
                   </div>
                 </div>
               )
@@ -339,9 +304,9 @@ export function CitasCalendarView({citas,onReload,stats}:Props){
         <div className="rounded-2xl border border-border/50 bg-card p-4 space-y-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Resumen</p>
           {[
-            {label:"Hoy",         val:stats.hoy,        color:"text-foreground"},
-            {label:"Esta semana", val:stats.semana,     color:"text-primary"},
-            {label:"Pendientes",  val:stats.pendientes, color:"text-amber-400"},
+            {label:"Hoy",val:stats.hoy,color:"text-foreground"},
+            {label:"Esta semana",val:stats.semana,color:"text-primary"},
+            {label:"Pendientes",val:stats.pendientes,color:"text-amber-400"},
           ].map(({label,val,color})=>(
             <div key={label} className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{label}</span>
@@ -351,8 +316,8 @@ export function CitasCalendarView({citas,onReload,stats}:Props){
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ─────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col min-h-0">
+      {/* ── RIGHT ────────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col">
         {/* Week nav */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
@@ -362,75 +327,68 @@ export function CitasCalendarView({citas,onReload,stats}:Props){
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={()=>setWeekAnchor(w=>{const p=new Date(w);p.setDate(w.getDate()-7);return p})}
-              className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
-            <button onClick={()=>{const m=getMondayOf(new Date());setWeekAnchor(m);setCalYear(m.getFullYear());setCalMonth(m.getMonth())}}
-              className="rounded-lg px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors">Hoy</button>
-            <button onClick={()=>setWeekAnchor(w=>{const n=new Date(w);n.setDate(w.getDate()+7);return n})}
-              className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronRight className="size-4"/></button>
+            <button onClick={()=>setWeekAnchor(w=>{const p=new Date(w);p.setDate(w.getDate()-7);return p})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
+            <button onClick={()=>{const m=getMondayOf(new Date());setWeekAnchor(m);setCalYear(m.getFullYear());setCalMonth(m.getMonth())}} className="rounded-lg px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors">Hoy</button>
+            <button onClick={()=>setWeekAnchor(w=>{const n=new Date(w);n.setDate(w.getDate()+7);return n})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronRight className="size-4"/></button>
           </div>
         </div>
 
-        {/* Scrollable grid */}
-        <div className="flex flex-1 overflow-y-auto" style={{maxHeight:"calc(100vh - 220px)"}}>
+        {/* Day-of-week header row */}
+        <div className="flex border-b border-border/30 shrink-0">
+          <div className="w-14 shrink-0"/>
+          {citasSemana.map(({date},ci)=>{
+            const isToday=sameDay(date,todayRef)
+            return(
+              <div key={ci} className={`flex-1 flex flex-col items-center py-2 cursor-pointer hover:bg-muted/30 transition-colors
+                ${isToday?"bg-primary/10":""}`} onClick={()=>handleDayClick(date)}>
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">{DIAS_L[ci]}</span>
+                <span className={`mt-0.5 flex size-7 items-center justify-center rounded-full text-sm font-bold
+                  ${isToday?"bg-primary text-primary-foreground":"text-foreground"}`}>{date.getDate()}</span>
+              </div>
+            )
+          })}
+        </div>
 
-          {/* Hours column */}
-          <div className="shrink-0 w-14 border-r border-border/30 relative bg-card" style={{height:`${GRID_H}px`}}>
+        {/* Scrollable grid */}
+        <div className="flex flex-1 overflow-y-auto" style={{maxHeight:"calc(100vh - 240px)"}}>
+          {/* Hour labels */}
+          <div className="w-14 shrink-0 relative border-r border-border/20" style={{height:`${GRID_H}px`}}>
             {HOURS.slice(0,-1).map((h,i)=>(
-              <div key={h} className="absolute right-2 text-[10px] text-muted-foreground/50 font-medium leading-none"
-                style={{top:`${i*CELL_H-6}px`}}>
+              <div key={h} className="absolute right-2 text-[10px] text-muted-foreground/50 font-medium"
+                style={{top:`${i*CELL_H-7}px`}}>
                 {String(h).padStart(2,"0")}:00
               </div>
             ))}
           </div>
 
           {/* Day columns */}
-          <div className="flex-1 grid" style={{gridTemplateColumns:`repeat(7,minmax(0,1fr))`}}>
-            {citasSemana.map(({date,items},colIdx)=>{
-              const isToday=sameDay(date,today)
+          <div className="flex-1 flex">
+            {citasSemana.map(({date,layout},ci)=>{
+              const isToday=sameDay(date,todayRef)
               return(
-                <div key={colIdx} className={`flex flex-col border-r border-border/20 last:border-r-0 ${isToday?"bg-primary/[0.03]":""}`}>
-                  {/* Day header */}
-                  <div className={`sticky top-0 z-10 flex flex-col items-center py-2 border-b border-border/30 cursor-pointer shrink-0
-                    ${isToday?"bg-primary/10":"bg-card"}`} onClick={()=>handleDayClick(date)}>
-                    <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">{DIAS_LARGO[colIdx]}</span>
-                    <span className={`mt-0.5 flex size-6 items-center justify-center rounded-full text-xs font-bold
-                      ${isToday?"bg-primary text-primary-foreground":"text-foreground"}`}>{date.getDate()}</span>
-                  </div>
-
-                  {/* Timed body */}
-                  <div className="relative" style={{height:`${GRID_H}px`}}>
-                    {/* Hour lines + disabled zones (PART 2 #1) */}
-                    {HOURS.slice(0,-1).map((h,i)=>{
-                      const disabled = h<WORK_START||h>=WORK_END
-                      return(
-                        <div key={h}>
-                          <div className={`absolute left-0 right-0 border-t border-border/15 ${disabled?"bg-muted/10":""}`}
-                            style={{top:`${i*CELL_H}px`,height:`${CELL_H}px`}}/>
-                          {/* Half-hour line */}
-                          <div className="absolute left-0 right-0 border-t border-border/[0.06]"
-                            style={{top:`${i*CELL_H+CELL_H/2}px`}}/>
-                          {/* Disabled stripe */}
-                          {disabled&&(
-                            <div className="absolute left-0 right-0 bg-muted/[0.12] pointer-events-none"
-                              style={{top:`${i*CELL_H}px`,height:`${CELL_H}px`}}/>
-                          )}
-                        </div>
-                      )
-                    })}
-
-                    {/* Current time (PART 1 #4 — fixed calculation) */}
-                    {isToday&&isThisWeek&&<CurrentTimeLine/>}
-
-                    {/* Appointments */}
-                    {items.map(({cita,top,height,left,width})=>(
-                      <div key={cita.id} className="absolute px-px"
-                        style={{top:`${top}px`,height:`${height}px`,left:`${left}%`,width:`${width}%`}}>
-                        <AppCard cita={cita} height={height} updatingId={updatingId}
-                          onAction={(id,estatus)=>setConfirmPending({id,estatus,name:cita.beneficiario})}/>
+                <div key={ci} className={`flex-1 relative border-r border-border/15 last:border-r-0 ${isToday?"bg-primary/[0.025]":""}`}
+                  style={{height:`${GRID_H}px`}}>
+                  {/* Hour grid lines */}
+                  {HOURS.slice(0,-1).map((h,i)=>{
+                    const disabled=h<WORK_START||h>=WORK_END
+                    return(
+                      <div key={h} className={`absolute left-0 right-0 border-t border-border/15 ${disabled?"bg-muted/10":""}`}
+                        style={{top:`${i*CELL_H}px`,height:`${CELL_H}px`}}>
+                        <div className="absolute left-0 right-0 border-t border-border/[0.06]" style={{top:"50%"}}/>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })}
+
+                  {/* Current time — only on today */}
+                  {isToday&&isThisWeek&&<NowLine/>}
+
+                  {/* Appointments — absolute positioned */}
+                  {layout.map(({cita,top,height,left,widthPct})=>(
+                    <div key={cita.id} className="absolute px-0.5"
+                      style={{top:`${top}px`,height:`${height}px`,left:`${left}%`,width:`${widthPct}%`}}>
+                      <AppBlock cita={cita} height={height} widthPct={widthPct} left={left} onSelect={setSelectedCita}/>
+                    </div>
+                  ))}
                 </div>
               )
             })}
@@ -438,28 +396,12 @@ export function CitasCalendarView({citas,onReload,stats}:Props){
         </div>
       </div>
 
-      {/* ── Confirm dialog ───────────────────────────────────────────────── */}
-      {confirmPending&&(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl border border-border/60 bg-card shadow-2xl p-6 max-w-sm w-full mx-4">
-            <h3 className="text-base font-bold mb-2">Confirmar cambio</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              ¿Marcar la cita de <strong className="text-foreground">{confirmPending.name}</strong> como{" "}
-              <strong className="text-foreground">{confirmPending.estatus}</strong>?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" size="sm" onClick={()=>setConfirmPending(null)} disabled={updatingId!==null}>Cancelar</Button>
-              <Button size="sm" variant={confirmPending.estatus==="Cancelada"?"destructive":"default"}
-                disabled={updatingId!==null} onClick={()=>doUpdate(confirmPending.id,confirmPending.estatus)}>
-                {updatingId!==null?"Guardando...":"Confirmar"}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* ── Popover ─────────────────────────────────────────────────────── */}
+      {selectedCita&&(
+        <CitaPopover cita={selectedCita} updatingId={updatingId}
+          onClose={()=>setSelectedCita(null)}
+          onAction={doUpdate}/>
       )}
     </div>
   )
 }
-
-// ─── Export validator for use in the new-appointment dialog ──────────────────
-export { validateSlot }
