@@ -243,7 +243,7 @@ export function CitasSection() {
                   className="bg-muted/30 pr-8"
                   value={buscaBenef}
                   onFocus={() => setShowBenefList(true)}
-                  onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })); setShowBenefList(true) }}
+                  onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })); setShowBenefList(true); setSaveError(null) }}
                 />
                 <button
                   type="button"
@@ -264,6 +264,7 @@ export function CitasSection() {
                         setForm(f => ({ ...f, curp: b.folio }))
                         setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`)
                         setShowBenefList(false)
+                        setSaveError(null)
                       }}
                     >
                       <span className="font-semibold text-primary mr-2">{b.folio}</span>
@@ -281,7 +282,7 @@ export function CitasSection() {
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">Tipo de Servicio</Label>
-              <Select value={form.idTipoServicio} onValueChange={v => setForm(f => ({ ...f, idTipoServicio: v }))}>
+              <Select value={form.idTipoServicio} onValueChange={v => { setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }}>
                 <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar tipo de servicio" /></SelectTrigger>
                 <SelectContent>
                   {TIPOS_SERVICIO_SUGERIDOS.map(t => (
@@ -294,7 +295,7 @@ export function CitasSection() {
             {/* Especialista */}
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">Especialista</Label>
-              <Select value={form.especialista} onValueChange={v => setForm(f => ({ ...f, especialista: v }))}>
+              <Select value={form.especialista} onValueChange={v => { setForm(f => ({ ...f, especialista: v })); setSaveError(null) }}>
                 <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar especialista (opcional)" /></SelectTrigger>
                 <SelectContent>
                   {ESPECIALISTAS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
@@ -307,14 +308,14 @@ export function CitasSection() {
               <div className="space-y-1.5">
                 <Label htmlFor="fecha-cita" className="text-sm font-semibold">Fecha</Label>
                 <Input id="fecha-cita" type="date" className="bg-muted/30" value={form.fecha}
-                  onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
+                  onChange={e => { setForm(f => ({ ...f, fecha: e.target.value })); setSaveError(null) }} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-semibold">Hora (intervalos de 30 min)</Label>
                 <select
                   className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
                   value={form.hora}
-                  onChange={e => setForm(f => ({ ...f, hora: e.target.value }))}
+                  onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null) }}
                 >
                   <option value="">Seleccionar hora</option>
                   {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}

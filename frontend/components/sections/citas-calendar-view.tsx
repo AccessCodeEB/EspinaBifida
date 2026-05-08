@@ -68,17 +68,18 @@ function buildLayout(dayCitas:Cita[]):LItem[]{
   return result
 }
 
-// ── Validator (exported for citas.tsx) ───────────────────────────────────────
+// ── Validator ─────────────────────────────────────────────────────────────────
 export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string):string|null{
   const s=snap30(toMins(hora)),e=s+DEFAULT_MINS
   if(s/60<WORK_START||s/60>=WORK_END)return`Horario fuera del rango (${WORK_START}:00–${WORK_END}:00)`
+  // FIX #3: both doctor AND patient checked with range intersection
   const day=citas.filter(c=>c.fecha===fecha&&c.estatus!=="Cancelada")
   for(const c of day){
     const cs=snap30(toMins(c.hora)),ce=cs+DEFAULT_MINS
-    if(s<ce&&e>cs){
-      if(especialista&&c.especialista===especialista)return`El doctor ya tiene una cita en este horario`
-      if(curp&&c.beneficiario&&c.beneficiario===curp)return`El paciente ya tiene una cita en este horario`
-    }
+    const overlaps=s<ce&&e>cs
+    if(!overlaps)continue
+    if(especialista&&c.especialista===especialista)return`El doctor ya tiene una cita en este horario`
+    if(curp&&c.folio&&c.folio===curp)return`El paciente ya tiene una cita en este horario`
   }
   return null
 }
@@ -160,29 +161,35 @@ function CitaPopover({cita,anchor,onClose,onAction,updatingId}:{
 }
 
 // ── Action Center ────────────────────────────────────────────────────────────
-function ActionCenter({citas}:{citas:Cita[]}){
+function ActionCenter({citas,onNavigate}:{citas:Cita[];onNavigate:(c:Cita)=>void}){
   const now=new Date();now.setHours(0,0,0,0)
+  // Pendientes sin confirmar del pasado
   const alerts=citas.filter(c=>{
     if(c.estatus==="Cancelada"||c.estatus==="Completada")return false
     const d=new Date(c.fecha+"T12:00:00");return d<now
   }).slice(0,5)
   if(!alerts.length)return(
-    <div className="rounded-2xl border border-border/50 bg-card p-4">
+    <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Alertas</p>
-      <p className="text-xs text-muted-foreground/60">Sin alertas pendientes ✓</p>
+      <p className="text-xs text-muted-foreground/50">Sin alertas pendientes ✓</p>
     </div>
   )
   return(
-    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
-      <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-        <AlertCircle className="size-3"/>Requieren atención
+    <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <AlertCircle className="size-3 text-amber-400"/>Requieren atención
       </p>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {alerts.map(c=>(
-          <div key={c.id} className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-2">
-            <p className="text-[11px] font-semibold text-foreground/80 truncate">{c.beneficiario}</p>
-            <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.estatus}</p>
-          </div>
+          // FIX #5 nav: click navigates to that cita's week and opens its popover
+          <button key={c.id} onClick={()=>onNavigate(c)}
+            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 px-3 py-2.5 transition-colors group">
+            <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
+              <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.estatus}</p>
+            </div>
+          </button>
         ))}
       </div>
     </div>
@@ -231,7 +238,19 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     return cells
   },[calYear,calMonth])
 
-  const citasSemana=useMemo(()=>weekDates.map(d=>({date:d,layout:buildLayout(citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate()))})),[citas,weekDates])
+  // FIX #1: only non-cancelled for the grid; citasDay already sorted
+  const citasSemana=useMemo(()=>weekDates.map(d=>{
+    const all=citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate())
+    // FIX #2: Cancelled not rendered in the weekly grid
+    const visible=all.filter(c=>c.estatus!=="Cancelada")
+    return{date:d,layout:buildLayout(visible)}
+  }),[citas,weekDates])
+
+  // FIX #5: navigate to cita's week when clicking Action Center alert
+  function navigateToCita(c:Cita){
+    const d=new Date(c.fecha+"T12:00:00")
+    handleDay(d)
+  }
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
     setSelected(null)
@@ -274,27 +293,29 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
               const inW=weekDates.some(w=>sameDay(w,date))
               const isT=sameDay(date,todayRef)
               return(
-                <div key={idx} className="flex flex-col items-center gap-px">
-                  <button onClick={()=>handleDay(date)}
-                    className={`flex size-6 items-center justify-center rounded-full text-[11px] font-medium transition-all
-                      ${out?"text-muted-foreground/25 hover:bg-muted/30"
-                        :isT?"bg-primary text-primary-foreground shadow-sm"
-                        :inW?"bg-primary/20 text-primary"
-                        :"text-foreground hover:bg-muted"}`}>
-                    {date.getDate()}
-                  </button>
-                  <div className="flex gap-px h-1.5 items-center">
-                    {!out&&Array.from({length:dots}).map((_,i)=>(
-                      <span key={i} className={`size-1 rounded-full ${isT?"bg-primary-foreground/80":"bg-primary/50"}`}/>
-                    ))}
+                  <div key={idx} className="flex flex-col items-center gap-px">
+                    <button onClick={()=>handleDay(date)}
+                      className={`flex size-6 items-center justify-center rounded-full text-[11px] font-medium transition-all
+                        ${out?"text-muted-foreground/25 hover:bg-muted/30"
+                          :isT?"bg-primary text-primary-foreground shadow-sm"
+                          :inW?"bg-primary/20 text-primary"
+                          :"text-foreground hover:bg-muted"}`}>
+                      {date.getDate()}
+                    </button>
+                    {/* FIX #6: dots shown for ALL days incl. overflow, just dimmer */}
+                    <div className="flex gap-px h-1.5 items-center">
+                      {Array.from({length:dots}).map((_,i)=>(
+                        <span key={i} className={`size-1 rounded-full
+                          ${isT?"bg-primary-foreground/80":out?"bg-primary/25":"bg-primary/50"}`}/>
+                      ))}
+                    </div>
                   </div>
-                </div>
               )
             })}
           </div>
         </div>
-        {/* Action Center */}
-        <ActionCenter citas={citas}/>
+        {/* Action Center with navigation */}
+        <ActionCenter citas={citas} onNavigate={navigateToCita}/>
       </div>
 
       {/* RIGHT */}
@@ -326,10 +347,11 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
         </div>
         {/* Scrollable grid */}
         <div className="flex flex-1 overflow-y-auto" style={{maxHeight:"calc(100vh - 240px)"}}>
-          {/* Hours */}
+          {/* Hours column — FIX #6: pt-0 + offset labels to align with grid lines */}
           <div className="w-14 shrink-0 relative border-r border-border/20" style={{height:`${GRID_H}px`}}>
             {HOURS.slice(0,-1).map((h,i)=>(
-              <div key={h} className="absolute right-2 text-[10px] text-muted-foreground/50 font-medium" style={{top:`${i*CELL_H-7}px`}}>
+              <div key={h} className="absolute right-2 text-[10px] text-muted-foreground/50 font-medium select-none"
+                style={{top:`${i===0?2:i*CELL_H-7}px`}}>
                 {String(h).padStart(2,"0")}:00
               </div>
             ))}
