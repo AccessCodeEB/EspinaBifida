@@ -189,12 +189,23 @@ function ActionCenter({citas}:{citas:Cita[]}){
   )
 }
 
-interface Props{citas:Cita[];onReload:()=>void;stats:{hoy:number;semana:number;pendientes:number}}
+interface Props{
+  citas:Cita[]
+  onReload:()=>void
+  /** Called after a successful status update — updates parent citas array without setLoading(true) */
+  onSilentUpdate:(updater:(prev:Cita[])=>Cita[])=>void
+  stats:{hoy:number;semana:number;pendientes:number}
+}
 
-export function CitasCalendarView({citas:citasProp,onReload,stats}:Props){
-  // ── Optimistic local state ─────────────────────────────────────────────────
+export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats}:Props){
+  // Local optimistic state — initialised from props, updated immediately on action
   const[citas,setCitas]=useState<Cita[]>(citasProp)
-  useEffect(()=>setCitas(citasProp),[citasProp])
+  // Sync only when a full reload happens (new cita created, page mount)
+  // We use a ref to avoid overwriting an in-progress optimistic update
+  const isMutating=useRef(false)
+  useEffect(()=>{
+    if(!isMutating.current)setCitas(citasProp)
+  },[citasProp])
 
   const todayRef=useMemo(()=>{const d=new Date();d.setHours(0,0,0,0);return d},[])
   const[weekAnchor,setWeekAnchor]=useState<Date>(()=>getMon(new Date()))
@@ -222,22 +233,24 @@ export function CitasCalendarView({citas:citasProp,onReload,stats}:Props){
 
   const citasSemana=useMemo(()=>weekDates.map(d=>({date:d,layout:buildLayout(citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate()))})),[citas,weekDates])
 
-  // ── Optimistic update ──────────────────────────────────────────────────────
   async function doUpdate(id:number,estatus:Cita["estatus"]){
-    // 1. Close popover immediately
     setSelected(null)
-    // 2. Optimistic update — no calendar reset
-    setCitas(prev=>prev.map(c=>c.id===id?{...c,estatus}:c))
+    isMutating.current=true
+    const updater=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus}:c)
+    // Optimistic: update local + parent immediately
+    setCitas(updater)
+    onSilentUpdate(updater)
     setUpdatingId(id)
     try{
       await updateEstatusCita(id,estatus)
       toast.success(`Cita marcada como ${estatus}`)
-      onReload() // sync in background
     }catch{
-      // Revert on failure
-      setCitas(citasProp)
-      toast.error("No se pudo actualizar. Revirtiendo cambio.")
-    }finally{setUpdatingId(null)}
+      // Revert both
+      const revert=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus:citasProp.find(x=>x.id===id)?.estatus??c.estatus}:c)
+      setCitas(revert)
+      onSilentUpdate(revert)
+      toast.error("No se pudo actualizar. Cambio revertido.")
+    }finally{setUpdatingId(null);isMutating.current=false}
   }
 
   return(

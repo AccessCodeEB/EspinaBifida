@@ -48,12 +48,17 @@ export function CitasSection() {
   const [buscaBenef, setBuscaBenef] = useState("")
   const [showBenefList, setShowBenefList] = useState(false)
 
-  const loadCitas = useCallback(() => {
-    setLoading(true)
+  const loadCitas = useCallback((silent=false) => {
+    if(!silent) setLoading(true)
     getCitas()
       .then(setCitas)
       .catch(err => setError(err?.message ?? "Error al cargar citas"))
-      .finally(() => setLoading(false))
+      .finally(() => { if(!silent) setLoading(false) })
+  }, [])
+
+  /** Updates citas in-place without triggering the loading spinner */
+  const silentUpdate = useCallback((updater:(prev:Cita[])=>Cita[]) => {
+    setCitas(updater)
   }, [])
 
   useEffect(() => {
@@ -206,7 +211,12 @@ export function CitasSection() {
           className={viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}
         >
           {activeView === "calendar" ? (
-            <CitasCalendarView citas={citas} onReload={loadCitas} stats={stats} />
+            <CitasCalendarView
+              citas={citas}
+              onReload={()=>loadCitas(true)}
+              onSilentUpdate={silentUpdate}
+              stats={stats}
+            />
           ) : (
             <CitasListView citas={citas} beneficiarios={beneficiarios} />
           )}
