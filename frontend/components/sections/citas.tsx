@@ -12,6 +12,14 @@ import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
+
+// 30-min time slots 08:00 – 20:00
+const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
+  const h = 8 + Math.floor(i / 2), m = i % 2 === 0 ? "00" : "30"
+  return `${String(h).padStart(2,"0")}:${m}`
+}).filter(t => {
+  const [h] = t.split(":").map(Number); return h < 20
+})
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
   "Dra. Patricia Solís - Rehabilitación",
@@ -104,8 +112,7 @@ export function CitasSection() {
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
-    // PART 2 #1 #2 #3 — validate work hours + doctor overlap
-    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista)
+    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp)
     if (slotError) { setSaveError(slotError); return }
     setSaving(true); setSaveError(null)
     try {
@@ -135,22 +142,20 @@ export function CitasSection() {
           <p className="mt-1 text-sm text-muted-foreground">Gestión de citas con especialistas.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Stats compactos */}
+          {/* Pill badges */}
           {!loading && (
-            <div className="hidden sm:flex items-center gap-3 mr-1 text-xs">
-              <span className="flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-2 text-xs">
+              <span className="flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-2.5 py-1">
                 <span className="font-bold text-foreground">{stats.hoy}</span>
                 <span className="text-muted-foreground">hoy</span>
               </span>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1">
                 <span className="font-bold text-primary">{stats.semana}</span>
-                <span className="text-muted-foreground">semana</span>
+                <span className="text-primary/70">semana</span>
               </span>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1">
                 <span className="font-bold text-amber-400">{stats.pendientes}</span>
-                <span className="text-muted-foreground">pendientes</span>
+                <span className="text-amber-400/70">pendientes</span>
               </span>
             </div>
           )}
@@ -295,9 +300,15 @@ export function CitasSection() {
                   onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="hora-cita" className="text-sm font-semibold">Hora</Label>
-                <Input id="hora-cita" type="time" className="bg-muted/30" value={form.hora}
-                  onChange={e => setForm(f => ({ ...f, hora: e.target.value }))} />
+                <Label className="text-sm font-semibold">Hora (intervalos de 30 min)</Label>
+                <select
+                  className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={form.hora}
+                  onChange={e => setForm(f => ({ ...f, hora: e.target.value }))}
+                >
+                  <option value="">Seleccionar hora</option>
+                  {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
             </div>
 
@@ -316,7 +327,7 @@ export function CitasSection() {
           </div>
           <div className="px-6 py-4 border-t border-border/40 bg-muted/10 flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => setShowDialog(false)} disabled={saving}>Cancelar</Button>
-            <Button type="button" onClick={handleGuardar} disabled={saving}>
+            <Button type="button" onClick={handleGuardar} disabled={saving || !!saveError}>
               {saving ? "Guardando..." : "Guardar Cita"}
             </Button>
           </div>
