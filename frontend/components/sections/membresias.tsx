@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Search, AlertTriangle, CheckCircle, XCircle, CreditCard } from "lucide-react"
+import { StatusIcon } from "@/components/ui/status-icon"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,28 +26,7 @@ function getMembresiaEstatus(b: Beneficiario): "Activa" | "Inactiva" | "Cancelad
   return "Cancelada"
 }
 
-function EstatusBadge({ estatus }: { estatus: "Activa" | "Inactiva" | "Cancelada" }) {
-  switch (estatus) {
-    case "Activa":
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
-          <CheckCircle className="size-3.5" />Activa
-        </span>
-      )
-    case "Inactiva":
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
-          <AlertTriangle className="size-3.5" />Inactiva
-        </span>
-      )
-    case "Cancelada":
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-          <XCircle className="size-3.5" />Cancelada
-        </span>
-      )
-  }
-}
+// Usamos `StatusIcon` compartido para mantener consistencia visual con Servicios
 
 export function MembresiasSection() {
   /** Lista completa (misma fuente que Beneficiarios) para conteos idénticos a los chips. */
@@ -155,7 +135,7 @@ export function MembresiasSection() {
                       <TableCell className="py-4 hidden md:table-cell text-muted-foreground text-sm">{b.ciudad ?? "—"}</TableCell>
                       <TableCell className="py-4 hidden lg:table-cell text-muted-foreground text-sm">{b.estado ?? "—"}</TableCell>
                       <TableCell className="py-4 text-center">
-                        <div className="flex justify-center"><EstatusBadge estatus={estatus} /></div>
+                        <div className="flex justify-center"><StatusIcon status={estatus} /></div>
                       </TableCell>
                       <TableCell className="py-4 pr-6 text-right">
                         {estatus !== "Cancelada" && (
