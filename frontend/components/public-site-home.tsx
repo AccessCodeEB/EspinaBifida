@@ -186,53 +186,84 @@ export function PublicSiteHome() {
         </section>
 
         {/* Sección 3: El Proceso */}
-        <section id="proceso" className="mx-auto w-full max-w-7xl px-6 py-20 lg:px-12">
-          <RevealOnView>
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-                Tu camino con nosotros
-              </h2>
-            </div>
-          </RevealOnView>
-          <div className="grid gap-6 md:grid-cols-3">
-            <RevealOnView delay={0}>
-              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
-                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">1</span>
-                <div className="relative z-10">
-                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#1b5e96] text-white">
-                    <ClipboardEdit className="size-6" />
-                  </div>
-                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Registro en línea</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Completa el formulario de pre-registro para que podamos conocer tu caso y crear tu expediente inicial.</p>
-                </div>
-              </div>
-            </RevealOnView>
-            <RevealOnView delay={120}>
-              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
-                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">2</span>
-                <div className="relative z-10">
-                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#a3e6a6] text-[#0f4c81]">
-                    <CalendarDays className="size-6" />
-                  </div>
-                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Reservar cita</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Nuestro equipo se contactará contigo para agendar una consulta inicial y evaluar tus necesidades médicas y de apoyo.</p>
-                </div>
-              </div>
-            </RevealOnView>
-            <RevealOnView delay={240}>
-              <div className="relative h-full overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
-                <span className="pointer-events-none absolute -right-4 -top-6 text-[10rem] font-black text-slate-50 dark:text-slate-900">3</span>
-                <div className="relative z-10">
-                  <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-[#64748b] text-white">
-                    <Building2 className="size-6" />
-                  </div>
-                  <h3 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">Visita la sede</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Te esperamos en nuestras instalaciones físicas, diseñadas 100% pensando en la accesibilidad y tu comodidad.</p>
-                </div>
-              </div>
-            </RevealOnView>
+<section id="proceso" className="mx-auto w-full max-w-7xl px-6 py-20 lg:px-12">
+  <RevealOnView>
+    <div className="mb-14 text-center">
+      <h2 className="text-3xl font-extrabold tracking-tight text-[#0f4c81] sm:text-4xl dark:text-white">
+        Tu camino con nosotros
+      </h2>
+      <div className="mx-auto mt-4 h-1 w-14 rounded-full bg-[#f6b21a]" />
+    </div>
+  </RevealOnView>
+
+  <div className="grid gap-8 md:grid-cols-3">
+    <RevealOnView delay={0}>
+      <div className="group relative h-full overflow-hidden rounded-[2rem] border border-blue-100 bg-gradient-to-br from-[#eef7ff] to-white p-10 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+        <span className="pointer-events-none absolute right-4 top-4 text-[10rem] font-black leading-none text-[#dbeafe]">
+          1
+        </span>
+
+        <div className="relative z-10">
+          <div className="mb-20 flex size-16 items-center justify-center rounded-2xl bg-[#0f4c81] text-white shadow-lg transition group-hover:scale-110">
+            <ClipboardEdit className="size-8" />
           </div>
-        </section>
+
+          <h3 className="mb-4 text-2xl font-bold text-slate-950 dark:text-white">
+            Registro en línea
+          </h3>
+
+          <p className="text-base leading-7 text-slate-600 dark:text-slate-400">
+            Completa el formulario de pre-registro para que podamos conocer tu caso y crear tu expediente inicial.
+          </p>
+        </div>
+      </div>
+    </RevealOnView>
+
+    <RevealOnView delay={120}>
+      <div className="group relative h-full overflow-hidden rounded-[2rem] border border-yellow-100 bg-gradient-to-br from-[#fff4d8] to-white p-10 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+        <span className="pointer-events-none absolute right-4 top-4 text-[10rem] font-black leading-none text-[#fde68a]">
+          2
+        </span>
+
+        <div className="relative z-10">
+          <div className="mb-20 flex size-16 items-center justify-center rounded-2xl bg-[#f6b21a] text-[#0f4c81] shadow-lg transition group-hover:scale-110">
+            <CalendarDays className="size-8" />
+          </div>
+
+          <h3 className="mb-4 text-2xl font-bold text-slate-950 dark:text-white">
+            Reservar cita
+          </h3>
+
+          <p className="text-base leading-7 text-slate-600 dark:text-slate-400">
+            Nuestro equipo se contactará contigo para agendar una consulta inicial y evaluar tus necesidades médicas y de apoyo.
+          </p>
+        </div>
+      </div>
+    </RevealOnView>
+
+    <RevealOnView delay={240}>
+      <div className="group relative h-full overflow-hidden rounded-[2rem] border border-blue-100 bg-gradient-to-br from-[#eef7ff] to-white p-10 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+        <span className="pointer-events-none absolute right-4 top-4 text-[10rem] font-black leading-none text-[#dbeafe]">
+          3
+        </span>
+
+        <div className="relative z-10">
+          <div className="mb-20 flex size-16 items-center justify-center rounded-2xl bg-[#64748b] text-white shadow-lg transition group-hover:scale-110">
+            <Building2 className="size-8" />
+          </div>
+
+          <h3 className="mb-4 text-2xl font-bold text-slate-950 dark:text-white">
+            Visita la sede
+          </h3>
+
+          <p className="text-base leading-7 text-slate-600 dark:text-slate-400">
+            Te esperamos en nuestras instalaciones físicas, diseñadas 100% pensando en la accesibilidad y tu comodidad.
+          </p>
+        </div>
+      </div>
+    </RevealOnView>
+  </div>
+</section>
 
         {/* Sección 4: Instalaciones y Comunidad */}
         <section id="instalaciones" className="bg-[#f8fafc] py-20 dark:bg-slate-900">
