@@ -119,19 +119,72 @@ export function PublicSiteHome() {
           </div>
         </section>
 
-        {/* Sección 1: Nuestra Misión */}
-        <section id="mision" className="bg-[#f4f7fb] py-20 dark:bg-slate-900">
-          <RevealOnView>
-            <div className="mx-auto max-w-4xl px-6 text-center lg:px-12">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-                Nuestra Misión
-              </h2>
-              <p className="mt-6 text-pretty text-lg leading-relaxed text-slate-600 dark:text-slate-300">
-                Existimos para proporcionar una red de atención integral y apoyo inquebrantable para individuos que viven con Espina Bífida y sus familias. A través de instalaciones accesibles, orientación experta y una comunidad profundamente conectada, nuestro objetivo es transformar los desafíos en triunfos compartidos.
-              </p>
+        {/* Sección 1: Misión, Visión y Valores */}
+<section id="mision" className="bg-white px-6 py-20 dark:bg-slate-950">
+  <RevealOnView>
+    <div className="mx-auto max-w-7xl">
+      <div className="grid gap-6 rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900 md:grid-cols-3">
+        
+        {/* MISIÓN */}
+        <div className="flex gap-5 border-b border-slate-200 pb-6 dark:border-slate-700 md:border-b-0 md:border-r md:pb-0 md:pr-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-50 text-3xl dark:bg-slate-800">
+            <Target className="h-8 w-8 text-[#0f4c81]" />
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-bold text-[#0f4c81] dark:text-white">
+              Misión
+            </h3>
+
+            <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              Mejorar la calidad de vida de las personas con espina bífida y sus familias, a través de servicios integrales de salud, educación y desarrollo humano.
+            </p>
+          </div>
+        </div>
+
+        {/* VISIÓN */}
+        <div className="flex gap-5 border-b border-slate-200 pb-6 dark:border-slate-700 md:border-b-0 md:border-r md:pb-0 md:pr-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-yellow-50 text-3xl dark:bg-slate-800">
+            <Eye className="h-8 w-8 text-[#0f4c81]" />
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-bold text-[#0f4c81] dark:text-white">
+              Visión
+            </h3>
+
+            <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              Ser una asociación líder y referente nacional en la atención integral de la espina bífida, reconocida por su calidad, calidez y compromiso social.
+            </p>
+          </div>
+        </div>
+
+        {/* VALORES */}
+        <div className="flex gap-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-50 text-3xl dark:bg-slate-800">
+            <HandHeart className="h-8 w-8 text-[#0f4c81]" />
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-bold text-[#0f4c81] dark:text-white">
+              Valores
+            </h3>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
+              <span>● Respeto</span>
+              <span>● Honestidad</span>
+              <span>● Compromiso</span>
+              <span>● Empatía</span>
+              <span>● Solidaridad</span>
+              <span>● Responsabilidad</span>
             </div>
-          </RevealOnView>
-        </section>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </RevealOnView>
+</section>
 
         {/* Sección 2: Registro Centrado */}
         <section id="seccion-registro" className="scroll-mt-24 bg-white px-6 py-20 lg:px-12 dark:bg-slate-950">
