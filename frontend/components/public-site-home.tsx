@@ -115,7 +115,7 @@ export function PublicSiteHome() {
                   opacity={1}
                 />
               </div>
-            </RevealOnMount>
+            </RevealOnMount.
           </div>
         </section>
 
