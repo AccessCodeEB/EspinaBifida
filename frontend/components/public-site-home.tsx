@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
-import { Moon, SunMedium, ArrowRight, ClipboardEdit, CalendarDays, Building2, HeartPulse } from "lucide-react"
+import { Moon, SunMedium, ArrowRight, ClipboardEdit, CalendarDays, Building2, HeartPulse, Target, Eye, HandHeart } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { PublicPreregistroSection } from "@/components/public-preregistro-section"
 import { RevealOnMount, RevealOnView } from "@/components/reveal-motion"
-// @ts-expect-error: Ignora la falta de tipos ya que GradualBlur es un componente JS
 import GradualBlur from "@/components/ui/gradual-blur"
 
 export function PublicSiteHome() {
@@ -115,7 +114,7 @@ export function PublicSiteHome() {
                   opacity={1}
                 />
               </div>
-            </RevealOnMount.
+            </RevealOnMount>
           </div>
         </section>
 
