@@ -23,6 +23,6 @@ router.get("/:curp", verifyToken, ServiciosController.getByCurp);
 router.put("/:idServicio", verifyToken, checkRole(1, 2), ServiciosController.update);
 
 // DELETE /servicios/:idServicio - Eliminar servicio
-router.delete("/:idServicio", verifyToken, checkRole(1), ServiciosController.deleteById);
+router.delete("/:idServicio", verifyToken, checkRole(1, 2), ServiciosController.deleteById);
 
 export default router;
