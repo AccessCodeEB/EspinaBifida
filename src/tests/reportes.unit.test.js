@@ -159,3 +159,42 @@ describe('generarXLSX', () => {
     expect(rows[0].NOMBRE).toBe('Consulta general');
   });
 });
+
+// ── generarHTML — ramas pendientes ───────────────────────────────────────────
+
+describe('generarHTML — esc() con null/undefined (rama ?? \'\')', () => {
+  it('escapa null a cadena vacía sin lanzar', () => {
+    const data = {
+      ...DATA_VACIA,
+      detalle: [{ NOMBRE: null, CANTIDAD: null, UNIDAD: undefined }],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toBeDefined();
+    // los campos null/undefined se convierten a '' por esc()
+    expect(html).not.toContain('null');
+    expect(html).not.toContain('undefined');
+  });
+
+  it('muestra 0 en resumen cuando los campos son null via ?? 0', () => {
+    const data = { ...DATA_VACIA, resumen: null };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    // resumen?.CANT_CREDENCIALES ?? 0 → '0'
+    expect(html).toContain('>0<');
+  });
+});
+
+// ── calcularPeriodo — ramas adicionales ──────────────────────────────────────
+
+describe('calcularPeriodo — tipos de periodo', () => {
+  it('ANUAL: disparo en mes no-enero también produce el año anterior (tipo ANUAL genérico)', () => {
+    // La función ANUAL solo debería dispararse el 1-ene, pero si se llama en otro mes
+    // debe devolver el año anterior completo
+    const result = calcularPeriodo('ANUAL', new Date(2026, 5, 1)); // 1-jun-2026
+    expect(result).toEqual({ fechaInicio: '2025-01-01', fechaFin: '2025-12-31' });
+  });
+
+  it('tipo desconocido cae en rama ANUAL (default)', () => {
+    const result = calcularPeriodo('DESCONOCIDO', new Date(2026, 0, 1));
+    expect(result).toEqual({ fechaInicio: '2025-01-01', fechaFin: '2025-12-31' });
+  });
+});

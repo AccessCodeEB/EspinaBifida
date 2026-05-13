@@ -24,7 +24,9 @@ export async function generarPDF(data, fechaInicio, fechaFin) {
   const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // 'load' es correcto para HTML estático sin recursos externos.
+    // 'networkidle0' agrega ~500ms de espera innecesaria en este caso.
+    await page.setContent(html, { waitUntil: 'load' });
     return await page.pdf({ format: 'Letter', printBackground: true });
   } finally {
     await browser.close();

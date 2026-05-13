@@ -20,6 +20,8 @@ export async function getPeriodo(req, res, next) {
       throw badRequest('fechaInicio y fechaFin son requeridos');
     if (!DATE_RE.test(fechaInicio) || !DATE_RE.test(fechaFin))
       throw badRequest('Formato de fecha inválido — use YYYY-MM-DD');
+    if (fechaInicio > fechaFin)
+      throw badRequest('fechaInicio no puede ser posterior a fechaFin');
     if (!['pdf', 'xlsx'].includes(formato))
       throw badRequest('formato debe ser pdf o xlsx');
 
@@ -69,7 +71,10 @@ export async function descargar(req, res, next) {
     if (!rutaRelativa) throw notFound(`El reporte no tiene archivo ${formato}`);
 
     const rutaAbsoluta = path.resolve(STORAGE, rutaRelativa);
-    if (!rutaAbsoluta.startsWith(STORAGE)) {
+    // startsWith(STORAGE + sep) evita el ataque de directorio hermano:
+    // si STORAGE='/data/reportes', '/data/reportes-evil/...' pasaría startsWith
+    // sin el separador pero falla con él.
+    if (!rutaAbsoluta.startsWith(STORAGE + path.sep)) {
       throw badRequest('Ruta de archivo inválida');
     }
 
