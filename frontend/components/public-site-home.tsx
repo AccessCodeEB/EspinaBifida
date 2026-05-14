@@ -403,12 +403,12 @@ export function PublicSiteHome() {
             <div className="grid gap-10 md:grid-cols-3 md:gap-0">
               {PROCESS_STEPS.map(({ n, icon: Icon, title, desc, colCls }, i) => (
                 <RevealOnView key={n} delay={i * 100}>
-                  <div className={`relative flex flex-col border-t-2 pt-8 ${colCls}`} style={{ borderTopColor: "#22c55e" }}>
+                  <div className={`relative flex flex-col border-t-2 pt-8 ${colCls}`} style={{ borderTopColor: "#E8B043" }}>
                     <span
                       className="absolute -top-[5px] left-0 size-2.5 rounded-full"
-                      style={{ backgroundColor: "#22c55e" }}
+                      style={{ backgroundColor: "#E8B043" }}
                     />
-                    <p className="mb-4 text-xs font-bold uppercase tracking-widest" style={{ color: "#22c55e" }}>{n}</p>
+                    <p className="mb-4 text-xs font-bold uppercase tracking-widest" style={{ color: "#E8B043" }}>{n}</p>
                     <div className="mb-4 flex size-11 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
                       <Icon className="size-5 text-[#0f4c81] dark:text-blue-400" />
                     </div>
