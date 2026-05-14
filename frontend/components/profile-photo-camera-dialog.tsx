@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { getMediaDevices } from "@/lib/camera-support"
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
 
@@ -57,8 +58,13 @@ export function ProfilePhotoCameraDialog({
   }, [])
 
   const refreshDeviceList = useCallback(async () => {
+    const md = getMediaDevices()
+    if (!md?.enumerateDevices) {
+      setDevices([])
+      return
+    }
     try {
-      const listed = await navigator.mediaDevices.enumerateDevices()
+      const listed = await md.enumerateDevices()
       setDevices(listed.filter((d) => d.kind === "videoinput"))
     } catch {
       setDevices([])
@@ -83,30 +89,42 @@ export function ProfilePhotoCameraDialog({
       streamRef.current = null
       setHasStream(false)
 
+      const md = getMediaDevices()
+      if (!md?.getUserMedia) {
+        if (!cancelled) {
+          toast.error(
+            "La cámara solo funciona con HTTPS o en http://localhost. Desde otra dirección (p. ej. IP de tu red) usa «Subir archivo», o ejecuta el front con npm run dev:https."
+          )
+          onOpenChange(false)
+          setStarting(false)
+        }
+        return
+      }
+
       try {
         let stream: MediaStream | null = null
         const preferDevice = Boolean(selectedDeviceId && selectedDeviceId.length > 0)
 
         if (preferDevice) {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
+            stream = await md.getUserMedia({
               audio: false,
               video: { deviceId: { exact: selectedDeviceId! } },
             })
           } catch {
-            stream = await navigator.mediaDevices.getUserMedia({
+            stream = await md.getUserMedia({
               audio: false,
               video: { deviceId: { ideal: selectedDeviceId! } },
             })
           }
         } else {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
+            stream = await md.getUserMedia({
               audio: false,
               video: { facingMode: "user" },
             })
           } catch {
-            stream = await navigator.mediaDevices.getUserMedia({
+            stream = await md.getUserMedia({
               audio: false,
               video: true,
             })
@@ -168,11 +186,13 @@ export function ProfilePhotoCameraDialog({
 
   useEffect(() => {
     if (!open) return
+    const md = getMediaDevices()
+    if (!md?.addEventListener) return
     const onDeviceChange = () => {
       void refreshDeviceList()
     }
-    navigator.mediaDevices.addEventListener("devicechange", onDeviceChange)
-    return () => navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange)
+    md.addEventListener("devicechange", onDeviceChange)
+    return () => md.removeEventListener("devicechange", onDeviceChange)
   }, [open, refreshDeviceList])
 
   const handleCapture = () => {

@@ -26,7 +26,7 @@ Documentación técnica completa del módulo de beneficiarios para el sistema Es
 | CORREO_ELECTRONICO   | VARCHAR2     | formato email                                           |
 | CONTACTO_EMERGENCIA  | VARCHAR2     | -                                                       |
 | TELEFONO_EMERGENCIA  | VARCHAR2     | 10 dígitos                                              |
-| MUNICIPIO_NACIMIENTO | VARCHAR2     | -                                                       |
+| MUNICIPIO_NACIMIENTO | VARCHAR2     | *(no usado por la aplicación; columna legada)*          |
 | HOSPITAL_NACIMIENTO  | VARCHAR2     | -                                                       |
 | TIPO_SANGRE          | VARCHAR2     | A+/A-/B+/B-/AB+/AB-/O+/O-                               |
 | USA_VALVULA          | VARCHAR2     | 'S' o 'N'                                               |
@@ -79,7 +79,7 @@ Antes de cualquier operación de escritura, los campos de texto se limpian con `
 
 - `nombres`, `apellidoPaterno`, `apellidoMaterno`, `nombrePadreMadre`
 - `calle`, `colonia`, `ciudad`, `municipio`, `estado`
-- `contactoEmergencia`, `municipioNacimiento`, `hospitalNacimiento`
+- `contactoEmergencia`, `hospitalNacimiento`
 
 ### Validaciones aplicadas
 

@@ -1,12 +1,12 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
-import { CreditCard, ClipboardList, Package, CalendarDays, UserCheck } from "lucide-react"
+import { Inbox, ClipboardList, Package, CalendarDays, UserCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getInventario } from "@/services/inventario"
 import { getBeneficiarios } from "@/services/beneficiarios"
-import { conteosEstatusBeneficiarios, conteoMembresiasPorVencer } from "@/lib/beneficiarios-conteos"
+import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
 import {
   BarChart,
   Bar,
@@ -74,7 +74,7 @@ export function DashboardSection() {
 
   // Beneficiarios desde la API
   const [activosMembresia, setActivosMembresia] = useState<number | null>(null)
-  const [porVencerMembresia, setPorVencerMembresia] = useState<number | null>(null)
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState<number | null>(null)
   const [loadingBenef, setLoadingBenef] = useState(true)
 
   useEffect(() => {
@@ -97,12 +97,12 @@ export function DashboardSection() {
         if (cancelled) return
         const c = conteosEstatusBeneficiarios(beneficiarios)
         setActivosMembresia(c.Activo)
-        setPorVencerMembresia(conteoMembresiasPorVencer(beneficiarios))
+        setSolicitudesPendientes(conteoSolicitudesPendientes(beneficiarios))
       })
       .catch(() => {
         if (cancelled) return
         setActivosMembresia(null)
-        setPorVencerMembresia(null)
+        setSolicitudesPendientes(null)
       })
       .finally(() => {
         if (!cancelled) setLoadingBenef(false)
@@ -116,13 +116,13 @@ export function DashboardSection() {
   const metricCards = useMemo(
     () => [
       {
-        title: "Membresías por Vencer",
-        value: porVencerMembresia === null ? "--" : String(porVencerMembresia),
+        title: "Solicitudes pendientes",
+        value: solicitudesPendientes === null ? "--" : String(solicitudesPendientes),
         description:
-          porVencerMembresia === null
+          solicitudesPendientes === null
             ? "Cargando beneficiarios…"
-            : "Credencial por vencer en los próximos 30 días (sin baja)",
-        icon: CreditCard,
+            : "Registros de posibles beneficiarios en espera de revisión (Preregistro)",
+        icon: Inbox,
         color: "bg-amber-500 text-white",
         iconClassName: "",
       },
@@ -146,7 +146,7 @@ export function DashboardSection() {
         iconClassName: "text-white",
       },
     ],
-    [porVencerMembresia, inventarioBajoCount]
+    [solicitudesPendientes, inventarioBajoCount]
   )
 
   return (

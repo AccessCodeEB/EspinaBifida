@@ -40,7 +40,6 @@ const beneficiarioRow = {
   CORREO_ELECTRONICO:  "juan@test.com",
   CONTACTO_EMERGENCIA: null,
   TELEFONO_EMERGENCIA: null,
-  MUNICIPIO_NACIMIENTO: null,
   HOSPITAL_NACIMIENTO:  null,
   USA_VALVULA:          "S",
   NOTAS:                null,

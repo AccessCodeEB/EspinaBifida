@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Settings, Moon, LogOut, User } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -40,10 +40,24 @@ const VALID_SECTIONS = new Set([
   "preregistro",
 ])
 
-function SectionContent({ section }: { section: string }) {
+function SectionContent({
+  section,
+  openEditBeneficiarioCurp,
+  onConsumedOpenEditBeneficiario,
+}: {
+  section: string
+  openEditBeneficiarioCurp?: string | null
+  onConsumedOpenEditBeneficiario?: () => void
+}) {
   switch (section) {
     case "dashboard": return <DashboardSection />
-    case "beneficiarios": return <BeneficiariosSection />
+    case "beneficiarios":
+      return (
+        <BeneficiariosSection
+          openEditCurp={openEditBeneficiarioCurp ?? null}
+          onConsumedOpenEditCurp={onConsumedOpenEditBeneficiario}
+        />
+      )
     case "membresias": return <MembresiasSection />
     case "servicios": return <ServiciosSection />
     case "inventario": return <InventarioSection />
@@ -97,6 +111,13 @@ function PanelHomeContent() {
     setActiveSection(section)
     router.replace(`/panel?section=${section}`, { scroll: false })
   }
+
+  const editBeneficiarioParam = searchParams.get("editBeneficiario")
+
+  const clearEditBeneficiarioParam = useCallback(() => {
+    if (!searchParams.get("editBeneficiario")) return
+    router.replace("/panel?section=beneficiarios", { scroll: false })
+  }, [router, searchParams])
 
   const [showSettings, setShowSettings] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
@@ -235,7 +256,11 @@ function PanelHomeContent() {
         </header>
 
         <div className="p-4 md:p-6 lg:p-8">
-          <SectionContent section={activeSection} />
+          <SectionContent
+            section={activeSection}
+            openEditBeneficiarioCurp={activeSection === "beneficiarios" ? editBeneficiarioParam : null}
+            onConsumedOpenEditBeneficiario={clearEditBeneficiarioParam}
+          />
         </div>
 
       </div>

@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+import React, { useState, useEffect, useRef } from "react"
 import {
   Search, Plus, Eye, Edit, CreditCard, FileText, MapPin,
   Download, CheckCircle, XCircle, AlertTriangle, User, Users, Loader2,
   Phone, HeartPulse, Stethoscope, ClipboardList, Mail,
   Calendar, Hash, Droplet, Activity, ArrowLeft, Save, Trash2, ZoomIn, X,
+  AlertCircle,
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -34,6 +36,8 @@ import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
+import { BeneficiariosEditDialog } from "@/components/beneficiarios-edit-dialog"
+import { calcularCompletitudExpediente, UMBRAL_EXPEDIENTE_COMPLETO_PCT } from "@/lib/beneficiario-completitud"
 
 // ─── UI Helpers ───────────────────────────────────────────────────────────────
 
@@ -176,7 +180,13 @@ function IconInput({ icon: Icon, alignTop, children }: { icon: React.ElementType
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
-export function BeneficiariosSection() {
+export function BeneficiariosSection({
+  openEditCurp = null,
+  onConsumedOpenEditCurp,
+}: {
+  openEditCurp?: string | null
+  onConsumedOpenEditCurp?: () => void
+} = {}) {
   const [overlayAction, setOverlayAction] = useState<"baja" | "eliminar" | null>(null)
   const [credencialBeneficiario, setCredencialBeneficiario] = useState<Beneficiario | null>(null)
   const [removeFotoConfirmOpen, setRemoveFotoConfirmOpen] = useState(false)
@@ -200,6 +210,22 @@ export function BeneficiariosSection() {
     editFotoPreview, handleEditFotoSelected,
   } = useBeneficiarios()
 
+  const openEditRef = useRef(openEdit)
+  openEditRef.current = openEdit
+
+  useEffect(() => {
+    const raw = openEditCurp?.trim()
+    if (!raw || loading || error) return
+    const c = raw.toUpperCase()
+    const b = beneficiarios.find(
+      (x) => String(x.folio ?? x.curp ?? "").trim().toUpperCase() === c
+    )
+    if (b) {
+      openEditRef.current(b)
+      onConsumedOpenEditCurp?.()
+    }
+  }, [openEditCurp, beneficiarios, loading, error, onConsumedOpenEditCurp])
+
   const fotoZoomUrl = selectedBeneficiario
     ? resolvePublicUploadUrl(selectedBeneficiario.fotoPerfilUrl ?? undefined)
     : undefined
@@ -221,6 +247,7 @@ export function BeneficiariosSection() {
   )
 
   return (
+    <TooltipPrimitive.Provider delayDuration={200}>
     <div className="flex flex-col gap-8 pb-8">
 
       {/* ── Header ── */}
@@ -280,8 +307,41 @@ export function BeneficiariosSection() {
           const initials = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
           const nombre = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""} ${b.apellidoMaterno ?? ""}`.trim()
           const cardPhoto = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined)
+          const completitud = calcularCompletitudExpediente(b)
+          const alertaIncompleto = !completitud.cumpleUmbral
           return (
-            <Card key={b.folio} className="flex w-full min-w-0 flex-col items-center text-center border-border/60 shadow-sm hover:shadow-md transition-shadow p-6 rounded-2xl">
+            <Card key={b.folio} className="relative flex w-full min-w-0 flex-col items-center text-center rounded-xl border-border/40 bg-muted/20 shadow-xs p-6">
+              {alertaIncompleto ? (
+                <TooltipPrimitive.Root>
+                  <TooltipPrimitive.Trigger asChild>
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full border-0 bg-amber-500/15 text-amber-700 shadow-none outline-none transition-colors hover:bg-amber-500/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:bg-amber-500/20 dark:text-amber-300"
+                      aria-label="Expediente incompleto"
+                    >
+                      <AlertCircle className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
+                    </button>
+                  </TooltipPrimitive.Trigger>
+                  <TooltipPrimitive.Portal>
+                    <TooltipPrimitive.Content
+                      side="left"
+                      sideOffset={6}
+                      className={cn(
+                        "z-50 max-w-[240px] rounded-lg border border-border bg-popover px-3 py-2.5 text-xs text-popover-foreground shadow-md",
+                        "animate-in fade-in-0 zoom-in-95"
+                      )}
+                    >
+                      <p className="font-semibold text-foreground">Falta información por completar</p>
+                      <p className="mt-1.5 leading-snug text-muted-foreground">
+                        Expediente al <span className="font-bold text-foreground">{completitud.porcentaje}%</span>{" "}
+                        ({completitud.llenos} de {completitud.total} campos). Se requiere al menos{" "}
+                        {UMBRAL_EXPEDIENTE_COMPLETO_PCT}% para considerarlo completo.
+                      </p>
+                      <TooltipPrimitive.Arrow className="fill-popover" />
+                    </TooltipPrimitive.Content>
+                  </TooltipPrimitive.Portal>
+                </TooltipPrimitive.Root>
+              ) : null}
               <div className={cn("mb-3 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold shadow-sm", getPhotoRingClasses(b.estatus))}>
                 {cardPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -304,14 +364,14 @@ export function BeneficiariosSection() {
               <div className="mt-5 flex w-full items-center justify-center gap-2">
                 <Button
                   variant="outline" size="sm"
-                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-none rounded-lg gap-1"
                   onClick={() => { setSelectedBeneficiario(b); setShowExpedienteDialog(true) }}
                 >
                   <Eye className="size-3.5 shrink-0" />Detalles
                 </Button>
                 <Button
                   variant="outline" size="sm"
-                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-sm rounded-lg gap-1"
+                  className="h-8 shrink-0 px-2.5 text-xs text-muted-foreground hover:text-foreground shadow-none rounded-lg gap-1"
                   onClick={() => setCredencialBeneficiario(b)}
                 >
                   <CreditCard className="size-3.5 shrink-0" />Credencial
@@ -437,7 +497,6 @@ export function BeneficiariosSection() {
                     <DetailGroup title="Médico / Diagnóstico" icon={Stethoscope}>
                       <DetailField label="Tipo de Espina Bífida" value={selectedBeneficiario.tipo} />
                       <DetailField label="¿Usa válvula?" value={selectedBeneficiario.usaValvula} badgeVariant="valve" />
-                      <DetailField label="Municipio de Nacimiento" value={selectedBeneficiario.municipioNacimiento} />
                       <DetailField label="Hospital de Nacimiento" value={selectedBeneficiario.hospitalNacimiento} />
                       <DetailField label="Notas" value={selectedBeneficiario.notas} />
                     </DetailGroup>
@@ -868,16 +927,6 @@ export function BeneficiariosSection() {
                   </Select>
                 </FieldWrap>
                 <div className="space-y-1.5">
-                  <Label htmlFor="alta-mun-nac">Municipio de nacimiento</Label>
-                  <Input
-                    id="alta-mun-nac"
-                    value={altaForm.municipioNacimiento ?? ""}
-                    onChange={(e) => handleAltaChange("municipioNacimiento", e.target.value)}
-                    className="bg-background"
-                    placeholder="Municipio"
-                  />
-                </div>
-                <div className="space-y-1.5">
                   <Label htmlFor="alta-hosp-nac">Hospital de nacimiento</Label>
                   <Input
                     id="alta-hosp-nac"
@@ -911,424 +960,31 @@ export function BeneficiariosSection() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog: Editar ────────────────────────────────────────────────── */}
-      <Dialog open={showEditDialog} onOpenChange={(open) => {
-        if (!isSaving) {
-          setShowEditDialog(open)
-          if (!open) setOverlayAction(null)
-        }
-      }}>
-        <DialogContent aria-describedby={undefined} className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
-
-          {/* ── OVERLAY CENTRADO PARA CONFIRMAR BAJA / ELIMINAR ── */}
-          {overlayAction && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in">
-              <div className="bg-background border border-border/60 p-6 rounded-2xl shadow-xl w-full max-w-sm mx-4 text-center zoom-in-95 animate-in">
-                {overlayAction === "baja" ? (
-                  <>
-                    <div className="mx-auto size-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                      <AlertTriangle className="size-6 text-destructive" />
-                    </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">¿Dar de baja?</h3>
-                    <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                      El beneficiario se ocultará, pero no se borrará permanentemente. Podrás restaurarlo después.
-                    </p>
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="flex-1" onClick={() => setOverlayAction(null)} disabled={isSaving}>
-                        Cancelar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        disabled={isSaving}
-                        onClick={async () => {
-                          const ok = await handleDarDeBaja()
-                          if (ok) setOverlayAction(null)
-                        }}
-                      >
-                        Sí, dar de baja
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="mx-auto size-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                      <XCircle className="size-6 text-destructive" />
-                    </div>
-                    <h3 className="text-lg font-bold text-foreground mb-2">¿Eliminar definitivamente?</h3>
-                    <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                      Esta acción no se puede deshacer. Se borrarán todos sus datos permanentemente.
-                    </p>
-                    <div className="flex gap-3">
-                      <Button variant="outline" className="flex-1" onClick={() => setOverlayAction(null)} disabled={isSaving}>
-                        Cancelar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        disabled={isSaving}
-                        onClick={async () => {
-                          const ok = await handleEditDelete()
-                          if (ok) setOverlayAction(null)
-                        }}
-                      >
-                        Sí, eliminar
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-          {/* ────────────────────────────────────────────────────────── */}
-
-          <div className="shrink-0 z-10 bg-background border-b border-border/40 px-6 py-4">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Editar Beneficiario</DialogTitle>
-              <DialogDescription className="mt-1">
-                Modificando datos de <span className="font-semibold text-foreground">{editForm.nombres} {editForm.apellidoPaterno} {editForm.apellidoMaterno}</span> — {editForm.curp || "Sin CURP"}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 space-y-6 bg-muted/10">
-            {saveError && (
-              <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-                <XCircle className="size-4 shrink-0" />{saveError}
-              </div>
-            )}
-
-            {/* ── Tarjeta de Estado de Membresía ── */}
-            <div className="rounded-xl border border-border/60 bg-background shadow-sm overflow-hidden mb-6">
-              {editForm.estatus === "Baja" ? (
-                <div className="flex flex-col gap-4 bg-muted/30 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
-                      <XCircle className="size-5 shrink-0 text-destructive" aria-hidden />
-                      Beneficiario en estado de baja
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Para eliminar el expediente permanentemente, usa el botón rojo en la parte inferior.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleEditChange("estatus", "Inactivo")}
-                    className="shrink-0 self-start bg-background sm:self-auto"
-                  >
-                    Restaurar expediente
-                  </Button>
-                </div>
-              ) : (
-                <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">Actividad del Beneficiario</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {editForm.estatus === "Activo"
-                        ? "Actualmente activo y recibiendo beneficios."
-                        : "Marcado como inactivo temporalmente."}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-sm font-medium transition-colors ${editForm.estatus === "Inactivo" ? "text-foreground" : "text-muted-foreground"}`}>
-                      Inactivo
-                    </span>
-                    <Switch
-                      checked={editForm.estatus === "Activo"}
-                      onCheckedChange={(checked) => handleEditChange("estatus", checked ? "Activo" : "Inactivo")}
-                      className="data-[state=checked]:bg-success"
-                    />
-                    <span className={`text-sm font-medium transition-colors ${editForm.estatus === "Activo" ? "text-success" : "text-muted-foreground"}`}>
-                      Activo
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* ────────────────────────────────────── */}
-
-            <SectionCard title="Información Personal" icon={User}>
-              <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
-                <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <ProfilePhotoUpload
-                    variant="form"
-                    size="md"
-                    fotoPerfilUrl={editForm.fotoPerfilUrl}
-                    previewSrc={editFotoPreview}
-                    fallbackText={`${editForm.nombres?.[0] ?? ""}${editForm.apellidoPaterno?.[0] ?? ""}`}
-                    uploading={fotoUploading}
-                    onFileSelected={handleEditFotoSelected}
-                    onRemovePhotoRequest={
-                      (editForm.fotoPerfilUrl || editFotoPreview)
-                        ? () => setRemoveFotoConfirmOpen(true)
-                        : undefined
-                    }
-                  />
-                  <div className="text-center sm:text-left space-y-1">
-                    <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Ajusta el encuadre a tu gusto. <br className="hidden sm:block" />
-                      Formatos: JPEG, PNG o WebP (máx. 2 MB).
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FieldWrap error={editErrors?.nombres}>
-                  <Label>Nombres</Label>
-                  <Input value={editForm.nombres ?? ""} onChange={(e) => handleEditChange("nombres", e.target.value)} className="bg-background" />
-                </FieldWrap>
-                <FieldWrap error={editErrors?.apellidoPaterno}>
-                  <Label>Apellido Paterno</Label>
-                  <Input value={editForm.apellidoPaterno ?? ""} onChange={(e) => handleEditChange("apellidoPaterno", e.target.value)} className="bg-background" />
-                </FieldWrap>
-                <FieldWrap error={editErrors?.apellidoMaterno}>
-                  <Label>Apellido Materno</Label>
-                  <Input value={editForm.apellidoMaterno ?? ""} onChange={(e) => handleEditChange("apellidoMaterno", e.target.value)} className="bg-background" />
-                </FieldWrap>
-                <FieldWrap error={editErrors?.curp}>
-                  <Label>CURP</Label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      value={editForm.curp ?? ""}
-                      onChange={(e) => handleEditChange("curp", e.target.value.toUpperCase())}
-                      className={`pl-9 bg-background ${editErrors?.curp ? "border-destructive" : ""}`}
-                      maxLength={18}
-                    />
-                  </div>
-                </FieldWrap>
-                <FieldWrap error={editErrors?.fechaNacimiento}>
-                  <Label>Fecha de Nacimiento</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                    <Input type="date" value={editForm.fechaNacimiento ?? ""} onChange={(e) => handleEditChange("fechaNacimiento", e.target.value)} className={`pl-9 bg-background ${editErrors?.fechaNacimiento ? "border-destructive" : ""}`} />
-                  </div>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Género</Label>
-                  <Select value={editForm.genero ?? ""} onValueChange={(v) => handleEditChange("genero", v)}>
-                    <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="F">Femenino</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FieldWrap error={editErrors?.tipoSangre}>
-                  <Label htmlFor="edit-tipo-sangre">Tipo de sangre</Label>
-                  <Select
-                    value={editForm.tipoSangre ? editForm.tipoSangre : "__none__"}
-                    onValueChange={(v) => handleEditChange("tipoSangre", v === "__none__" ? "" : v)}
-                  >
-                    <SelectTrigger
-                      id="edit-tipo-sangre"
-                      className={cn(
-                        "bg-background",
-                        editErrors?.tipoSangre && "border-destructive",
-                        !editForm.tipoSangre && "text-muted-foreground"
-                      )}
-                    >
-                      <SelectValue placeholder="Sin especificar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__" className="text-muted-foreground">Sin especificar</SelectItem>
-                      {TIPOS_SANGRE_OPCIONES.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Nombre del Padre / Madre</Label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input value={editForm.nombrePadreMadre ?? ""} onChange={(e) => handleEditChange("nombrePadreMadre", e.target.value)} className="pl-9 bg-background" />
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Dirección" icon={MapPin}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label>Calle y Número</Label>
-                  <Input value={editForm.calle ?? ""} onChange={(e) => handleEditChange("calle", e.target.value)} className="bg-background" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Colonia</Label>
-                  <Input value={editForm.colonia ?? ""} onChange={(e) => handleEditChange("colonia", e.target.value)} className="bg-background" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>CP</Label>
-                  <Input value={editForm.cp ?? ""} onChange={(e) => handleEditChange("cp", e.target.value)} maxLength={5} className="bg-background" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Ciudad</Label>
-                  <Input value={editForm.ciudad ?? ""} onChange={(e) => handleEditChange("ciudad", e.target.value)} className="bg-background" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Estado</Label>
-                  <Input value={editForm.estado ?? ""} onChange={(e) => handleEditChange("estado", e.target.value)} className="bg-background" />
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Contacto" icon={Phone}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FieldWrap error={editErrors?.telefonoCasa}>
-                  <Label>Teléfono Casa</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoCasa ?? ""} onChange={(e) => handleEditChange("telefonoCasa", e.target.value)} className={`pl-9 bg-background ${editErrors?.telefonoCasa ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-                <FieldWrap error={editErrors?.telefonoCelular}>
-                  <Label>Teléfono Celular</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoCelular ?? ""} onChange={(e) => handleEditChange("telefonoCelular", e.target.value)} className={`pl-9 bg-background ${editErrors?.telefonoCelular ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-                <FieldWrap error={editErrors?.correoElectronico}>
-                  <Label>Correo Electrónico</Label>
-                  <IconInput icon={Mail}><Input type="email" value={editForm.correoElectronico ?? ""} onChange={(e) => handleEditChange("correoElectronico", e.target.value)} className={`pl-9 bg-background ${editErrors?.correoElectronico ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Contacto de Emergencia" icon={HeartPulse}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Nombre</Label>
-                  <IconInput icon={User}><Input value={editForm.contactoEmergencia ?? ""} onChange={(e) => handleEditChange("contactoEmergencia", e.target.value)} className="pl-9 bg-background" /></IconInput>
-                </div>
-                <FieldWrap error={editErrors?.telefonoEmergencia}>
-                  <Label>Teléfono</Label>
-                  <IconInput icon={Phone}><Input value={editForm.telefonoEmergencia ?? ""} onChange={(e) => handleEditChange("telefonoEmergencia", e.target.value)} className={`pl-9 bg-background ${editErrors?.telefonoEmergencia ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Médico / Diagnóstico" icon={Stethoscope}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Tipo de Espina Bífida</Label>
-                  <Select value={editForm.tipo ?? ""} onValueChange={(v) => handleEditChange("tipo", v)}>
-                    <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Mielomeningocele">Mielomeningocele</SelectItem>
-                      <SelectItem value="Meningocele">Meningocele</SelectItem>
-                      <SelectItem value="Oculta">Oculta</SelectItem>
-                      <SelectItem value="Lipomeningocele">Lipomeningocele</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <FieldWrap error={editErrors?.usaValvula}>
-                  <Label>¿Usa válvula?</Label>
-                  <Select value={editForm.usaValvula === undefined ? "" : editForm.usaValvula ? "si" : "no"} onValueChange={(v) => handleEditChange("usaValvula", v === "si")}>
-                    <SelectTrigger className={`bg-background ${editErrors?.usaValvula ? "border-destructive" : ""}`}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="si">Sí</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label>Municipio de Nacimiento</Label>
-                  <Input value={editForm.municipioNacimiento ?? ""} onChange={(e) => handleEditChange("municipioNacimiento", e.target.value)} className="bg-background" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Hospital de Nacimiento</Label>
-                  <Input value={editForm.hospitalNacimiento ?? ""} onChange={(e) => handleEditChange("hospitalNacimiento", e.target.value)} className="bg-background" />
-                </div>
-                <FieldWrap error={editErrors?.notas}>
-                  <Label>Notas</Label>
-                  <IconInput icon={FileText}><Input value={editForm.notas ?? ""} onChange={(e) => handleEditChange("notas", e.target.value)} placeholder="Observaciones adicionales" className={`pl-9 bg-background ${editErrors?.notas ? "border-destructive" : ""}`} /></IconInput>
-                </FieldWrap>
-              </div>
-            </SectionCard>
-
-          </div>
-
-          <div className="shrink-0 bg-background border-t border-border/40 px-6 py-4 flex items-center justify-between gap-3">
-            {/* ── Zona Izquierda: Dar de Baja / Eliminar ── */}
-            <div className="flex-1">
-              {editForm.estatus === "Baja" ? (
-                <Button type="button" variant="outline" onClick={() => setOverlayAction("eliminar")} disabled={isSaving} className="text-destructive border-destructive/30 hover:bg-destructive hover:text-white transition-colors">
-                  <XCircle className="mr-2 size-4" /> Eliminar
-                </Button>
-              ) : (
-                <Button type="button" variant="outline" onClick={() => setOverlayAction("baja")} disabled={isSaving} className="text-destructive border-destructive/30 hover:bg-destructive hover:text-white transition-colors">
-                  <AlertTriangle className="mr-2 size-4" /> Dar de baja
-                </Button>
-              )}
-            </div>
-
-            {/* ── Zona Derecha: Acciones Principales ── */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                className="gap-2"
-                disabled={isSaving}
-                onClick={() => {
-                  setOverlayAction(null)
-                  setSaveError(null)
-                  setShowEditDialog(false)
-                  if (selectedBeneficiario) {
-                    const latest =
-                      beneficiarios.find((x) => x.folio === selectedBeneficiario.folio) ?? selectedBeneficiario
-                    setSelectedBeneficiario(latest)
-                    setShowExpedienteDialog(true)
-                  }
-                }}
-              >
-                <ArrowLeft className="size-4" />
-                Regresar
-              </Button>
-              <Button type="button" onClick={handleSaveEdit} disabled={isSaving} className="bg-[#005bb5] hover:bg-[#004a94] text-white">
-                {isSaving ? "Guardando..." : "Guardar cambios"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Dialog: Confirmación de Borrado de Foto ─────────────────────── */}
-      <AlertDialog open={removeFotoConfirmOpen} onOpenChange={setRemoveFotoConfirmOpen}>
-        <AlertDialogContent className="w-full max-w-xs gap-3 p-5 sm:max-w-xs">
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar foto de perfil?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se borrará definitivamente. Podrás subir otra foto después si lo deseas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={fotoUploading}>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={fotoUploading}
-              className="gap-2 text-white [&_svg]:text-white"
-              onClick={async () => {
-                const curp = String(editForm.curp ?? editForm.folio ?? "").trim().toUpperCase()
-                if (!curp) return
-                const ok = await handleDeleteFotoBeneficiario(curp)
-                if (ok) setRemoveFotoConfirmOpen(false)
-              }}
-            >
-              {fotoUploading ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Eliminando…
-                </>
-              ) : (
-                <>
-                  <Trash2 className="size-4" />
-                  Eliminar foto
-                </>
-              )}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <BeneficiariosEditDialog
+        showEditDialog={showEditDialog}
+        setShowEditDialog={setShowEditDialog}
+        isSaving={isSaving}
+        overlayAction={overlayAction}
+        setOverlayAction={setOverlayAction}
+        handleDarDeBaja={handleDarDeBaja}
+        handleEditDelete={handleEditDelete}
+        editForm={editForm}
+        handleEditChange={handleEditChange}
+        editErrors={editErrors}
+        saveError={saveError}
+        setSaveError={setSaveError}
+        handleSaveEdit={handleSaveEdit}
+        selectedBeneficiario={selectedBeneficiario}
+        setSelectedBeneficiario={setSelectedBeneficiario}
+        beneficiarios={beneficiarios}
+        fotoUploading={fotoUploading}
+        editFotoPreview={editFotoPreview}
+        handleEditFotoSelected={handleEditFotoSelected}
+        handleDeleteFotoBeneficiario={handleDeleteFotoBeneficiario}
+        removeFotoConfirmOpen={removeFotoConfirmOpen}
+        setRemoveFotoConfirmOpen={setRemoveFotoConfirmOpen}
+        setShowExpedienteDialog={setShowExpedienteDialog}
+      />
 
       {/* Vista ampliada de foto de perfil (expediente) */}
       <Dialog
@@ -1369,5 +1025,6 @@ export function BeneficiariosSection() {
       </Dialog>
 
     </div>
+    </TooltipPrimitive.Provider>
   )
 }

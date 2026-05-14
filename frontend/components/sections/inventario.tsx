@@ -38,6 +38,12 @@ type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
 type SortDirection = "asc" | "desc"
 const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 
+function getCantidadTextClass(cantidad: number) {
+  return cantidad < 10
+    ? "text-red-600 dark:text-red-400"
+    : "text-foreground"
+}
+
 export function InventarioSection() {
   const [inventario, setInventario]   = useState<ArticuloInventario[]>([])
   const [loading, setLoading]         = useState(true)
@@ -415,7 +421,7 @@ export function InventarioSection() {
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por clave o descripción..."
+                placeholder="Buscar por clave o artículo..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -430,11 +436,17 @@ export function InventarioSection() {
                 <TableHead className="font-semibold text-center">
                   <button type="button" className="cursor-pointer" onClick={() => handleSort("clave")}>Clave{sortIndicator("clave")}</button>
                 </TableHead>
-                <TableHead className="font-semibold text-center">
-                  <button type="button" className="cursor-pointer" onClick={() => handleSort("descripcion")}>Descripción{sortIndicator("descripcion")}</button>
+                <TableHead className="min-w-[12rem] font-semibold text-left">
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-baseline gap-0.5 text-left"
+                    onClick={() => handleSort("descripcion")}
+                  >
+                    Artículo{sortIndicator("descripcion")}
+                  </button>
                 </TableHead>
                 <TableHead className="font-semibold hidden md:table-cell text-center">
-                  <button type="button" className="cursor-pointer" onClick={handleUnidadCycle}>
+                  <button type="button" className="flex w-full cursor-pointer justify-center text-center" onClick={handleUnidadCycle}>
                     Unidad
                   </button>
                 </TableHead>
@@ -451,20 +463,20 @@ export function InventarioSection() {
               {sortedFiltered.map((item, idx) => (
                 <TableRow key={`${item.clave}-${idx}`} className={item.cantidad < item.minimo ? "bg-destructive/5" : ""}>
                   <TableCell className="text-center font-semibold text-primary">{item.clave}</TableCell>
-                  <TableCell className="text-center font-medium">{item.descripcion}</TableCell>
-                  <TableCell className="hidden md:table-cell text-center text-foreground">{item.unidad}</TableCell>
+                  <TableCell className="max-w-[12rem] text-left font-medium md:max-w-[14rem]">
+                    <div className="flex flex-col gap-1">
+                      <span className="line-clamp-1">{item.descripcion}</span>
+                      <span className="text-[11px] text-muted-foreground md:hidden">
+                        {item.unidad} · {item.cuota}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-nowrap text-center text-foreground">{item.unidad}</TableCell>
                   <TableCell className="hidden lg:table-cell text-center text-foreground">{item.cuota}</TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`font-bold ${item.cantidad < item.minimo ? "text-destructive" : "text-foreground"}`}>
-                        {item.cantidad}
-                      </span>
-                      {item.cantidad < item.minimo && (
-                        <Badge className="bg-destructive text-destructive-foreground gap-1 text-xs">
-                          <AlertTriangle className="size-3" />Bajo
-                        </Badge>
-                      )}
-                    </div>
+                    <span className={`text-sm font-semibold ${getCantidadTextClass(item.cantidad)}`}>
+                      {item.cantidad}
+                    </span>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">

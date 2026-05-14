@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback, useEffect } from "react"
 import { Camera, Loader2, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { isProfileCameraSupported } from "@/lib/camera-support"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { ProfilePhotoCropDialog } from "@/components/profile-photo-crop-dialog"
 import { ProfilePhotoCameraDialog } from "@/components/profile-photo-camera-dialog"
@@ -95,6 +96,11 @@ export function ProfilePhotoUpload({
   const [cropOpen, setCropOpen] = useState(false)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const [cameraSupported, setCameraSupported] = useState(false)
+
+  useEffect(() => {
+    setCameraSupported(isProfileCameraSupported())
+  }, [])
 
   const serverSrc = resolvePublicUploadUrl(
     fotoPerfilUrl ?? undefined,
@@ -182,8 +188,13 @@ export function ProfilePhotoUpload({
         Subir archivo
       </DropdownMenuItem>
       <DropdownMenuItem
-        disabled={disabled || uploading}
+        disabled={disabled || uploading || !cameraSupported}
         className="gap-2"
+        title={
+          !cameraSupported
+            ? "La cámara requiere HTTPS o http://localhost. Usa «Subir archivo» o npm run dev:https."
+            : undefined
+        }
         onSelect={() => openCameraDialog()}
       >
         <Camera className="size-4 shrink-0 opacity-70" aria-hidden />

@@ -21,7 +21,6 @@ export interface Beneficiario {
   correoElectronico?: string
   contactoEmergencia?: string
   telefonoEmergencia?: string
-  municipioNacimiento?: string
   hospitalNacimiento?: string
   usaValvula?: boolean
   notas?: string
@@ -52,6 +51,23 @@ export function getBeneficiario(folio: string) {
 /** POST /beneficiarios */
 export function createBeneficiario(data: Omit<Beneficiario, "folio">) {
   return apiClient.post<Beneficiario>("/beneficiarios", data)
+}
+
+/** POST /beneficiarios/solicitud-publica — alta como Inactivo + marcador en NOTAS (sitio público). */
+export function createBeneficiarioPublicSolicitud(
+  data: Omit<Beneficiario, "folio"> & { turnstileToken: string }
+) {
+  return apiClient.post<{ message: string }>("/beneficiarios/solicitud-publica", data)
+}
+
+/** POST /beneficiarios/:folio/aprobar-pre-registro */
+export function aprobarPreRegistroBeneficiario(folio: string) {
+  return apiClient.post<{ message: string }>(`/beneficiarios/${encFolio(folio)}/aprobar-pre-registro`, {})
+}
+
+/** DELETE /beneficiarios/:folio/pre-registro — solo solicitudes públicas pendientes */
+export function rechazarPreRegistroBeneficiario(folio: string) {
+  return apiClient.delete<{ message: string }>(`/beneficiarios/${encFolio(folio)}/pre-registro`)
 }
 
 /** PUT /beneficiarios/:folio */

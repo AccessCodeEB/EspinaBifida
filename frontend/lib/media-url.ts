@@ -1,4 +1,4 @@
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "")
+import { resolveApiMediaOrigin } from "@/lib/api-base"
 
 /**
  * Convierte ruta guardada en BD (/uploads/...), URL absoluta o data URL en src usable por <img>.
@@ -11,6 +11,7 @@ export function resolvePublicUploadUrl(
   if (!stored) return undefined
   // data URL (base64): usar tal cual, sin prefijo de API
   if (stored.startsWith("data:")) return stored
+  const API_BASE = resolveApiMediaOrigin()
   let base: string
   if (stored.startsWith("http://") || stored.startsWith("https://")) base = stored
   else base = `${API_BASE}${stored.startsWith("/") ? stored : `/${stored}`}`

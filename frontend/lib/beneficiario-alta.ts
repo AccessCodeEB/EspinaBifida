@@ -1,7 +1,28 @@
 import type { Beneficiario } from "@/services/beneficiarios"
+import { MARCADOR_SOLICITUD_PUBLICA_PENDIENTE } from "@/lib/solicitud-publica-beneficiario"
 
 /** Valores permitidos por CHECK en BD (columna TIPOS_SANGRE) y en la API como `tipoSangre`. */
 export const TIPOS_SANGRE_OPCIONES: string[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+
+/** Valores del selector público / clínico (columna `tipo` en beneficiario). */
+export const TIPOS_ESPINA_BIFIDA_OPCIONES = [
+  "Mielomeningocele",
+  "Meningocele",
+  "Oculta",
+  "Lipomeningocele",
+] as const
+
+export type TipoEspinaBifida = (typeof TIPOS_ESPINA_BIFIDA_OPCIONES)[number]
+
+export function labelTipoEspinaBifida(value: string | undefined): string {
+  const v = String(value ?? "").trim()
+  if (!v) return "—"
+  const canon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+    (t) => t.toLowerCase() === v.toLowerCase()
+  )
+  if (canon) return canon
+  return v
+}
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TEL_RE = /^\d{10}$/
@@ -56,7 +77,6 @@ export const ALTA_FORM_INICIAL = {
   correoElectronico: "",
   contactoEmergencia: "",
   telefonoEmergencia: "",
-  municipioNacimiento: "",
   hospitalNacimiento: "",
   usaValvula: undefined as boolean | undefined,
   notas: "",
@@ -125,8 +145,91 @@ export function validateAlta(form: BeneficiarioAltaForm): Record<string, string>
 
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
+  const tipoEbRaw = String(form.tipo ?? "").trim()
+  const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+    (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
+  )
+  if (!tipoEbRaw) {
+    errs.tipo = "Selecciona un tipo de espina bífida"
+  } else if (!tipoEbCanon) {
+    errs.tipo = "Tipo no válido"
+  }
+
   const tsAlta = String(form.tipoSangre ?? "").trim()
   if (tsAlta && !TIPOS_SANGRE_OPCIONES.includes(tsAlta)) errs.tipoSangre = "Tipo inválido"
+
+  return errs
+}
+
+/**
+ * Validación solo para solicitud pública (pre-registro): datos mínimos para enviar la solicitud.
+ * El resto del expediente puede completarse en el panel tras la aprobación.
+ */
+export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record<string, string> {
+  const errs: Record<string, string> = {}
+  if (!form.nombres.trim()) errs.nombres = "Obligatorio"
+  else {
+    const ne = errTextNoDigits(form.nombres)
+    if (ne) errs.nombres = ne
+  }
+  if (!form.apellidoPaterno.trim()) errs.apellidoPaterno = "Obligatorio"
+  else {
+    const pe = errTextNoDigits(form.apellidoPaterno)
+    if (pe) errs.apellidoPaterno = pe
+  }
+  if (!form.apellidoMaterno.trim()) errs.apellidoMaterno = "Obligatorio"
+  else {
+    const me = errTextNoDigits(form.apellidoMaterno)
+    if (me) errs.apellidoMaterno = me
+  }
+  if (!form.curp.trim()) {
+    errs.curp = "Obligatorio"
+  } else if (!CURP_RE.test(form.curp.toUpperCase())) {
+    errs.curp = "CURP inválida"
+  }
+  if (!form.fechaNacimiento) errs.fechaNacimiento = "Obligatorio"
+  if (!form.ciudad.trim()) errs.ciudad = "Obligatorio"
+  else {
+    const ce = errTextNoDigits(form.ciudad)
+    if (ce) errs.ciudad = ce
+  }
+  if (!form.estado.trim()) errs.estado = "Obligatorio"
+  else {
+    const ee = errTextNoDigits(form.estado)
+    if (ee) errs.estado = ee
+  }
+
+  const celErr = errPhoneField(form.telefonoCelular, true)
+  if (celErr) errs.telefonoCelular = celErr
+
+  const email = String(form.correoElectronico ?? "").trim()
+  if (!email) {
+    errs.correoElectronico = "Obligatorio"
+  } else if (!EMAIL_RE.test(email)) {
+    const looksNumericOnly = /^[\d\s+.-]+$/.test(email)
+    errs.correoElectronico = looksNumericOnly ? "Correo: usa letras y @" : "Correo inválido"
+  }
+
+  if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
+
+  const tipoEbRaw = String(form.tipo ?? "").trim()
+  const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+    (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
+  )
+  if (!tipoEbRaw) {
+    errs.tipo = "Selecciona un tipo de espina bífida"
+  } else if (!tipoEbCanon) {
+    errs.tipo = "Tipo no válido"
+  }
+
+  const notasUsuario = String(form.notas ?? "").trim()
+  if (notasUsuario.length > 0) {
+    const notasConMarca = `${MARCADOR_SOLICITUD_PUBLICA_PENDIENTE}\n${notasUsuario}`
+    if (notasConMarca.length > 500) {
+      const maxUsuario = 500 - MARCADOR_SOLICITUD_PUBLICA_PENDIENTE.length - 1
+      errs.notas = `Máximo ${maxUsuario} caracteres en motivo o notas (el sistema reserva espacio interno).`
+    }
+  }
 
   return errs
 }
@@ -143,6 +246,10 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     const s = String(t).trim()
     return s === "" ? null : s
   })()
+  const tipoCanon =
+    TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+      (t) => t.toLowerCase() === String(form.tipo ?? "").trim().toLowerCase()
+    ) ?? String(form.tipo ?? "").trim()
   return {
     ...form,
     curp: form.curp.toUpperCase(),
@@ -153,7 +260,7 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     correoElectronico: String(form.correoElectronico ?? "").trim(),
     tipoSangre: tipoSangreAlta ?? undefined,
     usaValvula: (form.usaValvula ? "S" : "N") as unknown as boolean,
-    tipo: form.tipo || "",
+    tipo: tipoCanon,
     ciudad: form.ciudad,
     estado: form.estado,
     membresiaEstatus: "Sin membresia",
@@ -201,8 +308,20 @@ export function parseBeneficiarioApiError(raw: string): Record<string, string> {
       if (msg.includes("nombres")) errs.nombres = "Obligatorio"
       if (msg.includes("apellidoPaterno")) errs.apellidoPaterno = "Obligatorio"
       if (msg.includes("apellidoMaterno")) errs.apellidoMaterno = "Obligatorio"
+      if (msg.includes("fechaNacimiento")) errs.fechaNacimiento = "Obligatorio"
+      if (msg.includes("ciudad")) errs.ciudad = "Obligatorio"
+      if (msg.includes("estado")) errs.estado = "Obligatorio"
+      if (msg.includes("telefonoCelular")) errs.telefonoCelular = "Obligatorio"
+      if (msg.includes("correoElectronico")) errs.correoElectronico = "Obligatorio"
+      if (msg.includes("tipo")) errs.tipo = "Obligatorio"
+      if (msg.includes("usaValvula")) errs.usaValvula = "Obligatorio"
       return Object.keys(errs).length > 0 ? errs : { _global: msg }
     }
+    case "CAPTCHA_REQUIRED":
+    case "CAPTCHA_FAILED":
+      return { turnstile: msg || "Completa la verificación humana e intenta de nuevo." }
+    case "CAPTCHA_CONFIG":
+      return { _global: msg || "Verificación humana no disponible. Intenta más tarde." }
     case "DUPLICATE_CURP":
       return { curp: "Esta CURP ya está registrada" }
     case "BENEFICIARIO_BAJA":

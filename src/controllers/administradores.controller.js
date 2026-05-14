@@ -91,7 +91,7 @@ export async function uploadFotoPerfil(req, res, next) {
     const idAdmin = Number(req.params.idAdmin);
     const { fotoPerfilUrl } = await AdminService.updateFotoPerfilByUpload(
       idAdmin,
-      req.file.filename,
+      req.file,
       req.user
     );
     res.json({ message: "Foto de perfil actualizada", fotoPerfilUrl });

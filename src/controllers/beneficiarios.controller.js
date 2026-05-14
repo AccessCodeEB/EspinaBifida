@@ -1,6 +1,7 @@
 import * as BeneficiarioService from "../services/beneficiarios.service.js";
 import { toCamel, safeClobString } from "../utils/dbTransform.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
+import { verifyTurnstileToken } from "../utils/verifyTurnstile.js";
 
 function mapBeneficiario(row) {
   const b = toCamel(row);
@@ -25,7 +26,6 @@ function mapBeneficiario(row) {
     correoElectronico:  b.correoElectronico,
     contactoEmergencia: b.contactoEmergencia,
     telefonoEmergencia: b.telefonoEmergencia,
-    municipioNacimiento: b.municipioNacimiento,
     hospitalNacimiento:  b.hospitalNacimiento,
     usaValvula:      b.usaValvula === "S" || b.usaValvula === 1 || b.usaValvula === "1",
     notas:           safeClobString(b.notas),
@@ -113,6 +113,35 @@ export async function uploadFotoPerfil(req, res, next) {
       req.file.mimetype    // p.ej "image/jpeg"
     );
     res.json({ message: "Foto de perfil actualizada", fotoPerfilUrl });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createPublicSolicitud(req, res, next) {
+  try {
+    const { turnstileToken, ...body } = req.body ?? {};
+    await verifyTurnstileToken(turnstileToken, req.ip);
+    await BeneficiarioService.createPublicSolicitud(body);
+    res.status(201).json({ message: "Solicitud recibida; el equipo la revisará." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approvePreRegistro(req, res, next) {
+  try {
+    await BeneficiarioService.approvePreRegistro(req.params.curp);
+    res.json({ message: "Solicitud aprobada; el beneficiario quedó activo." });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function rejectPreRegistro(req, res, next) {
+  try {
+    await BeneficiarioService.rejectPreRegistro(req.params.curp);
+    res.json({ message: "Solicitud cancelada y expediente eliminado." });
   } catch (err) {
     next(err);
   }

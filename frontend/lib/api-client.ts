@@ -4,19 +4,15 @@
  * consistencia en headers, manejo de errores y autenticación.
  */
 
+import { resolveApiFetchUrl } from "@/lib/api-base"
 import { tokenStorage } from "@/lib/token"
 
-/**
- * Backend Express (por defecto puerto 3000). NO usar el puerto del front (3001):
- * si las peticiones van al mismo Next, la respuesta es HTML y falla JSON.parse.
- */
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(
-  /\/$/,
-  ""
-)
-
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public code?: string
+  ) {
     super(message)
     this.name = "ApiError"
   }
@@ -26,7 +22,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${BASE_URL}${path}`
+  const url = resolveApiFetchUrl(path)
   const token = tokenStorage.get()
 
   const res = await fetch(url, {
@@ -43,14 +39,16 @@ async function request<T>(
 
   if (!res.ok) {
     let message = text
+    let code: string | undefined
     try {
-      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      const parsed = JSON.parse(text) as { message?: string; error?: string; code?: string }
       if (typeof parsed?.message === "string") message = parsed.message
       else if (typeof parsed?.error === "string") message = parsed.error
+      if (typeof parsed?.code === "string") code = parsed.code
     } catch {
       /* usar texto crudo */
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, code)
   }
 
   // 204 No Content — no intentar parsear JSON
@@ -73,7 +71,7 @@ async function request<T>(
 }
 
 async function requestFormData<T>(path: string, form: FormData, init: RequestInit = {}): Promise<T> {
-  const url = `${BASE_URL}${path}`
+  const url = resolveApiFetchUrl(path)
   const token = tokenStorage.get()
 
   const res = await fetch(url, {
@@ -91,14 +89,16 @@ async function requestFormData<T>(path: string, form: FormData, init: RequestIni
 
   if (!res.ok) {
     let message = text
+    let code: string | undefined
     try {
-      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      const parsed = JSON.parse(text) as { message?: string; error?: string; code?: string }
       if (typeof parsed?.message === "string") message = parsed.message
       else if (typeof parsed?.error === "string") message = parsed.error
+      if (typeof parsed?.code === "string") code = parsed.code
     } catch {
       /* usar texto crudo */
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, code)
   }
 
   if (res.status === 204) return undefined as T

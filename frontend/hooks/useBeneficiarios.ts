@@ -14,6 +14,7 @@ import {
   type Beneficiario,
 } from "@/services/beneficiarios"
 import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
+import { esSolicitudPublicaPendiente } from "@/lib/solicitud-publica-beneficiario"
 import {
   ALTA_FORM_INICIAL,
   CURP_RE,
@@ -223,6 +224,7 @@ export function useBeneficiarios() {
   // ── Filtrado y conteos ────────────────────────────────────────────────────
   const filtered = beneficiarios
     .filter((b) => {
+      if (esSolicitudPublicaPendiente(b)) return false
       const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
       const term   = searchTerm.toLowerCase()
       const matchesSearch  = nombre.toLowerCase().includes(term) || b.folio.toLowerCase().includes(term) || b.ciudad.toLowerCase().includes(term)
@@ -524,8 +526,7 @@ export function useBeneficiarios() {
         correoElectronico:  String(altaForm.correoElectronico ?? "").trim(),
         contactoEmergencia: altaForm.contactoEmergencia,
         telefonoEmergencia: emergenciaDigits,
-        municipioNacimiento: altaForm.municipioNacimiento,
-        hospitalNacimiento:  altaForm.hospitalNacimiento,
+        hospitalNacimiento: altaForm.hospitalNacimiento,
         usaValvula:  altaForm.usaValvula,
         notas:       altaForm.notas,
         tipo:        "",

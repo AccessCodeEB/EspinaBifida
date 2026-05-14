@@ -10,8 +10,8 @@ export async function findAll() {
               b.MUNICIPIO, b.ESTADO, b.CP,
               b.TELEFONO_CASA, b.TELEFONO_CELULAR, b.CORREO_ELECTRONICO,
               b.CONTACTO_EMERGENCIA, b.TELEFONO_EMERGENCIA,
-              b.MUNICIPIO_NACIMIENTO, b.HOSPITAL_NACIMIENTO,
-              b.USA_VALVULA, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
+              b.HOSPITAL_NACIMIENTO,
+              b.USA_VALVULA, b.TIPO, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
               CASE
                 WHEN EXISTS (
                   SELECT 1 FROM CREDENCIALES c
@@ -62,8 +62,8 @@ export async function create(data) {
       calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
       contactoEmergencia, telefonoEmergencia,
-      municipioNacimiento, hospitalNacimiento,
-      tipoSangre, usaValvula, notas, estatus,
+      hospitalNacimiento,
+      tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
 
     await conn.execute(
@@ -73,16 +73,16 @@ export async function create(data) {
          CALLE, COLONIA, CIUDAD, MUNICIPIO, ESTADO, CP,
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
-         MUNICIPIO_NACIMIENTO, HOSPITAL_NACIMIENTO,
-         TIPOS_SANGRE, USA_VALVULA, NOTAS, ESTATUS
+         HOSPITAL_NACIMIENTO,
+         TIPOS_SANGRE, TIPO, USA_VALVULA, NOTAS, ESTATUS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
          :calle, :colonia, :ciudad, :municipio, :estado, :cp,
          :telefonoCasa, :telefonoCelular, :correoElectronico,
          :contactoEmergencia, :telefonoEmergencia,
-         :municipioNacimiento, :hospitalNacimiento,
-         :tipoSangre, :usaValvula, :notas, :estatus
+         :hospitalNacimiento,
+         :tipoSangre, :tipo, :usaValvula, :notas, :estatus
        )`,
       {
         nombres:             nombres              ?? null,
@@ -103,9 +103,9 @@ export async function create(data) {
         correoElectronico:   correoElectronico    ?? null,
         contactoEmergencia:  contactoEmergencia   ?? null,
         telefonoEmergencia:  telefonoEmergencia   ?? null,
-        municipioNacimiento: municipioNacimiento  ?? null,
         hospitalNacimiento:  hospitalNacimiento   ?? null,
         tipoSangre:          tipoSangre           ?? null,
+        tipo:                tipo                 ?? null,
         usaValvula:          usaValvula           ?? "N",
         notas:               notas                ?? null,
         estatus:             estatus              ?? "Activo",
@@ -126,8 +126,8 @@ export async function update(curp, data) {
       calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
       contactoEmergencia, telefonoEmergencia,
-      municipioNacimiento, hospitalNacimiento,
-      tipoSangre, usaValvula, notas, estatus,
+      hospitalNacimiento,
+      tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
 
     const result = await conn.execute(
@@ -149,9 +149,9 @@ export async function update(curp, data) {
          CORREO_ELECTRONICO    = :correoElectronico,
          CONTACTO_EMERGENCIA   = :contactoEmergencia,
          TELEFONO_EMERGENCIA   = :telefonoEmergencia,
-         MUNICIPIO_NACIMIENTO  = :municipioNacimiento,
          HOSPITAL_NACIMIENTO   = :hospitalNacimiento,
          TIPOS_SANGRE          = :tipoSangre,
+         TIPO                  = :tipo,
          USA_VALVULA           = :usaValvula,
          NOTAS                 = :notas,
          ESTATUS               = :estatus
@@ -175,9 +175,9 @@ export async function update(curp, data) {
         correoElectronico:   correoElectronico    ?? null,
         contactoEmergencia:  contactoEmergencia   ?? null,
         telefonoEmergencia:  telefonoEmergencia   ?? null,
-        municipioNacimiento: municipioNacimiento  ?? null,
         hospitalNacimiento:  hospitalNacimiento   ?? null,
         tipoSangre:          tipoSangre           ?? null,
+        tipo:                tipo                 ?? null,
         usaValvula:          usaValvula           ?? "N",
         notas:               notas                ?? null,
         estatus:             estatus              ?? "Activo",
@@ -209,6 +209,20 @@ export async function updateEstatus(curp, estatus) {
     await conn.execute(
       `UPDATE BENEFICIARIOS SET ESTATUS = :estatus WHERE CURP = :curp`,
       { estatus, curp },
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+}
+
+/** Actualiza estatus y notas en una sola operación (p. ej. aprobar solicitud pública). */
+export async function updateEstatusAndNotas(curp, estatus, notas) {
+  const conn = await getConnection();
+  try {
+    await conn.execute(
+      `UPDATE BENEFICIARIOS SET ESTATUS = :estatus, NOTAS = :notas WHERE CURP = :curp`,
+      { estatus, notas: notas ?? null, curp },
       { autoCommit: true }
     );
   } finally {
