@@ -254,8 +254,10 @@ describe("PUT /api/v1/servicios/:idServicio — actualizar servicio", () => {
 
 describe("DELETE /api/v1/servicios/:idServicio — eliminar servicio", () => {
   test("elimina servicio existente (200)", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [servicioRow] });
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ rows: [servicioRow] }); // getById
+    mockExecute.mockResolvedValueOnce({ rows: [] });             // SELECT SERVICIO_ARTICULOS (sin consumos)
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 0 });     // DELETE SERVICIO_ARTICULOS
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });     // DELETE SERVICIOS
 
     const res = await request(app)
       .delete("/api/v1/servicios/1")

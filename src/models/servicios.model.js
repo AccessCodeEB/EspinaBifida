@@ -371,12 +371,39 @@ export async function update(idServicio, data) {
 export async function deleteById(idServicio) {
   const conn = await getConnection();
   try {
-    await conn.execute(
-      `DELETE FROM SERVICIOS 
-       WHERE ID_SERVICIO = :idServicio`,
+    // 1. Obtener artículos consumidos para revertir inventario
+    const { rows: consumos } = await conn.execute(
+      `SELECT ID_ARTICULO, CANTIDAD
+         FROM SERVICIO_ARTICULOS
+        WHERE ID_SERVICIO = :idServicio`,
       { idServicio },
-      { autoCommit: true }
+      { outFormat: 2304 } // oracledb.OUT_FORMAT_OBJECT
     );
+
+    // 2. Revertir cada descuento de inventario (ENTRADA)
+    for (const consumo of consumos) {
+      await applyMovimientoConConexion(conn, {
+        idArticulo: consumo.ID_ARTICULO,
+        tipo: 'ENTRADA',
+        cantidad: consumo.CANTIDAD,
+        motivo: `Reversa por eliminación de servicio ID: ${idServicio}`,
+      });
+    }
+
+    // 3. Eliminar artículos del servicio y luego el servicio
+    await conn.execute(
+      `DELETE FROM SERVICIO_ARTICULOS WHERE ID_SERVICIO = :idServicio`,
+      { idServicio }
+    );
+    await conn.execute(
+      `DELETE FROM SERVICIOS WHERE ID_SERVICIO = :idServicio`,
+      { idServicio }
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
   } finally {
     await conn.close();
   }
