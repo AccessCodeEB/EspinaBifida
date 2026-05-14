@@ -199,7 +199,7 @@ export function PublicSiteHome() {
                   className="flex items-center gap-1.5 text-sm font-medium text-[#0f4c81] hover:underline dark:text-blue-400"
                   onClick={() => scrollTo("mision", "center")}
                 >
-                  Conoce nuestra misión <ArrowRight className="size-4" />
+                  
                 </button>
               </div>
 
