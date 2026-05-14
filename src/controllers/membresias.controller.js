@@ -1,12 +1,6 @@
 import * as membresiasService from "../services/membresias.service.js";
 import { toCamel } from "../utils/dbTransform.js";
 
-function formatMonto(valor) {
-  if (valor == null) return "$0.00";
-  const n = Number(valor);
-  return `$${n.toFixed(2)}`;
-}
-
 function mapMembresia(row) {
   const r = toCamel(row);
   const estatus = r.estatusMembresia ?? "Vencida";
