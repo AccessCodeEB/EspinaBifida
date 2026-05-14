@@ -159,9 +159,9 @@ export function PublicSiteHome() {
             <Button
               style={{ backgroundColor: AMBER, color: "#ffffff" }}
               className="rounded-md px-5 text-sm font-bold shadow-sm hover:opacity-90"
-              onClick={handleStartRegistration}
+              onClick={() => scrollTo("apoyanos")}
             >
-              Pre-registro
+              Donar ahora
             </Button>
           </div>
 
@@ -223,7 +223,7 @@ export function PublicSiteHome() {
               <div className="relative aspect-[4/3] overflow-hidden rounded-xl">
                 <img
                   src="./comunidad-apoyo.jpg"
-                  alt="Instalaciones de la asociación"
+                  alt="Imagen de familia recibiendo apoyo de la asociación"
                   className="h-full w-full object-cover"
                 />
               </div>
