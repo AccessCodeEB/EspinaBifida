@@ -222,7 +222,7 @@ export function PublicSiteHome() {
             <RevealOnMount delay={180} className="relative">
               <div className="relative aspect-[4/3] overflow-hidden rounded-xl">
                 <img
-                  src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2053&auto=format&fit=crop"
+                  src="./comunidad-apoyo.jpg"
                   alt="Instalaciones de la asociación"
                   className="h-full w-full object-cover"
                 />
