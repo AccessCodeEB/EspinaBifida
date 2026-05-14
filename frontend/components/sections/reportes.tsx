@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -23,9 +24,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   FileText,
@@ -36,95 +37,210 @@ import {
   ClipboardList,
   Package,
   CalendarDays,
-  Eye,
-  Printer,
+  Loader2,
   TrendingUp,
   BarChart3,
+  AlertCircle,
+  Eye,
 } from "lucide-react"
+import { downloadReporte, fetchReporteUrl, getHistorico, type ReporteHistorico } from "@/services/reportes"
+
+// ── Tipos de reporte disponibles ──────────────────────────────────────────────
 
 const reportTypes = [
   {
     id: "beneficiarios",
     title: "Reporte de Beneficiarios",
-    description: "Listado completo de beneficiarios con datos demograficos",
+    description: "Listado completo de beneficiarios con datos demográficos",
     icon: Users,
-    fields: ["Folio", "Nombre", "Estado", "Ciudad", "Tipo", "Membresia"],
   },
   {
     id: "membresias",
-    title: "Reporte de Membresias",
-    description: "Estado de membresias activas, por vencer y vencidas",
+    title: "Reporte de Membresías",
+    description: "Estado de membresías activas, por vencer y vencidas",
     icon: CreditCard,
-    fields: ["Folio", "Beneficiario", "Fecha Inicio", "Fecha Vencimiento", "Estado", "Monto"],
   },
   {
     id: "servicios",
     title: "Reporte de Servicios",
     description: "Historial de servicios prestados por periodo",
     icon: ClipboardList,
-    fields: ["Fecha", "Folio", "Beneficiario", "Servicio", "Monto", "Voluntario"],
   },
   {
     id: "inventario",
     title: "Reporte de Inventario",
     description: "Stock actual y movimientos de productos",
     icon: Package,
-    fields: ["Clave", "Descripcion", "Unidad", "Existencia", "Ultimo Movimiento"],
   },
   {
     id: "citas",
     title: "Reporte de Citas",
     description: "Agenda de citas por especialista y periodo",
     icon: CalendarDays,
-    fields: ["Fecha", "Hora", "Beneficiario", "Especialista", "Estado"],
   },
   {
     id: "estadisticas",
-    title: "Reporte Estadistico",
-    description: "Resumen estadistico de atencion mensual/anual",
+    title: "Reporte Estadístico",
+    description: "Resumen estadístico de atención mensual/anual",
     icon: BarChart3,
-    fields: ["Periodo", "Beneficiarios Atendidos", "Servicios", "Ingresos", "Citas"],
   },
 ]
 
-const generatedReports = [
-  { id: 1, name: "Beneficiarios_Marzo_2024.pdf", type: "beneficiarios", date: "2024-03-15", size: "245 KB" },
-  { id: 2, name: "Membresias_Q1_2024.xlsx", type: "membresias", date: "2024-03-10", size: "128 KB" },
-  { id: 3, name: "Servicios_Febrero_2024.pdf", type: "servicios", date: "2024-03-01", size: "312 KB" },
-  { id: 4, name: "Inventario_Marzo_2024.xlsx", type: "inventario", date: "2024-03-20", size: "89 KB" },
-  { id: 5, name: "Estadisticas_Anual_2023.pdf", type: "estadisticas", date: "2024-01-15", size: "567 KB" },
-]
+// ── Helpers de fecha ──────────────────────────────────────────────────────────
 
-// Sample data for preview
-const sampleBeneficiariosData = [
-  { folio: "B-001", nombre: "Maria Garcia Lopez", estado: "Jalisco", ciudad: "Guadalajara", tipo: "Mielomeningocele", membresia: "Activa" },
-  { folio: "B-002", nombre: "Juan Rodriguez Martinez", estado: "CDMX", ciudad: "Coyoacan", tipo: "Meningocele", membresia: "Activa" },
-  { folio: "B-003", nombre: "Ana Fernandez Ruiz", estado: "Nuevo Leon", ciudad: "Monterrey", tipo: "Mielomeningocele", membresia: "Por vencer" },
-  { folio: "B-004", nombre: "Carlos Sanchez Diaz", estado: "Puebla", ciudad: "Puebla", tipo: "Oculta", membresia: "Vencida" },
-  { folio: "B-005", nombre: "Laura Martinez Gomez", estado: "Jalisco", ciudad: "Zapopan", tipo: "Mielomeningocele", membresia: "Activa" },
-]
+function toISO(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function calcularFechas(periodo: string): { fechaInicio: string; fechaFin: string } | null {
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = hoy.getMonth() // 0-indexed
+
+  switch (periodo) {
+    case "mes-actual": {
+      const inicio = new Date(y, m, 1)
+      const fin = new Date(y, m + 1, 0)
+      return { fechaInicio: toISO(inicio), fechaFin: toISO(fin) }
+    }
+    case "mes-anterior": {
+      const inicio = new Date(y, m - 1, 1)
+      const fin = new Date(y, m, 0)
+      return { fechaInicio: toISO(inicio), fechaFin: toISO(fin) }
+    }
+    case "trimestre": {
+      const inicio = new Date(y, m - 3, 1)
+      const fin = new Date(y, m + 1, 0)
+      return { fechaInicio: toISO(inicio), fechaFin: toISO(fin) }
+    }
+    case "semestre": {
+      const inicio = new Date(y, m - 6, 1)
+      const fin = new Date(y, m + 1, 0)
+      return { fechaInicio: toISO(inicio), fechaFin: toISO(fin) }
+    }
+    case "anual": {
+      return { fechaInicio: `${y - 1}-01-01`, fechaFin: `${y - 1}-12-31` }
+    }
+    default:
+      return null // personalizado — el usuario ingresa las fechas
+  }
+}
+
+// ── Componente ────────────────────────────────────────────────────────────────
 
 export function ReportesSection() {
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState("mes-actual")
-  const [selectedFormat, setSelectedFormat] = useState("pdf")
-  const [showPreview, setShowPreview] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [selectedFormat, setSelectedFormat] = useState<"pdf" | "xlsx">("pdf")
+  const [customInicio, setCustomInicio] = useState("")
+  const [customFin, setCustomFin] = useState("")
 
-  const handleGenerateReport = () => {
-    setIsGenerating(true)
-    // Simulate report generation
-    setTimeout(() => {
-      setIsGenerating(false)
-      setShowPreview(true)
-    }, 1500)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const previewBlobRef = useRef<string | null>(null)
+
+  const [historico, setHistorico] = useState<ReporteHistorico[]>([])
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+
+  // Cargar historial al montar
+  const cargarHistorico = useCallback(async () => {
+    setLoadingHistorico(true)
+    try {
+      const res = await getHistorico()
+      setHistorico(res.data)
+    } catch {
+      // Si falla (sin permisos, sin datos), mostrar vacío
+      setHistorico([])
+    } finally {
+      setLoadingHistorico(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    cargarHistorico()
+  }, [cargarHistorico])
+
+  const handleDescargar = async () => {
+    setDownloadError(null)
+    const fechas = getFechas()
+    if (!fechas) {
+      setDownloadError(
+        selectedPeriod === "personalizado"
+          ? "Ingresa un rango de fechas válido."
+          : "No se pudo calcular el periodo."
+      )
+      return
+    }
+
+    setIsDownloading(true)
+    try {
+      await downloadReporte(fechas.fechaInicio, fechas.fechaFin, selectedFormat)
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Error al generar el reporte.")
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const getFechas = (): { fechaInicio: string; fechaFin: string } | null => {
+    if (selectedPeriod === "personalizado") {
+      if (!customInicio || !customFin || customInicio > customFin) return null
+      return { fechaInicio: customInicio, fechaFin: customFin }
+    }
+    return calcularFechas(selectedPeriod)
+  }
+
+  const handlePreview = async () => {
+    setDownloadError(null)
+    const fechas = getFechas()
+    if (!fechas) {
+      setDownloadError(
+        selectedPeriod === "personalizado"
+          ? "Ingresa un rango de fechas válido para la vista previa."
+          : "No se pudo calcular el periodo."
+      )
+      return
+    }
+    setIsPreviewing(true)
+    try {
+      // Liberar blob anterior si existe
+      if (previewBlobRef.current) {
+        URL.revokeObjectURL(previewBlobRef.current)
+        previewBlobRef.current = null
+      }
+      const url = await fetchReporteUrl(fechas.fechaInicio, fechas.fechaFin, "pdf")
+      previewBlobRef.current = url
+      setPreviewUrl(url)
+      setPreviewOpen(true)
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Error al generar la vista previa.")
+    } finally {
+      setIsPreviewing(false)
+    }
+  }
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false)
+    if (previewBlobRef.current) {
+      URL.revokeObjectURL(previewBlobRef.current)
+      previewBlobRef.current = null
+    }
+    setPreviewUrl(null)
   }
 
   const currentReport = reportTypes.find(r => r.id === selectedReport)
 
+  const fechasCalculadas = selectedPeriod !== "personalizado"
+    ? calcularFechas(selectedPeriod)
+    : (customInicio && customFin ? { fechaInicio: customInicio, fechaFin: customFin } : null)
+
   return (
     <div className="space-y-6">
-      {/* Report Type Selection */}
+      {/* Selección de tipo de reporte */}
       <div>
         <h3 className="mb-4 text-lg font-semibold text-foreground">Seleccionar Tipo de Reporte</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -143,9 +259,7 @@ export function ReportesSection() {
                   }`}>
                     <report.icon className="size-6" />
                   </div>
-                  <div>
-                    <CardTitle className="text-base">{report.title}</CardTitle>
-                  </div>
+                  <CardTitle className="text-base">{report.title}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -156,7 +270,7 @@ export function ReportesSection() {
         </div>
       </div>
 
-      {/* Report Configuration */}
+      {/* Configuración y descarga */}
       {selectedReport && (
         <Card>
           <CardHeader>
@@ -165,11 +279,12 @@ export function ReportesSection() {
               Configurar Reporte: {currentReport?.title}
             </CardTitle>
             <CardDescription>
-              Selecciona el periodo y formato de exportacion
+              Selecciona el periodo y formato de exportación
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Periodo */}
               <div className="space-y-2">
                 <Label htmlFor="periodo" className="text-base font-medium">Periodo</Label>
                 <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -179,19 +294,23 @@ export function ReportesSection() {
                   <SelectContent>
                     <SelectItem value="mes-actual">Mes Actual</SelectItem>
                     <SelectItem value="mes-anterior">Mes Anterior</SelectItem>
-                    <SelectItem value="trimestre">Ultimo Trimestre</SelectItem>
-                    <SelectItem value="semestre">Ultimo Semestre</SelectItem>
-                    <SelectItem value="anual">Anual 2024</SelectItem>
+                    <SelectItem value="trimestre">Último Trimestre</SelectItem>
+                    <SelectItem value="semestre">Último Semestre</SelectItem>
+                    <SelectItem value="anual">Año Anterior</SelectItem>
                     <SelectItem value="personalizado">Personalizado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Formato */}
               <div className="space-y-2">
                 <Label htmlFor="formato" className="text-base font-medium">Formato</Label>
-                <Select value={selectedFormat} onValueChange={setSelectedFormat}>
+                <Select
+                  value={selectedFormat}
+                  onValueChange={(v) => setSelectedFormat(v as "pdf" | "xlsx")}
+                >
                   <SelectTrigger id="formato" className="h-12 text-base">
-                    <SelectValue placeholder="Seleccionar formato" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pdf">
@@ -200,31 +319,30 @@ export function ReportesSection() {
                         PDF
                       </div>
                     </SelectItem>
-                    <SelectItem value="excel">
+                    <SelectItem value="xlsx">
                       <div className="flex items-center gap-2">
                         <FileSpreadsheet className="size-4 text-green-600" />
                         Excel (.xlsx)
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="csv">
-                      <div className="flex items-center gap-2">
-                        <FileText className="size-4 text-blue-500" />
-                        CSV
                       </div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Botones de acción */}
               <div className="flex items-end gap-3 sm:col-span-2">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
+                  variant="outline"
                   className="h-12 flex-1 text-base"
-                  onClick={handleGenerateReport}
-                  disabled={isGenerating}
+                  onClick={handlePreview}
+                  disabled={isPreviewing || isDownloading}
                 >
-                  {isGenerating ? (
-                    <>Generando...</>
+                  {isPreviewing ? (
+                    <>
+                      <Loader2 className="mr-2 size-5 animate-spin" />
+                      Cargando...
+                    </>
                   ) : (
                     <>
                       <Eye className="mr-2 size-5" />
@@ -232,145 +350,243 @@ export function ReportesSection() {
                     </>
                   )}
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  size="lg"
                   className="h-12 flex-1 text-base"
-                  disabled={isGenerating}
+                  onClick={handleDescargar}
+                  disabled={isDownloading || isPreviewing}
                 >
-                  <Download className="mr-2 size-5" />
-                  Descargar
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="h-12 text-base"
-                  disabled={isGenerating}
-                >
-                  <Printer className="size-5" />
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="mr-2 size-5 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 size-5" />
+                      Descargar {selectedFormat.toUpperCase()}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
 
-            {/* Fields Preview */}
-            <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4">
-              <p className="mb-2 text-sm font-medium text-muted-foreground">Campos incluidos en el reporte:</p>
-              <div className="flex flex-wrap gap-2">
-                {currentReport?.fields.map((field) => (
-                  <Badge key={field} variant="secondary" className="text-sm">
-                    {field}
-                  </Badge>
-                ))}
+            {/* Rango personalizado */}
+            {selectedPeriod === "personalizado" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Fecha inicio</Label>
+                  <Input
+                    type="date"
+                    className="h-12 text-base"
+                    value={customInicio}
+                    onChange={(e) => setCustomInicio(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base font-medium">Fecha fin</Label>
+                  <Input
+                    type="date"
+                    className="h-12 text-base"
+                    value={customFin}
+                    onChange={(e) => setCustomFin(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Rango calculado (info) */}
+            {fechasCalculadas && (
+              <p className="text-sm text-muted-foreground">
+                Periodo: <span className="font-medium text-foreground">{fechasCalculadas.fechaInicio}</span>
+                {" "}al{" "}
+                <span className="font-medium text-foreground">{fechasCalculadas.fechaFin}</span>
+              </p>
+            )}
+
+            {/* Error */}
+            {downloadError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="size-4 shrink-0" />
+                {downloadError}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Recent Reports */}
+      {/* Historial de reportes */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="size-5" />
-            Reportes Generados Recientemente
-          </CardTitle>
-          <CardDescription>
-            Historial de reportes generados para descargar nuevamente
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="size-5" />
+                Reportes Generados Automáticamente
+              </CardTitle>
+              <CardDescription>
+                Reportes guardados por el sistema (mensual, semestral, anual)
+              </CardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={cargarHistorico}
+              disabled={loadingHistorico}
+            >
+              {loadingHistorico
+                ? <Loader2 className="size-4 animate-spin" />
+                : "Actualizar"
+              }
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-base">Nombre del Archivo</TableHead>
-                <TableHead className="text-base">Tipo</TableHead>
-                <TableHead className="text-base">Fecha</TableHead>
-                <TableHead className="text-base">Tamano</TableHead>
-                <TableHead className="text-right text-base">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {generatedReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell className="font-medium">
-                    {report.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {report.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{report.date}</TableCell>
-                  <TableCell>{report.size}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Download className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <FileText className="size-6" />
-              Vista Previa: {currentReport?.title}
-            </DialogTitle>
-            <DialogDescription>
-              Periodo: {selectedPeriod === "mes-actual" ? "Marzo 2024" : selectedPeriod} | Formato: {selectedFormat.toUpperCase()}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-96 overflow-auto rounded-lg border border-border">
+          {loadingHistorico ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="mr-2 size-5 animate-spin" />
+              Cargando historial...
+            </div>
+          ) : historico.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-muted-foreground">
+              <FileText className="size-10 opacity-30" />
+              <p className="text-sm">No hay reportes generados automáticamente todavía.</p>
+              <p className="text-xs">El sistema generará reportes según el calendario configurado.</p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  {currentReport?.fields.map((field) => (
-                    <TableHead key={field} className="font-semibold">{field}</TableHead>
-                  ))}
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Periodo</TableHead>
+                  <TableHead>Fecha generación</TableHead>
+                  <TableHead className="text-right">Descargar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sampleBeneficiariosData.map((row, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{row.folio}</TableCell>
-                    <TableCell>{row.nombre}</TableCell>
-                    <TableCell>{row.estado}</TableCell>
-                    <TableCell>{row.ciudad}</TableCell>
-                    <TableCell>{row.tipo}</TableCell>
+                {historico.map((r) => (
+                  <TableRow key={r.ID_REPORTE}>
                     <TableCell>
-                      <Badge 
-                        variant={
-                          row.membresia === "Activa" ? "default" : 
-                          row.membresia === "Por vencer" ? "secondary" : "destructive"
-                        }
-                      >
-                        {row.membresia}
+                      <Badge variant="outline" className="capitalize">
+                        {r.TIPO}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {r.FECHA_INICIO} — {r.FECHA_FIN}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {r.FECHA_GENERACION
+                        ? new Date(r.FECHA_GENERACION).toLocaleDateString("es-MX")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {r.RUTA_PDF && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Descargar PDF"
+                            onClick={async () => {
+                              try {
+                                const token = (await import("@/lib/token")).tokenStorage.get()
+                                const { resolveApiFetchUrl } = await import("@/lib/api-base")
+                                const url = resolveApiFetchUrl(`/v1/reportes/${r.ID_REPORTE}/descargar?formato=pdf`)
+                                const res = await fetch(url, {
+                                  credentials: "include",
+                                  headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                })
+                                if (!res.ok) return
+                                const blob = await res.blob()
+                                const a = document.createElement("a")
+                                a.href = URL.createObjectURL(blob)
+                                a.download = `reporte-${r.FECHA_INICIO}-${r.FECHA_FIN}.pdf`
+                                a.click()
+                                URL.revokeObjectURL(a.href)
+                              } catch { /* ignorar */ }
+                            }}
+                          >
+                            <FileText className="size-4 text-red-500" />
+                          </Button>
+                        )}
+                        {r.RUTA_XLSX && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Descargar Excel"
+                            onClick={async () => {
+                              try {
+                                const token = (await import("@/lib/token")).tokenStorage.get()
+                                const { resolveApiFetchUrl } = await import("@/lib/api-base")
+                                const url = resolveApiFetchUrl(`/v1/reportes/${r.ID_REPORTE}/descargar?formato=xlsx`)
+                                const res = await fetch(url, {
+                                  credentials: "include",
+                                  headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                })
+                                if (!res.ok) return
+                                const blob = await res.blob()
+                                const a = document.createElement("a")
+                                a.href = URL.createObjectURL(blob)
+                                a.download = `reporte-${r.FECHA_INICIO}-${r.FECHA_FIN}.xlsx`
+                                a.click()
+                                URL.revokeObjectURL(a.href)
+                              } catch { /* ignorar */ }
+                            }}
+                          >
+                            <FileSpreadsheet className="size-4 text-green-600" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+      {/* Modal de vista previa — PDF real en iframe */}
+      <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) handleClosePreview() }}>
+        <DialogContent className="flex h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw] flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <FileText className="size-5 text-red-500" />
+              Vista Previa — {currentReport?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {fechasCalculadas
+                ? `Periodo: ${fechasCalculadas.fechaInicio} al ${fechasCalculadas.fechaFin}`
+                : "Reporte generado"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* iframe ocupa todo el espacio restante */}
+          <div className="min-h-0 flex-1">
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="size-full border-0"
+                title="Vista previa del reporte"
+              />
+            )}
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" size="lg" onClick={() => setShowPreview(false)}>
-              Cerrar
-            </Button>
-            <Button size="lg">
-              <Download className="mr-2 size-5" />
-              Descargar {selectedFormat.toUpperCase()}
-            </Button>
+
+          <div className="shrink-0 border-t px-6 py-4">
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" size="lg" onClick={handleClosePreview}>
+                Cerrar
+              </Button>
+              <Button
+                size="lg"
+                onClick={async () => {
+                  handleClosePreview()
+                  await handleDescargar()
+                }}
+                disabled={isDownloading}
+              >
+                <Download className="mr-2 size-5" />
+                Descargar {selectedFormat.toUpperCase()}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
