@@ -559,11 +559,14 @@ export function MembresiasSection() {
                 </tr>
               ) : (
                 ordenados.map((b) => {
-                  const estatus  = getMembresiaEstatus(b)
                   const nombre   = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`.trim()
                   const folio    = b.curp ?? b.folio ?? "—"
                   const dias     = diasBadge(b.diasRestantes)
-                  const est      = estatusBadge(estatus)
+                  const estatusStyle = {
+                    Activo:   { dot: "bg-emerald-500", cls: "text-emerald-700 dark:text-emerald-400" },
+                    Inactivo: { dot: "bg-amber-500",   cls: "text-amber-700 dark:text-amber-400"     },
+                    Baja:     { dot: "bg-red-500",     cls: "text-red-600 dark:text-red-400"         },
+                  }[b.estatus] ?? { dot: "bg-slate-400", cls: "text-slate-500 dark:text-slate-400" }
 
                   return (
                     <tr key={folio} className="transition-colors hover:bg-muted/20">
@@ -571,9 +574,9 @@ export function MembresiasSection() {
                       <td className="py-3 text-xs font-medium text-foreground">{nombre}</td>
                       <td className="hidden py-3 text-xs text-foreground md:table-cell">{b.ciudad ?? "—"}</td>
                       <td className="py-3 text-center">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${est.cls}`}>
-                          <span className={`size-1.5 rounded-full ${est.dot}`} />
-                          {estatus}
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${estatusStyle.cls}`}>
+                          <span className={`size-1.5 rounded-full ${estatusStyle.dot}`} />
+                          {b.estatus}
                         </span>
                       </td>
                       <td className="py-3 text-center">
@@ -582,7 +585,7 @@ export function MembresiasSection() {
                         </span>
                       </td>
                       <td className="py-3 pr-5 text-right">
-                        {estatus !== "Cancelada" && (
+                        {b.estatus !== "Baja" && (
                           <button
                             onClick={() => { setSelectedBenef(b); setShowPagoDialog(true) }}
                             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"

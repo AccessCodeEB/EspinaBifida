@@ -19,21 +19,11 @@ import {
   ArrowUp,
 } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
@@ -242,60 +232,46 @@ export function PreregistroSection() {
             Gestión de solicitudes recibidas desde el portal web.
           </p>
         </div>
-        <Button asChild size="lg" variant="outline" className="w-full sm:w-auto shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900">
-          <Link
-            href="/#seccion-registro"
-            className="inline-flex items-center justify-center gap-2 no-underline"
-            title="Abrir el sitio público de la asociación"
-          >
-            <ExternalLink className="size-5 shrink-0" aria-hidden />
-            Ver sitio público
-          </Link>
-        </Button>
+        <Link
+          href="/#seccion-registro"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-foreground shadow-sm no-underline transition-colors hover:bg-muted"
+          title="Abrir el sitio público de la asociación"
+        >
+          <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+          Ver sitio público
+        </Link>
       </div>
 
       {/* BLOQUE SUPERIOR: Métricas a la izquierda, Revisión Rápida a la derecha */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="flex flex-col gap-4 lg:col-span-4 h-full">
-          <Card className="group flex-1 border-border/50 bg-background/50 backdrop-blur-sm shadow-sm transition-all duration-300 hover:shadow-md hover:border-amber-200/60 dark:hover:border-amber-900/50">
-            <CardContent className="flex items-center gap-5 p-5 h-full">
-              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 transition-transform duration-300 group-hover:scale-110 dark:bg-amber-500/20 dark:text-amber-400">
-                <Clock className="size-6" />
-              </div>
-              <div className="flex flex-col justify-center">
-                <p className="text-sm font-medium tracking-tight text-muted-foreground">Pendientes de revisión</p>
-                <p className="text-3xl font-bold tracking-tighter leading-tight text-foreground">
-                  {pendientes.length}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-3 lg:col-span-4 h-full">
+          {/* Pendientes de revisión */}
+          <div className="flex flex-1 items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm dark:border-amber-800 dark:bg-amber-950/30">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/50">
+              <Clock className="size-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">Pendientes de revisión</span>
+              <span className="block text-3xl font-bold tabular-nums text-amber-800 dark:text-amber-300 mt-1">{pendientes.length}</span>
+              <span className="block text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">Solicitudes en espera de acción</span>
+            </div>
+          </div>
 
-          <Card
-            role="button"
-            tabIndex={0}
-            className="group flex-1 cursor-pointer border-border/50 bg-background/50 backdrop-blur-sm shadow-sm outline-none transition-all duration-300 hover:border-sky-200/60 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:hover:border-sky-900/50"
-            onClick={() => window.location.reload()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                window.location.reload()
-              }
-            }}
-            aria-label="Refrescar la página y volver a cargar las solicitudes"
+          {/* Refrescar */}
+          <button
+            type="button"
+            className="flex flex-1 items-center gap-4 rounded-xl border border-border/70 bg-card px-5 py-4 shadow-sm transition-colors hover:bg-muted/40 active:scale-[.99]"
+            onClick={() => void load()}
+            aria-label="Recargar solicitudes"
           >
-            <CardContent className="flex h-full items-center gap-5 p-5">
-              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95 dark:bg-sky-500/20 dark:text-sky-400">
-                <RefreshCw className="size-6" aria-hidden />
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col justify-center">
-                <p className="text-sm font-semibold tracking-tight text-muted-foreground">Refrescar página</p>
-                <p className="mt-1 text-sm font-medium leading-snug text-foreground">
-                  Click para recargar la pagina y ver los datos mas actualizados
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted/50">
+              <RefreshCw className="size-5 text-muted-foreground" aria-hidden />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-base font-semibold text-foreground">Actualizar datos</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Recarga las solicitudes más recientes</p>
+            </div>
+          </button>
         </div>
 
         {/* Columna Derecha: Revisión Rápida */}
@@ -476,215 +452,169 @@ export function PreregistroSection() {
       </div>
 
       {/* Tabla Principal */}
-      <Card className="border-border/60 text-foreground shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold text-foreground">Todas las solicitudes</CardTitle>
-              <CardDescription className="text-foreground">
-                {loading ? "Cargando datos..." : `Mostrando ${filtered.length} expediente(s)`}
-              </CardDescription>
-            </div>
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground" />
-              <Input
-                id="preregistro-busqueda-solicitudes"
-                placeholder="Buscar por nombre, CURP, correo..."
-                className="h-10 pl-9 pr-9 text-sm text-foreground placeholder:text-neutral-700 dark:placeholder:text-neutral-300 transition-colors focus-visible:ring-1"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={loading}
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-foreground hover:bg-muted/60"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <X className="size-4" />
-                </Button>
-              )}
-            </div>
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Todas las solicitudes</p>
+            <p className="text-[11px] text-muted-foreground">
+              {loading ? "Cargando..." : `${filtered.length} expediente${filtered.length !== 1 ? "s" : ""} pendiente${filtered.length !== 1 ? "s" : ""}`}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-foreground">
-              <Loader2 className="size-10 animate-spin text-foreground/80 mb-4" />
-              <p className="text-sm font-medium text-foreground">Cargando solicitudes...</p>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              id="preregistro-busqueda-solicitudes"
+              type="text"
+              placeholder="Buscar por nombre, CURP, correo..."
+              className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-8 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 disabled:opacity-50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={loading}
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-14">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Cargando solicitudes...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+            <div className="flex size-11 items-center justify-center rounded-full bg-muted/50">
+              <Inbox className="size-5 text-muted-foreground/60" />
             </div>
-          ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="h-12 text-sm font-semibold text-muted-foreground">Nombre</TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground md:table-cell">
-                      CURP
-                    </TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground lg:table-cell">
-                      Correo
-                    </TableHead>
-                    <TableHead className="hidden h-12 text-sm font-semibold text-muted-foreground lg:table-cell">
-                      Teléfono
-                    </TableHead>
-                    <TableHead className="h-12 text-center text-sm font-semibold text-muted-foreground">
-                      Acciones
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((b) => {
-                    const curp = String(b.folio ?? b.curp ?? "").trim()
-                    return (
-                      <TableRow key={curp} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-medium text-foreground">{nombreCompleto(b)}</TableCell>
-                        <TableCell className="hidden text-sm font-medium text-blue-600 dark:text-blue-400 md:table-cell">
-                          {curp}
-                        </TableCell>
-                        <TableCell className="hidden text-sm text-foreground lg:table-cell">
-                          {b.correoElectronico ?? "—"}
-                        </TableCell>
-                        <TableCell className="hidden text-sm text-foreground lg:table-cell">
-                          {b.telefonoCelular ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-center align-middle">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-foreground hover:bg-muted/60 hover:text-foreground"
-                              title="Ver detalle"
-                              onClick={() => {
-                                setSelected(b)
-                                setShowDetalleDialog(true)
-                              }}
-                            >
-                              <Eye className="size-4 text-foreground" />
-                              <span className="sr-only">Ver detalle</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-foreground hover:bg-muted/60 hover:text-foreground"
-                              title="Seleccionar en revisión rápida para aceptar o rechazar"
-                              onClick={() => {
-                                const id = curp.toUpperCase()
-                                const idx = pendientes.findIndex(
-                                  (p) =>
-                                    String(p.folio ?? p.curp ?? "")
-                                      .trim()
-                                      .toUpperCase() === id
-                                )
-                                if (idx < 0) return
-                                setQuickReviewIndex(idx)
-                                requestAnimationFrame(() => {
-                                  document
-                                    .getElementById("revision-rapida-preregistro")
-                                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                                })
-                              }}
-                            >
-                              <ArrowUp className="size-4 text-foreground" />
-                              <span className="sr-only">Seleccionar en revisión rápida</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          
-          {!loading && filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in">
-              <div className="flex size-16 items-center justify-center rounded-full bg-muted/50 mb-4">
-                <Inbox className="size-8 text-muted-foreground/60" />
-              </div>
-              <p className="text-lg font-semibold text-muted-foreground">No se encontraron solicitudes</p>
-              <p className="mt-1 max-w-sm text-sm text-foreground">
-                {searchTerm 
-                  ? "No hay expedientes que coincidan con tu búsqueda. Intenta con otros términos." 
-                  : "Actualmente no hay solicitudes pendientes de revisión."}
+            <div>
+              <p className="text-sm font-medium text-foreground">No se encontraron solicitudes</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {searchTerm ? "Ningún expediente coincide con la búsqueda." : "No hay solicitudes pendientes."}
               </p>
-              {searchTerm && (
-                <Button 
-                  variant="link" 
-                  onClick={() => setSearchTerm("")}
-                  className="mt-2"
-                >
-                  Limpiar filtros
-                </Button>
-              )}
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+            {searchTerm && (
+              <button onClick={() => setSearchTerm("")} className="text-xs font-medium text-[#0f4c81] hover:underline">
+                Limpiar búsqueda
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/40 bg-muted/20">
+                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Nombre</th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">CURP</th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Correo</th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Teléfono</th>
+                  <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {filtered.map((b) => {
+                  const curp = String(b.folio ?? b.curp ?? "").trim()
+                  return (
+                    <tr key={curp} className="transition-colors hover:bg-muted/20">
+                      <td className="py-3 pl-5 text-xs font-semibold text-foreground">{nombreCompleto(b)}</td>
+                      <td className="hidden py-3 font-mono text-[11px] text-foreground md:table-cell">{curp}</td>
+                      <td className="hidden py-3 text-xs text-foreground lg:table-cell">{b.correoElectronico ?? "—"}</td>
+                      <td className="hidden py-3 text-xs text-foreground lg:table-cell">{b.telefonoCelular ?? "—"}</td>
+                      <td className="py-3 pr-5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button title="Ver detalle"
+                            className="flex items-center gap-1 rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+                            onClick={() => { setSelected(b); setShowDetalleDialog(true) }}>
+                            <Eye className="size-3.5" />Ver
+                          </button>
+                          <button title="Llevar a revisión rápida"
+                            className="flex items-center gap-1 rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+                            onClick={() => {
+                              const id = curp.toUpperCase()
+                              const idx = pendientes.findIndex(p => String(p.folio ?? p.curp ?? "").trim().toUpperCase() === id)
+                              if (idx < 0) return
+                              setQuickReviewIndex(idx)
+                              requestAnimationFrame(() => {
+                                document.getElementById("revision-rapida-preregistro")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                              })
+                            }}>
+                            <ArrowUp className="size-3.5" />Revisar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Modal de Detalles */}
       <Dialog open={showDetalleDialog} onOpenChange={setShowDetalleDialog}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto sm:rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-muted-foreground">Detalle de solicitud</DialogTitle>
-            <DialogDescription className="text-foreground">
-              {selected?.fechaAlta ? `Fecha de registro: ${selected.fechaAlta}` : "Información de pre-registro enviada por el usuario"}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="max-w-md p-0 gap-0 overflow-hidden border-0 outline-none ring-0 shadow-2xl sm:rounded-2xl">
           {selected ? (
-            <div className="grid gap-4 py-4">
-              <div className="rounded-xl border border-border bg-muted/20 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nombre completo</p>
-                <p className="text-lg font-bold text-foreground">{nombreCompleto(selected)}</p>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">CURP</p>
-                  <p className="text-base font-medium text-blue-600 dark:text-blue-400">{selected.folio}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estatus en BD</p>
-                  <p className="text-base font-medium text-foreground">{selected.estatus}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Correo Electrónico</p>
-                  <p className="text-base font-medium break-all text-foreground">{selected.correoElectronico ?? "No especificado"}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Teléfono</p>
-                  <p className="text-base font-medium text-foreground">{selected.telefonoCelular ?? "No especificado"}</p>
+            <>
+              {/* Banner navy */}
+              <div className="relative overflow-hidden" style={{ background: "#0f4c81" }}>
+                <div className="absolute inset-0 opacity-[0.06]"
+                  style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                <div className="relative flex items-start justify-between gap-3 px-5 py-4">
+                  <div className="min-w-0">
+                    <DialogTitle className="text-base font-bold text-white leading-tight truncate">
+                      {nombreCompleto(selected)}
+                    </DialogTitle>
+                    <DialogDescription className="mt-0.5 font-mono text-[11px] text-white/60">
+                      {selected.folio}
+                    </DialogDescription>
+                    {selected.fechaAlta && (
+                      <p className="mt-1 text-[11px] text-white/50">Registrado: {selected.fechaAlta}</p>
+                    )}
+                  </div>
+                  <button onClick={() => setShowDetalleDialog(false)}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors">
+                    <X className="size-4" />
+                  </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estado / Provincia</p>
-                  <p className="text-base font-medium text-foreground">{selected.estado ?? "No especificado"}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ciudad</p>
-                  <p className="text-base font-medium text-foreground">{selected.ciudad ?? "No especificado"}</p>
-                </div>
+
+              {/* Datos en tabla */}
+              <div className="divide-y divide-border/40">
+                {[
+                  { label: "Estatus",         value: selected.estatus },
+                  { label: "Correo",          value: selected.correoElectronico ?? "—" },
+                  { label: "Teléfono",        value: selected.telefonoCelular ?? "—" },
+                  { label: "Ciudad",          value: selected.ciudad ?? "—" },
+                  { label: "Estado",          value: selected.estado ?? "—" },
+                  { label: "Tipo",            value: labelTipoEspinaBifida(selected.tipo) || "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-4 px-5 py-3">
+                    <span className="w-28 shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+                    <span className="flex-1 text-xs font-medium text-foreground break-all">{value}</span>
+                  </div>
+                ))}
+                {notasSinMarcador(selected.notas) && (
+                  <div className="px-5 py-3">
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                      {notasSinMarcador(selected.notas)}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="rounded-xl border border-border bg-muted/20 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notas / Motivo de consulta</p>
-                <p className="text-base whitespace-pre-wrap leading-relaxed text-foreground">
-                  {notasSinMarcador(selected.notas) || "Sin observaciones adicionales."}
-                </p>
-                <div className="mt-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tipo de espina bífida</p>
-                  <p className="text-base font-medium text-foreground">{labelTipoEspinaBifida(selected.tipo)}</p>
-                </div>
-              </div>
-              <div className="flex justify-end border-t border-border pt-4 mt-2">
-                <Button variant="outline" onClick={() => setShowDetalleDialog(false)}>
+
+              {/* Footer */}
+              <div className="flex justify-end border-t border-border/40 px-5 py-3">
+                <button onClick={() => setShowDetalleDialog(false)}
+                  className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted">
                   Cerrar
-                </Button>
+                </button>
               </div>
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>

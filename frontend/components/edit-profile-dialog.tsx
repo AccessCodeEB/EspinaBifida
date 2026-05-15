@@ -170,120 +170,104 @@ export function EditProfileDialog({
     }
   }
 
+  const NAVY = "#0f4c81"
+
   // ── Render ──────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-full max-w-md rounded-3xl border border-border/40 bg-background p-0 shadow-2xl gap-0 overflow-hidden"
+        className="w-full max-w-lg rounded-2xl border-0 bg-card p-0 shadow-2xl gap-0 overflow-hidden"
         showCloseButton={false}
       >
-        {/* ── Cabecera ─────────────────────────────────────────────── */}
-        <DialogHeader className="border-b border-border/40 px-6 py-5 bg-background">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <DialogTitle className="text-[18px] font-semibold text-foreground tracking-tight">
-                Editar perfil
-              </DialogTitle>
-              <DialogDescription className="mt-0.5 text-[13px] text-muted-foreground">
-                Actualiza tu información de cuenta.
-              </DialogDescription>
-            </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              aria-label="Cerrar"
-              className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
-            >
-              <X className="size-4" />
-            </button>
+        {/* ── Banner superior con avatar ── */}
+        <div className="relative overflow-hidden" style={{ background: NAVY }}>
+          {/* Patrón decorativo */}
+          <div className="absolute inset-0 opacity-[0.07]"
+            style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+          <div className="absolute -bottom-8 -right-8 size-40 rounded-full opacity-[0.06]" style={{ backgroundColor: "#E8B043" }} />
+
+          <button
+            onClick={() => onOpenChange(false)}
+            aria-label="Cerrar"
+            className="absolute right-3 top-3 z-10 flex size-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+
+          <div className="relative flex items-center gap-4 px-6 pt-5 pb-5">
+            {!loadingAdmin && admin ? (
+                <ProfilePhotoUpload
+                  variant="form"
+                  size="md"
+                  imageRevision={adminFotoRevision}
+                  fotoPerfilUrl={admin.fotoPerfilUrl}
+                  fallbackText={admin.nombreCompleto.slice(0, 2)}
+                  uploading={fotoUploading}
+                  disabled={saving}
+                  onFileSelected={async (file) => {
+                    setFotoUploading(true)
+                    try {
+                      const r = await uploadAdminFotoPerfil(admin.idAdmin, file)
+                      setAdmin((p) => (p ? { ...p, fotoPerfilUrl: r.fotoPerfilUrl } : p))
+                      setAdminFotoRevision((n) => n + 1)
+                      onFotoPerfilUpdated?.(r.fotoPerfilUrl)
+                      toast.success("Foto de perfil actualizada")
+                    } catch (e: unknown) {
+                      toast.error(e instanceof Error ? e.message : "No se pudo subir la foto")
+                    } finally {
+                      setFotoUploading(false)
+                    }
+                  }}
+                />
+              ) : (
+                <div className="size-14 rounded-full bg-white/10" />
+              )}
+              <div className="min-w-0 pr-8">
+                <DialogTitle className="text-base font-bold text-white leading-tight truncate">
+                  {admin?.nombreCompleto ?? "Perfil"}
+                </DialogTitle>
+                <p className="text-[11px] text-white/60 truncate mt-0.5">{admin?.email ?? ""}</p>
+                {admin && (
+                  <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5">
+                    <Shield className="size-3 text-white/60" />
+                    <span className="text-[10px] font-semibold text-white/70">{admin.nombreRol}</span>
+                  </div>
+                )}
+              </div>
           </div>
-        </DialogHeader>
+          <DialogDescription className="sr-only">Editar perfil de administrador</DialogDescription>
+        </div>
 
-        {/* ── Cuerpo ───────────────────────────────────────────────── */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-7 space-y-7">
+        {/* ── Cuerpo ── */}
+        <div className="max-h-[60vh] overflow-y-auto">
 
-          {/* Estado de carga */}
           {loadingAdmin && (
-            <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
               <span className="text-sm">Cargando datos...</span>
             </div>
           )}
 
-          {/* Error de carga */}
           {loadError && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+            <div className="m-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
               {loadError}
             </div>
           )}
 
           {!loadingAdmin && !loadError && admin && (
-            <>
-              {/* ── Rol (solo lectura) ──────────────────────────────── */}
-              <section>
-                <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <Shield className="size-3.5" />
-                  Rol
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 shadow-sm">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Shield className="size-4" />
-                  </div>
-                  <span className="text-[14px] font-semibold text-foreground">
-                    {admin.nombreRol}
-                  </span>
-                </div>
-              </section>
+            <div className="divide-y divide-border/40">
 
-              <Separator className="bg-border/50" />
+              {/* ── Información de perfil ── */}
+              <div className="px-6 py-5 space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5">
+                  <User className="size-3" />Información de cuenta
+                </p>
 
-              {/* ── Perfil editable ─────────────────────────────────── */}
-              <section>
-                <div className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <User className="size-3.5" />
-                  Perfil
-                </div>
-
-                <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
-                  <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                    <div className="shrink-0">
-                      <ProfilePhotoUpload
-                        variant="form"
-                        size="md"
-                        imageRevision={adminFotoRevision}
-                        fotoPerfilUrl={admin.fotoPerfilUrl}
-                        fallbackText={admin.nombreCompleto.slice(0, 2)}
-                        uploading={fotoUploading}
-                        disabled={saving}
-                        onFileSelected={async (file) => {
-                          setFotoUploading(true)
-                          try {
-                            const r = await uploadAdminFotoPerfil(admin.idAdmin, file)
-                            setAdmin((p) => (p ? { ...p, fotoPerfilUrl: r.fotoPerfilUrl } : p))
-                            setAdminFotoRevision((n) => n + 1)
-                            onFotoPerfilUpdated?.(r.fotoPerfilUrl)
-                            toast.success("Foto de perfil actualizada")
-                          } catch (e: unknown) {
-                            toast.error(e instanceof Error ? e.message : "No se pudo subir la foto")
-                          } finally {
-                            setFotoUploading(false)
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="text-center sm:text-left space-y-1">
-                      <h4 className="text-sm font-bold text-foreground">Actualizar Foto de perfil</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Formatos soportados: JPEG, PNG o WebP (máx. 2 MB).
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ep-nombre" className="text-[13px] font-semibold text-foreground">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                       Nombre completo
-                    </Label>
+                    </label>
                     <Input
                       id="ep-nombre"
                       readOnly={!canEditNombreYCorreo}
@@ -291,17 +275,17 @@ export function EditProfileDialog({
                       onChange={(e) => { setForm((p) => ({ ...p, nombreCompleto: e.target.value })); setSaveOk(false); setSaveError(null) }}
                       placeholder="Tu nombre"
                       className={cn(
-                        "h-10 border-border/60 shadow-sm transition-all",
+                        "h-9 text-sm border-border/60",
                         canEditNombreYCorreo
-                          ? "bg-card focus-visible:ring-1 focus-visible:ring-primary/40"
-                          : "cursor-not-allowed bg-muted/50 text-muted-foreground"
+                          ? "bg-background focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30"
+                          : "cursor-not-allowed bg-muted/40 text-muted-foreground"
                       )}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="ep-email" className="text-[13px] font-semibold text-foreground">
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                       Correo electrónico
-                    </Label>
+                    </label>
                     <Input
                       id="ep-email"
                       type="email"
@@ -310,166 +294,105 @@ export function EditProfileDialog({
                       onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); setSaveOk(false); setSaveError(null) }}
                       placeholder="correo@ejemplo.com"
                       className={cn(
-                        "h-10 border-border/60 shadow-sm transition-all",
+                        "h-9 text-sm border-border/60",
                         canEditNombreYCorreo
-                          ? "bg-card focus-visible:ring-1 focus-visible:ring-primary/40"
-                          : "cursor-not-allowed bg-muted/50 text-muted-foreground"
+                          ? "bg-background focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30"
+                          : "cursor-not-allowed bg-muted/40 text-muted-foreground"
                       )}
                     />
                   </div>
                 </div>
 
                 {!canEditNombreYCorreo && (
-                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-                    Solo un Super Administrador puede modificar el nombre y el correo. Puedes actualizar tu foto de perfil y tu contraseña desde este mismo panel.
+                  <p className="text-[11px] text-muted-foreground">
+                    Solo un Super Administrador puede modificar el nombre y correo.
                   </p>
                 )}
 
-                {saveError && (
-                  <p className="mt-3 text-xs text-destructive">{saveError}</p>
-                )}
+                {saveError && <p className="text-xs text-red-600 dark:text-red-400">{saveError}</p>}
                 {saveOk && (
-                  <div className="mt-3 flex items-center gap-2 text-xs font-medium text-success">
-                    <CheckCircle className="size-3.5" />
-                    Datos guardados correctamente.
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="size-3.5" />Cambios guardados.
                   </div>
                 )}
 
                 {canEditNombreYCorreo && (
-                  <Button
-                    id="ep-save"
-                    type="button"
-                    className="mt-4 w-full gap-2 h-10 shadow-sm"
-                    disabled={saving || loadingAdmin}
-                    onClick={handleSave}
+                  <button
+                    type="button" disabled={saving || loadingAdmin} onClick={handleSave}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: NAVY }}
                   >
-                    {saving
-                      ? <><Loader2 className="size-4 animate-spin" /> Guardando...</>
-                      : <><Save    className="size-4" />              Guardar cambios</>
-                    }
-                  </Button>
+                    {saving ? <><Loader2 className="size-3.5 animate-spin" />Guardando...</> : <><Save className="size-3.5" />Guardar cambios</>}
+                  </button>
                 )}
-              </section>
+              </div>
 
-              <Separator className="bg-border/50" />
 
-              {/* ── Contraseña ──────────────────────────────────────── */}
-              <section>
-                <div className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <Lock className="size-3.5" />
-                  Contraseña
-                </div>
+              {/* ── Contraseña ── */}
+              <div className="px-6 py-5">
+                <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5">
+                  <Lock className="size-3" />Seguridad
+                </p>
 
                 {pwOk && (
-                  <div className="mb-4 flex items-center gap-2 text-xs font-medium text-success">
-                    <CheckCircle className="size-3.5" />
-                    Contraseña actualizada correctamente.
+                  <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="size-3.5" />Contraseña actualizada.
                   </div>
                 )}
 
                 {!showPwSection ? (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    className="w-full gap-2 h-10 border-border/60 bg-card shadow-sm hover:bg-accent transition-colors"
                     onClick={() => { setShowPwSection(true); setPwOk(false) }}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/70 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
-                    <Lock className="size-4 text-muted-foreground" />
-                    Cambiar contraseña
-                  </Button>
+                    <Lock className="size-3.5 text-muted-foreground" />Cambiar contraseña
+                  </button>
                 ) : (
-                  <div className="space-y-4 rounded-2xl border border-border/50 bg-muted/20 p-5 shadow-sm">
-
-                    {/* Contraseña actual */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ep-pw-actual" className="text-xs font-semibold">Contraseña actual</Label>
-                      <div className="relative">
-                        <Input
-                          id="ep-pw-actual"
-                          type={showCurrent ? "text" : "password"}
-                          placeholder="••••••••"
-                          value={pwForm.passwordActual}
-                          onChange={(e) => { setPwForm((p) => ({ ...p, passwordActual: e.target.value })); setPwError(null) }}
-                          className="h-9 pr-10 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrent((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          tabIndex={-1}
-                          aria-label={showCurrent ? "Ocultar" : "Mostrar"}
-                        >
-                          {showCurrent ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                        </button>
+                  <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                    {([
+                      { id: "ep-pw-actual", label: "Contraseña actual",  key: "passwordActual" as const, show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+                      { id: "ep-pw-nueva",  label: "Nueva contraseña",   key: "passwordNueva"  as const, show: showNew,     toggle: () => setShowNew(v => !v), placeholder: "Mínimo 6 caracteres" },
+                    ]).map(({ id, label, key, show, toggle, placeholder }) => (
+                      <div key={id} className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</label>
+                        <div className="relative">
+                          <Input id={id} type={show ? "text" : "password"} placeholder={placeholder ?? "••••••••"}
+                            value={pwForm[key]}
+                            onChange={(e) => { setPwForm((p) => ({ ...p, [key]: e.target.value })); setPwError(null) }}
+                            className="h-9 pr-10 text-sm border-border/60 focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30" />
+                          <button type="button" onClick={toggle} tabIndex={-1}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                            {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Nueva contraseña */}
+                    ))}
                     <div className="space-y-1.5">
-                      <Label htmlFor="ep-pw-nueva" className="text-xs font-semibold">Nueva contraseña</Label>
-                      <div className="relative">
-                        <Input
-                          id="ep-pw-nueva"
-                          type={showNew ? "text" : "password"}
-                          placeholder="Mínimo 6 caracteres"
-                          value={pwForm.passwordNueva}
-                          onChange={(e) => { setPwForm((p) => ({ ...p, passwordNueva: e.target.value })); setPwError(null) }}
-                          className="h-9 pr-10 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNew((v) => !v)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          tabIndex={-1}
-                          aria-label={showNew ? "Ocultar" : "Mostrar"}
-                        >
-                          {showNew ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Confirmar contraseña */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="ep-pw-confirm" className="text-xs font-semibold">Confirmar contraseña</Label>
-                      <Input
-                        id="ep-pw-confirm"
-                        type="password"
-                        placeholder="Repite la nueva contraseña"
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Confirmar contraseña</label>
+                      <Input id="ep-pw-confirm" type="password" placeholder="Repite la nueva contraseña"
                         value={pwForm.confirmar}
                         onChange={(e) => { setPwForm((p) => ({ ...p, confirmar: e.target.value })); setPwError(null) }}
-                        className="h-9 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
-                      />
+                        className="h-9 text-sm border-border/60 focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30" />
                     </div>
-
-                    {pwError && <p className="text-xs text-destructive">{pwError}</p>}
-
-                    <div className="flex gap-3 pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1 h-9 shadow-sm"
-                        disabled={pwSaving}
+                    {pwError && <p className="text-xs text-red-600 dark:text-red-400">{pwError}</p>}
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" disabled={pwSaving}
                         onClick={() => { setShowPwSection(false); setPwForm(EMPTY_PW); setPwError(null) }}
-                      >
+                        className="flex-1 rounded-lg border border-border/70 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
                         Cancelar
-                      </Button>
-                      <Button
-                        id="ep-pw-save"
-                        type="button"
-                        className="flex-1 gap-2 h-9 shadow-sm"
-                        disabled={pwSaving}
-                        onClick={handleChangePassword}
-                      >
-                        {pwSaving
-                          ? <><Loader2 className="size-3.5 animate-spin" /> Guardando...</>
-                          : "Confirmar"
-                        }
-                      </Button>
+                      </button>
+                      <button type="button" disabled={pwSaving} onClick={handleChangePassword}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                        style={{ backgroundColor: NAVY }}>
+                        {pwSaving ? <><Loader2 className="size-3.5 animate-spin" />Guardando...</> : "Confirmar"}
+                      </button>
                     </div>
                   </div>
                 )}
-              </section>
-            </>
+              </div>
+
+            </div>
           )}
         </div>
       </DialogContent>

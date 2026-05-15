@@ -8,6 +8,10 @@ import {
   Timer, CalendarDays, Banknote, CreditCard, Building2,
   CheckCircle2, Clock, XCircle, AlertCircle,
 } from "lucide-react"
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from "recharts"
 import type { ArticuloInventario } from "@/services/inventario"
 import type { PagoReciente }       from "@/services/membresias"
 import type { Cita }               from "@/services/citas"
@@ -18,6 +22,7 @@ import { getBeneficiarios }        from "@/services/beneficiarios"
 import { getPagosRecientes }       from "@/services/membresias"
 import { getCitas }                from "@/services/citas"
 import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
+import { resolvePublicUploadUrl } from "@/lib/media-url"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
@@ -84,7 +89,7 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
   useEffect(() => { setPage(0) }, [stockBajo])
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
         <div>
           <p className="text-sm font-semibold text-foreground">Artículos bajos</p>
@@ -134,10 +139,10 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
           })
         )}
       </div>
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+      {!loading && (
+        <div className="mt-auto flex items-center justify-between border-t border-border/40 px-5 py-2.5">
           <span className="text-[11px] text-muted-foreground">
-            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, stockBajo.length)} de {stockBajo.length}
+            {stockBajo.length === 0 ? "0" : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, stockBajo.length)}`} de {stockBajo.length}
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
@@ -218,7 +223,7 @@ export function DashboardSection() {
     return beneficiarios
       .filter((b) => b.estatus !== "Baja" && b.diasRestantes != null)
       .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999))
-      .slice(0, 8) // 4 por columna × 2 columnas
+      .slice(0, 100)
   }, [beneficiarios])
 
   /* ── Citas de hoy ── */
@@ -237,7 +242,6 @@ export function DashboardSection() {
     const pagosActual   = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesActual))
     const pagosAnterior = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesAnterior))
 
-    const totalActual   = pagosActual.reduce((s, p) => s + (Number(p.monto) || 0), 0)
     const totalAnterior = pagosAnterior.reduce((s, p) => s + (Number(p.monto) || 0), 0)
 
     const porMetodo = {
@@ -246,10 +250,34 @@ export function DashboardSection() {
       tarjeta:       pagosActual.filter((p) => p.metodoPago === "tarjeta").reduce((s, p) => s + (Number(p.monto) || 0), 0),
     }
 
+    // totalActual = suma de los tres métodos para que siempre cuadre
+    const totalActual = porMetodo.efectivo + porMetodo.transferencia + porMetodo.tarjeta
+
     const diff = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior) * 100 : 0
 
     return { totalActual, totalAnterior, diff, porMetodo, count: pagosActual.length }
   }, [pagos])
+
+  /* ── Datos mensuales para la gráfica (últimos 6 meses) ── */
+  const monthlyData = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date()
+      d.setDate(1)
+      d.setMonth(d.getMonth() - (5 - i))
+      const key   = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const label = d.toLocaleDateString("es-MX", { month: "short" })
+        .replace(".", "")
+        .replace(/^\w/, (c) => c.toUpperCase())
+      const pagosDelMes = pagos.filter(
+        (p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(key)
+      )
+      const ingresos  = pagosDelMes.reduce((s, p) => s + (Number(p.monto) || 0), 0)
+      const miembros  = beneficiarios.filter(
+        (b) => (b.fechaAlta ?? "").startsWith(key)
+      ).length
+      return { mes: label, ingresos: parseFloat(ingresos.toFixed(2)), nuevos: miembros }
+    })
+  }, [pagos, beneficiarios])
 
   const kpis = useMemo(() => [
     {
@@ -436,8 +464,8 @@ export function DashboardSection() {
           <p className="text-[11px] text-muted-foreground">Ingresos por membresías · mes actual vs anterior</p>
         </div>
         {loadingPagos ? (
-          <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-card px-6 py-5 space-y-2">
                 <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
                 <div className="h-6 w-2/3 rounded bg-muted animate-pulse" />
@@ -445,7 +473,7 @@ export function DashboardSection() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 divide-x divide-y divide-border/40 sm:grid-cols-4 sm:divide-y-0">
+          <div className="grid grid-cols-2 divide-x divide-y divide-border/40 sm:grid-cols-5 sm:divide-y-0">
             <div className="px-6 py-5">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Este mes</p>
               <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{fmt$(financiero.totalActual)}</p>
@@ -464,8 +492,9 @@ export function DashboardSection() {
               <p className="mt-1 text-[11px] text-muted-foreground">{financiero.count} pago{financiero.count !== 1 ? "s" : ""} este mes</p>
             </div>
             {[
-              { label: "Efectivo",      val: financiero.porMetodo.efectivo,      icon: Banknote,  color: "#10b981" },
-              { label: "Transferencia", val: financiero.porMetodo.transferencia, icon: Building2, color: NAVY },
+              { label: "Efectivo",      val: financiero.porMetodo.efectivo,      icon: Banknote,   color: "#10b981" },
+              { label: "Transferencia", val: financiero.porMetodo.transferencia, icon: Building2,  color: NAVY },
+              { label: "Tarjeta",       val: financiero.porMetodo.tarjeta,       icon: CreditCard, color: AMBER },
             ].map(({ label, val, icon: Icon, color }) => (
               <div key={label} className="px-6 py-5">
                 <div className="flex items-center gap-1.5">
@@ -486,66 +515,191 @@ export function DashboardSection() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
         {/* Control de membresías */}
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Control de membresías</p>
-              <p className="text-[11px] text-muted-foreground">Ordenado por proximidad de vencimiento</p>
-            </div>
-            <Timer className="size-4 text-muted-foreground" />
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-border/40">
-            {loadingBenef ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
-                  <div className="size-8 rounded-full bg-muted animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-1.5 min-w-0">
-                    <div className="h-2.5 w-2/3 rounded bg-muted animate-pulse" />
-                    <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
-                  </div>
-                  <div className="h-5 w-10 rounded bg-muted animate-pulse shrink-0" />
+        {(() => {
+          const MEM_PAGE = 8
+          const [memPage, setMemPage] = useState(0)
+          const totalMemPages = Math.max(1, Math.ceil(membresiasPorVencer.length / MEM_PAGE))
+          const paginatedMem = membresiasPorVencer.slice(memPage * MEM_PAGE, memPage * MEM_PAGE + MEM_PAGE)
+
+          return (
+            <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Control de membresías</p>
+                  <p className="text-[11px] text-muted-foreground">Ordenado por proximidad de vencimiento</p>
                 </div>
-              ))
-            ) : membresiasPorVencer.length === 0 ? (
-              <div className="col-span-2 flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <CheckCircle2 className="size-8 text-emerald-500 opacity-50" />
-                <p className="text-xs text-muted-foreground">No hay membresías próximas a vencer</p>
+                <Timer className="size-4 text-muted-foreground" />
               </div>
-            ) : (
-              membresiasPorVencer.map((b) => {
-                const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
-                const dias    = b.diasRestantes ?? 0
-                const inicial = nombre.charAt(0).toUpperCase()
-                const badge =
-                  dias <= 0  ? { text: "Vencida", cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800" } :
-                  dias <= 7  ? { text: `${dias}d`, cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800" } :
-                  dias <= 14 ? { text: `${dias}d`, cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800" } :
-                               { text: `${dias}d`, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800" }
-                const dotColor = dias <= 0 ? "bg-red-500" : dias <= 7 ? "bg-red-400" : dias <= 14 ? "bg-amber-400" : "bg-emerald-400"
-                return (
-                  <div key={b.curp ?? b.folio} className="flex items-center gap-2.5 border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/20 last:border-b-0">
-                    <div className="relative shrink-0">
-                      <div className="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ backgroundColor: NAVY }}>
-                        {inicial}
+              <div className="grid grid-cols-2 divide-x divide-border/40">
+                {loadingBenef ? (
+                  Array.from({ length: MEM_PAGE }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
+                      <div className="size-7 rounded-full bg-muted animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="h-2.5 w-2/3 rounded bg-muted animate-pulse" />
+                        <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
                       </div>
-                      <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-[1.5px] border-card ${dotColor}`} />
+                      <div className="h-4 w-12 rounded bg-muted animate-pulse shrink-0" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-[11px] font-semibold text-foreground">{nombre}</p>
-                      <p className="truncate text-[10px] text-muted-foreground">{b.ciudad || "—"}</p>
-                    </div>
-                    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>
-                      {badge.text}
-                    </span>
+                  ))
+                ) : membresiasPorVencer.length === 0 ? (
+                  <div className="col-span-2 flex flex-col items-center justify-center gap-2 py-12 text-center">
+                    <CheckCircle2 className="size-8 text-emerald-500 opacity-50" />
+                    <p className="text-xs text-muted-foreground">No hay membresías próximas a vencer</p>
                   </div>
-                )
-              })
-            )}
-          </div>
-        </div>
+                ) : (
+                  paginatedMem.map((b) => {
+                    const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
+                    const inicial = nombre.charAt(0).toUpperCase()
+                    const fotoUrl = resolvePublicUploadUrl(b.fotoPerfilUrl ?? undefined)
+                    const estatusStyle = {
+                      Activo:   { dot: "bg-emerald-500", cls: "text-emerald-700 dark:text-emerald-400" },
+                      Inactivo: { dot: "bg-amber-500",   cls: "text-amber-700 dark:text-amber-400"     },
+                      Baja:     { dot: "bg-red-500",     cls: "text-red-600 dark:text-red-400"         },
+                    }[b.estatus] ?? { dot: "bg-slate-400", cls: "text-slate-500 dark:text-slate-400" }
+
+                    return (
+                      <div key={b.curp ?? b.folio} className="flex items-center gap-2.5 border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/20 last:border-b-0">
+                        <div className="size-7 shrink-0 overflow-hidden rounded-full text-[11px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: fotoUrl ? undefined : NAVY }}>
+                          {fotoUrl
+                            ? <img src={fotoUrl} alt="" className="size-full object-cover" onError={(e) => { e.currentTarget.style.display = "none" }} />
+                            : inicial
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-[11px] font-semibold text-foreground">{nombre}</p>
+                          <p className="truncate text-[10px] text-muted-foreground">{b.ciudad || "—"}</p>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${estatusStyle.cls}`}>
+                          <span className={`size-1.5 rounded-full ${estatusStyle.dot}`} />
+                          {b.estatus}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              {!loadingBenef && (
+                <div className="mt-auto flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+                  <span className="text-[11px] text-muted-foreground">
+                    {membresiasPorVencer.length === 0 ? "0" : `${memPage * MEM_PAGE + 1}–${Math.min((memPage + 1) * MEM_PAGE, membresiasPorVencer.length)}`} de {membresiasPorVencer.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setMemPage(p => p - 1)} disabled={memPage === 0}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+                    <span className="min-w-[2.5rem] text-center text-[11px] font-medium text-foreground">{memPage + 1} / {totalMemPages}</span>
+                    <button onClick={() => setMemPage(p => p + 1)} disabled={memPage >= totalMemPages - 1}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Artículos bajos */}
         <ArticulosBajosPanel stockBajo={stockBajo} loading={loadingStock} umbral={INVENTARIO_BAJO_UMBRAL} />
+      </div>
+
+      {/* ── Gráfica de rendimiento mensual ── */}
+      <div className="rounded-xl border border-border/70 bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Rendimiento mensual</p>
+            <p className="text-[11px] text-muted-foreground">Ingresos y nuevos beneficiarios · últimos 6 meses</p>
+          </div>
+          <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: NAVY }} />
+              Ingresos
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: AMBER }} />
+              Nuevos
+            </span>
+          </div>
+        </div>
+
+        {loadingPagos ? (
+          <div className="flex h-[220px] items-center justify-center">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-foreground" />
+          </div>
+        ) : (
+          <div className="px-2 pb-4 pt-3">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={monthlyData} margin={{ top: 8, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid
+                  strokeDasharray="3 4"
+                  stroke="currentColor"
+                  strokeOpacity={0.07}
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="mes"
+                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.45 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dy={6}
+                />
+                <YAxis
+                  yAxisId="ingresos"
+                  orientation="left"
+                  tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => v === 0 ? "0" : `$${(v / 1000).toFixed(0)}k`}
+                  width={42}
+                />
+                <YAxis
+                  yAxisId="nuevos"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  width={28}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "10px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                  }}
+                  formatter={(value: number, name: string) =>
+                    name === "ingresos"
+                      ? [`$${value.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, "Ingresos"]
+                      : [value, "Nuevos beneficiarios"]
+                  }
+                />
+                <Line
+                  yAxisId="ingresos"
+                  type="monotone"
+                  dataKey="ingresos"
+                  stroke={NAVY}
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: NAVY, strokeWidth: 0 }}
+                  activeDot={{ r: 5.5, fill: NAVY, strokeWidth: 2, stroke: "#fff" }}
+                />
+                <Line
+                  yAxisId="nuevos"
+                  type="monotone"
+                  dataKey="nuevos"
+                  stroke={AMBER}
+                  strokeWidth={2}
+                  strokeDasharray="5 3"
+                  dot={{ r: 3.5, fill: AMBER, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: AMBER, strokeWidth: 2, stroke: "#fff" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
     </div>

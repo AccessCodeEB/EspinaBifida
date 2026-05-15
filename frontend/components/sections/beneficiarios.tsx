@@ -621,291 +621,190 @@ export function BeneficiariosSection({
 
       {/* ── Dialog: Nueva Alta ────────────────────────────────────────────── */}
       <Dialog open={showAltaDialog} onOpenChange={(open) => { if (!isSaving) setShowAltaDialog(open) }}>
-        <DialogContent className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-none shadow-2xl sm:rounded-2xl">
-          <div className="shrink-0 z-10 bg-background border-b border-border/40 px-6 py-4">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Registrar Beneficiario</DialogTitle>
-              <DialogDescription>Ingresa los datos para registrar un nuevo beneficiario en el sistema.</DialogDescription>
-            </DialogHeader>
+        <DialogContent showCloseButton={false} className="max-w-2xl w-[calc(100vw-1.5rem)] max-h-[min(90vh,880px)] flex flex-col overflow-hidden p-0 gap-0 border-0 shadow-2xl sm:rounded-2xl">
+
+          {/* ── Banner navy ── */}
+          <div className="relative shrink-0 overflow-hidden" style={{ background: "#0f4c81" }}>
+            <div className="absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+            <div className="relative flex items-center justify-between gap-3 px-6 py-4">
+              <div>
+                <DialogTitle className="text-base font-bold text-white">Registrar beneficiario</DialogTitle>
+                <DialogDescription className="mt-0.5 text-[11px] text-white/60">
+                  Completa los campos obligatorios marcados con <span className="text-red-300">*</span>
+                </DialogDescription>
+              </div>
+              <button onClick={() => setShowAltaDialog(false)} disabled={isSaving}
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40">
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide px-6 py-8 bg-muted/10">
+
+          {/* ── Cuerpo ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide divide-y divide-border/40">
+
             {saveError && (
-              <div className="mb-6 rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-                <XCircle className="size-4 shrink-0" />{saveError}
+              <div className="px-6 py-3 flex items-center gap-2 bg-red-50 border-b border-red-200 text-xs text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
+                <XCircle className="size-3.5 shrink-0" />{saveError}
               </div>
             )}
 
-            <SectionCard title="Información Personal" icon={User}>
-              <div className="mb-8 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 p-5 transition-colors hover:border-primary/40 hover:bg-primary/10">
-                <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-start">
-                  <div className="shrink-0">
-                    <ProfilePhotoUpload
-                      variant="form"
-                      size="md"
-                      previewSrc={altaFotoPreview}
-                      fotoPerfilUrl={null}
-                      fallbackText={`${altaForm.nombres?.[0] ?? "?"}${altaForm.apellidoPaterno?.[0] ?? ""}`}
-                      uploading={isSaving}
-                      disabled={isSaving}
-                      onFileSelected={handleAltaFotoSelected}
-                    />
-                  </div>
-                  <div className="text-center sm:text-left space-y-1">
-                    <h4 className="text-sm font-bold text-foreground">Foto de perfil</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Ajusta el encuadre en el paso siguiente. <br className="hidden sm:block" />
-                      Formatos: JPEG, PNG o WebP (máx. 2 MB).
-                    </p>
+            {/* ── Personal ── */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/40 bg-muted/20 px-6 py-3">
+                <User className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Información personal</span>
+              </div>
+              <div className="px-6 py-6 space-y-5">
+                {/* Foto inline */}
+                <div className="flex items-center gap-4">
+                  <ProfilePhotoUpload variant="form" size="md" previewSrc={altaFotoPreview}
+                    fotoPerfilUrl={null}
+                    fallbackText={`${altaForm.nombres?.[0] ?? "?"}${altaForm.apellidoPaterno?.[0] ?? ""}`}
+                    uploading={isSaving} disabled={isSaving} onFileSelected={handleAltaFotoSelected} />
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Foto de perfil</p>
+                    <p className="text-[11px] text-muted-foreground">JPEG, PNG o WebP · máx. 2 MB</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FieldWrap error={altaErrors?.nombres}>
-                  <LabelReq htmlFor="alta-nombres">Nombres</LabelReq>
-                  <Input
-                    id="alta-nombres"
-                    value={altaForm.nombres ?? ""}
-                    onChange={(e) => handleAltaChange("nombres", e.target.value)}
-                    className={`bg-background ${altaErrors?.nombres ? "border-destructive" : ""}`}
-                    placeholder="Ej. Juan Carlos"
-                  />
-                </FieldWrap>
-                <FieldWrap error={altaErrors?.apellidoPaterno}>
-                  <LabelReq htmlFor="alta-apellido-paterno">Apellido paterno</LabelReq>
-                  <Input
-                    id="alta-apellido-paterno"
-                    value={altaForm.apellidoPaterno ?? ""}
-                    onChange={(e) => handleAltaChange("apellidoPaterno", e.target.value)}
-                    className={`bg-background ${altaErrors?.apellidoPaterno ? "border-destructive" : ""}`}
-                    placeholder="Ej. García"
-                  />
-                </FieldWrap>
-                <FieldWrap error={altaErrors?.apellidoMaterno}>
-                  <LabelReq htmlFor="alta-apellido-materno">Apellido materno</LabelReq>
-                  <Input
-                    id="alta-apellido-materno"
-                    value={altaForm.apellidoMaterno ?? ""}
-                    onChange={(e) => handleAltaChange("apellidoMaterno", e.target.value)}
-                    className={`bg-background ${altaErrors?.apellidoMaterno ? "border-destructive" : ""}`}
-                    placeholder="Ej. López"
-                  />
-                </FieldWrap>
-                <FieldWrap error={altaErrors?.curp}>
-                  <LabelReq htmlFor="alta-curp">CURP</LabelReq>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      id="alta-curp"
-                      value={altaForm.curp ?? ""}
-                      onChange={(e) => handleAltaChange("curp", e.target.value.toUpperCase())}
-                      className={`pl-9 bg-background ${altaErrors?.curp ? "border-destructive" : ""}`}
-                      maxLength={18}
-                      placeholder="18 caracteres"
-                    />
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <FieldWrap error={altaErrors?.nombres}>
+                    <LabelReq htmlFor="alta-nombres">Nombres</LabelReq>
+                    <Input id="alta-nombres" value={altaForm.nombres ?? ""} onChange={(e) => handleAltaChange("nombres", e.target.value)}
+                      className={`h-10 text-sm ${altaErrors?.nombres ? "border-destructive" : ""}`} placeholder="Ej. Juan Carlos" />
+                  </FieldWrap>
+                  <FieldWrap error={altaErrors?.apellidoPaterno}>
+                    <LabelReq htmlFor="alta-ap">Apellido paterno</LabelReq>
+                    <Input id="alta-ap" value={altaForm.apellidoPaterno ?? ""} onChange={(e) => handleAltaChange("apellidoPaterno", e.target.value)}
+                      className={`h-10 text-sm ${altaErrors?.apellidoPaterno ? "border-destructive" : ""}`} placeholder="Ej. García" />
+                  </FieldWrap>
+                  <FieldWrap error={altaErrors?.apellidoMaterno}>
+                    <LabelReq htmlFor="alta-am">Apellido materno</LabelReq>
+                    <Input id="alta-am" value={altaForm.apellidoMaterno ?? ""} onChange={(e) => handleAltaChange("apellidoMaterno", e.target.value)}
+                      className={`h-10 text-sm ${altaErrors?.apellidoMaterno ? "border-destructive" : ""}`} placeholder="Ej. López" />
+                  </FieldWrap>
+                  <FieldWrap error={altaErrors?.curp}>
+                    <LabelReq htmlFor="alta-curp">CURP</LabelReq>
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                      <Input id="alta-curp" value={altaForm.curp ?? ""} onChange={(e) => handleAltaChange("curp", e.target.value.toUpperCase())}
+                        className={`h-10 pl-9 font-mono text-sm ${altaErrors?.curp ? "border-destructive" : ""}`} maxLength={18} placeholder="18 caracteres" />
+                    </div>
+                  </FieldWrap>
+                  <FieldWrap error={altaErrors?.fechaNacimiento}>
+                    <LabelReq htmlFor="alta-fn">Fecha de nacimiento</LabelReq>
+                    <Input id="alta-fn" type="date" value={altaForm.fechaNacimiento ?? ""} onChange={(e) => handleAltaChange("fechaNacimiento", e.target.value)}
+                      className={`h-10 text-sm ${altaErrors?.fechaNacimiento ? "border-destructive" : ""}`} />
+                  </FieldWrap>
+                  <div className="space-y-2">
+                    <Label htmlFor="alta-genero">Género</Label>
+                    <Select value={altaForm.genero ?? ""} onValueChange={(v) => handleAltaChange("genero", v)}>
+                      <SelectTrigger id="alta-genero" className="h-10 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="M">Masculino</SelectItem>
+                        <SelectItem value="F">Femenino</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </FieldWrap>
-                <FieldWrap error={altaErrors?.fechaNacimiento}>
-                  <LabelReq htmlFor="alta-fecha-nacimiento">Fecha de nacimiento</LabelReq>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="alta-fecha-nacimiento"
-                      type="date"
-                      value={altaForm.fechaNacimiento ?? ""}
-                      onChange={(e) => handleAltaChange("fechaNacimiento", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.fechaNacimiento ? "border-destructive" : ""}`}
-                    />
-                  </div>
-                </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label htmlFor="alta-genero">Género</Label>
-                  <Select value={altaForm.genero ?? ""} onValueChange={(v) => handleAltaChange("genero", v)}>
-                    <SelectTrigger id="alta-genero" className="bg-background">
-                      <SelectValue placeholder="Selecciona una opción" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="F">Femenino</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FieldWrap error={altaErrors?.tipoSangre}>
+                    <Label htmlFor="alta-sangre">Tipo de sangre</Label>
+                    <Select value={altaForm.tipoSangre ? altaForm.tipoSangre : "__none__"} onValueChange={(v) => handleAltaChange("tipoSangre", v === "__none__" ? "" : v)}>
+                      <SelectTrigger id="alta-sangre" className={cn("h-10 text-sm", altaErrors?.tipoSangre && "border-destructive")}>
+                        <SelectValue placeholder="Sin especificar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Sin especificar</SelectItem>
+                        {TIPOS_SANGRE_OPCIONES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FieldWrap>
                 </div>
-                <FieldWrap error={altaErrors?.tipoSangre}>
-                  <Label htmlFor="alta-tipo-sangre">Tipo de sangre</Label>
-                  <Select
-                    value={altaForm.tipoSangre ? altaForm.tipoSangre : "__none__"}
-                    onValueChange={(v) => handleAltaChange("tipoSangre", v === "__none__" ? "" : v)}
-                  >
-                    <SelectTrigger
-                      id="alta-tipo-sangre"
-                      className={cn(
-                        "bg-background",
-                        altaErrors?.tipoSangre && "border-destructive",
-                        !altaForm.tipoSangre && "text-muted-foreground"
-                      )}
-                    >
-                      <SelectValue placeholder="Sin especificar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__" className="text-muted-foreground">Sin especificar</SelectItem>
-                      {TIPOS_SANGRE_OPCIONES.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldWrap>
               </div>
-            </SectionCard>
+            </div>
 
-            <SectionCard title="Dirección" icon={MapPin}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
+            {/* ── Dirección ── */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/40 bg-muted/20 px-6 py-3">
+                <MapPin className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Dirección</span>
+              </div>
+              <div className="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="alta-calle">Calle y número</Label>
-                  <Input
-                    id="alta-calle"
-                    value={altaForm.calle ?? ""}
-                    onChange={(e) => handleAltaChange("calle", e.target.value)}
-                    className="bg-background"
-                    placeholder="Calle, número exterior e interior"
-                    autoComplete="street-address"
-                  />
+                  <Input id="alta-calle" value={altaForm.calle ?? ""} onChange={(e) => handleAltaChange("calle", e.target.value)}
+                    className="h-10 text-sm" placeholder="Calle, número exterior e interior" autoComplete="street-address" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="alta-colonia">Colonia</Label>
-                  <Input
-                    id="alta-colonia"
-                    value={altaForm.colonia ?? ""}
-                    onChange={(e) => handleAltaChange("colonia", e.target.value)}
-                    className="bg-background"
-                    placeholder="Colonia o fraccionamiento"
-                  />
+                  <Input id="alta-colonia" value={altaForm.colonia ?? ""} onChange={(e) => handleAltaChange("colonia", e.target.value)}
+                    className="h-10 text-sm" placeholder="Colonia o fraccionamiento" />
                 </div>
                 <FieldWrap error={altaErrors?.cp}>
                   <Label htmlFor="alta-cp">Código postal</Label>
-                  <Input
-                    id="alta-cp"
-                    value={altaForm.cp ?? ""}
-                    onChange={(e) => handleAltaChange("cp", e.target.value)}
-                    maxLength={8}
-                    className={`bg-background ${altaErrors?.cp ? "border-destructive" : ""}`}
-                    placeholder="5 dígitos"
-                    inputMode="numeric"
-                  />
+                  <Input id="alta-cp" value={altaForm.cp ?? ""} onChange={(e) => handleAltaChange("cp", e.target.value)}
+                    maxLength={8} className={`h-10 text-sm ${altaErrors?.cp ? "border-destructive" : ""}`} placeholder="5 dígitos" inputMode="numeric" />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.ciudad}>
                   <LabelReq htmlFor="alta-ciudad">Ciudad</LabelReq>
-                  <Input
-                    id="alta-ciudad"
-                    value={altaForm.ciudad ?? ""}
-                    onChange={(e) => handleAltaChange("ciudad", e.target.value)}
-                    className={`bg-background ${altaErrors?.ciudad ? "border-destructive" : ""}`}
-                    placeholder="Ciudad"
-                    autoComplete="address-level2"
-                  />
+                  <Input id="alta-ciudad" value={altaForm.ciudad ?? ""} onChange={(e) => handleAltaChange("ciudad", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.ciudad ? "border-destructive" : ""}`} placeholder="Ciudad" autoComplete="address-level2" />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.estado}>
                   <LabelReq htmlFor="alta-estado">Estado</LabelReq>
-                  <Input
-                    id="alta-estado"
-                    value={altaForm.estado ?? ""}
-                    onChange={(e) => handleAltaChange("estado", e.target.value)}
-                    className={`bg-background ${altaErrors?.estado ? "border-destructive" : ""}`}
-                    placeholder="Estado"
-                    autoComplete="address-level1"
-                  />
+                  <Input id="alta-estado" value={altaForm.estado ?? ""} onChange={(e) => handleAltaChange("estado", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.estado ? "border-destructive" : ""}`} placeholder="Estado" autoComplete="address-level1" />
                 </FieldWrap>
               </div>
-            </SectionCard>
+            </div>
 
-            <SectionCard title="Contacto" icon={Phone}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* ── Contacto ── */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/40 bg-muted/20 px-6 py-3">
+                <Phone className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Contacto</span>
+              </div>
+              <div className="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
                 <FieldWrap error={altaErrors?.telefonoCasa}>
                   <Label htmlFor="alta-tel-casa">Teléfono casa</Label>
-                  <IconInput icon={Phone}>
-                    <Input
-                      id="alta-tel-casa"
-                      value={altaForm.telefonoCasa ?? ""}
-                      onChange={(e) => handleAltaChange("telefonoCasa", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.telefonoCasa ? "border-destructive" : ""}`}
-                      placeholder="10 dígitos (opcional)"
-                      inputMode="tel"
-                      maxLength={16}
-                      autoComplete="tel"
-                    />
-                  </IconInput>
+                  <Input id="alta-tel-casa" value={altaForm.telefonoCasa ?? ""} onChange={(e) => handleAltaChange("telefonoCasa", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.telefonoCasa ? "border-destructive" : ""}`} placeholder="10 dígitos (opcional)" inputMode="tel" maxLength={16} />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.telefonoCelular}>
-                  <LabelReq htmlFor="alta-tel-celular">Teléfono celular</LabelReq>
-                  <IconInput icon={Phone}>
-                    <Input
-                      id="alta-tel-celular"
-                      value={altaForm.telefonoCelular ?? ""}
-                      onChange={(e) => handleAltaChange("telefonoCelular", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.telefonoCelular ? "border-destructive" : ""}`}
-                      placeholder="10 dígitos"
-                      inputMode="tel"
-                      maxLength={16}
-                      autoComplete="tel"
-                    />
-                  </IconInput>
+                  <LabelReq htmlFor="alta-tel-cel">Teléfono celular</LabelReq>
+                  <Input id="alta-tel-cel" value={altaForm.telefonoCelular ?? ""} onChange={(e) => handleAltaChange("telefonoCelular", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.telefonoCelular ? "border-destructive" : ""}`} placeholder="10 dígitos" inputMode="tel" maxLength={16} />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.correoElectronico} className="sm:col-span-2">
                   <LabelReq htmlFor="alta-correo">Correo electrónico</LabelReq>
-                  <IconInput icon={Mail}>
-                    <Input
-                      id="alta-correo"
-                      type="email"
-                      value={altaForm.correoElectronico ?? ""}
-                      onChange={(e) => handleAltaChange("correoElectronico", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.correoElectronico ? "border-destructive" : ""}`}
-                      placeholder="nombre@correo.com"
-                      autoComplete="email"
-                    />
-                  </IconInput>
+                  <Input id="alta-correo" type="email" value={altaForm.correoElectronico ?? ""} onChange={(e) => handleAltaChange("correoElectronico", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.correoElectronico ? "border-destructive" : ""}`} placeholder="nombre@correo.com" autoComplete="email" />
                 </FieldWrap>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Contacto de Emergencia" icon={HeartPulse}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <FieldWrap error={altaErrors?.contactoEmergencia}>
-                  <Label htmlFor="alta-contacto-emergencia">Nombre</Label>
-                  <IconInput icon={User}>
-                    <Input
-                      id="alta-contacto-emergencia"
-                      value={altaForm.contactoEmergencia ?? ""}
-                      onChange={(e) => handleAltaChange("contactoEmergencia", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.contactoEmergencia ? "border-destructive" : ""}`}
-                      placeholder="Nombre completo del contacto"
-                    />
-                  </IconInput>
+                  <Label htmlFor="alta-cont-emerg">Contacto emergencia</Label>
+                  <Input id="alta-cont-emerg" value={altaForm.contactoEmergencia ?? ""} onChange={(e) => handleAltaChange("contactoEmergencia", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.contactoEmergencia ? "border-destructive" : ""}`} placeholder="Nombre completo" />
                 </FieldWrap>
                 <FieldWrap error={altaErrors?.telefonoEmergencia}>
-                  <Label htmlFor="alta-tel-emergencia">Teléfono</Label>
-                  <IconInput icon={Phone}>
-                    <Input
-                      id="alta-tel-emergencia"
-                      value={altaForm.telefonoEmergencia ?? ""}
-                      onChange={(e) => handleAltaChange("telefonoEmergencia", e.target.value)}
-                      className={`pl-9 bg-background ${altaErrors?.telefonoEmergencia ? "border-destructive" : ""}`}
-                      placeholder="10 dígitos (opcional)"
-                      inputMode="tel"
-                      maxLength={16}
-                      autoComplete="tel"
-                    />
-                  </IconInput>
+                  <Label htmlFor="alta-tel-emerg">Tel. emergencia</Label>
+                  <Input id="alta-tel-emerg" value={altaForm.telefonoEmergencia ?? ""} onChange={(e) => handleAltaChange("telefonoEmergencia", e.target.value)}
+                    className={`h-10 text-sm ${altaErrors?.telefonoEmergencia ? "border-destructive" : ""}`} placeholder="10 dígitos" inputMode="tel" maxLength={16} />
                 </FieldWrap>
               </div>
-            </SectionCard>
+            </div>
 
-            <SectionCard title="Médico / Diagnóstico" icon={Stethoscope}>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-1.5">
+            {/* ── Clínico ── */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/40 bg-muted/20 px-6 py-3">
+                <Stethoscope className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Clínico</span>
+              </div>
+              <div className="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
+                <div className="space-y-2">
                   <Label htmlFor="alta-tipo-eb">Tipo de espina bífida</Label>
                   <Select value={altaForm.tipo ?? ""} onValueChange={(v) => handleAltaChange("tipo", v)}>
-                    <SelectTrigger id="alta-tipo-eb" className="bg-background">
-                      <SelectValue placeholder="Selecciona el tipo" />
-                    </SelectTrigger>
+                    <SelectTrigger id="alta-tipo-eb" className="h-10 text-sm"><SelectValue placeholder="Selecciona el tipo" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Mielomeningocele">Mielomeningocele</SelectItem>
                       <SelectItem value="Meningocele">Meningocele</SelectItem>
@@ -917,45 +816,42 @@ export function BeneficiariosSection({
                 <FieldWrap error={altaErrors?.usaValvula}>
                   <LabelReq htmlFor="alta-valvula">¿Usa válvula?</LabelReq>
                   <Select value={altaForm.usaValvula === undefined ? "" : altaForm.usaValvula ? "si" : "no"} onValueChange={(v) => handleAltaChange("usaValvula", v === "si")}>
-                    <SelectTrigger id="alta-valvula" className={`bg-background ${altaErrors?.usaValvula ? "border-destructive" : ""}`}>
-                      <SelectValue placeholder="Selecciona una opción" />
-                    </SelectTrigger>
+                    <SelectTrigger id="alta-valvula" className={`h-10 text-sm ${altaErrors?.usaValvula ? "border-destructive" : ""}`}><SelectValue placeholder="Selecciona" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="si">Sí</SelectItem>
                       <SelectItem value="no">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </FieldWrap>
-                <div className="space-y-1.5">
-                  <Label htmlFor="alta-hosp-nac">Hospital de nacimiento</Label>
-                  <Input
-                    id="alta-hosp-nac"
-                    value={altaForm.hospitalNacimiento ?? ""}
-                    onChange={(e) => handleAltaChange("hospitalNacimiento", e.target.value)}
-                    className="bg-background"
-                    placeholder="Nombre del hospital"
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="alta-hosp">Hospital de nacimiento</Label>
+                  <Input id="alta-hosp" value={altaForm.hospitalNacimiento ?? ""} onChange={(e) => handleAltaChange("hospitalNacimiento", e.target.value)}
+                    className="h-10 text-sm" placeholder="Nombre del hospital" />
                 </div>
                 <FieldWrap error={altaErrors?.notas} className="sm:col-span-2">
                   <Label htmlFor="alta-notas">Notas</Label>
-                  <IconInput icon={FileText}>
-                    <Input
-                      id="alta-notas"
-                      value={altaForm.notas ?? ""}
-                      onChange={(e) => handleAltaChange("notas", e.target.value)}
-                      placeholder="Observaciones adicionales (opcional)"
-                      className={`pl-9 bg-background ${altaErrors?.notas ? "border-destructive" : ""}`}
-                    />
-                  </IconInput>
+                  <Input id="alta-notas" value={altaForm.notas ?? ""} onChange={(e) => handleAltaChange("notas", e.target.value)}
+                    placeholder="Observaciones adicionales (opcional)"
+                    className={`h-10 text-sm ${altaErrors?.notas ? "border-destructive" : ""}`} />
                 </FieldWrap>
               </div>
-            </SectionCard>
+            </div>
+
           </div>
-          <div className="shrink-0 bg-background border-t border-border/40 px-6 py-4 flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowAltaDialog(false)} disabled={isSaving}>Cancelar</Button>
-            <Button onClick={handleAltaSubmit} disabled={isSaving} className="bg-[#005bb5] hover:bg-[#004a94] text-white">
-              {isSaving ? "Guardando..." : "Registrar"}
-            </Button>
+
+          {/* ── Footer ── */}
+          <div className="shrink-0 border-t border-border/40 bg-card px-6 py-5 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowAltaDialog(false)} disabled={isSaving}
+                className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleAltaSubmit} disabled={isSaving}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#0f4c81" }}>
+                {isSaving ? <><Loader2 className="size-3.5 animate-spin" />Guardando...</> : "Registrar beneficiario"}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

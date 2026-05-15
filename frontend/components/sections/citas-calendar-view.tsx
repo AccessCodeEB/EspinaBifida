@@ -13,10 +13,12 @@ const DIAS_S=["L","M","X","J","V","S","D"]
 const DIAS_L=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-const BL:Record<string,string>={Confirmada:"border-l-emerald-400",Pendiente:"border-l-amber-400",Completada:"border-l-sky-400",Cancelada:"border-l-red-400"}
-const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-amber-500/10",Completada:"bg-sky-500/10",Cancelada:"bg-red-500/10"}
-const DC:Record<string,string>={Confirmada:"bg-emerald-400",Pendiente:"bg-amber-400",Completada:"bg-sky-400",Cancelada:"bg-red-400"}
-const TC:Record<string,string>={Confirmada:"text-emerald-300",Pendiente:"text-amber-300",Completada:"text-sky-300",Cancelada:"text-red-300"}
+const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-blue-500",Completada:"border-l-slate-400",Cancelada:"border-l-red-500"}
+const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-blue-500/10",Completada:"bg-slate-500/10",Cancelada:"bg-red-500/10"}
+const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-400",Cancelada:"bg-red-500"}
+const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-blue-600 dark:text-blue-400",Completada:"text-slate-500",Cancelada:"text-red-600 dark:text-red-400"}
+const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-500",Cancelada:"bg-red-500"}
+const POPUP_LABEL:Record<string,string>={Confirmada:"Confirmada",Pendiente:"Pendiente",Completada:"Completada",Cancelada:"Cancelada"}
 
 function sameDay(a:Date,b:Date){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
 function getMon(d:Date):Date{const c=new Date(d);c.setHours(0,0,0,0);const day=c.getDay();c.setDate(c.getDate()-(day===0?6:day-1));return c}
@@ -100,16 +102,15 @@ function NowLine(){
 }
 
 // ── Appointment block ────────────────────────────────────────────────────────
-function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Cita,r:DOMRect)=>void}){
-  const ref=useRef<HTMLDivElement>(null)
+function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Cita)=>void}){
   const border=BL[cita.estatus]??"border-l-slate-500"
   const bg=BG[cita.estatus]??"bg-slate-500/10"
   const tc=TC[cita.estatus]??"text-slate-300"
   const dot=DC[cita.estatus]??"bg-slate-400"
   return(
-    <div ref={ref} className={`w-full h-full rounded-r-md border-l-4 border border-border/20 ${border} ${bg}
+    <div className={`w-full h-full rounded-r-md border-l-4 border border-border/20 ${border} ${bg}
       px-1.5 py-1 overflow-hidden cursor-pointer hover:brightness-125 transition-all select-none`}
-      onClick={()=>{if(ref.current)onSelect(cita,ref.current.getBoundingClientRect())}}>
+      onClick={(e)=>{e.stopPropagation();onSelect(cita)}}>
       <div className={`flex items-center gap-1 text-[11px] font-semibold ${tc}`}>
         <span className={`size-1.5 rounded-full shrink-0 ${dot}`}/><span className="truncate">{cita.hora}</span>
       </div>
@@ -119,42 +120,112 @@ function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Ci
 }
 
 // ── Anchored Popover ─────────────────────────────────────────────────────────
-function CitaPopover({cita,anchor,onClose,onAction,updatingId}:{
-  cita:Cita;anchor:DOMRect;onClose:()=>void
+function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
+  cita:Cita;blockRect:DOMRect;onClose:()=>void
   onAction:(id:number,e:Cita["estatus"])=>void;updatingId:number|null
 }){
-  const dot=DC[cita.estatus]??"bg-slate-400"
-  const tc=TC[cita.estatus]??"text-slate-300"
-  const popW=280
-  // Position to the right of the card; if off-screen, flip left
-  const left=anchor.right+8+popW>window.innerWidth?anchor.left-popW-8:anchor.right+8
-  const top=Math.min(anchor.top,window.innerHeight-320)
+  const accentBg = POPUP_BG[cita.estatus] ?? "bg-slate-500"
+  const popW = 280
+  const popH = 230
+  const gap = 10
+  // Aparece a la derecha del bloque; si no cabe, a la izquierda
+  const left = blockRect.right + gap + popW > window.innerWidth
+    ? Math.max(8, blockRect.left - popW - gap)
+    : blockRect.right + gap
+  // Verticalmente centrado con el bloque; si no cabe, se ajusta
+  const rawTop = blockRect.top + blockRect.height / 2 - popH / 2
+  const top = Math.min(Math.max(8, rawTop), window.innerHeight - popH - 8)
+
+  const isUpdating = updatingId === cita.id
+
   return(
     <>
       <div className="fixed inset-0 z-40" onClick={onClose}/>
-      <div className="fixed z-50 rounded-2xl border border-border/50 bg-[#0f172a]/98 backdrop-blur-xl shadow-2xl p-4 space-y-3"
-        style={{left:`${left}px`,top:`${top}px`,width:`${popW}px`,boxShadow:"0 16px 48px rgba(0,0,0,0.7)"}}>
-        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground" onClick={onClose}><X className="size-4"/></button>
-        <div className="flex items-center gap-2">
-          <span className={`size-2.5 rounded-full ${dot}`}/>
-          <span className={`font-bold ${tc}`}>{cita.hora}</span>
-          <span className="ml-auto text-[10px] border border-border/50 rounded-full px-2 py-px text-muted-foreground">{cita.estatus}</span>
+      <div
+        className="fixed z-50 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
+        style={{left:`${left}px`,top:`${top}px`,width:`${popW}px`}}
+      >
+        {/* Header coloreado según estatus */}
+        <div className={`${accentBg} px-4 py-3 flex items-center justify-between`}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white/90 uppercase tracking-widest">
+              {POPUP_LABEL[cita.estatus] ?? cita.estatus}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white">{cita.hora}</span>
+            <button onClick={onClose} className="rounded-full p-0.5 text-white/70 hover:text-white hover:bg-white/20 transition-colors">
+              <X className="size-3.5"/>
+            </button>
+          </div>
         </div>
-        <div>
-          <p className="font-bold text-foreground">{cita.beneficiario}</p>
-          {cita.especialista&&<p className="text-xs text-muted-foreground mt-0.5">{cita.especialista}</p>}
+
+        {/* Cuerpo */}
+        <div className="px-4 py-3 space-y-2.5">
+          <div>
+            <p className="text-sm font-semibold text-foreground leading-tight">{cita.beneficiario}</p>
+            {cita.especialista && (
+              <p className="text-[11px] text-muted-foreground mt-0.5">{cita.especialista}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">{cita.fecha}</p>
+          </div>
+
+          {cita.notas && (
+            <p className="text-[11px] italic text-muted-foreground border-t border-border/40 pt-2">
+              "{cita.notas}"
+            </p>
+          )}
+
+          {/* Acciones */}
+          <div className="flex gap-2 pt-1 border-t border-border/40">
+            {cita.estatus === "Pendiente" && <>
+              <button
+                disabled={isUpdating}
+                onClick={() => onAction(cita.id, "Confirmada")}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Check className="size-3.5"/>Confirmar
+              </button>
+              <button
+                disabled={isUpdating}
+                onClick={() => onAction(cita.id, "Cancelada")}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <X className="size-3.5"/>Cancelar
+              </button>
+            </>}
+            {cita.estatus === "Confirmada" && <>
+              <button
+                disabled={isUpdating}
+                onClick={() => onAction(cita.id, "Completada")}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <Check className="size-3.5"/>Completar
+              </button>
+              <button
+                disabled={isUpdating}
+                onClick={() => onAction(cita.id, "Cancelada")}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+              >
+                <X className="size-3.5"/>Cancelar
+              </button>
+            </>}
+            {(cita.estatus === "Completada" || cita.estatus === "Cancelada") && (
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-border/60 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+              >
+                Cerrar
+              </button>
+            )}
+          </div>
         </div>
-        {cita.notas&&<p className="text-xs italic text-muted-foreground/60 border-t border-border/30 pt-2">"{cita.notas}"</p>}
-        <div className="flex gap-2">
-          {cita.estatus==="Pendiente"&&<>
-            <Button size="sm" className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700" disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Confirmada")}><Check className="size-3 mr-1"/>Confirmar</Button>
-            <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs" disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}><X className="size-3 mr-1"/>Cancelar</Button>
-          </>}
-          {cita.estatus==="Confirmada"&&<>
-            <Button size="sm" className="flex-1 h-8 text-xs bg-sky-600 hover:bg-sky-700" disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Completada")}>Completar</Button>
-            <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs" disabled={updatingId===cita.id} onClick={()=>onAction(cita.id,"Cancelada")}><X className="size-3 mr-1"/>Cancelar</Button>
-          </>}
-        </div>
+
+        {isUpdating && (
+          <div className="absolute inset-0 flex items-center justify-center bg-card/70 backdrop-blur-sm rounded-2xl">
+            <span className="text-xs text-muted-foreground">Actualizando...</span>
+          </div>
+        )}
       </div>
     </>
   )
@@ -163,7 +234,6 @@ function CitaPopover({cita,anchor,onClose,onAction,updatingId}:{
 // ── Action Center ────────────────────────────────────────────────────────────
 function ActionCenter({citas,onNavigate}:{citas:Cita[];onNavigate:(c:Cita)=>void}){
   const now=new Date();now.setHours(0,0,0,0)
-  // Pendientes sin confirmar del pasado
   const alerts=citas.filter(c=>{
     if(c.estatus==="Cancelada"||c.estatus==="Completada")return false
     const d=new Date(c.fecha+"T12:00:00");return d<now
@@ -181,7 +251,6 @@ function ActionCenter({citas,onNavigate}:{citas:Cita[];onNavigate:(c:Cita)=>void
       </p>
       <div className="space-y-1.5">
         {alerts.map(c=>(
-          // FIX #5 nav: click navigates to that cita's week and opens its popover
           <button key={c.id} onClick={()=>onNavigate(c)}
             className="w-full text-left rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 px-3 py-2.5 transition-colors group">
             <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
@@ -192,6 +261,86 @@ function ActionCenter({citas,onNavigate}:{citas:Cita[];onNavigate:(c:Cita)=>void
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+function CitaDetailPanel({selected,onClose,onAction,updatingId}:{
+  selected:{cita:Cita}|null
+  onClose:()=>void
+  onAction:(id:number,e:Cita["estatus"])=>void
+  updatingId:number|null
+}){
+  if(!selected){
+    return(
+      <div className="rounded-2xl border border-border/40 bg-card/60 flex flex-col items-center justify-center gap-2 p-6 text-center" style={{minHeight:"160px"}}>
+        <CalendarDays className="size-8 text-muted-foreground/30"/>
+        <p className="text-xs text-muted-foreground/50">Selecciona una cita<br/>para ver los detalles</p>
+      </div>
+    )
+  }
+  const{cita}=selected
+  const accentBg=POPUP_BG[cita.estatus]??"bg-slate-500"
+  const isUpdating=updatingId===cita.id
+  return(
+    <div className="rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm relative">
+      {/* Header */}
+      <div className={`${accentBg} px-4 py-3 flex items-center justify-between`}>
+        <span className="text-xs font-bold text-white/90 uppercase tracking-widest">
+          {POPUP_LABEL[cita.estatus]??cita.estatus}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white">{cita.hora}</span>
+          <button onClick={onClose} className="rounded-full p-0.5 text-white/70 hover:text-white hover:bg-white/20 transition-colors">
+            <X className="size-3.5"/>
+          </button>
+        </div>
+      </div>
+      {/* Body */}
+      <div className="px-4 py-3 space-y-2.5">
+        <div>
+          <p className="text-sm font-semibold text-foreground leading-tight">{cita.beneficiario}</p>
+          {cita.especialista&&<p className="text-[11px] text-muted-foreground mt-0.5">{cita.especialista}</p>}
+          <p className="text-[10px] text-muted-foreground mt-1">{cita.fecha}</p>
+        </div>
+        {cita.notas&&(
+          <p className="text-[11px] italic text-muted-foreground border-t border-border/40 pt-2">"{cita.notas}"</p>
+        )}
+        <div className="flex gap-2 pt-1 border-t border-border/40">
+          {cita.estatus==="Pendiente"&&<>
+            <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Confirmada")}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+              <Check className="size-3.5"/>Confirmar
+            </button>
+            <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Cancelada")}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+              <X className="size-3.5"/>Cancelar
+            </button>
+          </>}
+          {cita.estatus==="Confirmada"&&<>
+            <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Completada")}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+              <Check className="size-3.5"/>Completar
+            </button>
+            <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Cancelada")}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50">
+              <X className="size-3.5"/>Cancelar
+            </button>
+          </>}
+          {(cita.estatus==="Completada"||cita.estatus==="Cancelada")&&(
+            <button onClick={onClose}
+              className="flex-1 rounded-lg border border-border/60 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted">
+              Cerrar
+            </button>
+          )}
+        </div>
+      </div>
+      {isUpdating&&(
+        <div className="absolute inset-0 flex items-center justify-center bg-card/70 backdrop-blur-sm rounded-2xl">
+          <span className="text-xs text-muted-foreground">Actualizando...</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -218,7 +367,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
   const[weekAnchor,setWeekAnchor]=useState<Date>(()=>getMon(new Date()))
   const[calYear,setCalYear]=useState(()=>new Date().getFullYear())
   const[calMonth,setCalMonth]=useState(()=>new Date().getMonth())
-  const[selected,setSelected]=useState<{cita:Cita;rect:DOMRect}|null>(null)
+  const[selected,setSelected]=useState<{cita:Cita}|null>(null)
   const[updatingId,setUpdatingId]=useState<number|null>(null)
 
   const weekDates=useMemo(()=>getWeek(weekAnchor),[weekAnchor])
@@ -314,7 +463,9 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
             })}
           </div>
         </div>
-        {/* Action Center with navigation */}
+        {/* Detalle de cita seleccionada */}
+        <CitaDetailPanel selected={selected} onClose={()=>setSelected(null)} onAction={doUpdate} updatingId={updatingId}/>
+        {/* Requieren atención */}
         <ActionCenter citas={citas} onNavigate={navigateToCita}/>
       </div>
 
@@ -373,7 +524,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
                   {isT&&isThisWeek&&<NowLine/>}
                   {layout.map(({cita,top,height,left,widthPct})=>(
                     <div key={cita.id} className="absolute px-0.5" style={{top:`${top}px`,height:`${height}px`,left:`${left}%`,width:`${widthPct}%`}}>
-                      <AppBlock cita={cita} height={height} onSelect={(c,r)=>setSelected({cita:c,rect:r})}/>
+                      <AppBlock cita={cita} height={height} onSelect={(c)=>setSelected({cita:c})}/>
                     </div>
                   ))}
                 </div>
@@ -383,11 +534,6 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
         </div>
       </div>
 
-      {/* Anchored Popover */}
-      {selected&&(
-        <CitaPopover cita={selected.cita} anchor={selected.rect} updatingId={updatingId}
-          onClose={()=>setSelected(null)} onAction={doUpdate}/>
-      )}
     </div>
   )
 }

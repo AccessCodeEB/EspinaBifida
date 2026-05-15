@@ -88,24 +88,6 @@ export function CitasListView({ citas, beneficiarios }: Props) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total",       val: citas.length,                                           color: "#0f4c81" },
-          { label: "Pendientes",  val: citas.filter(c => c.estatus === "Pendiente").length,   color: "#f59e0b" },
-          { label: "Confirmadas", val: citas.filter(c => c.estatus === "Confirmada").length,  color: "#10b981" },
-          { label: "Completadas", val: citas.filter(c => c.estatus === "Completada").length,  color: "#3b82f6" },
-        ].map(({ label, val, color }) => (
-          <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
-            <div className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-              <p className="text-xl font-bold tabular-nums text-foreground">{val}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Tabla card */}
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
@@ -141,26 +123,33 @@ export function CitasListView({ citas, beneficiarios }: Props) {
 
         {/* Tabla */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[18%]" />
+              <col className="w-[24%]" />
+              <col className="w-[30%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
-                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-24">Folio</th>
-                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                <th className="py-2.5 pl-5 pr-2 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Folio</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("beneficiario")}>
                     <User className="size-3" />Paciente <SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("especialista")}>
                     Doctor <SortIndicator field="especialista" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("fecha")}>
                     <Calendar className="size-3" />Fecha <SortIndicator field="fecha" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="py-2.5 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                <th className="py-2.5 pl-2 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("estatus")}>
                     Estatus <SortIndicator field="estatus" current={sortField} dir={sortDir} />
                   </button>
@@ -180,17 +169,21 @@ export function CitasListView({ citas, beneficiarios }: Props) {
                   const diagnosis = benefMap.get(diagnosisKey)
                   return (
                     <tr key={cita.id} className="transition-colors hover:bg-muted/20">
-                      <td className="py-3 pl-5 font-mono text-[11px] text-foreground">{cita.folio}</td>
-                      <td className="py-3 min-w-0">
+                      <td className="py-3 pl-5 pr-2">
+                        <p className="truncate font-mono text-[10px] text-muted-foreground">{cita.folio || "—"}</p>
+                      </td>
+                      <td className="py-3 px-2 min-w-0">
                         <p className="truncate text-xs font-semibold text-foreground">{cita.beneficiario}</p>
                         {diagnosis && <p className="truncate text-[10px] text-muted-foreground">{diagnosis}</p>}
                       </td>
-                      <td className="hidden py-3 text-xs text-foreground md:table-cell">{cita.especialista || "—"}</td>
-                      <td className="py-3">
+                      <td className="py-3 px-2">
+                        <p className="truncate text-xs text-foreground">{cita.especialista || "—"}</p>
+                      </td>
+                      <td className="py-3 px-2">
                         <p className="text-xs text-foreground">{cita.fecha}</p>
                         <p className="text-[10px] text-muted-foreground">{cita.hora}</p>
                       </td>
-                      <td className="py-3 pr-5"><StatusPill status={cita.estatus} /></td>
+                      <td className="py-3 pl-2 pr-5"><StatusPill status={cita.estatus} /></td>
                     </tr>
                   )
                 })

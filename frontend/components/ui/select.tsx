@@ -7,11 +7,9 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function Select({
-  modal = false,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  /** `modal={false}` evita que un Select dentro de Dialog deje el foco/atrapamiento y bloquee otros botones (p. ej. Guardar). */
-  return <SelectPrimitive.Root data-slot="select" modal={modal} {...props} />
+  return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
 function SelectGroup({
