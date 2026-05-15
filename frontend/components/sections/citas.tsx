@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, CalendarDays, List, AlertCircle, ChevronDown } from "lucide-react"
+import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,8 @@ export function CitasSection() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [smartSuggestion, setSmartSuggestion] = useState<string | null>(null)
+  const [isFindingSlot, setIsFindingSlot] = useState(false)
 
   // Beneficiarios
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
@@ -106,9 +108,58 @@ export function CitasSection() {
   function openDialog() {
     setForm(EMPTY_FORM)
     setSaveError(null)
+    setSmartSuggestion(null)
     setBuscaBenef("")
     setShowBenefList(false)
     setShowDialog(true)
+  }
+
+  function handleSuggestSmartSlot() {
+    // Paso A: Validación
+    if (!form.curp || !form.especialista) {
+      toast.warning("Selecciona un especialista y un beneficiario primero para buscar disponibilidad.")
+      return
+    }
+
+    setIsFindingSlot(true)
+    setSmartSuggestion(null)
+    setSaveError(null)
+
+    // Paso B: Búsqueda iterativa
+    const startDate = form.fecha ? new Date(form.fecha + "T12:00:00") : new Date()
+    const SLOTS: string[] = []
+    for (let h = 8; h < 20; h++) {
+      SLOTS.push(`${String(h).padStart(2, "0")}:00`)
+      SLOTS.push(`${String(h).padStart(2, "0")}:30`)
+    }
+
+    let found = false
+    for (let dayOffset = 0; dayOffset < 7 && !found; dayOffset++) {
+      const d = new Date(startDate)
+      d.setDate(startDate.getDate() + dayOffset)
+      const fechaStr = d.toISOString().split("T")[0]
+
+      for (const hora of SLOTS) {
+        const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
+        if (!error) {
+          // Paso C: Hallazgo — aplicar al formulario
+          setForm(f => ({ ...f, fecha: fechaStr, hora }))
+          const label = dayOffset === 0 ? "hoy" : dayOffset === 1 ? "mañana" : `en ${dayOffset} días`
+          setSmartSuggestion(`✨ Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
+          toast.success("¡Horario ideal encontrado y aplicado!", { description: `${fechaStr} · ${hora}` })
+          found = true
+          break
+        }
+      }
+    }
+
+    // Paso D: Fallback si no encontró nada en 7 días
+    if (!found) {
+      toast.error("No se encontró disponibilidad en los próximos 7 días.")
+      setSmartSuggestion(null)
+    }
+
+    setIsFindingSlot(false)
   }
 
   async function handleGuardar() {
@@ -287,24 +338,57 @@ export function CitasSection() {
               </Select>
             </div>
 
-            {/* Fecha y Hora */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
-                <Input type="date" className="h-10 text-sm" value={form.fecha}
-                  onChange={e => { setForm(f => ({ ...f, fecha: e.target.value })); setSaveError(null) }} />
+            {/* Fecha y Hora + Smart Slot */}
+            <div className="space-y-2">
+              {/* Botón IA */}
+              <button
+                type="button"
+                onClick={handleSuggestSmartSlot}
+                disabled={isFindingSlot}
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold transition-all duration-300 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, rgba(15,76,129,0.5) 0%, rgba(13,148,136,0.3) 100%)", backdropFilter: "blur(8px)" }}
+              >
+                <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 to-teal-500/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                {isFindingSlot ? (
+                  <>
+                    <span className="size-3.5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+                    <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Buscando horario ideal...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-3.5 text-sky-400" />
+                    <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Sugerir mejor horario</span>
+                  </>
+                )}
+              </button>
+
+              {/* Inputs Fecha y Hora */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
+                  <Input type="date" className="h-10 text-sm" value={form.fecha}
+                    onChange={e => { setForm(f => ({ ...f, fecha: e.target.value })); setSaveError(null); setSmartSuggestion(null) }} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                    value={form.hora}
+                    onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
+                  >
+                    <option value="">Seleccionar</option>
+                    {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
-                <select
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-                  value={form.hora}
-                  onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null) }}
-                >
-                  <option value="">Seleccionar</option>
-                  {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+
+              {/* Resultado de la sugerencia IA */}
+              {smartSuggestion && (
+                <div className="flex items-center gap-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs font-medium text-teal-400">
+                  <Sparkles className="size-3.5 shrink-0" />
+                  {smartSuggestion}
+                </div>
+              )}
             </div>
 
             {/* Notas */}
