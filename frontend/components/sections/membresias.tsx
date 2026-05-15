@@ -75,6 +75,9 @@ function estatusBadge(estatus: "Activa" | "Inactiva" | "Cancelada") {
 
 // ─── Dialog de pago ───────────────────────────────────────────────────────────
 
+const CARD_TYPES = ["Visa", "Mastercard", "American Express", "Otra"] as const
+type CardType = typeof CARD_TYPES[number]
+
 function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   open: boolean; beneficiario: Beneficiario | null
   onClose: () => void; onSuccess: () => void
@@ -85,22 +88,66 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   const [observaciones, setObs]     = useState("")
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
+
+  // Transferencia
+  const [banco, setBanco]           = useState("")
+  const [comprobante, setComprobante] = useState("")
+
+  // Tarjeta
+  const [tipoTarjeta, setTipoTarjeta]   = useState<CardType>("Visa")
+  const [ultimos4, setUltimos4]         = useState("")
+  const [vencimiento, setVencimiento]   = useState("")
+  const [nombreTarjeta, setNombreTarjeta] = useState("")
+  const [autorizacion, setAutorizacion] = useState("")
+
   const montoTotal = meses * MONTO_PREDETERMINADO
 
   useEffect(() => {
-    if (open) { setMeses(1); setMetodo(""); setReferencia(""); setObs(""); setError(null) }
+    if (open) {
+      setMeses(1); setMetodo(""); setReferencia(""); setObs("")
+      setBanco(""); setComprobante("")
+      setTipoTarjeta("Visa"); setUltimos4(""); setVencimiento(""); setNombreTarjeta(""); setAutorizacion("")
+      setError(null)
+    }
   }, [open])
 
   const handleConfirm = async () => {
     if (!beneficiario) return
     if (!metodo) { setError("Selecciona un método de pago."); return }
+    if (metodo === "transferencia" && !comprobante.trim()) {
+      setError("Ingresa el número de comprobante de la transferencia.")
+      return
+    }
+
+    // Componer referencia y observaciones según método
+    let refFinal = referencia.trim() || undefined
+    let obsFinal = observaciones.trim() || undefined
+
+    if (metodo === "transferencia") {
+      refFinal = comprobante.trim()
+      const partes = [banco.trim() && `Banco: ${banco.trim()}`, observaciones.trim()].filter(Boolean)
+      obsFinal = partes.join(" | ") || undefined
+    }
+    if (metodo === "tarjeta") {
+      const digits = ultimos4.replace(/\s/g, "")
+      const masked = digits.length >= 4 ? `****${digits.slice(-4)}` : digits
+      refFinal = `${tipoTarjeta} ${masked}`
+      const partes = [
+        nombreTarjeta.trim() && `Titular: ${nombreTarjeta.trim()}`,
+        vencimiento && `Venc: ${vencimiento}`,
+        autorizacion.trim() && `Auth: ${autorizacion.trim()}`,
+        observaciones.trim(),
+      ].filter(Boolean)
+      obsFinal = partes.join(" | ") || undefined
+    }
+
     setLoading(true); setError(null)
     try {
       await registrarPago({
         curp: beneficiario.curp ?? beneficiario.folio,
         meses, monto: montoTotal, metodo_pago: metodo,
-        referencia: referencia.trim() || undefined,
-        observaciones: observaciones.trim() || undefined,
+        referencia: refFinal,
+        observaciones: obsFinal,
       })
       toast.success("Pago registrado correctamente", {
         description: `${meses} ${meses === 1 ? "mes" : "meses"} · ${formatMonto(montoTotal)}`,
@@ -166,22 +213,185 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
             </Select>
           </div>
 
+          {/* ── Transferencia bancaria ── */}
           {metodo === "transferencia" && (
-            <div>
-              <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Referencia bancaria</Label>
-              <Input className="h-10 text-sm" placeholder="Número de referencia o folio" value={referencia} onChange={(e) => setReferencia(e.target.value)} />
-            </div>
-          )}
-          {metodo === "tarjeta" && (
-            <div>
-              <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Últimos 4 dígitos</Label>
-              <Input className="h-10 text-sm" placeholder="0000" maxLength={4} value={referencia} onChange={(e) => setReferencia(e.target.value.replace(/\D/g, ""))} />
+            <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-800 dark:bg-blue-950/20">
+              <div className="flex items-center gap-2 border-b border-blue-200/60 pb-3 dark:border-blue-800/60">
+                <Building2 className="size-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-bold text-blue-800 dark:text-blue-300">Datos de transferencia</span>
+              </div>
+              {/* Info cuenta destino */}
+              <div className="rounded-lg border border-blue-200 bg-white px-3 py-2.5 text-xs dark:border-blue-700 dark:bg-slate-900">
+                <p className="font-bold text-slate-500 dark:text-slate-400 mb-1">Cuenta destino</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Banco</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">Banorte</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">No. Cuenta</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">0001617086-5</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">CLABE</span>
+                  <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">072 580 00016170865 0</span>
+                </div>
+              </div>
+              {/* Campos */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400">
+                    No. Comprobante <span className="text-red-500">*</span>
+                  </label>
+                  <Input className="h-9 text-sm" placeholder="Folio o referencia" value={comprobante}
+                    onChange={(e) => setComprobante(e.target.value)} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400">
+                    Banco emisor
+                  </label>
+                  <Input className="h-9 text-sm" placeholder="Ej. BBVA, HSBC..." value={banco}
+                    onChange={(e) => setBanco(e.target.value)} />
+                </div>
+              </div>
             </div>
           )}
 
+          {/* ── Tarjeta ── */}
+          {metodo === "tarjeta" && (() => {
+            const brandColor: Record<CardType, string> = {
+              "Visa":             "#1A1FCE",
+              "Mastercard":       "#EB001B",
+              "American Express": "#015FD0",
+              "Otra":             "#475569",
+            }
+            const c = brandColor[tipoTarjeta]
+            const hex20 = `${c}33` // ~20% opacity para fondos y bordes
+            return (
+            <div className="space-y-3 rounded-xl border p-4" style={{ borderColor: `${c}55`, backgroundColor: `${c}08` }}>
+              <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: `${c}33` }}>
+                <CreditCard className="size-4" style={{ color: c }} />
+                <span className="text-xs font-bold" style={{ color: c }}>Datos de tarjeta</span>
+              </div>
+
+              {/* Vista previa tipo tarjeta física */}
+              <div className="relative overflow-hidden rounded-xl p-5 text-white transition-all duration-500 min-h-[160px] flex flex-col justify-between"
+                style={{ background: {
+                  "Visa":             "linear-gradient(135deg, #1A1FCE 0%, #2228e0 60%, #3b42f5 100%)",
+                  "Mastercard":       "linear-gradient(135deg, #EB001B 0%, #c5001a 40%, #F79E1B 100%)",
+                  "American Express": "linear-gradient(135deg, #015FD0 0%, #0270f5 60%, #1a84ff 100%)",
+                  "Otra":             "linear-gradient(135deg, #1e293b 0%, #334155 60%, #475569 100%)",
+                }[tipoTarjeta] }}>
+                <div className="absolute inset-0 opacity-10"
+                  style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+                <div className="relative">
+                  <div className="flex items-start justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
+                      {tipoTarjeta}
+                    </span>
+                    <CreditCard className="size-5 opacity-60" />
+                  </div>
+                  <p className="mt-3 font-mono text-base tracking-widest">
+                    {ultimos4 || "0000 0000 0000 0000"}
+                  </p>
+                  <div className="mt-2 flex items-end justify-between">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest opacity-60">Titular</p>
+                      <p className="text-xs font-semibold tracking-wide uppercase">{nombreTarjeta || "NOMBRE APELLIDO"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] uppercase tracking-widest opacity-60">Vencimiento</p>
+                      <p className="font-mono text-sm">{vencimiento || "MM/AA"}</p>
+                    </div>
+                    {autorizacion && (
+                      <div className="text-right">
+                        <p className="text-[9px] uppercase tracking-widest opacity-60">Auth</p>
+                        <p className="font-mono text-xs">{autorizacion}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Red de tarjeta */}
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest" style={{ color: c }}>
+                  Red de tarjeta
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {CARD_TYPES.map((t) => (
+                    <button key={t} type="button" onClick={() => setTipoTarjeta(t)}
+                      className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
+                      style={tipoTarjeta === t
+                        ? { borderColor: c, backgroundColor: c, color: "#fff" }
+                        : { borderColor: "#e2e8f0", backgroundColor: "#fff", color: "#0f172a" }
+                      }>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nombre en tarjeta */}
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest" style={{ color: c }}>
+                  Nombre en la tarjeta
+                </label>
+                <Input className="h-9 text-sm uppercase" placeholder="NOMBRE APELLIDO"
+                  value={nombreTarjeta}
+                  onChange={(e) => setNombreTarjeta(e.target.value.toUpperCase())} />
+              </div>
+
+              {/* Número */}
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest" style={{ color: c }}>
+                  Número de tarjeta <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  className="h-9 font-mono text-sm"
+                  placeholder="0000 0000 0000 0000"
+                  maxLength={19}
+                  value={ultimos4}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, 16)
+                    const formatted = digits.replace(/(.{4})/g, "$1 ").trim()
+                    setUltimos4(formatted)
+                  }}
+                />
+              </div>
+
+              {/* Vencimiento + Autorización */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest" style={{ color: c }}>
+                    Vencimiento <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    className="h-9 font-mono text-sm"
+                    placeholder="MM/AA"
+                    maxLength={5}
+                    value={vencimiento}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "").slice(0, 4)
+                      const formatted = raw.length > 2 ? `${raw.slice(0, 2)}/${raw.slice(2)}` : raw
+                      setVencimiento(formatted)
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest" style={{ color: c }}>
+                    Código de autorización
+                  </label>
+                  <Input className="h-9 text-sm" placeholder="Opcional" value={autorizacion}
+                    onChange={(e) => setAutorizacion(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )})()}
+
+          {/* Observaciones generales */}
           <div>
             <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Observaciones</Label>
-            <Input className="h-10 text-sm" placeholder="Opcional" value={observaciones} onChange={(e) => setObs(e.target.value)} />
+            <Input className="h-10 text-sm" placeholder="Notas adicionales (opcional)" value={observaciones} onChange={(e) => setObs(e.target.value)} />
           </div>
 
           {error && (
