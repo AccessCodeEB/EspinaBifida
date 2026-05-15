@@ -128,13 +128,23 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
   const popW = 280
   const popH = 230
   const gap = 10
-  // Aparece a la derecha del bloque; si no cabe, a la izquierda
-  const left = blockRect.right + gap + popW > window.innerWidth
-    ? Math.max(8, blockRect.left - popW - gap)
-    : blockRect.right + gap
-  // Verticalmente centrado con el bloque; si no cabe, se ajusta
+  
+  // Usamos clientWidth para ignorar el ancho del scrollbar y evitar overflow horizontal
+  const viewportW = document.documentElement.clientWidth
+  let left = blockRect.right + gap
+  
+  // Si se sale del borde derecho, renderizamos a la izquierda del bloque
+  if (left + popW > viewportW - 24) {
+    left = blockRect.left - popW - gap
+  }
+  // Fallback de seguridad si no cabe tampoco a la izquierda
+  if (left < 12) {
+    left = 12
+  }
+
+  // Verticalmente centrado con el bloque; si no cabe, se ajusta a los bordes
   const rawTop = blockRect.top + blockRect.height / 2 - popH / 2
-  const top = Math.min(Math.max(8, rawTop), window.innerHeight - popH - 8)
+  const top = Math.min(Math.max(12, rawTop), window.innerHeight - popH - 12)
 
   const isUpdating = updatingId === cita.id
 
