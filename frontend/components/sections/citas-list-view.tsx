@@ -121,17 +121,6 @@ export function CitasListView({ citas, beneficiarios }: Props) {
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 border-b border-border/40 px-5 py-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-0 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              placeholder="Paciente, doctor o folio..."
-              className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-          </div>
-
           {/* Filter button */}
           <div className="relative" ref={panelRef}>
             <button
@@ -154,7 +143,7 @@ export function CitasListView({ citas, beneficiarios }: Props) {
 
             {/* Filter panel dropdown */}
             {showFilters && (
-              <div className="absolute right-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-border/60 bg-card p-4 shadow-xl">
+              <div className="absolute left-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-border/60 bg-card p-4 shadow-xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Filtros</span>
                   {activeFilterCount > 0 && (
@@ -203,17 +192,20 @@ export function CitasListView({ citas, beneficiarios }: Props) {
                       </button>
                     )}
                   </div>
-
-                  {/* Paciente / Especialista quick search hint */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                      <User className="size-3" />Paciente o especialista
-                    </label>
-                    <p className="text-[10px] text-muted-foreground/70">Usa la barra de búsqueda para filtrar por nombre, doctor o folio.</p>
-                  </div>
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              placeholder="Paciente, doctor o folio..."
+              className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
           </div>
 
           {/* Result count */}
