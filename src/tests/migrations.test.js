@@ -12,6 +12,8 @@ jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 const { runMigration001 } = await import("../migrations/001_foto_perfil_clob.js");
 const { runMigration002 } = await import("../migrations/002_reportes_generados.js");
 const { runMigration003 } = await import("../migrations/003_administradores_foto_perfil_clob.js");
+const { runMigration004 } = await import("../migrations/004_credenciales_pago_fields.js");
+const { runMigration005 } = await import("../migrations/005_configuracion_especialistas.js");
 
 beforeEach(() => { resetMocks(); });
 
@@ -659,5 +661,282 @@ describe("runMigration003 — result.rows ausente (rama ?? [])", () => {
     expect(calls[1]).toMatch(/ALTER TABLE ADMINISTRADORES ADD FOTO_PERFIL_CLOB CLOB/i);
     expect(calls[2]).toMatch(/RENAME COLUMN FOTO_PERFIL_CLOB TO FOTO_PERFIL_URL/i);
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration004 — Agrega columnas de pago a CREDENCIALES y actualiza SP/Trigger
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("runMigration004 — todas las columnas ya existen", () => {
+  test("omite los ALTER y solo ejecuta SP + Trigger", async () => {
+    mockExecute
+      .mockResolvedValueOnce(cntResult(1)) // MONTO existe
+      .mockResolvedValueOnce(cntResult(1)) // METODO_PAGO existe
+      .mockResolvedValueOnce(cntResult(1)) // REFERENCIA existe
+      .mockResolvedValueOnce({})           // CREATE OR REPLACE PROCEDURE
+      .mockResolvedValueOnce({});          // CREATE OR REPLACE TRIGGER
+
+    await runMigration004();
+
+    expect(mockExecute).toHaveBeenCalledTimes(5);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration004 — ninguna columna existe (estado inicial)", () => {
+  test("ejecuta 3 ALTER + SP + Trigger y cierra conexión", async () => {
+    mockExecute
+      .mockResolvedValueOnce(cntResult(0)) // MONTO no existe
+      .mockResolvedValueOnce({})           // ALTER ADD MONTO
+      .mockResolvedValueOnce(cntResult(0)) // METODO_PAGO no existe
+      .mockResolvedValueOnce({})           // ALTER ADD METODO_PAGO
+      .mockResolvedValueOnce(cntResult(0)) // REFERENCIA no existe
+      .mockResolvedValueOnce({})           // ALTER ADD REFERENCIA
+      .mockResolvedValueOnce({})           // CREATE OR REPLACE PROCEDURE
+      .mockResolvedValueOnce({});          // CREATE OR REPLACE TRIGGER
+
+    await runMigration004();
+
+    expect(mockExecute).toHaveBeenCalledTimes(8);
+    const calls = mockExecute.mock.calls.map((c) => c[0].trim ? c[0].trim() : c[0]);
+    expect(calls[1]).toMatch(/ALTER TABLE CREDENCIALES ADD MONTO/i);
+    expect(calls[3]).toMatch(/ALTER TABLE CREDENCIALES ADD METODO_PAGO/i);
+    expect(calls[5]).toMatch(/ALTER TABLE CREDENCIALES ADD REFERENCIA/i);
+    expect(calls[6]).toMatch(/SP_REGISTRAR_MEMBRESIA/i);
+    expect(calls[7]).toMatch(/TRG_CREDENCIALES_BI/i);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration004 — estado parcial (MONTO existe, otras no)", () => {
+  test("omite el ALTER de MONTO y ejecuta los demás + SP + Trigger", async () => {
+    mockExecute
+      .mockResolvedValueOnce(cntResult(1)) // MONTO existe
+      .mockResolvedValueOnce(cntResult(0)) // METODO_PAGO no existe
+      .mockResolvedValueOnce({})           // ALTER ADD METODO_PAGO
+      .mockResolvedValueOnce(cntResult(0)) // REFERENCIA no existe
+      .mockResolvedValueOnce({})           // ALTER ADD REFERENCIA
+      .mockResolvedValueOnce({})           // SP
+      .mockResolvedValueOnce({});          // Trigger
+
+    await runMigration004();
+
+    expect(mockExecute).toHaveBeenCalledTimes(7);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration004 — CNT en formato posicional [0]", () => {
+  test("interpreta el conteo desde el primer elemento del array (rama ?? r1[0]?.[0])", async () => {
+    // formato posicional: r1[0] es un array, r1[0]?.[0] sería el valor CNT
+    mockExecute
+      .mockResolvedValueOnce({ rows: [[1]] }) // MONTO existe (posicional)
+      .mockResolvedValueOnce({ rows: [[1]] }) // METODO_PAGO existe
+      .mockResolvedValueOnce({ rows: [[1]] }) // REFERENCIA existe
+      .mockResolvedValueOnce({})              // SP
+      .mockResolvedValueOnce({});             // Trigger
+
+    await runMigration004();
+
+    expect(mockExecute).toHaveBeenCalledTimes(5);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration004 — error durante la ejecución", () => {
+  test("captura el error, logea y cierra conexión", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges"));
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration004()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[migration-004]"),
+      expect.any(String)
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration004 — falla al obtener conexión", () => {
+  test("captura el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration004()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(mockClose).not.toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration004 — connection.close() lanza (finally catch)", () => {
+  test("silencia el error de close y no relanza", async () => {
+    mockExecute
+      .mockResolvedValueOnce(cntResult(1))
+      .mockResolvedValueOnce(cntResult(1))
+      .mockResolvedValueOnce(cntResult(1))
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+    mockClose.mockRejectedValueOnce(new Error("close failed"));
+
+    await expect(runMigration004()).resolves.toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration005 — MONTO_SUGERIDO, tipos de servicio, ESPECIALISTAS, CONFIGURACION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Devuelve la secuencia de mocks para migration005 cuando TODO ya existe.
+ * Orden: CHECK monto_sugerido, 4×UPDATE montos, 3×CHECK servicios, CHECK esp, CHECK config
+ */
+function mockMigration005AllExists() {
+  // 1. MONTO_SUGERIDO existe
+  mockExecute.mockResolvedValueOnce(cntResult(1));
+  // 2-5. 4× UPDATE montos (always run)
+  for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+  // 6-8. 3× CHECK servicio → existe
+  for (let i = 0; i < 3; i++) mockExecute.mockResolvedValueOnce(cntResult(1));
+  // 9. ESPECIALISTAS existe
+  mockExecute.mockResolvedValueOnce(cntResult(1));
+  // 10. CONFIGURACION existe
+  mockExecute.mockResolvedValueOnce(cntResult(1));
+}
+
+describe("runMigration005 — todo ya existe", () => {
+  test("omite todos los DDL — solo ejecuta los 4 UPDATE de montos", async () => {
+    mockMigration005AllExists();
+
+    await runMigration005();
+
+    // 1 SELECT monto_sugerido + 4 UPDATE + 3 SELECT servicios + 1 SELECT esp + 1 SELECT config = 10
+    expect(mockExecute).toHaveBeenCalledTimes(10);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration005 — estado inicial (nada existe)", () => {
+  test("ejecuta toda la secuencia DDL completa", async () => {
+    // 1. MONTO_SUGERIDO no existe → ALTER
+    mockExecute
+      .mockResolvedValueOnce(cntResult(0)) // CHECK MONTO_SUGERIDO
+      .mockResolvedValueOnce({});           // ALTER ADD MONTO_SUGERIDO
+    // 2-5. 4× UPDATE montos
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+    // 6-11. 3× [CHECK (CNT=0) + INSERT]
+    for (let i = 0; i < 3; i++) {
+      mockExecute.mockResolvedValueOnce(cntResult(0)); // no existe
+      mockExecute.mockResolvedValueOnce({});            // INSERT
+    }
+    // 12. CHECK ESPECIALISTAS → no existe
+    mockExecute.mockResolvedValueOnce(cntResult(0));
+    // 13. CREATE TABLE ESPECIALISTAS
+    mockExecute.mockResolvedValueOnce({});
+    // 14-17. 4× INSERT especialistas
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+    // 18. CHECK CONFIGURACION → no existe
+    mockExecute.mockResolvedValueOnce(cntResult(0));
+    // 19. CREATE TABLE CONFIGURACION
+    mockExecute.mockResolvedValueOnce({});
+    // 20-24. 5× INSERT configs
+    for (let i = 0; i < 5; i++) mockExecute.mockResolvedValueOnce({});
+
+    await runMigration005();
+
+    // 2 + 4 + 6 + 2 + 4 + 2 + 5 = 25 calls
+    expect(mockExecute).toHaveBeenCalledTimes(25);
+    const calls = mockExecute.mock.calls.map((c) => c[0].trim ? c[0].trim() : c[0]);
+    // calls: 0=CHECK_MONTO, 1=ALTER, 2-5=4×UPDATE, 6-11=3×(CHECK+INSERT),
+    //        12=CHECK_ESP, 13=CREATE_ESP, 14-17=4×INSERT_esp,
+    //        18=CHECK_CONF, 19=CREATE_CONF, 20-24=5×INSERT_conf
+    expect(calls[1]).toMatch(/ALTER TABLE SERVICIOS_CATALOGO ADD MONTO_SUGERIDO/i);
+    expect(calls[2]).toMatch(/UPDATE SERVICIOS_CATALOGO SET MONTO_SUGERIDO/i);
+    expect(calls[13]).toMatch(/CREATE TABLE ESPECIALISTAS/i);
+    expect(calls[19]).toMatch(/CREATE TABLE CONFIGURACION/i);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration005 — estado parcial: MONTO_SUGERIDO ya existe, tablas no", () => {
+  test("omite ALTER de columna pero crea tablas ESPECIALISTAS y CONFIGURACION", async () => {
+    // 1. MONTO_SUGERIDO existe → skip ALTER
+    mockExecute.mockResolvedValueOnce(cntResult(1));
+    // 2-5. 4× UPDATE montos
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+    // 6-8. 3× CHECK servicios → todos existen
+    for (let i = 0; i < 3; i++) mockExecute.mockResolvedValueOnce(cntResult(1));
+    // 9. CHECK ESPECIALISTAS → no existe
+    mockExecute.mockResolvedValueOnce(cntResult(0));
+    // 10. CREATE TABLE ESPECIALISTAS
+    mockExecute.mockResolvedValueOnce({});
+    // 11-14. 4× INSERT especialistas
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+    // 15. CHECK CONFIGURACION → no existe
+    mockExecute.mockResolvedValueOnce(cntResult(0));
+    // 16. CREATE TABLE CONFIGURACION
+    mockExecute.mockResolvedValueOnce({});
+    // 17-21. 5× INSERT configs
+    for (let i = 0; i < 5; i++) mockExecute.mockResolvedValueOnce({});
+
+    await runMigration005();
+
+    // 1 + 4 + 3 + 1+1+4 + 1+1+5 = 21
+    expect(mockExecute).toHaveBeenCalledTimes(21);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration005 — error durante la ejecución", () => {
+  test("captura el error, logea y cierra conexión", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00942: table or view does not exist"));
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration005()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[migration-005]"),
+      expect.any(String)
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration005 — falla al obtener conexión", () => {
+  test("captura el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration005()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(mockClose).not.toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration005 — connection.close() lanza (finally catch)", () => {
+  test("silencia el error de close y no relanza", async () => {
+    mockMigration005AllExists();
+    mockClose.mockRejectedValueOnce(new Error("close failed"));
+
+    await expect(runMigration005()).resolves.toBeUndefined();
   });
 });
