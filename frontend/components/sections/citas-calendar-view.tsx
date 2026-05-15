@@ -1,7 +1,7 @@
 "use client"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
@@ -14,11 +14,11 @@ const DIAS_S=["L","M","X","J","V","S","D"]
 const DIAS_L=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-blue-500",Completada:"border-l-slate-400",Cancelada:"border-l-red-500"}
-const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-blue-500/10",Completada:"bg-slate-500/10",Cancelada:"bg-red-500/10"}
-const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-400",Cancelada:"bg-red-500"}
-const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-blue-600 dark:text-blue-400",Completada:"text-slate-500 dark:text-slate-400",Cancelada:"text-red-600 dark:text-red-400"}
-const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-500",Cancelada:"bg-red-500"}
+const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-amber-500",Completada:"border-l-blue-500",Cancelada:"border-l-red-500"}
+const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-amber-500/10",Completada:"bg-blue-500/10",Cancelada:"bg-red-500/10"}
+const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-amber-500",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
+const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-amber-600 dark:text-amber-400",Completada:"text-blue-600 dark:text-blue-400",Cancelada:"text-red-600 dark:text-red-400"}
+const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-amber-500",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
 const POPUP_LABEL:Record<string,string>={Confirmada:"Confirmada",Pendiente:"Pendiente",Completada:"Completada",Cancelada:"Cancelada"}
 
 function sameDay(a:Date,b:Date){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
@@ -319,11 +319,13 @@ function ActionCenter({
             <div className="flex items-center gap-2 mt-1">
               <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
               <p className="text-[10px] text-muted-foreground whitespace-nowrap">{c.fecha} · {c.hora}</p>
-              <span className={`ml-auto shrink-0 rounded-full w-[84px] py-0.5 text-center text-[9px] font-bold uppercase tracking-wider ${
+              <span className={`ml-auto shrink-0 flex items-center justify-center rounded-md border p-1 ${
                 c.estatus==="Confirmada"
-                  ?"bg-emerald-500/15 text-emerald-400"
-                  :"bg-amber-500/15 text-amber-400"
-              }`}>{c.estatus}</span>
+                  ?"border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  :"border-amber-500/30 bg-amber-500/10 text-amber-400"
+              }`}>
+                {c.estatus==="Confirmada" ? <CheckCircle2 className="size-3.5" /> : <Clock className="size-3.5" />}
+              </span>
             </div>
           </button>
         ))}

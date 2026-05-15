@@ -17,7 +17,7 @@ type FilterEstatus = "Todos" | Cita["estatus"]
 const STATUS_CONFIG: Record<string, { dot: string; cls: string; Icon: typeof CheckCircle2 }> = {
   Confirmada: { dot: "bg-emerald-500", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", Icon: CheckCircle2 },
   Pendiente:  { dot: "bg-amber-500",   cls: "border-amber-500/30  bg-amber-500/10  text-amber-400",   Icon: Clock        },
-  Completada: { dot: "bg-blue-400",    cls: "border-border/60     bg-muted/30      text-muted-foreground", Icon: CheckCircle2 },
+  Completada: { dot: "bg-blue-500",    cls: "border-blue-500/30   bg-blue-500/10   text-blue-400",    Icon: CheckCircle2 },
   Cancelada:  { dot: "bg-red-500",     cls: "border-red-500/30    bg-red-500/10    text-red-400",     Icon: XCircle      },
 }
 

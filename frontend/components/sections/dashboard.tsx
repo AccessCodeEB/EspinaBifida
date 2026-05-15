@@ -310,7 +310,7 @@ export function DashboardSection() {
   const agendaStatusStyle: Record<string, string> = {
     Confirmada: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
     Pendiente:  "border-amber-500/30  bg-amber-500/10  text-amber-400",
-    Completada: "border-border/60     bg-muted/30      text-muted-foreground",
+    Completada: "border-blue-500/30   bg-blue-500/10   text-blue-400",
     Cancelada:  "border-red-500/30    bg-red-500/10    text-red-400",
   }
   const agendaItemIcon: Record<string, React.ElementType> = {
