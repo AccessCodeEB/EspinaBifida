@@ -114,7 +114,30 @@ export async function getDistribucionCiudades(fechaInicio, fechaFin) {
   }
 }
 
-// ── 4. Estudios médicos (subconjunto de SERVICIOS_CATALOGO) ───────────────────
+// ── 4. Atenciones agrupadas por mes ──────────────────────────────────────────
+export async function getAtencionesPorMes(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        TO_CHAR(TRUNC(S.FECHA, 'MM'), 'YYYY-MM') AS MES,
+        COUNT(DISTINCT S.CURP)                    AS PACIENTES,
+        COUNT(S.ID_SERVICIO)                      AS SERVICIOS
+      FROM SERVICIOS S
+      WHERE S.FECHA BETWEEN :fi AND :ff
+      GROUP BY TRUNC(S.FECHA, 'MM')
+      ORDER BY TRUNC(S.FECHA, 'MM')
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
+// ── 5. Estudios médicos (subconjunto de SERVICIOS_CATALOGO) ───────────────────
 // Retorna [] si ESTUDIOS_IDS no está configurado.
 export async function getEstudios(fechaInicio, fechaFin) {
   if (ESTUDIOS_IDS.length === 0) return [];
@@ -166,7 +189,7 @@ export async function findHistorico(page, limit) {
   try {
     const offset = (page - 1) * limit;
     const result = await conn.execute(`
-      SELECT ID_REPORTE, TIPO, FECHA_INICIO, FECHA_FIN, FECHA_GEN, RUTA_PDF, RUTA_XLSX
+      SELECT ID_REPORTE, TIPO, FECHA_INICIO, FECHA_FIN, FECHA_GEN AS FECHA_GENERACION, RUTA_PDF, RUTA_XLSX
       FROM REPORTES_GENERADOS
       ORDER BY FECHA_GEN DESC
       OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY

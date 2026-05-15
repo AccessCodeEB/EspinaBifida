@@ -49,40 +49,46 @@ import { downloadReporte, fetchReporteUrl, getHistorico, type ReporteHistorico }
 
 const reportTypes = [
   {
+    id: "estadisticas",
+    title: "Reporte Estadístico",
+    description: "Resumen estadístico: género, edad, procedencia y servicios por periodo",
+    icon: BarChart3,
+    disponible: true,
+  },
+  {
     id: "beneficiarios",
     title: "Reporte de Beneficiarios",
     description: "Listado completo de beneficiarios con datos demográficos",
     icon: Users,
+    disponible: false,
   },
   {
     id: "membresias",
     title: "Reporte de Membresías",
     description: "Estado de membresías activas, por vencer y vencidas",
     icon: CreditCard,
+    disponible: false,
   },
   {
     id: "servicios",
     title: "Reporte de Servicios",
     description: "Historial de servicios prestados por periodo",
     icon: ClipboardList,
+    disponible: false,
   },
   {
     id: "inventario",
     title: "Reporte de Inventario",
     description: "Stock actual y movimientos de productos",
     icon: Package,
+    disponible: false,
   },
   {
     id: "citas",
     title: "Reporte de Citas",
     description: "Agenda de citas por especialista y periodo",
     icon: CalendarDays,
-  },
-  {
-    id: "estadisticas",
-    title: "Reporte Estadístico",
-    description: "Resumen estadístico de atención mensual/anual",
-    icon: BarChart3,
+    disponible: false,
   },
 ]
 
@@ -129,7 +135,7 @@ function calcularFechas(periodo: string): { fechaInicio: string; fechaFin: strin
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export function ReportesSection() {
-  const [selectedReport, setSelectedReport] = useState<string | null>(null)
+  const [selectedReport, setSelectedReport] = useState<string | null>("estadisticas")
   const [selectedPeriod, setSelectedPeriod] = useState("mes-actual")
   const [selectedFormat, setSelectedFormat] = useState<"pdf" | "xlsx">("pdf")
   const [customInicio, setCustomInicio] = useState("")
@@ -247,10 +253,14 @@ export function ReportesSection() {
           {reportTypes.map((report) => (
             <Card
               key={report.id}
-              className={`cursor-pointer transition-all hover:border-primary hover:shadow-md ${
-                selectedReport === report.id ? "border-2 border-primary bg-primary/5" : ""
+              className={`transition-all ${
+                report.disponible
+                  ? `cursor-pointer hover:border-primary hover:shadow-md ${
+                      selectedReport === report.id ? "border-2 border-primary bg-primary/5" : ""
+                    }`
+                  : "cursor-not-allowed opacity-50"
               }`}
-              onClick={() => setSelectedReport(report.id)}
+              onClick={() => report.disponible && setSelectedReport(report.id)}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-3">
@@ -259,7 +269,12 @@ export function ReportesSection() {
                   }`}>
                     <report.icon className="size-6" />
                   </div>
-                  <CardTitle className="text-base">{report.title}</CardTitle>
+                  <div className="flex flex-1 items-start justify-between gap-2">
+                    <CardTitle className="text-base">{report.title}</CardTitle>
+                    {!report.disponible && (
+                      <Badge variant="secondary" className="shrink-0 text-xs">Próximamente</Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

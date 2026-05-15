@@ -14,8 +14,15 @@ function formatFecha(d) {
  * @param {object} opts  - { fechaInicio: 'YYYY-MM-DD', fechaFin: 'YYYY-MM-DD' }
  * @returns {string} HTML
  */
+function formatMes(mesStr) {
+  // mesStr = 'YYYY-MM'
+  const [y, m] = mesStr.split('-');
+  const d = new Date(Number(y), Number(m) - 1, 1);
+  return d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+}
+
 export function generarHTML(data, { fechaInicio, fechaFin }) {
-  const { resumen, detalle, ciudades, estudios } = data;
+  const { resumen, detalle, ciudades, estudios, porMes = [] } = data;
   const mitad = Math.ceil(detalle.length / 2);
   const col1  = detalle.slice(0, mitad);
   const col2  = detalle.slice(mitad);
@@ -79,6 +86,17 @@ export function generarHTML(data, { fechaInicio, fechaFin }) {
       <td class="num">${esc(resumen?.ADULTOS          ?? 0)}</td>
     </tr>
   </table>
+
+  ${porMes.length > 1 ? `
+  <h3>Atenciones por Mes</h3>
+  <table style="width:50%">
+    <tr><th>Mes</th><th>Pacientes</th><th>Servicios</th></tr>
+    ${porMes.map(r => `<tr>
+      <td>${esc(formatMes(r.MES))}</td>
+      <td class="num">${esc(r.PACIENTES)}</td>
+      <td class="num">${esc(r.SERVICIOS)}</td>
+    </tr>`).join('')}
+  </table>` : ''}
 
   <h3>Detalle de Servicios</h3>
   <div class="detalle-cols">

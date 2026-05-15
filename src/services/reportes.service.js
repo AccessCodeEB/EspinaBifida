@@ -12,7 +12,8 @@ export async function generarReporte(fechaInicio, fechaFin) {
   const detalle  = await ReportesModel.getDetalleServicios(fechaInicio, fechaFin);
   const ciudades = await ReportesModel.getDistribucionCiudades(fechaInicio, fechaFin);
   const estudios = await ReportesModel.getEstudios(fechaInicio, fechaFin);
-  return { resumen, detalle, ciudades, estudios };
+  const porMes   = await ReportesModel.getAtencionesPorMes(fechaInicio, fechaFin);
+  return { resumen, detalle, ciudades, estudios, porMes };
 }
 
 /**
@@ -34,12 +35,13 @@ export async function generarPDF(data, fechaInicio, fechaFin) {
 }
 
 /**
- * Genera XLSX con 4 hojas: Resumen, Detalle Servicios, Ciudades, Estudios.
+ * Genera XLSX con 5 hojas: Resumen, Por Mes, Detalle Servicios, Ciudades, Estudios.
  * Retorna Buffer listo para res.send().
  */
 export async function generarXLSX(data) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([data.resumen]), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.porMes),   'Por Mes');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.detalle),  'Detalle Servicios');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.ciudades), 'Ciudades');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.estudios), 'Estudios');

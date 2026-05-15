@@ -11,12 +11,14 @@ const mockGetResumenPeriodo       = jest.fn();
 const mockGetDetalleServicios     = jest.fn();
 const mockGetDistribucionCiudades = jest.fn();
 const mockGetEstudios             = jest.fn();
+const mockGetAtencionesPorMes     = jest.fn();
 
 jest.unstable_mockModule('../models/reportes.model.js', () => ({
   getResumenPeriodo:       mockGetResumenPeriodo,
   getDetalleServicios:     mockGetDetalleServicios,
   getDistribucionCiudades: mockGetDistribucionCiudades,
   getEstudios:             mockGetEstudios,
+  getAtencionesPorMes:     mockGetAtencionesPorMes,
 }));
 
 const mockGenerarHTML = jest.fn();
@@ -61,6 +63,7 @@ const DATA = {
   detalle:  [{ NOMBRE: 'Consulta', CANTIDAD: 5 }],
   ciudades: [{ CIUDAD: 'Monterrey', CANTIDAD: 8 }],
   estudios: [],
+  porMes:   [{ MES: '2026-01', PACIENTES: 8, SERVICIOS: 10 }],
 };
 
 beforeEach(() => {
@@ -79,6 +82,9 @@ beforeEach(() => {
     close:    mockBrowserClose,
   });
 
+  // Default para atenciones por mes
+  mockGetAtencionesPorMes.mockResolvedValue(DATA.porMes);
+
   // Defaults para xlsx
   mockBookNew.mockReturnValue({});
   mockJsonToSheet.mockReturnValue({});
@@ -91,11 +97,12 @@ beforeEach(() => {
 // ── generarReporte ────────────────────────────────────────────────────────────
 
 describe('generarReporte', () => {
-  it('llama las 4 queries del modelo y retorna el objeto consolidado', async () => {
+  it('llama las 5 queries del modelo y retorna el objeto consolidado', async () => {
     mockGetResumenPeriodo      .mockResolvedValueOnce(DATA.resumen);
     mockGetDetalleServicios    .mockResolvedValueOnce(DATA.detalle);
     mockGetDistribucionCiudades.mockResolvedValueOnce(DATA.ciudades);
     mockGetEstudios            .mockResolvedValueOnce(DATA.estudios);
+    mockGetAtencionesPorMes    .mockResolvedValueOnce(DATA.porMes);
 
     const result = await generarReporte(PERIODO.inicio, PERIODO.fin);
 
@@ -104,6 +111,7 @@ describe('generarReporte', () => {
     expect(mockGetDetalleServicios    ).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
     expect(mockGetDistribucionCiudades).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
     expect(mockGetEstudios            ).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+    expect(mockGetAtencionesPorMes    ).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
   });
 
   it('propaga errores del modelo sin envolver', async () => {
@@ -156,11 +164,11 @@ describe('generarPDF', () => {
 // ── generarXLSX ───────────────────────────────────────────────────────────────
 
 describe('generarXLSX', () => {
-  it('crea workbook con 4 hojas y retorna buffer', async () => {
+  it('crea workbook con 5 hojas y retorna buffer', async () => {
     const result = await generarXLSX(DATA);
 
     expect(mockBookNew).toHaveBeenCalledTimes(1);
-    expect(mockBookAppendSheet).toHaveBeenCalledTimes(4);
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(5);
     expect(mockXlsxWrite).toHaveBeenCalledWith(
       expect.anything(),
       { type: 'buffer', bookType: 'xlsx' }
@@ -173,8 +181,9 @@ describe('generarXLSX', () => {
 
     const calls = mockJsonToSheet.mock.calls;
     expect(calls[0][0]).toEqual([DATA.resumen]);  // Resumen wraps object in array
-    expect(calls[1][0]).toEqual(DATA.detalle);
-    expect(calls[2][0]).toEqual(DATA.ciudades);
-    expect(calls[3][0]).toEqual(DATA.estudios);
+    expect(calls[1][0]).toEqual(DATA.porMes);
+    expect(calls[2][0]).toEqual(DATA.detalle);
+    expect(calls[3][0]).toEqual(DATA.ciudades);
+    expect(calls[4][0]).toEqual(DATA.estudios);
   });
 });

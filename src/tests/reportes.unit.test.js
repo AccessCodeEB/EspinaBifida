@@ -83,6 +83,7 @@ const DATA_VACIA = {
   detalle:  [],
   ciudades: [],
   estudios: [],
+  porMes:   [],
 };
 
 const DATA_COMPLETA = {
@@ -99,6 +100,10 @@ const DATA_COMPLETA = {
   ],
   estudios: [
     { NOMBRE: 'Urodinámico', CANTIDAD: 7 },
+  ],
+  porMes: [
+    { MES: '2026-01', PACIENTES: 20, SERVICIOS: 35 },
+    { MES: '2026-02', PACIENTES: 15, SERVICIOS: 20 },
   ],
 };
 
@@ -133,14 +138,14 @@ describe('generarHTML', () => {
 // ── generarXLSX ───────────────────────────────────────────────────────────────
 
 describe('generarXLSX', () => {
-  it('T14 — retorna Buffer con 4 hojas correctamente nombradas', async () => {
+  it('T14 — retorna Buffer con 5 hojas correctamente nombradas', async () => {
     const buf = await ReportesService.generarXLSX(DATA_COMPLETA);
 
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(0);
 
     const wb = XLSX.read(buf, { type: 'buffer' });
-    expect(wb.SheetNames).toEqual(['Resumen', 'Detalle Servicios', 'Ciudades', 'Estudios']);
+    expect(wb.SheetNames).toEqual(['Resumen', 'Por Mes', 'Detalle Servicios', 'Ciudades', 'Estudios']);
   });
 
   it('la hoja Resumen contiene los campos esperados', async () => {
