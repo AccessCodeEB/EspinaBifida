@@ -7,7 +7,7 @@ import {
   Download, CheckCircle, XCircle, AlertTriangle, User, Users, Loader2,
   Phone, HeartPulse, Stethoscope, ClipboardList, Mail,
   Calendar, Hash, Droplet, Activity, ArrowLeft, Save, Trash2, ZoomIn, X,
-  AlertCircle,
+  AlertCircle, Printer,
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -82,6 +82,270 @@ function getPhotoRingClasses(estatus?: string) {
     default:
       return "bg-muted text-muted-foreground ring-2 ring-offset-2 ring-offset-background ring-border"
   }
+}
+
+async function buildCredencialBlobUrl(b: Beneficiario & { fotoPerfilUrl?: string | null }): Promise<string> {
+  const nombre = [b.nombres, b.apellidoPaterno, b.apellidoMaterno].filter(Boolean).join(" ")
+  const direccion = [b.calle, b.colonia, b.ciudad, b.municipio, b.estado].filter(Boolean).join(", ")
+  const telefono = b.telefonoCasa || b.telefonoCelular || ""
+  const fotoSrc = b.fotoPerfilUrl ?? ""
+  const iniciales = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
+
+  // Convertir logo a data URL para que funcione dentro del blob
+  let logoDataUrl = ""
+  try {
+    const res = await fetch("/logo-espina-bifida.png")
+    const buf = await res.arrayBuffer()
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+    logoDataUrl = `data:image/png;base64,${b64}`
+  } catch { /* logo opcional */ }
+
+  // Convertir foto a data URL si existe
+  let fotoDataUrl = ""
+  if (fotoSrc) {
+    try {
+      const res = await fetch(fotoSrc)
+      const buf = await res.arrayBuffer()
+      const mime = res.headers.get("content-type") || "image/jpeg"
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+      fotoDataUrl = `data:${mime};base64,${b64}`
+    } catch { /* foto opcional */ }
+  }
+
+  const photoHtml = fotoDataUrl
+    ? `<img src="${fotoDataUrl}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center;" />`
+    : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:11pt;font-weight:700;color:#94a3b8;">${iniciales}</div>`
+
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" alt="AEBNL" style="height:9mm;width:auto;object-fit:contain;" />`
+    : `<span style="font-size:6pt;font-weight:900;color:#0f4c81;">ESPINA<br/>BÍFIDA</span>`
+
+  // Helpers
+  const field = (label: string, value?: string | boolean | null) => {
+    if (value === undefined || value === null || value === "") return ""
+    const v = typeof value === "boolean" ? (value ? "Sí" : "No") : String(value)
+    return `<div class="f"><span class="lbl">${label}</span> <span class="val">${v}</span></div>`
+  }
+  const fv = (value?: string | boolean | null) =>
+    (value === undefined || value === null || value === "")
+      ? ""
+      : (typeof value === "boolean" ? (value ? "Sí" : "No") : String(value))
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>Credencial</title>
+<style>
+  @page { size: 85.6mm 54mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 5.5pt; color: #111; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ── shared ── */
+  .page { width: 85.6mm; height: 54mm; overflow: hidden; position: relative; }
+  .lbl  { font-size: 5pt; color: #333; }
+  .val  { font-size: 5.5pt; font-weight: 600; color: #000; }
+  .f    { margin-bottom: 0.8mm; line-height: 1.3; }
+
+  /* ═══════════ FRENTE ═══════════ */
+  /* Top half: logo col + info col */
+  .fr-top {
+    display: flex;
+    height: 26mm;
+    border-bottom: 0.3mm solid #ccc;
+  }
+  .fr-logo-col {
+    width: 23mm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5mm;
+    border-right: 0.3mm solid #ccc;
+  }
+  .fr-logo-col img { width: 100%; height: auto; object-fit: contain; }
+  .fr-info-col {
+    flex: 1;
+    padding: 1.5mm 2mm 1mm 2mm;
+    display: flex;
+    flex-direction: column;
+    gap: 0mm;
+  }
+  .fr-folio {
+    text-align: right;
+    font-size: 6pt;
+    margin-bottom: 1mm;
+  }
+  .fr-folio .folio-lbl { color: #333; }
+  .fr-folio .folio-val { font-weight: 700; color: #000; }
+  .fr-tipo-badge {
+    display: inline-block;
+    font-size: 5pt; font-weight: 700;
+    color: #c00; border: 0.4mm solid #c00;
+    padding: 0 0.8mm; margin-left: 1mm;
+    vertical-align: middle;
+  }
+
+  /* Bottom half: photo col + info col */
+  .fr-bot {
+    display: flex;
+    height: 28mm;
+  }
+  .fr-photo-col {
+    width: 23mm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1.5mm 1.5mm 1mm 1.5mm;
+    border-right: 0.3mm solid #ccc;
+  }
+  .fr-photo {
+    width: 18mm; height: 22mm;
+    overflow: hidden;
+    border: 0.4mm solid #999;
+    background: #e8e8e8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9pt; font-weight: 700; color: #888;
+  }
+  .fr-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .fr-bot-info {
+    flex: 1;
+    padding: 1.5mm 2mm 1mm 2mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* ═══════════ REVERSO ═══════════ */
+  .bk-body {
+    padding: 2mm 2.5mm 1.5mm 2.5mm;
+  }
+  .bk-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1mm;
+    line-height: 1.3;
+  }
+  .bk-row .lbl { font-size: 5pt; color: #333; }
+  .bk-row .val { font-size: 5.5pt; font-weight: 600; }
+  .bk-sep { border-top: 0.3mm solid #ccc; margin: 1.5mm 0; }
+  .bk-bot {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    border-top: 0.3mm solid #ccc;
+    display: flex;
+  }
+  .bk-assoc {
+    flex: 1;
+    padding: 1.5mm 2mm;
+    font-size: 4.2pt;
+    color: #333;
+    line-height: 1.5;
+    border-right: 0.3mm solid #ccc;
+  }
+  .bk-assoc .assoc-name { font-size: 4.5pt; font-weight: 700; color: #0a3d6e; line-height: 1.3; }
+  .bk-nacimiento {
+    width: 38mm;
+    flex-shrink: 0;
+    padding: 1.5mm 2mm;
+    font-size: 4.8pt;
+  }
+  .bk-nacimiento .nac-title { font-size: 5pt; font-weight: 700; margin-bottom: 1mm; }
+  .bk-nacimiento table { border-collapse: collapse; width: 100%; }
+  .bk-nacimiento td { padding: 0.3mm 0; font-size: 4.5pt; vertical-align: top; }
+  .bk-nacimiento td:first-child { color: #444; padding-right: 1mm; white-space: nowrap; }
+  .bk-nacimiento td:last-child  { font-weight: 600; color: #000; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ FRENTE ══════════════════ -->
+<div class="page">
+
+  <div class="fr-top">
+    <div class="fr-logo-col">
+      ${logoHtml}
+    </div>
+    <div class="fr-info-col">
+      <div class="fr-folio">
+        <span class="folio-lbl">Folio:</span>
+        <span class="folio-val"> ${b.folio ?? ""}</span>
+      </div>
+      <div class="f">
+        <span class="lbl">Nombre:</span>
+        <span class="val"> ${nombre}</span>
+        ${b.tipo ? `<span class="fr-tipo-badge">${b.tipo.charAt(0).toUpperCase()}</span>` : ""}
+      </div>
+      ${direccion ? `<div class="f"><span class="lbl">Dirección:</span> <span class="val">${direccion}</span></div>` : ""}
+    </div>
+  </div>
+
+  <div class="fr-bot">
+    <div class="fr-photo-col">
+      <div class="fr-photo">${photoHtml}</div>
+    </div>
+    <div class="fr-bot-info">
+      <div>
+        ${telefono ? `<div class="f"><span class="lbl">Tel. Casa</span> <span class="val">${telefono}</span></div>` : ""}
+        ${b.nombrePadreMadre ? `<div class="f"><span class="lbl">Nombre de padres:</span><br/><span class="val">${b.nombrePadreMadre}</span></div>` : ""}
+      </div>
+      <div class="f">
+        <span class="lbl">Fecha de Expedicion:</span>
+        <span class="val"> ${b.fechaAlta ?? ""}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════ REVERSO ══════════════════ -->
+<div class="page" style="page-break-before:always;">
+
+  <div class="bk-body">
+    <div class="bk-row">
+      <div><span class="lbl">Padecimiento:</span></div>
+    </div>
+    <div class="bk-row">
+      <div><span class="lbl">Tipo de Sangre:</span> <span class="val">${fv(b.tipoSangre)}</span></div>
+      <div><span class="lbl">Tiene Valvula?</span> <span class="val">${fv(b.usaValvula)}</span></div>
+    </div>
+    <div class="bk-row" style="margin-top:1mm;">
+      <span class="lbl">En caso de accidente avisar a:</span>
+    </div>
+    <div class="bk-row">
+      <span class="val">${fv(b.contactoEmergencia)}</span>
+      <div><span class="lbl">Teléfono:</span> <span class="val">${fv(b.telefonoEmergencia || b.telefonoCasa)}</span></div>
+    </div>
+    <div class="bk-row" style="margin-top:0.5mm;">
+      <span class="lbl">Correo Electrónico:</span> <span class="val">${fv(b.correoElectronico)}</span>
+    </div>
+  </div>
+
+  <div class="bk-bot">
+    <div class="bk-assoc">
+      <div class="assoc-name">ASOCIACION DE ESPINA BIFIDA<br/>DE NUEVO LEON ABP</div>
+      <div style="margin-top:0.8mm;">Monterrey, NL</div>
+      <div>Teléfono: ${fv(b.telefonoCasa) || ""}</div>
+      <div>www.espinabifida.org.mx</div>
+    </div>
+    <div class="bk-nacimiento">
+      <div class="nac-title">Datos de Nacimiento:</div>
+      <table>
+        <tr><td>Fecha</td><td>${fv(b.fechaNacimiento)}</td></tr>
+        <tr><td>Lugar Nac.</td><td>${fv(b.ciudad || b.municipio)}</td></tr>
+        <tr><td>Hospital</td><td>${fv(b.hospitalNacimiento)}</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>`
+
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+  return URL.createObjectURL(blob)
 }
 
 function DetailField({
@@ -189,6 +453,10 @@ export function BeneficiariosSection({
 } = {}) {
   const [overlayAction, setOverlayAction] = useState<"baja" | "eliminar" | null>(null)
   const [credencialBeneficiario, setCredencialBeneficiario] = useState<Beneficiario | null>(null)
+  const [credImpresionOpen, setCredImpresionOpen] = useState(false)
+  const [credImpresionUrl, setCredImpresionUrl] = useState<string | null>(null)
+  const credImpresionBlobRef = useRef<string | null>(null)
+  const credImpresionIframeRef = useRef<HTMLIFrameElement>(null)
   const [removeFotoConfirmOpen, setRemoveFotoConfirmOpen] = useState(false)
   const [fotoPerfilZoomOpen, setFotoPerfilZoomOpen] = useState(false)
 
@@ -613,9 +881,101 @@ export function BeneficiariosSection({
                     </div>
                   </div>
                 </div>
+                <div className="flex justify-end gap-2 border-t border-border/50 bg-muted/10 px-6 py-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCredencialBeneficiario(null)}
+                  >
+                    Cerrar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={async () => {
+                      if (credImpresionBlobRef.current) {
+                        URL.revokeObjectURL(credImpresionBlobRef.current)
+                      }
+                      const url = await buildCredencialBlobUrl({
+                        ...credencialBeneficiario,
+                        fotoPerfilUrl: resolvePublicUploadUrl(credencialBeneficiario.fotoPerfilUrl ?? undefined),
+                      })
+                      credImpresionBlobRef.current = url
+                      setCredImpresionUrl(url)
+                      setCredImpresionOpen(true)
+                    }}
+                  >
+                    <Printer className="size-4" />
+                    Imprimir credencial
+                  </Button>
+                </div>
               </>
             )
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Impresión de credencial ─────────────────────────────── */}
+      <Dialog
+        open={credImpresionOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCredImpresionOpen(false)
+            setCredImpresionUrl(null)
+            if (credImpresionBlobRef.current) {
+              URL.revokeObjectURL(credImpresionBlobRef.current)
+              credImpresionBlobRef.current = null
+            }
+          }
+        }}
+      >
+        <DialogContent
+          className="flex w-[min(560px,92vw)] flex-col gap-0 p-0"
+          style={{ height: "min(85vh, 700px)", maxHeight: "90vh" }}
+        >
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <Printer className="size-4 text-primary" />
+              Vista previa — Credencial
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Revisa la credencial antes de imprimir.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden bg-muted/30">
+            {credImpresionUrl && (
+              <iframe
+                ref={credImpresionIframeRef}
+                src={credImpresionUrl}
+                className="h-full w-full border-0"
+                title="Vista previa de la credencial"
+              />
+            )}
+          </div>
+          <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCredImpresionOpen(false)
+                setCredImpresionUrl(null)
+                if (credImpresionBlobRef.current) {
+                  URL.revokeObjectURL(credImpresionBlobRef.current)
+                  credImpresionBlobRef.current = null
+                }
+              }}
+            >
+              Cerrar
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => credImpresionIframeRef.current?.contentWindow?.print()}
+            >
+              <Printer className="size-4" />
+              Imprimir
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
