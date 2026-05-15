@@ -224,6 +224,29 @@ describe('generarHTML', () => {
     expect(html).toContain('Sin movimientos en el periodo');
     expect(html).toContain('Sin artículos registrados');
   });
+
+  it('citas: genera resumen por estatus y tabla de detalle', () => {
+    const data = {
+      tipo: 'citas',
+      filas: [
+        { FECHA: '2026-01-20', NOMBRE: 'Ana Martínez', CURP: 'MARA850515MNLRNS02',
+          TIPO_SERVICIO: 'Neurología', ESPECIALISTA: 'Dr. Rodríguez', ESTATUS: 'Completada' },
+        { FECHA: '2026-01-22', NOMBRE: 'Marco García', CURP: 'GARM900101HNLRLS01',
+          TIPO_SERVICIO: 'Cardiología', ESPECIALISTA: 'Dr. Rodríguez', ESTATUS: 'Pendiente' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Ana Martínez');
+    expect(html).toContain('Dr. Rodríguez');
+    expect(html).toContain('Completada');
+    expect(html).toContain('Reporte de Citas');
+  });
+
+  it('citas: sin filas muestra mensaje vacío', () => {
+    const data = { tipo: 'citas', filas: [] };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin citas en el periodo');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────

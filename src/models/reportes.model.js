@@ -301,6 +301,33 @@ export async function getMovimientosPeriodo(fechaInicio, fechaFin) {
   }
 }
 
+// ── 11. Citas del periodo ─────────────────────────────────────────────────────
+export async function getCitasPeriodo(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        TO_CHAR(C.FECHA, 'YYYY-MM-DD') AS FECHA,
+        B.NOMBRES || ' ' || B.APELLIDO_PATERNO AS NOMBRE,
+        B.CURP,
+        SC.NOMBRE AS TIPO_SERVICIO,
+        C.ESPECIALISTA,
+        C.ESTATUS
+      FROM CITAS C
+      JOIN BENEFICIARIOS B ON C.CURP = B.CURP
+      JOIN SERVICIOS_CATALOGO SC ON C.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
+      WHERE C.FECHA BETWEEN :fi AND :ff
+      ORDER BY C.FECHA DESC
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // ── 5. Persistencia de reportes generados ────────────────────────────────────
 export async function guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx, generadoPor = null }) {
   const conn = await getConnection();

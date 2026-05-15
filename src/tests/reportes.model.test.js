@@ -28,6 +28,7 @@ const {
   getServiciosPeriodo,
   getArticulosStock,
   getMovimientosPeriodo,
+  getCitasPeriodo,
   guardarRegistro,
   findHistorico,
   findById,
@@ -388,6 +389,42 @@ describe('getMovimientosPeriodo', () => {
   it('cierra conexión si execute lanza', async () => {
     mockExecute.mockRejectedValueOnce(new Error('DB error'));
     await expect(getMovimientosPeriodo(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('DB error');
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getCitasPeriodo ───────────────────────────────────────────────────────────
+
+describe('getCitasPeriodo', () => {
+  it('retorna filas de citas en el periodo', async () => {
+    const rows = [
+      {
+        FECHA: '2026-01-20',
+        NOMBRE: 'Ana Martínez',
+        CURP: 'MARA850515MNLRNS02',
+        TIPO_SERVICIO: 'Neurología',
+        ESPECIALISTA: 'Dr. Rodríguez',
+        ESTATUS: 'Completada',
+      },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getCitasPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay citas en el periodo', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await getCitasPeriodo(PERIODO.inicio, PERIODO.fin);
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('ORA-00600'));
+    await expect(getCitasPeriodo(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('ORA-00600');
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

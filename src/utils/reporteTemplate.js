@@ -429,9 +429,103 @@ function generarHTMLInventario({ articulos, movimientos }, { fechaInicio, fechaF
 </html>`;
 }
 
-function generarHTMLCitas(data, { fechaInicio, fechaFin }) {
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
-  <p>Reporte de Citas — Próximamente (Task 6)</p></body></html>`;
+function generarHTMLCitas({ filas }, { fechaInicio, fechaFin }) {
+  const total = filas.length;
+
+  // Agrupar por estatus
+  const byEstatus = filas.reduce((acc, r) => {
+    acc[r.ESTATUS] = (acc[r.ESTATUS] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Agrupar por especialista
+  const byEspecialista = filas.reduce((acc, r) => {
+    const esp = r.ESPECIALISTA ?? 'Sin asignar';
+    acc[esp] = (acc[esp] || 0) + 1;
+    return acc;
+  }, {});
+
+  const estatusStyle = (e) => {
+    if (e === 'Completada') return 'color:#2a7a2a;font-weight:bold';
+    if (e === 'Cancelada')  return 'color:#c0392b;font-weight:bold';
+    return 'color:#b87c00;font-weight:bold'; // Pendiente / otros
+  };
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 9pt; margin: 20px; color: #000; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+    .titulo { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
+    .subtitulo { font-size: 10pt; margin-top: 4px; }
+    h3 { margin: 10px 0 4px; font-size: 10pt; background: #e0e0e0; padding: 3px 5px; border: 1px solid #999; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    th, td { border: 1px solid #999; padding: 3px 5px; }
+    th { background: #e0e0e0; font-weight: bold; text-align: center; }
+    .num { text-align: center; font-weight: bold; }
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="titulo">Asociación de Espina Bífida de Nuevo León, A.B.P.</div>
+    <div class="subtitulo">Reporte de Citas — del ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)}</div>
+    <div class="subtitulo">Generado: ${formatFecha(new Date())}</div>
+  </div>
+
+  <h3>Resumen — Total: ${esc(total)} citas</h3>
+  <div class="bottom-grid">
+    <div>
+      <table>
+        <tr><th>Estatus</th><th>Cantidad</th></tr>
+        ${Object.entries(byEstatus).length > 0
+          ? Object.entries(byEstatus).map(([e, n]) => `<tr>
+              <td style="${estatusStyle(e)}">${esc(e)}</td>
+              <td class="num">${esc(n)}</td>
+            </tr>`).join('')
+          : '<tr><td colspan="2" style="text-align:center;color:#666">—</td></tr>'
+        }
+      </table>
+    </div>
+    <div>
+      <table>
+        <tr><th>Especialista</th><th>Citas</th></tr>
+        ${Object.entries(byEspecialista).length > 0
+          ? Object.entries(byEspecialista)
+              .sort((a, b) => b[1] - a[1])
+              .map(([e, n]) => `<tr>
+                <td>${esc(e)}</td>
+                <td class="num">${esc(n)}</td>
+              </tr>`).join('')
+          : '<tr><td colspan="2" style="text-align:center;color:#666">—</td></tr>'
+        }
+      </table>
+    </div>
+  </div>
+
+  <h3>Detalle de Citas</h3>
+  <table>
+    <tr>
+      <th>Fecha</th><th>Beneficiario</th><th>CURP</th>
+      <th>Servicio</th><th>Especialista</th><th>Estatus</th>
+    </tr>
+    ${filas.length > 0
+      ? filas.map(r => `<tr>
+          <td>${esc(r.FECHA)}</td>
+          <td>${esc(r.NOMBRE)}</td>
+          <td>${esc(r.CURP)}</td>
+          <td>${esc(r.TIPO_SERVICIO)}</td>
+          <td>${esc(r.ESPECIALISTA ?? '—')}</td>
+          <td style="${estatusStyle(r.ESTATUS)}">${esc(r.ESTATUS)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:#666">Sin citas en el periodo</td></tr>'
+    }
+  </table>
+</body>
+</html>`;
 }
 
 export function generarHTML(data, { fechaInicio, fechaFin }) {

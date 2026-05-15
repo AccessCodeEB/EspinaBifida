@@ -26,8 +26,10 @@ export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas
       const movimientos = await ReportesModel.getMovimientosPeriodo(fechaInicio, fechaFin);
       return { tipo, articulos, movimientos };
     }
-    case 'citas':
-      return { tipo, filas: [] };
+    case 'citas': {
+      const filas = await ReportesModel.getCitasPeriodo(fechaInicio, fechaFin);
+      return { tipo, filas };
+    }
     default: { // 'estadisticas'
       const resumen  = await ReportesModel.getResumenPeriodo(fechaInicio, fechaFin);
       const detalle  = await ReportesModel.getDetalleServicios(fechaInicio, fechaFin);
