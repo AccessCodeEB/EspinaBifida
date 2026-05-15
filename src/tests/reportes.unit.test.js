@@ -155,6 +155,28 @@ describe('generarHTML', () => {
     const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
     expect(html).toContain('Sin beneficiarios en el periodo');
   });
+
+  it('membresias: genera tabla con estados coloreados', () => {
+    const data = {
+      tipo: 'membresias',
+      filas: [
+        { NOMBRE: 'Ana Martínez', CURP: 'MARA850515MNLRNS02',
+          NUMERO_CREDENCIAL: 'NL-001', FECHA_VIGENCIA_INICIO: new Date('2025-01-01'),
+          FECHA_VIGENCIA_FIN: new Date('2026-12-31'), FECHA_ULTIMO_PAGO: new Date('2025-01-10'),
+          ESTADO: 'Activa' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Ana Martínez');
+    expect(html).toContain('Activa');
+    expect(html).toContain('Membresías');
+  });
+
+  it('membresias: sin filas muestra mensaje vacío', () => {
+    const data = { tipo: 'membresias', filas: [] };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin membresías en el periodo');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────

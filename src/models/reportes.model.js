@@ -189,6 +189,41 @@ export async function getBeneficiariosPeriodo(fechaInicio, fechaFin) {
   }
 }
 
+// ── 7. Membresías vigentes o que se superponen con el periodo ─────────────────
+export async function getMembresias(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        B.NOMBRES || ' ' || B.APELLIDO_PATERNO AS NOMBRE,
+        B.CURP,
+        C.NUMERO_CREDENCIAL,
+        C.FECHA_VIGENCIA_INICIO,
+        C.FECHA_VIGENCIA_FIN,
+        C.FECHA_ULTIMO_PAGO,
+        CASE
+          WHEN SYSDATE BETWEEN C.FECHA_VIGENCIA_INICIO AND C.FECHA_VIGENCIA_FIN
+               AND (C.FECHA_VIGENCIA_FIN - SYSDATE) <= 30 THEN 'Por vencer'
+          WHEN SYSDATE BETWEEN C.FECHA_VIGENCIA_INICIO AND C.FECHA_VIGENCIA_FIN THEN 'Activa'
+          WHEN C.FECHA_VIGENCIA_FIN < SYSDATE THEN 'Vencida'
+          ELSE 'Futura'
+        END AS ESTADO
+      FROM CREDENCIALES C
+      JOIN BENEFICIARIOS B ON C.CURP = B.CURP
+      WHERE C.FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff
+         OR C.FECHA_VIGENCIA_FIN    BETWEEN :fi AND :ff
+         OR (C.FECHA_VIGENCIA_INICIO <= :fi AND C.FECHA_VIGENCIA_FIN >= :ff)
+      ORDER BY C.FECHA_VIGENCIA_FIN DESC
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // ── 5. Persistencia de reportes generados ────────────────────────────────────
 export async function guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx, generadoPor = null }) {
   const conn = await getConnection();

@@ -13,8 +13,10 @@ export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas
       const filas = await ReportesModel.getBeneficiariosPeriodo(fechaInicio, fechaFin);
       return { tipo, filas };
     }
-    case 'membresias':
-      return { tipo, filas: [] };
+    case 'membresias': {
+      const filas = await ReportesModel.getMembresias(fechaInicio, fechaFin);
+      return { tipo, filas };
+    }
     case 'servicios':
       return { tipo, filas: [] };
     case 'inventario':

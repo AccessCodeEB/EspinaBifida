@@ -24,6 +24,7 @@ const {
   getDistribucionCiudades,
   getEstudios,
   getBeneficiariosPeriodo,
+  getMembresias,
   guardarRegistro,
   findHistorico,
   findById,
@@ -256,6 +257,43 @@ describe('getBeneficiariosPeriodo', () => {
     await expect(getBeneficiariosPeriodo(PERIODO.inicio, PERIODO.fin))
       .rejects.toThrow('ORA-00942');
 
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getMembresias ─────────────────────────────────────────────────────────────
+
+describe('getMembresias', () => {
+  it('retorna filas de credenciales con estado calculado', async () => {
+    const rows = [
+      {
+        NOMBRE: 'Ana Martínez',
+        CURP: 'MARA850515MNLRNS02',
+        NUMERO_CREDENCIAL: 'NL-2025-001',
+        FECHA_VIGENCIA_INICIO: new Date('2025-01-01'),
+        FECHA_VIGENCIA_FIN: new Date('2026-12-31'),
+        FECHA_ULTIMO_PAGO: new Date('2025-01-10'),
+        ESTADO: 'Activa',
+      },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getMembresias(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] cuando no hay membresías en el rango', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await getMembresias(PERIODO.inicio, PERIODO.fin);
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('timeout'));
+    await expect(getMembresias(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('timeout');
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

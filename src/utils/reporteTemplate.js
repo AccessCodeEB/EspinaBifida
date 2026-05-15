@@ -211,9 +211,75 @@ function generarHTMLBeneficiarios({ filas }, { fechaInicio, fechaFin }) {
 </html>`;
 }
 
-function generarHTMLMembresias(data, { fechaInicio, fechaFin }) {
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
-  <p>Reporte de Membresías — Próximamente (Task 3)</p></body></html>`;
+function generarHTMLMembresias({ filas }, { fechaInicio, fechaFin }) {
+  const activas   = filas.filter(r => r.ESTADO === 'Activa').length;
+  const porVencer = filas.filter(r => r.ESTADO === 'Por vencer').length;
+  const vencidas  = filas.filter(r => r.ESTADO === 'Vencida').length;
+  const futuras   = filas.filter(r => r.ESTADO === 'Futura').length;
+
+  const estadoStyle = (estado) => {
+    if (estado === 'Activa')     return 'color:#2a7a2a;font-weight:bold';
+    if (estado === 'Por vencer') return 'color:#b87c00;font-weight:bold';
+    if (estado === 'Vencida')    return 'color:#c0392b;font-weight:bold';
+    return 'color:#555';
+  };
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 9pt; margin: 20px; color: #000; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+    .titulo { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
+    .subtitulo { font-size: 10pt; margin-top: 4px; }
+    h3 { margin: 10px 0 4px; font-size: 10pt; background: #e0e0e0; padding: 3px 5px; border: 1px solid #999; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 3px 5px; }
+    th { background: #e0e0e0; font-weight: bold; text-align: center; }
+    .resumen-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .stat { border: 1px solid #999; padding: 6px; text-align: center; }
+    .stat-n { font-size: 14pt; font-weight: bold; }
+    .stat-l { font-size: 8pt; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="titulo">Asociación de Espina Bífida de Nuevo León, A.B.P.</div>
+    <div class="subtitulo">Reporte de Membresías — del ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)}</div>
+    <div class="subtitulo">Generado: ${formatFecha(new Date())}</div>
+  </div>
+
+  <h3>Resumen</h3>
+  <div class="resumen-grid">
+    <div class="stat"><div class="stat-n" style="color:#2a7a2a">${esc(activas)}</div><div class="stat-l">Activas</div></div>
+    <div class="stat"><div class="stat-n" style="color:#b87c00">${esc(porVencer)}</div><div class="stat-l">Por vencer (≤30 días)</div></div>
+    <div class="stat"><div class="stat-n" style="color:#c0392b">${esc(vencidas)}</div><div class="stat-l">Vencidas</div></div>
+    <div class="stat"><div class="stat-n">${esc(futuras)}</div><div class="stat-l">Futuras</div></div>
+  </div>
+
+  <h3>Detalle de Membresías</h3>
+  <table>
+    <tr>
+      <th>Nombre</th><th>CURP</th><th>No. Credencial</th>
+      <th>Inicio</th><th>Fin vigencia</th><th>Último pago</th><th>Estado</th>
+    </tr>
+    ${filas.length > 0
+      ? filas.map(r => `<tr>
+          <td>${esc(r.NOMBRE)}</td>
+          <td>${esc(r.CURP)}</td>
+          <td>${esc(r.NUMERO_CREDENCIAL ?? '—')}</td>
+          <td>${esc(r.FECHA_VIGENCIA_INICIO ? formatFecha(r.FECHA_VIGENCIA_INICIO) : '—')}</td>
+          <td>${esc(r.FECHA_VIGENCIA_FIN   ? formatFecha(r.FECHA_VIGENCIA_FIN)   : '—')}</td>
+          <td>${esc(r.FECHA_ULTIMO_PAGO    ? formatFecha(r.FECHA_ULTIMO_PAGO)    : '—')}</td>
+          <td style="${estadoStyle(r.ESTADO)}">${esc(r.ESTADO)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" style="text-align:center;color:#666">Sin membresías en el periodo</td></tr>'
+    }
+  </table>
+</body>
+</html>`;
 }
 
 function generarHTMLServicios(data, { fechaInicio, fechaFin }) {
