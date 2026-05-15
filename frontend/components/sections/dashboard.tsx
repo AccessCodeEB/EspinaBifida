@@ -431,7 +431,6 @@ export function DashboardSection() {
               </div>
             ) : (
               citasHoy.map((c) => {
-                const IconEstatus = estatusCitaIcon[c.estatus] ?? AlertCircle
                 return (
                   <div key={c.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
                     <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-muted/50 py-1.5 text-center">
