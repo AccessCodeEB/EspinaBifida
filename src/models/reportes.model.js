@@ -15,12 +15,20 @@ export async function getResumenPeriodo(fechaInicio, fechaFin) {
   const conn = await getConnection();
   try {
     const { placeholders: ammPH, binds: ammBinds } = buildInClause(MUNICIPIOS_AMM, 'm');
+    const fi  = new Date(fechaInicio);
+    const ff  = new Date(fechaFin);
 
-    const result = await conn.execute(`
+    // ORA-00937: Oracle no permite mezclar subconsulta escalar con funciones de grupo
+    // en el mismo SELECT sin GROUP BY — se separa en dos queries sobre la misma conexión.
+    const credRes = await conn.execute(
+      `SELECT COUNT(*) AS CANT_CREDENCIALES FROM CREDENCIALES
+       WHERE FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff`,
+      { fi, ff },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const statsRes = await conn.execute(`
       SELECT
-        (SELECT COUNT(*) FROM CREDENCIALES
-         WHERE FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff) AS CANT_CREDENCIALES,
-
         COUNT(S.ID_SERVICIO)                              AS CANT_SERVICIOS,
         COUNT(CASE WHEN S.MONTO_PAGADO = 0 THEN 1 END)   AS EXENTOS,
         COUNT(CASE WHEN S.MONTO_PAGADO > 0 THEN 1 END)   AS CON_CUOTA,
@@ -50,10 +58,13 @@ export async function getResumenPeriodo(fechaInicio, fechaFin) {
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
       WHERE S.FECHA BETWEEN :fi AND :ff
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin), ffr: new Date(fechaFin), ...ammBinds },
+    { fi, ff, ffr: ff, ...ammBinds },
     { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
-    return result.rows[0];
+    return {
+      CANT_CREDENCIALES: credRes.rows[0]?.CANT_CREDENCIALES ?? 0,
+      ...statsRes.rows[0],
+    };
   } finally {
     await conn.close();
   }
