@@ -306,28 +306,30 @@ function ActionCenter({
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
 
-      {/* Cards — fixed page, no scroll */}
-      <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+      {/* Cards — fixed page, no scroll, evenly distributed */}
+      <div className="flex-1 min-h-0 flex flex-col justify-between gap-1">
+        <div className="flex flex-col gap-1.5">
         {slice.map(c=>(
           <button
             key={c.id}
             onClick={()=>onNavigate(c)}
-            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-2 hover:bg-muted/40 hover:border-border/60 transition-colors group"
+            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-3 hover:bg-muted/40 hover:border-border/60 transition-colors group"
           >
-            <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
+            <p className="text-[12px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
               {c.beneficiario}
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-2 mt-1">
               <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-              <p className="text-[10px] text-muted-foreground truncate">{c.fecha} · {c.hora}</p>
-              <span className={`ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wide ${
-                c.estatus==="Confirmada"?"text-emerald-400":"text-amber-400"
+              <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora}</p>
+              <span className={`ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                c.estatus==="Confirmada"
+                  ?"bg-emerald-500/15 text-emerald-400"
+                  :"bg-amber-500/15 text-amber-400"
               }`}>{c.estatus}</span>
             </div>
           </button>
         ))}
-        {/* Spacer so pagination sticks to bottom */}
-        <div className="flex-1"/>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -496,14 +498,17 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
-    // After layout updates: scroll to block and open its popover
+    // After layout updates: scroll to block (using rect relative to container) and open popover
     setTimeout(()=>{
       const el=document.getElementById(`cita-block-${c.id}`)
       const container=document.getElementById("citas-grid")
       if(el && container) {
-        const target = el.offsetTop - container.clientHeight / 2
+        // Use getBoundingClientRect to get position relative to the scroll container
+        const elRect=el.getBoundingClientRect()
+        const containerRect=container.getBoundingClientRect()
+        const target=container.scrollTop + (elRect.top - containerRect.top) - container.clientHeight/2 + el.clientHeight/2
         container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
-        // Open the popover by using the block's DOMRect
+        // Open the popover using the block's DOMRect
         const rect=el.getBoundingClientRect()
         setSelected({cita:c,rect})
       }
