@@ -514,7 +514,7 @@ export function ReportesSection() {
 
       {/* Modal vista previa */}
       <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) handleClosePreview() }}>
-        <DialogContent className="flex h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw] flex-col gap-0 p-0">
+        <DialogContent className="flex h-[92vh] max-h-[92vh] w-[95vw] max-w-[95vw] flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <FileText className="size-4 text-red-500" />

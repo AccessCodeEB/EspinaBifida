@@ -34,23 +34,23 @@ export async function getResumenPeriodo(fechaInicio, fechaFin) {
                              THEN B.CURP END)             AS RURAL,
 
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ff, B.FECHA_NACIMIENTO)/12) BETWEEN 0 AND 2
+          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 0 AND 2
           THEN B.CURP END)                                AS LACTANTES,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ff, B.FECHA_NACIMIENTO)/12) BETWEEN 3 AND 11
+          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 3 AND 11
           THEN B.CURP END)                                AS NINOS,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ff, B.FECHA_NACIMIENTO)/12) BETWEEN 12 AND 17
+          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 12 AND 17
           THEN B.CURP END)                                AS ADOLESCENTES,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ff, B.FECHA_NACIMIENTO)/12) >= 18
+          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) >= 18
           THEN B.CURP END)                                AS ADULTOS
 
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
       WHERE S.FECHA BETWEEN :fi AND :ff
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin), ...ammBinds },
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin), ffr: new Date(fechaFin), ...ammBinds },
     { outFormat: oracledb.OUT_FORMAT_OBJECT });
 
     return result.rows[0];
@@ -170,6 +170,8 @@ export async function getBeneficiariosPeriodo(fechaInicio, fechaFin) {
     const result = await conn.execute(`
       SELECT DISTINCT
         B.CURP,
+        B.APELLIDO_PATERNO,
+        B.NOMBRES,
         B.NOMBRES || ' ' || B.APELLIDO_PATERNO || ' ' || B.APELLIDO_MATERNO AS NOMBRE_COMPLETO,
         B.GENERO,
         B.MUNICIPIO,
