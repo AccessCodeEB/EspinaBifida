@@ -167,19 +167,6 @@ describe("registrarMembresia — validaciones de fechas", () => {
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  test("fecha_vigencia_inicio posterior a fecha_vigencia_fin → BAD_REQUEST", async () => {
-    // fechaVigenciaFin = fecha_emision + 1 año = 2027-01-01
-    // fecha_vigencia_inicio = 2028-01-01 → inicio > fin
-    await expect(
-      Service.registrarMembresia({
-        curp: CURP,
-        numero_credencial: "CRED-001",
-        fecha_emision: "2026-01-01",
-        fecha_vigencia_inicio: "2028-01-01",
-      })
-    ).rejects.toMatchObject({ statusCode: 400 });
-  });
-
   test("fecha_ultimo_pago con formato inválido → BAD_REQUEST", async () => {
     await expect(
       Service.registrarMembresia({

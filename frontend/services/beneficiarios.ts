@@ -29,6 +29,7 @@ export interface Beneficiario {
   tipo: string
   estatus: string
   membresiaEstatus: string
+  diasRestantes?: number | null
   activo?: boolean
   /** Ruta o URL devuelta por el backend (p. ej. /uploads/profiles/...) */
   fotoPerfilUrl?: string | null

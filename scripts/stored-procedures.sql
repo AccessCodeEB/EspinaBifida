@@ -76,7 +76,10 @@ CREATE OR REPLACE PROCEDURE SP_REGISTRAR_MEMBRESIA(
   p_fecha_pago      IN  DATE,
   p_fecha_emision   IN  DATE,
   p_observaciones   IN  VARCHAR2,
-  p_id_credencial   OUT NUMBER
+  p_id_credencial   OUT NUMBER,
+  p_monto           IN  NUMBER   DEFAULT NULL,
+  p_metodo_pago     IN  VARCHAR2 DEFAULT NULL,
+  p_referencia      IN  VARCHAR2 DEFAULT NULL
 ) AS
   v_estatus VARCHAR2(10);
 BEGIN
@@ -99,11 +102,13 @@ BEGIN
   INSERT INTO CREDENCIALES (
     CURP, NUMERO_CREDENCIAL,
     FECHA_VIGENCIA_INICIO, FECHA_VIGENCIA_FIN,
-    FECHA_ULTIMO_PAGO, FECHA_EMISION, OBSERVACIONES
+    FECHA_ULTIMO_PAGO, FECHA_EMISION, OBSERVACIONES,
+    MONTO, METODO_PAGO, REFERENCIA
   ) VALUES (
     p_curp, p_num_credencial,
     p_fecha_inicio, p_fecha_fin,
-    p_fecha_pago, p_fecha_emision, p_observaciones
+    p_fecha_pago, p_fecha_emision, p_observaciones,
+    p_monto, p_metodo_pago, p_referencia
   )
   RETURNING ID_CREDENCIAL INTO p_id_credencial;
 
@@ -118,6 +123,17 @@ EXCEPTION
   WHEN OTHERS THEN
     RAISE;
 END SP_REGISTRAR_MEMBRESIA;
+/
+
+-- Trigger: asigna ID_CREDENCIAL desde SEQ_CREDENCIALES antes de cada INSERT
+CREATE OR REPLACE TRIGGER TRG_CREDENCIALES_BI
+BEFORE INSERT ON CREDENCIALES
+FOR EACH ROW
+BEGIN
+  IF :NEW.ID_CREDENCIAL IS NULL THEN
+    SELECT SEQ_CREDENCIALES.NEXTVAL INTO :NEW.ID_CREDENCIAL FROM DUAL;
+  END IF;
+END;
 /
 
 -- -----------------------------------------------------------------------------

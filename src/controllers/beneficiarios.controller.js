@@ -34,6 +34,7 @@ function mapBeneficiario(row) {
     tipo:            b.tipo ?? null,
     fechaAlta:       b.fechaAlta,
     numeroCredencial: b.numeroCredencial,
+    diasRestantes:   b.diasRestantes != null ? Math.floor(Number(b.diasRestantes)) : null,
     fotoPerfilUrl:   safeClobString(b.fotoPerfilUrl) ?? null,
   };
 }

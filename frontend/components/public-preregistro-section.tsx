@@ -444,7 +444,7 @@ export function PublicPreregistroSection({
 
             <FieldShell label="¿Usa válvula?" required error={errors.usaValvula} htmlFor="prereg-valv">
               <Select
-                value={form.usaValvula === undefined ? "" : form.usaValvula ? "si" : "no"}
+                value={form.usaValvula === undefined ? undefined : form.usaValvula ? "si" : "no"}
                 onValueChange={(v) => change("usaValvula", v === "si")}
               >
                 <SelectTrigger
@@ -462,8 +462,8 @@ export function PublicPreregistroSection({
 
             <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo">
               <Select
-                value={form.tipo ? form.tipo : "__none__"}
-                onValueChange={(v) => change("tipo", v === "__none__" ? "" : v)}
+                value={form.tipo || undefined}
+                onValueChange={(v) => change("tipo", v)}
               >
                 <SelectTrigger
                   id="prereg-tipo"
@@ -472,7 +472,6 @@ export function PublicPreregistroSection({
                   <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Selecciona un tipo</SelectItem>
                   {TIPOS_ESPINA_BIFIDA_OPCIONES.map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}

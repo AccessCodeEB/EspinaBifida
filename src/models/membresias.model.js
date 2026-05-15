@@ -13,6 +13,10 @@ export async function findAll() {
               c.FECHA_VIGENCIA_FIN,
               c.FECHA_ULTIMO_PAGO,
               c.OBSERVACIONES,
+              c.MONTO,
+              c.METODO_PAGO,
+              c.REFERENCIA,
+              (c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE)) AS DIAS_RESTANTES,
               CASE
                 WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30 THEN 'Activa'
                 WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30 THEN 'Por vencer'
@@ -20,7 +24,39 @@ export async function findAll() {
               END AS ESTATUS_MEMBRESIA
        FROM CREDENCIALES c
        JOIN BENEFICIARIOS b ON b.CURP = c.CURP
-       ORDER BY c.FECHA_VIGENCIA_FIN DESC`
+       WHERE c.ID_CREDENCIAL = (
+         SELECT MAX(c2.ID_CREDENCIAL)
+         FROM CREDENCIALES c2
+         WHERE c2.CURP = c.CURP
+       )
+       ORDER BY c.FECHA_VIGENCIA_FIN ASC`
+    );
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
+export async function findPagosRecientes(limit = 20) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `SELECT c.ID_CREDENCIAL,
+              c.CURP,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO, '') AS NOMBRE_COMPLETO,
+              c.FECHA_EMISION,
+              c.FECHA_VIGENCIA_INICIO,
+              c.FECHA_VIGENCIA_FIN,
+              c.FECHA_ULTIMO_PAGO,
+              c.MONTO,
+              c.METODO_PAGO,
+              c.REFERENCIA,
+              c.OBSERVACIONES
+       FROM CREDENCIALES c
+       JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+       ORDER BY c.FECHA_EMISION DESC, c.ID_CREDENCIAL DESC
+       FETCH FIRST :limit ROWS ONLY`,
+      { limit }
     );
     return result.rows;
   } finally {
@@ -132,6 +168,67 @@ export async function setBeneficiarioInactivo(curp) {
   }
 }
 
+export async function setBeneficiarioBaja(curp) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(
+      `UPDATE BENEFICIARIOS
+       SET ESTATUS = 'Baja'
+       WHERE CURP = :curp
+         AND ESTATUS NOT IN ('Baja')`,
+      { curp },
+      { autoCommit: true }
+    );
+    return result.rowsAffected ?? 0;
+  } finally {
+    await conn.close();
+  }
+}
+
+/** Sincroniza ESTATUS de todos los beneficiarios según días vencidos de su membresía. */
+export async function syncEstados() {
+  const conn = await getConnection();
+  try {
+    // Credencial vencida (cualquier antigüedad) → Inactivo
+    // Solo aplica a beneficiarios con al menos una credencial registrada
+    await conn.execute(
+      `UPDATE BENEFICIARIOS b
+       SET ESTATUS = 'Inactivo'
+       WHERE ESTATUS = 'Activo'
+         AND NOT EXISTS (
+           SELECT 1 FROM CREDENCIALES c
+           WHERE c.CURP = b.CURP
+             AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+         )
+         AND EXISTS (
+           SELECT 1 FROM CREDENCIALES c
+           WHERE c.CURP = b.CURP
+         )`,
+      {},
+      { autoCommit: true }
+    );
+
+    // Inactivo con credencial vencida hace más de 30 días → Baja
+    await conn.execute(
+      `UPDATE BENEFICIARIOS b
+       SET ESTATUS = 'Baja'
+       WHERE ESTATUS = 'Inactivo'
+         AND EXISTS (
+           SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
+         )
+         AND (
+           SELECT MAX(c.FECHA_VIGENCIA_FIN)
+           FROM CREDENCIALES c
+           WHERE c.CURP = b.CURP
+         ) < TRUNC(SYSDATE) - 30`,
+      {},
+      { autoCommit: true }
+    );
+  } finally {
+    await conn.close();
+  }
+}
+
 export async function cancelarPorCurp(curp) {
   const conn = await getConnection();
   try {
@@ -157,6 +254,9 @@ export async function create({
   fechaVigenciaFin,
   fechaUltimoPago,
   observaciones,
+  monto,
+  metodoPago,
+  referencia,
 }) {
   const toDate = (v) => {
     if (!v) return null;
@@ -168,23 +268,35 @@ export async function create({
     const result = await conn.execute(
       `BEGIN
          SP_REGISTRAR_MEMBRESIA(
-           :curp, :num, :ini, :fin, :pago,
-           :emision, :obs, :id_out
+           p_curp           => :curp,
+           p_num_credencial => :num,
+           p_fecha_inicio   => :ini,
+           p_fecha_fin      => :fin,
+           p_fecha_pago     => :pago,
+           p_fecha_emision  => :emision,
+           p_observaciones  => :obs,
+           p_id_credencial  => :id_out,
+           p_monto          => :monto,
+           p_metodo_pago    => :metodo_pago,
+           p_referencia     => :referencia
          );
        END;`,
       {
-        curp:    curp,
-        num:     numeroCredencial,
-        ini:     { val: toDate(fechaVigenciaInicio), type: oracledb.DB_TYPE_DATE },
-        fin:     { val: toDate(fechaVigenciaFin),    type: oracledb.DB_TYPE_DATE },
-        pago:    { val: toDate(fechaUltimoPago),     type: oracledb.DB_TYPE_DATE },
-        emision: { val: toDate(fechaEmision),        type: oracledb.DB_TYPE_DATE },
-        obs:     observaciones ?? null,
-        id_out:  { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        curp:        curp,
+        num:         numeroCredencial,
+        ini:         { val: toDate(fechaVigenciaInicio), type: oracledb.DB_TYPE_DATE },
+        fin:         { val: toDate(fechaVigenciaFin),    type: oracledb.DB_TYPE_DATE },
+        pago:        { val: toDate(fechaUltimoPago),     type: oracledb.DB_TYPE_DATE },
+        emision:     { val: toDate(fechaEmision),        type: oracledb.DB_TYPE_DATE },
+        obs:         observaciones ?? null,
+        id_out:      { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        monto:       monto ?? null,
+        metodo_pago: metodoPago ?? null,
+        referencia:  referencia ?? null,
       }
     );
     await conn.commit();
-    return result;   // backward-compat: callers don't use the return value
+    return result;
   } catch (err) {
     await conn.rollback();
     if (err.errorNum === 20003) {

@@ -29,6 +29,10 @@ const membresiaRow = {
   FECHA_ULTIMO_PAGO:     "2026-01-01",
   NUMERO_CREDENCIAL:     "CRED-001",
   OBSERVACIONES:         null,
+  MONTO:                 500,
+  METODO_PAGO:           "efectivo",
+  REFERENCIA:            null,
+  DIAS_RESTANTES:        15,
 };
 
 beforeEach(() => { resetMocks(); });
@@ -47,10 +51,11 @@ describe("GET /membresias — getAll", () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0].folio).toBe(CURP);
     expect(res.body[0].estatus).toBe("Activa");
-    expect(res.body[0].porPagar).toBe("$0.00"); // Activa → porPagar = $0.00
+    expect(res.body[0].monto).toBe(500);
+    expect(res.body[0].diasRestantes).toBe(15);
   });
 
-  test("membresía vencida → porPagar = $500.00", async () => {
+  test("membresía vencida → monto devuelto correctamente", async () => {
     mockExecute.mockResolvedValueOnce({
       rows: [{ ...membresiaRow, ESTATUS_MEMBRESIA: "Vencida" }],
     });
@@ -58,7 +63,8 @@ describe("GET /membresias — getAll", () => {
     const res = await request(app).get("/membresias");
 
     expect(res.status).toBe(200);
-    expect(res.body[0].porPagar).toBe("$500.00");
+    expect(res.body[0].estatus).toBe("Vencida");
+    expect(res.body[0].monto).toBe(500);
   });
 
   test("estatusMembresia nulo → default 'Vencida' en mapMembresia", async () => {
@@ -99,9 +105,7 @@ describe("POST /membresias — createMembresia", () => {
   test("registra membresía exitosamente (201)", async () => {
     // findBeneficiarioByCurp → existe
     mockExecute.mockResolvedValueOnce({ rows: [{ CURP }] });
-    // hasPeriodOverlap → sin traslape
-    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
-    // INSERT CREDENCIALES
+    // SP_REGISTRAR_MEMBRESIA (BEGIN...END)
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
@@ -127,15 +131,12 @@ describe("POST /membresias — createMembresia", () => {
     expect(res.status).toBe(404);
   });
 
-  test("devuelve 409 si hay traslape de períodos", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ CURP }] });
-    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });
-
+  test("devuelve 400 si falta curp", async () => {
     const res = await request(app)
       .post("/membresias")
-      .send({ curp: CURP, numero_credencial: "X", fecha_emision: "2026-01-01" });
+      .send({ numero_credencial: "X", fecha_emision: "2026-01-01" });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(400);
   });
 });
 

@@ -30,6 +30,11 @@ export async function findAll() {
                 ) THEN 'Vencida'
                 ELSE 'Sin membresia'
               END AS MEMBRESIA_ESTATUS,
+              (SELECT c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE)
+               FROM CREDENCIALES c
+               WHERE c.CURP = b.CURP
+               ORDER BY c.FECHA_VIGENCIA_FIN DESC, c.ID_CREDENCIAL DESC
+               FETCH FIRST 1 ROWS ONLY) AS DIAS_RESTANTES,
               b.FOTO_PERFIL_URL
        FROM BENEFICIARIOS b
        ORDER BY b.APELLIDO_PATERNO`

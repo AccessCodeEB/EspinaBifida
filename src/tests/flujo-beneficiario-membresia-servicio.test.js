@@ -250,19 +250,19 @@ describe("Conflicto: CURP duplicada → 409", () => {
 // 6. MEMBRESÍA CON PERÍODO TRASLAPADO (409)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("Conflicto: membresía traslapada → 409", () => {
-  test("POST /api/v1/membresias con vigencia que se solapa con una existente", async () => {
+describe("Registro de pago mensual: renueva membresía existente → 201", () => {
+  test("POST /api/v1/membresias registra pago aunque ya exista membresía activa (SP cancela la anterior)", async () => {
     // findBeneficiarioByCurp → existe
     mockExecute.mockResolvedValueOnce({ rows: [{ CURP: CURP_VALIDA }] });
-    // hasPeriodOverlap → hay traslape
-    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });
+    // SP_REGISTRAR_MEMBRESIA (BEGIN...END) — cancela anterior y crea nueva
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .post("/api/v1/membresias")
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(membresiaBase);
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
   });
 });
 
