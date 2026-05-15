@@ -59,6 +59,7 @@ const { generarReporte, generarPDF, generarXLSX } = await import('../services/re
 
 const PERIODO = { inicio: '2026-01-01', fin: '2026-01-31' };
 const DATA = {
+  tipo:     'estadisticas',
   resumen:  { CANT_SERVICIOS: 10 },
   detalle:  [{ NOMBRE: 'Consulta', CANTIDAD: 5 }],
   ciudades: [{ CIUDAD: 'Monterrey', CANTIDAD: 8 }],
@@ -104,7 +105,7 @@ describe('generarReporte', () => {
     mockGetEstudios            .mockResolvedValueOnce(DATA.estudios);
     mockGetAtencionesPorMes    .mockResolvedValueOnce(DATA.porMes);
 
-    const result = await generarReporte(PERIODO.inicio, PERIODO.fin);
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'estadisticas');
 
     expect(result).toEqual(DATA);
     expect(mockGetResumenPeriodo      ).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);

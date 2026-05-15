@@ -43,6 +43,7 @@ import jwt from "jsonwebtoken";
 const token = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
 
 const DATA = {
+  tipo:     'estadisticas',
   resumen:  { CANT_CREDENCIALES: 5, CANT_SERVICIOS: 20, EXENTOS: 5, CON_CUOTA: 15,
               HOMBRES: 10, MUJERES: 10, URBANO: 18, RURAL: 2,
               LACTANTES: 1, NINOS: 4, ADOLESCENTES: 3, ADULTOS: 12 },
@@ -101,6 +102,22 @@ describe("GET /api/v1/reportes/periodo — validaciones", () => {
       .get("/api/v1/reportes/periodo?fechaInicio=2026-01-01&fechaFin=2026-01-31");
     expect(res.status).toBe(401);
   });
+
+  it("400 si tipo es inválido", async () => {
+    const res = await request(app)
+      .get("/api/v1/reportes/periodo?fechaInicio=2026-01-01&fechaFin=2026-01-31&tipo=facturas")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/tipo/i);
+  });
+
+  it("pasa tipo correcto al servicio", async () => {
+    const res = await request(app)
+      .get("/api/v1/reportes/periodo?fechaInicio=2026-01-01&fechaFin=2026-01-31&tipo=beneficiarios")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(mockGenerarReporte).toHaveBeenCalledWith("2026-01-01", "2026-01-31", "beneficiarios");
+  });
 });
 
 describe("GET /api/v1/reportes/periodo — generación PDF", () => {
@@ -111,7 +128,7 @@ describe("GET /api/v1/reportes/periodo — generación PDF", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/application\/pdf/);
-    expect(res.headers["content-disposition"]).toContain("reporte-2026-01-01-2026-01-31.pdf");
+    expect(res.headers["content-disposition"]).toContain("reporte-estadisticas-2026-01-01-2026-01-31.pdf");
     expect(mockGenerarPDF).toHaveBeenCalledTimes(1);
   });
 
@@ -140,7 +157,7 @@ describe("GET /api/v1/reportes/periodo — generación XLSX", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/spreadsheetml/);
-    expect(res.headers["content-disposition"]).toContain("reporte-2026-01-01-2026-01-31.xlsx");
+    expect(res.headers["content-disposition"]).toContain("reporte-estadisticas-2026-01-01-2026-01-31.xlsx");
     expect(mockGenerarXLSX).toHaveBeenCalledTimes(1);
   });
 });
@@ -242,6 +259,6 @@ describe("generarReporte — agrega resultados de los 4 queries", () => {
       .get("/api/v1/reportes/periodo?fechaInicio=2026-01-01&fechaFin=2026-01-31")
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
-    expect(mockGenerarReporte).toHaveBeenCalledWith('2026-01-01', '2026-01-31');
+    expect(mockGenerarReporte).toHaveBeenCalledWith('2026-01-01', '2026-01-31', 'estadisticas');
   });
 });

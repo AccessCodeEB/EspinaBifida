@@ -7,14 +7,16 @@ import { badRequest, notFound } from '../utils/httpErrors.js';
 const STORAGE = path.resolve(process.env.STORAGE_PATH ?? './storage/reportes');
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+const TIPOS_VALIDOS = ['estadisticas', 'beneficiarios', 'membresias', 'servicios', 'inventario', 'citas'];
+
 /**
  * GET /api/v1/reportes/periodo
- * ?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD&formato=pdf|xlsx
+ * ?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD&formato=pdf|xlsx&tipo=estadisticas|...
  * Genera el reporte on-demand y lo descarga directamente (no persiste en BD).
  */
 export async function getPeriodo(req, res, next) {
   try {
-    const { fechaInicio, fechaFin, formato = 'pdf' } = req.query;
+    const { fechaInicio, fechaFin, formato = 'pdf', tipo = 'estadisticas' } = req.query;
 
     if (!fechaInicio || !fechaFin)
       throw badRequest('fechaInicio y fechaFin son requeridos');
@@ -24,19 +26,21 @@ export async function getPeriodo(req, res, next) {
       throw badRequest('fechaInicio no puede ser posterior a fechaFin');
     if (!['pdf', 'xlsx'].includes(formato))
       throw badRequest('formato debe ser pdf o xlsx');
+    if (!TIPOS_VALIDOS.includes(tipo))
+      throw badRequest('tipo debe ser: estadisticas, beneficiarios, membresias, servicios, inventario, citas');
 
-    const data = await ReportesService.generarReporte(fechaInicio, fechaFin);
+    const data = await ReportesService.generarReporte(fechaInicio, fechaFin, tipo);
 
     if (formato === 'pdf') {
       const buf = await ReportesService.generarPDF(data, fechaInicio, fechaFin);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="reporte-${fechaInicio}-${fechaFin}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="reporte-${tipo}-${fechaInicio}-${fechaFin}.pdf"`);
       return res.send(buf);
     }
 
     const buf = await ReportesService.generarXLSX(data);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte-${fechaInicio}-${fechaFin}.xlsx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="reporte-${tipo}-${fechaInicio}-${fechaFin}.xlsx"`);
     return res.send(buf);
   } catch (err) { next(err); }
 }

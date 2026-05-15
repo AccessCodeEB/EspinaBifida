@@ -184,7 +184,7 @@ export function ReportesSection() {
 
     setIsDownloading(true)
     try {
-      await downloadReporte(fechas.fechaInicio, fechas.fechaFin, selectedFormat)
+      await downloadReporte(fechas.fechaInicio, fechas.fechaFin, selectedFormat, selectedReport ?? "estadisticas")
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Error al generar el reporte.")
     } finally {
@@ -218,7 +218,7 @@ export function ReportesSection() {
         URL.revokeObjectURL(previewBlobRef.current)
         previewBlobRef.current = null
       }
-      const url = await fetchReporteUrl(fechas.fechaInicio, fechas.fechaFin, "pdf")
+      const url = await fetchReporteUrl(fechas.fechaInicio, fechas.fechaFin, "pdf", selectedReport ?? "estadisticas")
       previewBlobRef.current = url
       setPreviewUrl(url)
       setPreviewOpen(true)

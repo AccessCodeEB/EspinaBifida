@@ -19,10 +19,11 @@ export interface ReporteHistorico {
 export async function fetchReporteUrl(
   fechaInicio: string,
   fechaFin: string,
-  formato: "pdf" | "xlsx"
+  formato: "pdf" | "xlsx",
+  tipo = "estadisticas"
 ): Promise<string> {
   const token = tokenStorage.get()
-  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}`
+  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
   const url = resolveApiFetchUrl(path)
 
   const res = await fetch(url, {
@@ -52,10 +53,11 @@ export async function fetchReporteUrl(
 export async function downloadReporte(
   fechaInicio: string,
   fechaFin: string,
-  formato: "pdf" | "xlsx"
+  formato: "pdf" | "xlsx",
+  tipo = "estadisticas"
 ): Promise<void> {
   const token = tokenStorage.get()
-  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}`
+  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
   const url = resolveApiFetchUrl(path)
 
   const res = await fetch(url, {

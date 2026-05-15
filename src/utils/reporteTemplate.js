@@ -21,7 +21,7 @@ function formatMes(mesStr) {
   return d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 }
 
-export function generarHTML(data, { fechaInicio, fechaFin }) {
+function generarHTMLEstadisticas(data, { fechaInicio, fechaFin }) {
   const { resumen, detalle, ciudades, estudios, porMes = [] } = data;
   const mitad = Math.ceil(detalle.length / 2);
   const col1  = detalle.slice(0, mitad);
@@ -145,4 +145,47 @@ export function generarHTML(data, { fechaInicio, fechaFin }) {
   </div>
 </body>
 </html>`;
+}
+
+function generarHTMLBeneficiarios(data, { fechaInicio, fechaFin }) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <style>body{font-family:Arial,sans-serif;font-size:9pt;margin:20px}
+  .header{text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px}
+  .titulo{font-size:13pt;font-weight:bold;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:3px 5px}
+  th{background:#e0e0e0;font-weight:bold;text-align:center}</style></head><body>
+  <div class="header"><div class="titulo">Asociación de Espina Bífida de Nuevo León, A.B.P.</div>
+  <div>Reporte de Beneficiarios — Próximamente</div></div>
+  <p>Este reporte se implementará en el Task 2.</p></body></html>`;
+}
+
+function generarHTMLMembresias(data, { fechaInicio, fechaFin }) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
+  <p>Reporte de Membresías — Próximamente (Task 3)</p></body></html>`;
+}
+
+function generarHTMLServicios(data, { fechaInicio, fechaFin }) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
+  <p>Reporte de Servicios — Próximamente (Task 4)</p></body></html>`;
+}
+
+function generarHTMLInventario(data, { fechaInicio, fechaFin }) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
+  <p>Reporte de Inventario — Próximamente (Task 5)</p></body></html>`;
+}
+
+function generarHTMLCitas(data, { fechaInicio, fechaFin }) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
+  <p>Reporte de Citas — Próximamente (Task 6)</p></body></html>`;
+}
+
+export function generarHTML(data, { fechaInicio, fechaFin }) {
+  switch (data.tipo) {
+    case 'beneficiarios': return generarHTMLBeneficiarios(data, { fechaInicio, fechaFin });
+    case 'membresias':    return generarHTMLMembresias(data,    { fechaInicio, fechaFin });
+    case 'servicios':     return generarHTMLServicios(data,     { fechaInicio, fechaFin });
+    case 'inventario':    return generarHTMLInventario(data,    { fechaInicio, fechaFin });
+    case 'citas':         return generarHTMLCitas(data,         { fechaInicio, fechaFin });
+    default:              return generarHTMLEstadisticas(data,  { fechaInicio, fechaFin });
+  }
 }

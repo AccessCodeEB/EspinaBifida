@@ -77,6 +77,7 @@ describe('calcularPeriodo', () => {
 // ── generarHTML ───────────────────────────────────────────────────────────────
 
 const DATA_VACIA = {
+  tipo:     'estadisticas',
   resumen:  { CANT_CREDENCIALES: 0, CANT_SERVICIOS: 0, EXENTOS: 0, CON_CUOTA: 0,
               HOMBRES: 0, MUJERES: 0, URBANO: 0, RURAL: 0,
               LACTANTES: 0, NINOS: 0, ADOLESCENTES: 0, ADULTOS: 0 },
@@ -87,6 +88,7 @@ const DATA_VACIA = {
 };
 
 const DATA_COMPLETA = {
+  tipo:     'estadisticas',
   resumen:  { CANT_CREDENCIALES: 10, CANT_SERVICIOS: 55, EXENTOS: 12, CON_CUOTA: 43,
               HOMBRES: 20, MUJERES: 35, URBANO: 48, RURAL: 7,
               LACTANTES: 5, NINOS: 15, ADOLESCENTES: 8, ADULTOS: 27 },

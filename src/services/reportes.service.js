@@ -4,16 +4,30 @@ import * as ReportesModel from '../models/reportes.model.js';
 import { generarHTML } from '../utils/reporteTemplate.js';
 
 /**
- * Ejecuta las 4 queries Oracle de forma secuencial (no paralela) para evitar
- * agotar el pool de conexiones bajo carga concurrente.
+ * Ejecuta las queries Oracle según el tipo de reporte solicitado.
+ * Los tipos distintos de 'estadisticas' retornan stubs vacíos (se implementan en Tasks 2-6).
  */
-export async function generarReporte(fechaInicio, fechaFin) {
-  const resumen  = await ReportesModel.getResumenPeriodo(fechaInicio, fechaFin);
-  const detalle  = await ReportesModel.getDetalleServicios(fechaInicio, fechaFin);
-  const ciudades = await ReportesModel.getDistribucionCiudades(fechaInicio, fechaFin);
-  const estudios = await ReportesModel.getEstudios(fechaInicio, fechaFin);
-  const porMes   = await ReportesModel.getAtencionesPorMes(fechaInicio, fechaFin);
-  return { resumen, detalle, ciudades, estudios, porMes };
+export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas') {
+  switch (tipo) {
+    case 'beneficiarios':
+      return { tipo, filas: [] };
+    case 'membresias':
+      return { tipo, filas: [] };
+    case 'servicios':
+      return { tipo, filas: [] };
+    case 'inventario':
+      return { tipo, articulos: [], movimientos: [] };
+    case 'citas':
+      return { tipo, filas: [] };
+    default: { // 'estadisticas'
+      const resumen  = await ReportesModel.getResumenPeriodo(fechaInicio, fechaFin);
+      const detalle  = await ReportesModel.getDetalleServicios(fechaInicio, fechaFin);
+      const ciudades = await ReportesModel.getDistribucionCiudades(fechaInicio, fechaFin);
+      const estudios = await ReportesModel.getEstudios(fechaInicio, fechaFin);
+      const porMes   = await ReportesModel.getAtencionesPorMes(fechaInicio, fechaFin);
+      return { tipo: 'estadisticas', resumen, detalle, ciudades, estudios, porMes };
+    }
+  }
 }
 
 /**
@@ -35,15 +49,34 @@ export async function generarPDF(data, fechaInicio, fechaFin) {
 }
 
 /**
- * Genera XLSX con 5 hojas: Resumen, Por Mes, Detalle Servicios, Ciudades, Estudios.
+ * Genera XLSX. Las hojas varían según data.tipo.
  * Retorna Buffer listo para res.send().
  */
 export async function generarXLSX(data) {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([data.resumen]), 'Resumen');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.porMes),   'Por Mes');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.detalle),  'Detalle Servicios');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.ciudades), 'Ciudades');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.estudios), 'Estudios');
+  switch (data.tipo) {
+    case 'beneficiarios':
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.filas), 'Beneficiarios');
+      break;
+    case 'membresias':
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.filas), 'Membresías');
+      break;
+    case 'servicios':
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.filas), 'Servicios');
+      break;
+    case 'inventario':
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.articulos),   'Stock Actual');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.movimientos), 'Movimientos');
+      break;
+    case 'citas':
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.filas), 'Citas');
+      break;
+    default: // 'estadisticas'
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([data.resumen]), 'Resumen');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.porMes),   'Por Mes');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.detalle),  'Detalle Servicios');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.ciudades), 'Ciudades');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.estudios), 'Estudios');
+  }
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
