@@ -4,6 +4,7 @@ import { runMigration001 } from "./migrations/001_foto_perfil_clob.js";
 import { runMigration002 } from "./migrations/002_reportes_generados.js";
 import { runMigration003 } from "./migrations/003_administradores_foto_perfil_clob.js";
 import { runMigration004 } from "./migrations/004_credenciales_pago_fields.js";
+import { runMigration006 } from "./migrations/006_articulos_stock_minimo.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 
 const REQUIRED_ENV = [
@@ -28,6 +29,7 @@ createPool()
     await runMigration002();
     await runMigration003();
     await runMigration004();
+    await runMigration006();
     initScheduler();
     const server = app.listen(Number(PORT), () =>
       console.log(`Server running on port ${PORT}`)

@@ -70,7 +70,7 @@ export async function findInventarioActual() {
   try {
     const result = await conn.execute(
       `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
-              CUOTA_RECUPERACION, INVENTARIO_ACTUAL
+              CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
        FROM ARTICULOS
        ORDER BY DESCRIPCION`
     );
