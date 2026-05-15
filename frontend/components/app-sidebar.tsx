@@ -111,7 +111,7 @@ export function AppSidebar({
         {/* Texto de marca — visible solo cuando se muestran labels */}
         <div className={`min-w-0 flex-1 transition-opacity duration-150 ${showLabels ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <p className="truncate text-[13px] font-semibold leading-tight text-white">Espina Bífida</p>
-          <p className="text-[10px] leading-tight text-white/30">Nuevo León · Panel admin</p>
+          <p className="text-[10px] leading-tight text-white/30">Nuevo León</p>
         </div>
 
         {/* Botón pin/unpin — visible solo cuando labels están visibles */}

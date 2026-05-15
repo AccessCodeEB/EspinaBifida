@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
-import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X } from "lucide-react"
+import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle } from "lucide-react"
 import type { Cita } from "@/services/citas"
 import type { Beneficiario } from "@/services/beneficiarios"
 
@@ -14,24 +14,25 @@ type SortField = "fecha" | "beneficiario" | "especialista" | "estatus"
 type SortDir = "asc" | "desc"
 type FilterEstatus = "Todos" | Cita["estatus"]
 
-const STATUS_DOT: Record<string, string> = {
-  Confirmada: "bg-emerald-500",
-  Pendiente:  "bg-amber-500",
-  Completada: "bg-blue-400",
-  Cancelada:  "bg-red-500",
-}
-const STATUS_TEXT: Record<string, string> = {
-  Confirmada: "text-emerald-500",
-  Pendiente:  "text-amber-500",
-  Completada: "text-blue-400",
-  Cancelada:  "text-red-400",
+const STATUS_CONFIG: Record<string, { dot: string; cls: string; Icon: typeof CheckCircle2 }> = {
+  Confirmada: { dot: "bg-emerald-500", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", Icon: CheckCircle2 },
+  Pendiente:  { dot: "bg-amber-500",   cls: "border-amber-500/30  bg-amber-500/10  text-amber-400",   Icon: Clock        },
+  Completada: { dot: "bg-blue-400",    cls: "border-border/60     bg-muted/30      text-muted-foreground", Icon: CheckCircle2 },
+  Cancelada:  { dot: "bg-red-500",     cls: "border-red-500/30    bg-red-500/10    text-red-400",     Icon: XCircle      },
 }
 
-/** Minimal clean pill: just a dot + text, no box */
+const STATUS_DOT: Record<string, string> = Object.fromEntries(
+  Object.entries(STATUS_CONFIG).map(([k, v]) => [k, v.dot])
+)
+
+/** Bordered pill with icon, matching agenda hoy style */
 function StatusPill({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status]
+  if (!cfg) return <span className="text-[11px] text-muted-foreground">{status}</span>
+  const Icon = cfg.Icon
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${STATUS_TEXT[status] ?? "text-muted-foreground"}`}>
-      <span className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT[status] ?? "bg-muted-foreground"}`} />
+    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${cfg.cls}`}>
+      <Icon className="size-3 shrink-0" />
       {status}
     </span>
   )

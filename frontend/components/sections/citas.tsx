@@ -35,8 +35,20 @@ export function CitasSection() {
   const [citas, setCitas] = useState<Cita[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeView, setActiveView] = useState<ActiveView>("calendar")
+  const [activeView, setActiveView] = useState<ActiveView>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("citas_activeView")
+      if (saved === "calendar" || saved === "list") return saved
+    }
+    return "calendar"
+  })
   const [viewVisible, setViewVisible] = useState(true)
+
+  // Scroll to top when entering the Citas section
+  useEffect(() => {
+    const main = document.querySelector("main")
+    if (main) main.scrollTo({ top: 0, behavior: "instant" })
+  }, [])
 
   // Dialog nueva cita
   const [showDialog, setShowDialog] = useState(false)
@@ -88,11 +100,15 @@ export function CitasSection() {
     return { hoy, semana, pendientes }
   }, [citas, today])
 
-  // Smooth view transition
+  // Smooth view transition + persist
   function switchView(view: ActiveView) {
     if (view === activeView) return
     setViewVisible(false)
-    setTimeout(() => { setActiveView(view); setViewVisible(true) }, 180)
+    setTimeout(() => {
+      setActiveView(view)
+      setViewVisible(true)
+      sessionStorage.setItem("citas_activeView", view)
+    }, 180)
   }
 
   const benefFiltrados = useMemo(() => {

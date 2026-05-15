@@ -306,8 +306,13 @@ export function DashboardSection() {
 
   const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Agenda de hoy: todos los estatus con el mismo estilo neutro (como "solicitudes en espera")
-  const agendaItemStyle = "border-border/60 bg-muted/30 text-muted-foreground"
+  // Agenda de hoy: badges con color por estatus (estilo del mockup)
+  const agendaStatusStyle: Record<string, string> = {
+    Confirmada: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    Pendiente:  "border-amber-500/30  bg-amber-500/10  text-amber-400",
+    Completada: "border-border/60     bg-muted/30      text-muted-foreground",
+    Cancelada:  "border-red-500/30    bg-red-500/10    text-red-400",
+  }
   const agendaItemIcon: Record<string, React.ElementType> = {
     Confirmada: CheckCircle2,
     Pendiente:  Clock,
@@ -440,7 +445,7 @@ export function DashboardSection() {
                       <p className="truncate text-xs font-semibold text-foreground">{c.beneficiario}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{c.especialista || "—"}</p>
                     </div>
-                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${agendaItemStyle}`}>
+                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${agendaStatusStyle[c.estatus] ?? "border-border/60 bg-muted/30 text-muted-foreground"}`}>
                       {(() => { const Icon = agendaItemIcon[c.estatus] ?? AlertCircle; return <Icon className="size-3" /> })()}
                       {c.estatus}
                     </div>
