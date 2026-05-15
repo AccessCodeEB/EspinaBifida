@@ -279,52 +279,41 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
 
 // ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
 function ActionCenter({
-  citas,onNavigate,onAction,updatingId
+  citas,onNavigate
 }:{
   citas:Cita[]
   onNavigate:(c:Cita)=>void
-  onAction:(id:number,e:Cita["estatus"])=>void
-  updatingId:number|null
 }){
-  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada").slice(0,8)
+  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
   if(!pending.length)return(
-    <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Citas Pendientes</p>
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Citas Pendientes</p>
       <p className="text-xs text-muted-foreground/50">Sin citas pendientes ✓</p>
     </div>
   )
   return(
-    <div className="rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-3">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-3">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
         <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
-      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
         {pending.map(c=>(
-          <div key={c.id} className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5 group">
-            <button className="w-full text-left" onClick={()=>onNavigate(c)}>
-              <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-                <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora} · {c.estatus}</p>
+          <div key={c.id} className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-foreground/80 truncate">{c.beneficiario}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
+                  <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora} · {c.estatus}</p>
+                </div>
               </div>
-            </button>
-            <div className="flex gap-1.5 mt-2">
-              {c.estatus==="Pendiente"&&(
-                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Confirmada")}
-                  className="flex-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
-                  Confirmar
-                </button>
-              )}
-              {c.estatus==="Confirmada"&&(
-                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Completada")}
-                  className="flex-1 rounded-lg bg-sky-600/80 hover:bg-sky-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
-                  Completar
-                </button>
-              )}
-              <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Cancelada")}
-                className="rounded-lg border border-border/40 bg-muted/30 hover:bg-red-500/10 hover:border-red-400/40 hover:text-red-400 px-2 py-1 text-[10px] text-muted-foreground transition-colors disabled:opacity-40">
-                Cancelar
+              <button
+                onClick={()=>onNavigate(c)}
+                className="shrink-0 flex items-center gap-1 rounded-lg border border-border/50 bg-muted/30 hover:bg-primary/10 hover:border-primary/40 hover:text-primary px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors"
+              >
+                Ver
+                <ChevronRight className="size-3"/>
               </button>
             </div>
           </div>
@@ -513,7 +502,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr] flex-1 min-h-0">
         {/* LEFT */}
-      <div className="flex flex-col gap-4 overflow-y-auto min-h-0">
+      <div className="flex flex-col gap-4 min-h-0">
         {/* Mini-cal */}
         <div className="rounded-2xl border border-border/50 bg-card p-3 shrink-0">
           <div className="flex items-center justify-between mb-2">
@@ -553,7 +542,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           </div>
         </div>
         {/* Action Center — Pendientes */}
-        <ActionCenter citas={citas} onNavigate={navigateToCita} onAction={doUpdate} updatingId={updatingId}/>
+        <ActionCenter citas={citas} onNavigate={navigateToCita}/>
       </div>
 
       {/* RIGHT */}
