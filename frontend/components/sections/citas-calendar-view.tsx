@@ -128,26 +128,39 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
   const popW = 280
   const popH = 230
   const gap = 6 // Minímamente pegado al costado
-  const viewportW = document.documentElement.clientWidth
+  
+  // Obtenemos los límites del contenedor del calendario
+  const calEl = typeof document !== "undefined" ? document.getElementById("calendar-grid-container") : null
+  const calRect = calEl ? calEl.getBoundingClientRect() : null
   
   // Por defecto: a la derecha del bloque
   let left = blockRect.right + gap
   
-  // Si se sale del lado derecho de la pantalla
-  if (left + popW > viewportW - 12) {
-    const leftAttempt = blockRect.left - popW - gap
-    if (leftAttempt >= 12) {
-      // Si cabe del lado izquierdo, lo ponemos ahí
-      left = leftAttempt
-    } else {
-      // Si no cabe en ningún lado (pantalla pequeña), lo pegamos al borde derecho
-      left = viewportW - popW - 12
+  if (calRect) {
+    // Si se sale del calendario por la derecha
+    if (left + popW > calRect.right - 8) {
+      const leftAttempt = blockRect.left - popW - gap
+      if (leftAttempt >= calRect.left + 8) {
+        // Cabe a la izquierda
+        left = leftAttempt
+      } else {
+        // Si no cabe, lo pegamos al borde derecho del calendario
+        left = calRect.right - popW - 8
+      }
+    }
+  } else {
+    // Fallback si no encuentra el contenedor
+    const viewportW = typeof document !== "undefined" ? document.documentElement.clientWidth : 1000
+    if (left + popW > viewportW - 12) {
+      const leftAttempt = blockRect.left - popW - gap
+      if (leftAttempt >= 12) left = leftAttempt
+      else left = viewportW - popW - 12
     }
   }
 
   // Alineación vertical: exactamente en la misma línea (top del bloque)
   let top = blockRect.top
-  // Prevenir que se corte por abajo
+  // Prevenir que se corte por abajo de la ventana (no del calendario, para que siga siendo visible si haces scroll)
   if (top + popH > window.innerHeight - 12) {
     top = window.innerHeight - popH - 12
   }
@@ -525,7 +538,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
       </div>
 
       {/* RIGHT */}
-      <div className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col">
+      <div id="calendar-grid-container" className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col relative">
         {/* Nav */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
