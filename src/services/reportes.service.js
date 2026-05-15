@@ -21,8 +21,11 @@ export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas
       const filas = await ReportesModel.getServiciosPeriodo(fechaInicio, fechaFin);
       return { tipo, filas };
     }
-    case 'inventario':
-      return { tipo, articulos: [], movimientos: [] };
+    case 'inventario': {
+      const articulos   = await ReportesModel.getArticulosStock();
+      const movimientos = await ReportesModel.getMovimientosPeriodo(fechaInicio, fechaFin);
+      return { tipo, articulos, movimientos };
+    }
     case 'citas':
       return { tipo, filas: [] };
     default: { // 'estadisticas'

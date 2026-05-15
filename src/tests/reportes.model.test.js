@@ -26,6 +26,8 @@ const {
   getBeneficiariosPeriodo,
   getMembresias,
   getServiciosPeriodo,
+  getArticulosStock,
+  getMovimientosPeriodo,
   guardarRegistro,
   findHistorico,
   findById,
@@ -332,6 +334,60 @@ describe('getServiciosPeriodo', () => {
   it('cierra conexión si execute lanza', async () => {
     mockExecute.mockRejectedValueOnce(new Error('ORA-01403'));
     await expect(getServiciosPeriodo(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('ORA-01403');
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getArticulosStock ─────────────────────────────────────────────────────────
+
+describe('getArticulosStock', () => {
+  it('retorna todos los artículos con su stock actual', async () => {
+    const rows = [
+      { ID_ARTICULO: 1, DESCRIPCION: 'Silla de ruedas', UNIDAD: 'pieza',
+        INVENTARIO_ACTUAL: 5, CUOTA_RECUPERACION: 200, MANEJA_INVENTARIO: 'S' },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getArticulosStock();
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay artículos', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await getArticulosStock();
+    expect(result).toEqual([]);
+  });
+});
+
+// ── getMovimientosPeriodo ─────────────────────────────────────────────────────
+
+describe('getMovimientosPeriodo', () => {
+  it('retorna movimientos del periodo', async () => {
+    const rows = [
+      { ARTICULO: 'Silla de ruedas', TIPO_MOVIMIENTO: 'SALIDA',
+        CANTIDAD: 1, FECHA: '2026-01-10', MOTIVO: 'Servicio ID 42' },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getMovimientosPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay movimientos en el periodo', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await getMovimientosPeriodo(PERIODO.inicio, PERIODO.fin);
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('DB error'));
+    await expect(getMovimientosPeriodo(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('DB error');
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

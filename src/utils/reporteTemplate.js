@@ -347,9 +347,86 @@ function generarHTMLServicios({ filas }, { fechaInicio, fechaFin }) {
 </html>`;
 }
 
-function generarHTMLInventario(data, { fechaInicio, fechaFin }) {
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
-  <p>Reporte de Inventario — Próximamente (Task 5)</p></body></html>`;
+function generarHTMLInventario({ articulos, movimientos }, { fechaInicio, fechaFin }) {
+  const conInventario = articulos.filter(a => a.MANEJA_INVENTARIO === 'S');
+  const sinStock      = conInventario.filter(a => a.INVENTARIO_ACTUAL <= 0).length;
+  const bajoStock     = conInventario.filter(a => a.INVENTARIO_ACTUAL > 0 && a.INVENTARIO_ACTUAL <= 5).length;
+
+  const stockStyle = (a) => {
+    if (a.MANEJA_INVENTARIO !== 'S') return '';
+    if (a.INVENTARIO_ACTUAL <= 0)  return 'color:#c0392b;font-weight:bold';
+    if (a.INVENTARIO_ACTUAL <= 5)  return 'color:#b87c00;font-weight:bold';
+    return 'color:#2a7a2a';
+  };
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 9pt; margin: 20px; color: #000; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+    .titulo { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
+    .subtitulo { font-size: 10pt; margin-top: 4px; }
+    h3 { margin: 10px 0 4px; font-size: 10pt; background: #e0e0e0; padding: 3px 5px; border: 1px solid #999; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    th, td { border: 1px solid #999; padding: 3px 5px; }
+    th { background: #e0e0e0; font-weight: bold; text-align: center; }
+    .num { text-align: center; font-weight: bold; }
+    .resumen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; }
+    .stat { border: 1px solid #999; padding: 6px; text-align: center; }
+    .stat-n { font-size: 14pt; font-weight: bold; }
+    .stat-l { font-size: 8pt; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="titulo">Asociación de Espina Bífida de Nuevo León, A.B.P.</div>
+    <div class="subtitulo">Reporte de Inventario — Movimientos del ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)}</div>
+    <div class="subtitulo">Generado: ${formatFecha(new Date())}</div>
+  </div>
+
+  <h3>Alertas de Stock</h3>
+  <div class="resumen-grid">
+    <div class="stat"><div class="stat-n">${esc(articulos.length)}</div><div class="stat-l">Total artículos</div></div>
+    <div class="stat"><div class="stat-n" style="color:#c0392b">${esc(sinStock)}</div><div class="stat-l">Sin stock</div></div>
+    <div class="stat"><div class="stat-n" style="color:#b87c00">${esc(bajoStock)}</div><div class="stat-l">Stock bajo (≤5)</div></div>
+  </div>
+
+  <h3>Stock Actual</h3>
+  <table>
+    <tr>
+      <th>Artículo</th><th>Unidad</th><th>Stock</th><th>Cuota</th><th>Rastreo</th>
+    </tr>
+    ${articulos.length > 0
+      ? articulos.map(a => `<tr>
+          <td>${esc(a.DESCRIPCION)}</td>
+          <td>${esc(a.UNIDAD)}</td>
+          <td class="num" style="${stockStyle(a)}">${a.MANEJA_INVENTARIO === 'S' ? esc(a.INVENTARIO_ACTUAL) : '—'}</td>
+          <td class="num">$${esc(Number(a.CUOTA_RECUPERACION ?? 0).toFixed(2))}</td>
+          <td class="num">${a.MANEJA_INVENTARIO === 'S' ? 'Sí' : 'No'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" style="text-align:center;color:#666">Sin artículos registrados</td></tr>'
+    }
+  </table>
+
+  <h3>Movimientos en el Periodo</h3>
+  <table>
+    <tr><th>Fecha</th><th>Artículo</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr>
+    ${movimientos.length > 0
+      ? movimientos.map(m => `<tr>
+          <td>${esc(m.FECHA)}</td>
+          <td>${esc(m.ARTICULO)}</td>
+          <td class="num" style="${m.TIPO_MOVIMIENTO === 'SALIDA' ? 'color:#c0392b' : 'color:#2a7a2a'}">${esc(m.TIPO_MOVIMIENTO)}</td>
+          <td class="num">${esc(m.CANTIDAD)}</td>
+          <td>${esc(m.MOTIVO ?? '—')}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" style="text-align:center;color:#666">Sin movimientos en el periodo</td></tr>'
+    }
+  </table>
+</body>
+</html>`;
 }
 
 function generarHTMLCitas(data, { fechaInicio, fechaFin }) {

@@ -252,6 +252,55 @@ export async function getServiciosPeriodo(fechaInicio, fechaFin) {
   }
 }
 
+// ── 9. Stock actual de todos los artículos ────────────────────────────────────
+export async function getArticulosStock() {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        A.ID_ARTICULO,
+        A.DESCRIPCION,
+        A.UNIDAD,
+        A.INVENTARIO_ACTUAL,
+        A.CUOTA_RECUPERACION,
+        A.MANEJA_INVENTARIO
+      FROM ARTICULOS A
+      ORDER BY A.DESCRIPCION
+    `,
+    {},
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
+// ── 10. Movimientos de inventario en el periodo ───────────────────────────────
+export async function getMovimientosPeriodo(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        A.DESCRIPCION AS ARTICULO,
+        M.TIPO_MOVIMIENTO,
+        M.CANTIDAD,
+        TO_CHAR(M.FECHA, 'YYYY-MM-DD') AS FECHA,
+        M.MOTIVO
+      FROM MOVIMIENTOS_INVENTARIO M
+      JOIN ARTICULOS A ON M.ID_ARTICULO = A.ID_ARTICULO
+      WHERE M.FECHA BETWEEN :fi AND :ff
+      ORDER BY M.FECHA DESC
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // ── 5. Persistencia de reportes generados ────────────────────────────────────
 export async function guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx, generadoPor = null }) {
   const conn = await getConnection();

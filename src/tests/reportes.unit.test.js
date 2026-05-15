@@ -199,6 +199,31 @@ describe('generarHTML', () => {
     const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
     expect(html).toContain('Sin servicios en el periodo');
   });
+
+  it('inventario: genera tablas de stock y movimientos', () => {
+    const data = {
+      tipo: 'inventario',
+      articulos: [
+        { DESCRIPCION: 'Silla de ruedas', UNIDAD: 'pieza',
+          INVENTARIO_ACTUAL: 3, CUOTA_RECUPERACION: 200, MANEJA_INVENTARIO: 'S' },
+      ],
+      movimientos: [
+        { FECHA: '2026-01-10', ARTICULO: 'Silla de ruedas',
+          TIPO_MOVIMIENTO: 'SALIDA', CANTIDAD: 1, MOTIVO: 'Servicio ID 42' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Silla de ruedas');
+    expect(html).toContain('SALIDA');
+    expect(html).toContain('Reporte de Inventario');
+  });
+
+  it('inventario: sin movimientos muestra mensaje vacío', () => {
+    const data = { tipo: 'inventario', articulos: [], movimientos: [] };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin movimientos en el periodo');
+    expect(html).toContain('Sin artículos registrados');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────
