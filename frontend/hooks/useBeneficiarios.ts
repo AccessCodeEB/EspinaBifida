@@ -33,8 +33,6 @@ function normalizeTipoSangre(raw: string | null | undefined): string {
   return TIPOS_SANGRE_OPCIONES.includes(t) ? t : ""
 }
 
-const TOAST_OK =
-  "border border-border/70 bg-popover text-popover-foreground shadow-md"
 
 /** Tarjetas: Activo → Inactivo → Baja; otros al final. */
 function estatusOrdenTarjetas(estatus: string | undefined): number {
@@ -296,7 +294,7 @@ export function useBeneficiarios() {
         return { ...prev, fotoPerfilUrl }
       })
       setFotoBustByCurp((prev) => ({ ...prev, [c]: (prev[c] ?? 0) + 1 }))
-      toast.success("Foto de perfil actualizada", { duration: 2800, className: TOAST_OK })
+      toast.success("Foto de perfil actualizada", { duration: 2800 })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "No se pudo subir la foto")
     } finally {
@@ -321,7 +319,7 @@ export function useBeneficiarios() {
         return { ...prev, fotoPerfilUrl: null }
       })
       setFotoBustByCurp((prev) => ({ ...prev, [c]: (prev[c] ?? 0) + 1 }))
-      toast.success("Foto de perfil eliminada", { duration: 2800, className: TOAST_OK })
+      toast.success("Foto de perfil eliminada", { duration: 2800 })
       return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "No se pudo eliminar la foto")
@@ -402,7 +400,7 @@ export function useBeneficiarios() {
           matchesCurp(b, saveId) ? { ...b, ...editForm, folio: saveId } as Beneficiario : b
         )
       )
-      toast.success("Guardado correcto", { duration: 2800, className: TOAST_OK })
+      toast.success("Guardado correcto", { duration: 2800 })
       setShowEditDialog(false)
     } catch (err: unknown) {
       const raw    = err instanceof Error ? err.message : "Error al guardar"
@@ -537,7 +535,7 @@ export function useBeneficiarios() {
       setBeneficiarios((prev) => [...prev, nuevo])
       setAltaForm(ALTA_FORM_INICIAL)
       setAltaErrors({})
-      toast.success("Registro correcto", { duration: 2800, className: TOAST_OK })
+      toast.success("Registro correcto", { duration: 2800 })
       setShowAltaDialog(false)
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Error al guardar"

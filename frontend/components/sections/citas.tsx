@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, CalendarDays, List, AlertCircle, ChevronDown } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -131,8 +132,12 @@ export function CitasSection() {
       })
       setShowDialog(false)
       loadCitas()
+      toast.success("Cita agendada correctamente", {
+        description: `${form.fecha} · ${form.hora}`,
+      })
     } catch (err: unknown) {
       setSaveError((err as Error)?.message ?? "Error al guardar la cita.")
+      toast.error((err as Error)?.message ?? "Error al guardar la cita.")
     } finally {
       setSaving(false)
     }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { toast } from "sonner"
 import {
   Search, CreditCard, Banknote, Building2, RefreshCw,
   Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp,
@@ -60,10 +61,10 @@ function labelMetodo(m: string | null | undefined): string {
 }
 
 function diasBadge(dias: number | null | undefined) {
-  if (dias == null) return { text: "Sin membresía", cls: "text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400" }
-  if (dias > 30)   return { text: `${dias} días`,   cls: "text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400" }
-  if (dias >= 0)   return { text: `${dias} días`,   cls: "text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400" }
-  return { text: `Vencida ${Math.abs(dias)}d`,       cls: "text-red-700 bg-red-50 dark:bg-red-950/40 dark:text-red-400" }
+  if (dias == null) return { text: "Sin membresía", cls: "text-slate-400 dark:text-slate-500" }
+  if (dias > 30)   return { text: `${dias} días`,   cls: "text-emerald-600 dark:text-emerald-400" }
+  if (dias >= 0)   return { text: `${dias} días`,   cls: "text-amber-600 dark:text-amber-400" }
+  return { text: `Vencida ${Math.abs(dias)}d`,       cls: "text-red-600 dark:text-red-400" }
 }
 
 function estatusBadge(estatus: "Activa" | "Inactiva" | "Cancelada") {
@@ -101,9 +102,13 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
         referencia: referencia.trim() || undefined,
         observaciones: observaciones.trim() || undefined,
       })
+      toast.success("Pago registrado correctamente", {
+        description: `${meses} ${meses === 1 ? "mes" : "meses"} · ${formatMonto(montoTotal)}`,
+      })
       onSuccess(); onClose()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al registrar el pago.")
+      toast.error(e instanceof Error ? e.message : "Error al registrar el pago.")
     } finally { setLoading(false) }
   }
 
@@ -362,7 +367,7 @@ export function MembresiasSection() {
                         </span>
                       </td>
                       <td className="py-3 text-center">
-                        <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold ${dias.cls}`}>
+                        <span className={`text-xs font-semibold tabular-nums ${dias.cls}`}>
                           {dias.text}
                         </span>
                       </td>

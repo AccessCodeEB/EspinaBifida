@@ -32,7 +32,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster closeButton={false} richColors={false} position="top-center" gap={10} />
+          <Toaster richColors position="bottom-right" gap={8} duration={3500} />
           <Analytics />
         </ThemeProvider>
       </body>

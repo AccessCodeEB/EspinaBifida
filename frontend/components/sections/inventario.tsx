@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import {
   getInventario, registrarMovimiento, crearArticulo, eliminarArticulo,
   type ArticuloInventario,
@@ -148,8 +149,10 @@ export function InventarioSection() {
       await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "Movimiento manual" })
       await refreshInventario()
       closeMovimientoDialog()
+      toast.success(qty > 0 ? "Entrada registrada correctamente" : "Salida registrada correctamente")
     } catch (err: unknown) {
       setMovimientoError(err instanceof Error ? err.message : "No se pudo registrar el movimiento")
+      toast.error(err instanceof Error ? err.message : "No se pudo registrar el movimiento")
       setSavingMovimiento(false)
     }
   }
@@ -183,8 +186,10 @@ export function InventarioSection() {
     try {
       await crearArticulo({ idArticulo: id, descripcion: articuloForm.descripcion.trim(), unidad: unidadFinal, cuotaRecuperacion: cuota, inventarioActual: inv, manejaInventario: "S", idCategoria: cat })
       await refreshInventario(); setShowAgregarDialog(false)
+      toast.success("Artículo agregado al inventario")
     } catch (err: unknown) {
       setArticuloError(err instanceof Error ? err.message : "No se pudo agregar el artículo")
+      toast.error(err instanceof Error ? err.message : "No se pudo agregar el artículo")
     } finally { setSavingArticulo(false) }
   }
 
@@ -193,8 +198,10 @@ export function InventarioSection() {
     setSavingArticulo(true); setArticuloError(null)
     try {
       await eliminarArticulo(deleteArticuloId); await refreshInventario(); setShowEliminarDialog(false)
+      toast.success("Artículo eliminado del inventario")
     } catch (err: unknown) {
       setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+      toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
     } finally { setSavingArticulo(false) }
   }
 
@@ -332,10 +339,10 @@ export function InventarioSection() {
                       <td className="hidden py-3 text-center text-xs text-foreground md:table-cell">{item.unidad}</td>
                       <td className="hidden py-3 text-center text-xs text-foreground lg:table-cell">{item.cuota}</td>
                       <td className="py-3 text-center">
-                        <span className={`inline-block min-w-[2rem] rounded px-2 py-0.5 text-xs font-bold tabular-nums ${
-                          cero ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" :
-                          bajo ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" :
-                                 "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        <span className={`text-sm font-bold tabular-nums ${
+                          cero ? "text-red-600 dark:text-red-400" :
+                          bajo ? "text-amber-600 dark:text-amber-400" :
+                                 "text-foreground"
                         }`}>
                           {item.cantidad}
                         </span>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   AlertTriangle,
   ArrowUpDown,
@@ -501,6 +502,7 @@ export function ServiciosSection() {
       setMontoServicio("")
       setDescripcionOtro("")
       setFechaServicio(hoy)
+      toast.success("Servicio registrado correctamente")
     } catch (err) {
       setRegistroError(err instanceof Error ? err.message : "Error al registrar el servicio")
     } finally {
@@ -537,9 +539,10 @@ export function ServiciosSection() {
 
       setPendingDelete({ servicio, timerId })
       setServicioParaEliminar(null)
+      toast.success("Servicio eliminado", { description: "Tienes 8 segundos para deshacer." })
     } catch (err) {
       console.error("Error al eliminar servicio:", err)
-      alert(err instanceof Error ? err.message : "Error al eliminar el servicio")
+      toast.error(err instanceof Error ? err.message : "Error al eliminar el servicio")
     } finally {
       setEliminandoServicio(false)
     }
@@ -980,7 +983,22 @@ export function ServiciosSection() {
                     <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
                     <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
                     <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
-                    <td className="py-3 text-center"><StatusIcon status={s.estatus} /></td>
+                    <td className="py-3 text-center">
+                      {(() => {
+                        const cfg: Record<string, { dot: string; text: string }> = {
+                          Activo:   { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
+                          Inactivo: { dot: "bg-amber-500",   text: "text-amber-700 dark:text-amber-400" },
+                          Baja:     { dot: "bg-red-500",     text: "text-red-600 dark:text-red-400" },
+                        }
+                        const c = cfg[s.estatus] ?? { dot: "bg-slate-400", text: "text-slate-500 dark:text-slate-400" }
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${c.text}`}>
+                            <span className={`size-1.5 rounded-full ${c.dot}`} />
+                            {s.estatus}
+                          </span>
+                        )
+                      })()}
+                    </td>
                     <td className="py-3 pr-5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => setServicioDetalle(s)}
