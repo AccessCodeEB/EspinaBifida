@@ -210,7 +210,7 @@ export function CitasSection() {
   const NAVY = "#0f4c81"
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="flex flex-col gap-6 flex-1 min-h-0">
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
@@ -273,7 +273,7 @@ export function CitasSection() {
       ) : (
         <div
           style={{ transition: "opacity 180ms ease, transform 180ms ease" }}
-          className={viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}
+          className={`flex-1 min-h-0 flex flex-col ${viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
         >
           {activeView === "calendar" ? (
             <CitasCalendarView

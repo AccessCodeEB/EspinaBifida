@@ -91,7 +91,18 @@ export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:
 function NowLine(){
   const[now,setNow]=useState(()=>new Date())
   const ref=useRef<HTMLDivElement>(null)
-  useEffect(()=>{ref.current?.scrollIntoView({behavior:"smooth",block:"center"});const id=setInterval(()=>setNow(new Date()),60_000);return()=>clearInterval(id)},[])
+  useEffect(()=>{
+    setTimeout(() => {
+      const el = ref.current
+      const container = document.getElementById("citas-grid")
+      if(el && container) {
+        const target = el.offsetTop - container.clientHeight / 2
+        container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
+      }
+    }, 150)
+    const id=setInterval(()=>setNow(new Date()),60_000);
+    return()=>clearInterval(id)
+  },[])
   const top=minsToTop(now.getHours()*60+now.getMinutes())
   if(top<0||top>GRID_H)return null
   return(
@@ -467,10 +478,14 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
-    // scroll the grid to that appointment block (deferred so layout updates first)
+    // scroll the grid to that appointment block
     setTimeout(()=>{
       const el=document.getElementById(`cita-block-${c.id}`)
-      el?.scrollIntoView({behavior:"smooth",block:"center"})
+      const container=document.getElementById("citas-grid")
+      if(el && container) {
+        const target = el.offsetTop - container.clientHeight / 2
+        container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
+      }
     },120)
   }
 
@@ -496,11 +511,11 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   return(
     <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr] flex-1 min-h-0">
         {/* LEFT */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 overflow-y-auto min-h-0">
         {/* Mini-cal */}
-        <div className="rounded-2xl border border-border/50 bg-card p-3">
+        <div className="rounded-2xl border border-border/50 bg-card p-3 shrink-0">
           <div className="flex items-center justify-between mb-2">
             <button onClick={prevMonth} className="rounded-lg p-1 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
             <span className="text-xs font-bold">{MESES[calMonth]} {calYear}</span>
@@ -542,7 +557,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
       </div>
 
       {/* RIGHT */}
-      <div id="calendar-grid-container" className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col relative">
+      <div id="calendar-grid-container" className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col relative flex-1 min-h-0">
         {/* Nav */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
@@ -569,7 +584,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           })}
         </div>
         {/* Scrollable grid */}
-        <div className="flex flex-1 overflow-y-auto" style={{maxHeight:"calc(100vh - 240px)"}}>
+        <div id="citas-grid" className="flex flex-1 overflow-y-auto relative">
           {/* Hours column — FIX #6: pt-0 + offset labels to align with grid lines */}
           <div className="w-14 shrink-0 relative border-r border-border/20" style={{height:`${GRID_H}px`}}>
             {HOURS.slice(0,-1).map((h,i)=>(
