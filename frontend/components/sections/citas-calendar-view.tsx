@@ -102,15 +102,15 @@ function NowLine(){
 }
 
 // ── Appointment block ────────────────────────────────────────────────────────
-function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Cita)=>void}){
+function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Cita,rect:DOMRect)=>void}){
   const border=BL[cita.estatus]??"border-l-slate-500"
   const bg=BG[cita.estatus]??"bg-slate-500/10"
   const tc=TC[cita.estatus]??"text-slate-300"
   const dot=DC[cita.estatus]??"bg-slate-400"
   return(
-    <div className={`w-full h-full rounded-r-md border-l-4 border border-border/20 ${border} ${bg}
+    <div id={`cita-block-${cita.id}`} className={`w-full h-full rounded-r-md border-l-4 border border-border/20 ${border} ${bg}
       px-1.5 py-1 overflow-hidden cursor-pointer hover:brightness-125 transition-all select-none`}
-      onClick={(e)=>{e.stopPropagation();onSelect(cita)}}>
+      onClick={(e)=>{e.stopPropagation();onSelect(cita,e.currentTarget.getBoundingClientRect())}}>
       <div className={`flex items-center gap-1 text-[11px] font-semibold ${tc}`}>
         <span className={`size-1.5 rounded-full shrink-0 ${dot}`}/><span className="truncate">{cita.hora}</span>
       </div>
@@ -390,7 +390,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
   const[weekAnchor,setWeekAnchor]=useState<Date>(()=>getMon(new Date()))
   const[calYear,setCalYear]=useState(()=>new Date().getFullYear())
   const[calMonth,setCalMonth]=useState(()=>new Date().getMonth())
-  const[selected,setSelected]=useState<{cita:Cita}|null>(null)
+  const[selected,setSelected]=useState<{cita:Cita;rect:DOMRect}|null>(null)
   const[updatingId,setUpdatingId]=useState<number|null>(null)
 
   const weekDates=useMemo(()=>getWeek(weekAnchor),[weekAnchor])
@@ -460,8 +460,9 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
   }
 
   return(
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
-      {/* LEFT */}
+    <>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
+        {/* LEFT */}
       <div className="flex flex-col gap-4">
         {/* Mini-cal */}
         <div className="rounded-2xl border border-border/50 bg-card p-3">
@@ -560,7 +561,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
                   {isT&&isThisWeek&&<NowLine/>}
                   {layout.map(({cita,top,height,left,widthPct})=>(
                     <div key={cita.id} className="absolute px-0.5" style={{top:`${top}px`,height:`${height}px`,left:`${left}%`,width:`${widthPct}%`}}>
-                      <AppBlock cita={cita} height={height} onSelect={(c)=>setSelected({cita:c})}/>
+                      <AppBlock cita={cita} height={height} onSelect={(c,rect)=>setSelected({cita:c,rect})}/>
                     </div>
                   ))}
                 </div>
@@ -569,7 +570,12 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           </div>
         </div>
       </div>
-
     </div>
+
+      {/* Popover */}
+      {selected&&(
+        <CitaPopover cita={selected.cita} blockRect={selected.rect} onClose={()=>setSelected(null)} onAction={doUpdate} updatingId={updatingId}/>
+      )}
+    </>
   )
 }

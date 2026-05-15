@@ -148,19 +148,35 @@ export function CitasSection() {
   return (
     <div className="flex flex-col gap-6 pb-8">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Citas</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Gestión y agenda de citas con especialistas</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* KPIs integrados */}
+          {!loading && [
+            { label: "Hoy",      value: stats.hoy,       color: NAVY },
+            { label: "Semana",   value: stats.semana,    color: "#10b981" },
+            { label: "Pendientes",value: stats.pendientes, color: "#f59e0b" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-card px-3 shadow-sm">
+              <div className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <p className="text-xs font-semibold text-foreground">
+                {value} <span className="font-medium text-muted-foreground ml-0.5">{label}</span>
+              </p>
+            </div>
+          ))}
+
+          <div className="hidden md:block w-px h-6 bg-border/40 mx-1" />
+
           {/* Toggle vista */}
-          <div className="flex items-center rounded-lg border border-border/70 bg-card p-0.5">
+          <div className="flex h-9 items-center rounded-lg border border-border/70 bg-card p-0.5 shadow-sm shrink-0">
             {(["calendar", "list"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => switchView(v)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex h-full items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-all ${
                   activeView === v
                     ? "bg-[#0f4c81] text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -170,34 +186,16 @@ export function CitasSection() {
               </button>
             ))}
           </div>
+
           <button
             onClick={openDialog}
-            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
             style={{ backgroundColor: NAVY }}
           >
-            <Plus className="size-4" />Nueva Cita
+            <Plus className="size-3.5" />Nueva Cita
           </button>
         </div>
       </div>
-
-      {/* ── KPIs ── */}
-      {!loading && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Citas hoy",      value: stats.hoy,       color: NAVY,      bg: `${NAVY}15`      },
-            { label: "Esta semana",    value: stats.semana,    color: "#10b981",  bg: "#10b98115"      },
-            { label: "Pendientes",     value: stats.pendientes, color: "#f59e0b", bg: "#f59e0b15"      },
-          ].map(({ label, value, color, bg }) => (
-            <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
-              <div className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-                <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ── Main view (con fade) ── */}
       {loading ? (
