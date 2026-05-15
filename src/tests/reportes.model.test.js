@@ -43,17 +43,21 @@ beforeEach(() => resetMocks());
 
 describe('getResumenPeriodo', () => {
   it('retorna la primera fila del resultado', async () => {
-    const row = {
-      CANT_CREDENCIALES: 5, CANT_SERVICIOS: 20, EXENTOS: 5, CON_CUOTA: 15,
+    // getResumenPeriodo usa 2 queries separadas (ORA-00937: no se puede mezclar
+    // subconsulta escalar con GROUP BY en un solo SELECT).
+    const credRow  = { CANT_CREDENCIALES: 5 };
+    const statsRow = {
+      CANT_SERVICIOS: 20, EXENTOS: 5, CON_CUOTA: 15,
       HOMBRES: 10, MUJERES: 10, URBANO: 18, RURAL: 2,
       LACTANTES: 1, NINOS: 4, ADOLESCENTES: 3, ADULTOS: 12,
     };
-    mockExecute.mockResolvedValueOnce({ rows: [row] });
+    mockExecute.mockResolvedValueOnce({ rows: [credRow] });
+    mockExecute.mockResolvedValueOnce({ rows: [statsRow] });
 
     const result = await getResumenPeriodo(PERIODO.inicio, PERIODO.fin);
 
-    expect(result).toBe(row);
-    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ...credRow, ...statsRow });
+    expect(mockExecute).toHaveBeenCalledTimes(2);
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
