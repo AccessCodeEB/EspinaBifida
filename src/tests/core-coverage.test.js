@@ -204,3 +204,20 @@ describe("profileFiles utils", () => {
     existsSpy.mockRestore();
   });
 });
+describe("unlinkOldProfileIfSafe — ramas adicionales de seguridad", () => {
+  test("base === '.' → retorna sin borrar (línea 19)", () => {
+    // path.basename("/uploads/profiles/.") === "."
+    expect(() => unlinkOldProfileIfSafe("/uploads/profiles/.")).not.toThrow();
+  });
+
+  test("base === '..' → retorna sin borrar (línea 19)", () => {
+    expect(() => unlinkOldProfileIfSafe("/uploads/profiles/..")).not.toThrow();
+  });
+
+  test("archivo no existente bajo profiles → no lanza (línea 23 rama false)", () => {
+    // El archivo /uploads/profiles/nonexistent-file-xyz.png no existe
+    expect(() =>
+      unlinkOldProfileIfSafe("/uploads/profiles/nonexistent-file-xyz.png")
+    ).not.toThrow();
+  });
+});

@@ -1,23 +1,27 @@
 import { jest } from "@jest/globals";
 
 // ─── Mocks del modelo ─────────────────────────────────────────────────────────
-const mockFindById      = jest.fn();
-const mockFindByEmail   = jest.fn();
+const mockFindById       = jest.fn();
+const mockFindByEmail    = jest.fn();
 const mockUpdatePassword = jest.fn();
+const mockCreate         = jest.fn();
+const mockUpdate         = jest.fn();
 
 jest.unstable_mockModule("../models/administradores.model.js", () => ({
-  findById:        mockFindById,
-  findByEmail:     mockFindByEmail,
-  findAll:         jest.fn(),
-  create:          jest.fn(),
-  update:          jest.fn(),
-  updatePassword:  mockUpdatePassword,
-  deactivate:      jest.fn(),
+  findById:           mockFindById,
+  findByEmail:        mockFindByEmail,
+  findAll:            jest.fn(),
+  create:             mockCreate,
+  update:             mockUpdate,
+  updatePassword:     mockUpdatePassword,
+  deactivate:         jest.fn(),
   updateFotoPerfilUrl: jest.fn(),
 }));
 
+const mockRolesFindById = jest.fn();
+
 jest.unstable_mockModule("../models/roles.model.js", () => ({
-  findById: jest.fn(),
+  findById: mockRolesFindById,
   findAll:  jest.fn(),
 }));
 
@@ -224,5 +228,142 @@ describe("updateFotoPerfilByUpload", () => {
     await expect(
       Service.updateFotoPerfilByUpload(99, fakeUploadedFile, caller)
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 400 si file.path está ausente", async () => {
+    const caller = { idAdmin: 1, idRol: 1 };
+    await expect(
+      Service.updateFotoPerfilByUpload(1, { mimetype: "image/png" }, caller)
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// create — validaciones de campos obligatorios (líneas 99–107)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("create — validaciones de campos (líneas 99–107)", () => {
+  test("nombre vacío → BAD_REQUEST", async () => {
+    await expect(
+      Service.create({ idRol: 1, nombreCompleto: "  ", email: "a@b.com", password: "pass123" })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("idRol ausente → BAD_REQUEST", async () => {
+    await expect(
+      Service.create({ idRol: null, nombreCompleto: "Admin", email: "a@b.com", password: "pass123" })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("rol no encontrado → NOT_FOUND", async () => {
+    mockRolesFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.create({ idRol: 99, nombreCompleto: "Admin", email: "a@b.com", password: "pass123" })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("email ya en uso → CONFLICT", async () => {
+    mockRolesFindById.mockResolvedValueOnce({ ID_ROL: 1, NOMBRE_ROL: "Staff" });
+    mockFindByEmail.mockResolvedValueOnce(adminRow); // ya existe
+    await expect(
+      Service.create({ idRol: 1, nombreCompleto: "Admin", email: "admin@test.com", password: "pass123" })
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  test("creación exitosa → no lanza", async () => {
+    mockRolesFindById.mockResolvedValueOnce({ ID_ROL: 1, NOMBRE_ROL: "Staff" });
+    mockFindByEmail.mockResolvedValueOnce(null); // no existe
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    mockCreate.mockResolvedValueOnce({ rowsAffected: 1 });
+    await expect(
+      Service.create({ idRol: 1, nombreCompleto: "Nuevo Admin", email: "nuevo@test.com", password: "pass123" })
+    ).resolves.toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// update — validaciones (líneas 123–133)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("update — validaciones (líneas 123–133)", () => {
+  test("admin no encontrado → NOT_FOUND", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.update(99, { idRol: 1, nombreCompleto: "Admin", email: "a@b.com" })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("email inválido → BAD_REQUEST", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await expect(
+      Service.update(1, { idRol: 1, nombreCompleto: "Admin", email: "no-es-email" })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("nombre vacío → BAD_REQUEST", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await expect(
+      Service.update(1, { idRol: 1, nombreCompleto: "  " })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("idRol ausente → BAD_REQUEST", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await expect(
+      Service.update(1, { idRol: null, nombreCompleto: "Admin" })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("rol no encontrado → NOT_FOUND", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockRolesFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.update(1, { idRol: 99, nombreCompleto: "Admin" })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("actualización exitosa → no lanza", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockRolesFindById.mockResolvedValueOnce({ ID_ROL: 1 });
+    mockUpdate.mockResolvedValueOnce({ rowsAffected: 1 });
+    await expect(
+      Service.update(1, { idRol: 1, nombreCompleto: "Admin Test", email: "admin@test.com" })
+    ).resolves.toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// login — rama bcrypt (línea 61): passwordHash válido con bcrypt
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("login — rama bcrypt estándar", () => {
+  test("contraseña correcta con hash bcrypt → retorna token", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockBcryptCompare.mockResolvedValueOnce(true);
+
+    const result = await Service.login("admin@test.com", "mipassword");
+
+    expect(result).toHaveProperty("token");
+    expect(mockBcryptCompare).toHaveBeenCalledWith("mipassword", "$2a$10$somehash");
+  });
+
+  test("contraseña incorrecta con hash bcrypt → 401", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockBcryptCompare.mockResolvedValueOnce(false);
+
+    await expect(Service.login("admin@test.com", "wrongpass")).rejects.toMatchObject({
+      statusCode: 401,
+    });
+  });
+
+  test("PASSWORD_HASH null → stored='', passwordValida=false → 401", async () => {
+    const rowNullHash = { ...adminRow, PASSWORD_HASH: null };
+    mockFindByEmail.mockResolvedValueOnce(rowNullHash);
+
+    await expect(Service.login("admin@test.com", "anypass")).rejects.toMatchObject({
+      statusCode: 401,
+    });
+    // bcrypt.compare no debe llamarse con hash vacío
+    expect(mockBcryptCompare).not.toHaveBeenCalled();
   });
 });
