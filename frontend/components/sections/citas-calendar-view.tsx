@@ -127,24 +127,32 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
   const accentBg = POPUP_BG[cita.estatus] ?? "bg-slate-500"
   const popW = 280
   const popH = 230
-  const gap = 10
-  
-  // Usamos clientWidth para ignorar el ancho del scrollbar y evitar overflow horizontal
+  const gap = 6 // Minímamente pegado al costado
   const viewportW = document.documentElement.clientWidth
+  
+  // Por defecto: a la derecha del bloque
   let left = blockRect.right + gap
   
-  // Si se sale del borde derecho, renderizamos a la izquierda del bloque
-  if (left + popW > viewportW - 24) {
-    left = blockRect.left - popW - gap
-  }
-  // Fallback de seguridad si no cabe tampoco a la izquierda
-  if (left < 12) {
-    left = 12
+  // Si se sale del lado derecho de la pantalla
+  if (left + popW > viewportW - 12) {
+    const leftAttempt = blockRect.left - popW - gap
+    if (leftAttempt >= 12) {
+      // Si cabe del lado izquierdo, lo ponemos ahí
+      left = leftAttempt
+    } else {
+      // Si no cabe en ningún lado (pantalla pequeña), lo pegamos al borde derecho
+      left = viewportW - popW - 12
+    }
   }
 
-  // Verticalmente centrado con el bloque; si no cabe, se ajusta a los bordes
-  const rawTop = blockRect.top + blockRect.height / 2 - popH / 2
-  const top = Math.min(Math.max(12, rawTop), window.innerHeight - popH - 12)
+  // Alineación vertical: exactamente en la misma línea (top del bloque)
+  let top = blockRect.top
+  // Prevenir que se corte por abajo
+  if (top + popH > window.innerHeight - 12) {
+    top = window.innerHeight - popH - 12
+  }
+  // Prevenir que se corte por arriba
+  if (top < 12) top = 12
 
   const isUpdating = updatingId === cita.id
 
