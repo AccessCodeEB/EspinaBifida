@@ -131,7 +131,7 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
                 <div className={`size-1.5 shrink-0 rounded-full ${isZero ? "bg-red-500" : "bg-amber-500"}`} />
                 <p className="flex-1 truncate text-xs text-foreground">{item.descripcion}</p>
                 <span className="shrink-0 text-[11px] text-muted-foreground">{item.unidad}</span>
-                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600" : "text-amber-600"}`}>
+                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                   {qty}
                 </span>
               </div>
@@ -481,7 +481,7 @@ export function DashboardSection() {
                 {financiero.diff >= 0
                   ? <TrendingUp className="size-3 text-emerald-500" />
                   : <TrendingDown className="size-3 text-red-500" />}
-                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {financiero.diff >= 0 ? "+" : ""}{financiero.diff.toFixed(1)}% vs mes anterior
                 </span>
               </div>
@@ -666,10 +666,12 @@ export function DashboardSection() {
                 <Tooltip
                   contentStyle={{
                     borderRadius: "10px",
-                    border: "1px solid rgba(0,0,0,0.08)",
+                    border: "1px solid var(--border)",
                     padding: "8px 12px",
                     fontSize: "12px",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                    backgroundColor: "var(--card)",
+                    color: "var(--card-foreground)",
                   }}
                   formatter={(value: number, name: string) =>
                     name === "ingresos"

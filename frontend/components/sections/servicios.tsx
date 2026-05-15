@@ -794,6 +794,15 @@ export function ServiciosSection() {
                     formatter={(value: number) => formatMoney(Number(value))}
                     labelFormatter={(label) => `Mes: ${label}`}
                     cursor={{ fill: "rgba(0,0,0,0.06)" }}
+                    contentStyle={{
+                      backgroundColor: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      color: "var(--card-foreground)",
+                    }}
+                    labelStyle={{ color: "var(--card-foreground)" }}
+                    itemStyle={{ color: "var(--card-foreground)" }}
                   />
                   <Bar dataKey="monto" fill="#005bb5" radius={[4, 4, 0, 0]} maxBarSize={45}>
                     {monthlyBarData.map((entry, index) => (
@@ -835,15 +844,15 @@ export function ServiciosSection() {
                     <Tooltip
                       formatter={(value: number, _name, item) => [`${value}`, item.payload.name]}
                       contentStyle={{
-                        backgroundColor: "#ffffff",
-                        border: "1px solid #e2e8f0",
+                        backgroundColor: "var(--card)",
+                        border: "1px solid var(--border)",
                         borderRadius: "8px",
                         fontSize: "12px",
                         boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                        color: "#0f172a",
+                        color: "var(--card-foreground)",
                       }}
-                      labelStyle={{ fontWeight: 600, color: "#0f172a" }}
-                      itemStyle={{ color: "#0f172a" }}
+                      labelStyle={{ fontWeight: 600, color: "var(--card-foreground)" }}
+                      itemStyle={{ color: "var(--card-foreground)" }}
                     />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "15px" }} />
                   </PieChart>
@@ -860,7 +869,7 @@ export function ServiciosSection() {
         {/* Alerta undo */}
         {pendingDelete && (
           <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
+            <AlertTriangle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <p className="flex-1 text-xs text-amber-800 dark:text-amber-300">
               Servicio <span className="font-semibold">{pendingDelete.servicio.folio}</span> marcado para eliminar. Puedes deshacer en 8 segundos.
             </p>

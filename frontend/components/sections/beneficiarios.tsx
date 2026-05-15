@@ -103,7 +103,7 @@ function DetailField({
   else if (badgeVariant === "valve")
     display = <span className={`text-xs px-2.5 py-0.5 rounded-md ${value ? "bg-primary/10 text-primary font-semibold" : "bg-muted/80 text-muted-foreground font-medium"}`}>{display}</span>
   else if (badgeVariant === "credential")
-    display = <span className="font-mono text-xs font-bold bg-amber-100/50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md">{display}</span>
+    display = <span className="font-mono text-xs font-bold bg-amber-100/50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">{display}</span>
   else if (badgeVariant === "membresia" && typeof value === "string")
     display = getEstatusBadge(value)
 
@@ -587,7 +587,7 @@ export function BeneficiariosSection({
                         </p>
                         <p className="text-xs font-semibold text-primary/90">{credencialBeneficiario.folio}</p>
                         {credencialBeneficiario.numeroCredencial && (
-                          <p className="font-mono text-[11px] font-bold text-amber-800">
+                          <p className="font-mono text-[11px] font-bold text-amber-800 dark:text-amber-400">
                             No. {credencialBeneficiario.numeroCredencial}
                           </p>
                         )}

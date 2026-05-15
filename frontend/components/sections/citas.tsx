@@ -322,8 +322,8 @@ export function CitasSection() {
                   ))}
                 </div>
               )}
-              {form.curp && <p className="text-[11px] font-medium text-emerald-600">✓ Seleccionado: {form.curp}</p>}
-              {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600">Selecciona un beneficiario de la lista</p>}
+              {form.curp && <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">✓ Seleccionado: {form.curp}</p>}
+              {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>}
             </div>
 
             {/* Tipo de Servicio */}

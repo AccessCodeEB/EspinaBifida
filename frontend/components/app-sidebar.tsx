@@ -245,27 +245,6 @@ export function AppSidebar({
           )}
         </button>
 
-        {/* User chip — solo cuando labels visibles */}
-        {showLabels && (
-          <div className="mt-3 flex items-center gap-2.5 rounded-lg px-3 py-2 bg-white/[0.04]">
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-              {initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-semibold text-white/70 leading-tight">{userName ?? "Usuario"}</p>
-              <p className="truncate text-[9px] text-white/30">{userRole ?? ""}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Avatar solo en modo mini */}
-        {!showLabels && (
-          <div className="mt-2 flex justify-center">
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold" title={userName}>
-              {initials}
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   )

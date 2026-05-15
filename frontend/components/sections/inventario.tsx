@@ -206,7 +206,7 @@ export function InventarioSection() {
   }
 
   const qty = normQty(cantidadMovimiento)
-  const qtyColor = qty > 0 ? "text-emerald-600" : qty < 0 ? "text-red-600" : "text-foreground"
+  const qtyColor = qty > 0 ? "text-emerald-600 dark:text-emerald-400" : qty < 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
 
   return (
     <div className="flex flex-col gap-6 pb-8">

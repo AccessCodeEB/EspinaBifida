@@ -17,7 +17,7 @@ const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","
 const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-blue-500",Completada:"border-l-slate-400",Cancelada:"border-l-red-500"}
 const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-blue-500/10",Completada:"bg-slate-500/10",Cancelada:"bg-red-500/10"}
 const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-400",Cancelada:"bg-red-500"}
-const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-blue-600 dark:text-blue-400",Completada:"text-slate-500",Cancelada:"text-red-600 dark:text-red-400"}
+const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-blue-600 dark:text-blue-400",Completada:"text-slate-500 dark:text-slate-400",Cancelada:"text-red-600 dark:text-red-400"}
 const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-500",Cancelada:"bg-red-500"}
 const POPUP_LABEL:Record<string,string>={Confirmada:"Confirmada",Pendiente:"Pendiente",Completada:"Completada",Cancelada:"Cancelada"}
 
@@ -237,7 +237,7 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
               <button
                 disabled={isUpdating}
                 onClick={() => onAction(cita.id, "Cancelada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
               >
                 <X className="size-3.5"/>Cancelar
               </button>
@@ -382,7 +382,7 @@ function CitaDetailPanel({selected,onClose,onAction,updatingId}:{
               <Check className="size-3.5"/>Completar
             </button>
             <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Cancelada")}
-              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50">
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60">
               <X className="size-3.5"/>Cancelar
             </button>
           </>}
