@@ -282,9 +282,69 @@ function generarHTMLMembresias({ filas }, { fechaInicio, fechaFin }) {
 </html>`;
 }
 
-function generarHTMLServicios(data, { fechaInicio, fechaFin }) {
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body>
-  <p>Reporte de Servicios — Próximamente (Task 4)</p></body></html>`;
+function generarHTMLServicios({ filas }, { fechaInicio, fechaFin }) {
+  const total      = filas.length;
+  const exentos    = filas.filter(r => r.MODALIDAD === 'Exento').length;
+  const conCuota   = filas.filter(r => r.MODALIDAD === 'Con cuota').length;
+  const montoTotal = filas.reduce((s, r) => s + (Number(r.MONTO_PAGADO) || 0), 0).toFixed(2);
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 9pt; margin: 20px; color: #000; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+    .titulo { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
+    .subtitulo { font-size: 10pt; margin-top: 4px; }
+    h3 { margin: 10px 0 4px; font-size: 10pt; background: #e0e0e0; padding: 3px 5px; border: 1px solid #999; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 3px 5px; }
+    th { background: #e0e0e0; font-weight: bold; text-align: center; }
+    .num { text-align: right; }
+    .resumen-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .stat { border: 1px solid #999; padding: 6px; text-align: center; }
+    .stat-n { font-size: 14pt; font-weight: bold; }
+    .stat-l { font-size: 8pt; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="titulo">Asociación de Espina Bífida de Nuevo León, A.B.P.</div>
+    <div class="subtitulo">Reporte de Servicios — del ${formatFecha(fechaInicio)} al ${formatFecha(fechaFin)}</div>
+    <div class="subtitulo">Generado: ${formatFecha(new Date())}</div>
+  </div>
+
+  <h3>Resumen</h3>
+  <div class="resumen-grid">
+    <div class="stat"><div class="stat-n">${esc(total)}</div><div class="stat-l">Total servicios</div></div>
+    <div class="stat"><div class="stat-n">${esc(exentos)}</div><div class="stat-l">Exentos</div></div>
+    <div class="stat"><div class="stat-n">${esc(conCuota)}</div><div class="stat-l">Con cuota</div></div>
+    <div class="stat"><div class="stat-n">$${esc(montoTotal)}</div><div class="stat-l">Monto recaudado</div></div>
+  </div>
+
+  <h3>Detalle de Servicios</h3>
+  <table>
+    <tr>
+      <th>Fecha</th><th>Beneficiario</th><th>CURP</th>
+      <th>Tipo de servicio</th><th>Costo</th><th>Pagado</th><th>Modalidad</th>
+    </tr>
+    ${filas.length > 0
+      ? filas.map(r => `<tr>
+          <td>${esc(r.FECHA)}</td>
+          <td>${esc(r.NOMBRE)}</td>
+          <td>${esc(r.CURP)}</td>
+          <td>${esc(r.TIPO_SERVICIO)}</td>
+          <td class="num">$${esc(Number(r.COSTO ?? 0).toFixed(2))}</td>
+          <td class="num">$${esc(Number(r.MONTO_PAGADO ?? 0).toFixed(2))}</td>
+          <td>${esc(r.MODALIDAD)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" style="text-align:center;color:#666">Sin servicios en el periodo</td></tr>'
+    }
+  </table>
+</body>
+</html>`;
 }
 
 function generarHTMLInventario(data, { fechaInicio, fechaFin }) {

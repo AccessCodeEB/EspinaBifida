@@ -224,6 +224,34 @@ export async function getMembresias(fechaInicio, fechaFin) {
   }
 }
 
+// ── 8. Detalle de servicios individuales del periodo ─────────────────────────
+export async function getServiciosPeriodo(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT
+        TO_CHAR(S.FECHA, 'YYYY-MM-DD') AS FECHA,
+        B.NOMBRES || ' ' || B.APELLIDO_PATERNO AS NOMBRE,
+        B.CURP,
+        SC.NOMBRE AS TIPO_SERVICIO,
+        S.COSTO,
+        S.MONTO_PAGADO,
+        CASE WHEN S.MONTO_PAGADO = 0 THEN 'Exento' ELSE 'Con cuota' END AS MODALIDAD
+      FROM SERVICIOS S
+      JOIN BENEFICIARIOS B ON S.CURP = B.CURP
+      JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
+      WHERE S.FECHA BETWEEN :fi AND :ff
+      ORDER BY S.FECHA DESC
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // ── 5. Persistencia de reportes generados ────────────────────────────────────
 export async function guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx, generadoPor = null }) {
   const conn = await getConnection();

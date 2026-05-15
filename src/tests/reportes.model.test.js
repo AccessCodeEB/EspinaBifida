@@ -25,6 +25,7 @@ const {
   getEstudios,
   getBeneficiariosPeriodo,
   getMembresias,
+  getServiciosPeriodo,
   guardarRegistro,
   findHistorico,
   findById,
@@ -294,6 +295,43 @@ describe('getMembresias', () => {
   it('cierra conexión si execute lanza', async () => {
     mockExecute.mockRejectedValueOnce(new Error('timeout'));
     await expect(getMembresias(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('timeout');
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getServiciosPeriodo ───────────────────────────────────────────────────────
+
+describe('getServiciosPeriodo', () => {
+  it('retorna filas de servicios en el periodo', async () => {
+    const rows = [
+      {
+        FECHA: '2026-01-15',
+        NOMBRE: 'Marco García López',
+        CURP: 'GARM900101HNLRLS01',
+        TIPO_SERVICIO: 'Consulta General',
+        COSTO: 100,
+        MONTO_PAGADO: 50,
+        MODALIDAD: 'Con cuota',
+      },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getServiciosPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay servicios en el periodo', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await getServiciosPeriodo(PERIODO.inicio, PERIODO.fin);
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('ORA-01403'));
+    await expect(getServiciosPeriodo(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('ORA-01403');
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

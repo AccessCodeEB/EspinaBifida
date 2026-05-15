@@ -177,6 +177,28 @@ describe('generarHTML', () => {
     const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
     expect(html).toContain('Sin membresías en el periodo');
   });
+
+  it('servicios: genera tabla con monto recaudado correcto', () => {
+    const data = {
+      tipo: 'servicios',
+      filas: [
+        { FECHA: '2026-01-15', NOMBRE: 'Marco García', CURP: 'GARM900101HNLRLS01',
+          TIPO_SERVICIO: 'Consulta', COSTO: 100, MONTO_PAGADO: 50, MODALIDAD: 'Con cuota' },
+        { FECHA: '2026-01-20', NOMBRE: 'Ana López', CURP: 'LOPA800202MNLRNN03',
+          TIPO_SERVICIO: 'Medicamento', COSTO: 0, MONTO_PAGADO: 0, MODALIDAD: 'Exento' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Marco García');
+    expect(html).toContain('$50.00');
+    expect(html).toContain('Reporte de Servicios');
+  });
+
+  it('servicios: sin filas muestra mensaje vacío', () => {
+    const data = { tipo: 'servicios', filas: [] };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin servicios en el periodo');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────
