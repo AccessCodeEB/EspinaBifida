@@ -1,5 +1,6 @@
 "use client"
 import { useState, useMemo, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -169,11 +170,11 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
 
   const isUpdating = updatingId === cita.id
 
-  return(
+  const content = (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose}/>
+      <div className="fixed inset-0 z-[100]" onClick={onClose}/>
       <div
-        className="fixed z-50 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
+        className="fixed z-[110] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
         style={{left:`${left}px`,top:`${top}px`,width:`${popW}px`}}
       >
         {/* Header coloreado según estatus */}
@@ -260,6 +261,9 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
       </div>
     </>
   )
+
+  if (typeof document === "undefined") return null
+  return createPortal(content, document.body)
 }
 
 // ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
