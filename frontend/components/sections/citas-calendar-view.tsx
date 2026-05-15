@@ -288,7 +288,6 @@ function ActionCenter({
   const[page,setPage]=useState(0)
   const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
   const totalPages=Math.max(1,Math.ceil(pending.length/PAGE_SIZE))
-  // clamp page when citas change
   const safePage=Math.min(page,totalPages-1)
   const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
 
@@ -306,14 +305,13 @@ function ActionCenter({
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
 
-      {/* Cards — fixed page, no scroll, evenly distributed */}
-      <div className="flex-1 min-h-0 flex flex-col justify-between gap-1">
-        <div className="flex flex-col gap-1.5">
+      {/* Cards — flex-1, clipped with overflow-hidden so pagination is never pushed out */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-1.5">
         {slice.map(c=>(
           <button
             key={c.id}
             onClick={()=>onNavigate(c)}
-            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-3 hover:bg-muted/40 hover:border-border/60 transition-colors group"
+            className="w-full shrink-0 text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5 hover:bg-muted/40 hover:border-border/60 transition-colors group"
           >
             <p className="text-[12px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
               {c.beneficiario}
@@ -329,27 +327,24 @@ function ActionCenter({
             </div>
           </button>
         ))}
-        </div>
       </div>
 
-      {/* Pagination */}
-      {totalPages>1&&(
-        <div className="flex items-center justify-center gap-2 shrink-0 pt-1">
-          <button
-            onClick={()=>setPage(p=>Math.max(0,p-1))}
-            disabled={safePage===0}
-            className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-          ><ChevronLeft className="size-3.5"/></button>
-          <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
-            {safePage+1} / {totalPages}
-          </span>
-          <button
-            onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))}
-            disabled={safePage===totalPages-1}
-            className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-          ><ChevronRight className="size-3.5"/></button>
-        </div>
-      )}
+      {/* Pagination — always shrink-0 at bottom, never pushed out */}
+      <div className="shrink-0 flex items-center justify-center gap-2 border-t border-border/20 pt-2">
+        <button
+          onClick={()=>setPage(p=>Math.max(0,p-1))}
+          disabled={safePage===0}
+          className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronLeft className="size-3.5"/></button>
+        <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+          {safePage+1} / {totalPages}
+        </span>
+        <button
+          onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))}
+          disabled={safePage===totalPages-1}
+          className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronRight className="size-3.5"/></button>
+      </div>
     </div>
   )
 }
