@@ -278,7 +278,7 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
 }
 
 // ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
-const PAGE_SIZE = 4
+const PAGE_SIZE = 5
 function ActionCenter({
   citas,onNavigate
 }:{
@@ -298,7 +298,7 @@ function ActionCenter({
     </div>
   )
   return(
-    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-2">
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 flex flex-col gap-2">
       {/* Header */}
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
         <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
@@ -311,7 +311,7 @@ function ActionCenter({
           <button
             key={c.id}
             onClick={()=>onNavigate(c)}
-            className="w-full shrink-0 text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-3 hover:bg-muted/40 hover:border-border/60 transition-colors group"
+            className="w-full shrink-0 text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-2 hover:bg-muted/40 hover:border-border/60 transition-colors group"
           >
             <p className="text-[12px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
               {c.beneficiario}
@@ -319,7 +319,7 @@ function ActionCenter({
             <div className="flex items-center gap-2 mt-1">
               <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
               <p className="text-[10px] text-muted-foreground whitespace-nowrap">{c.fecha} · {c.hora}</p>
-              <span className={`ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+              <span className={`ml-auto shrink-0 rounded-full w-[84px] py-0.5 text-center text-[9px] font-bold uppercase tracking-wider ${
                 c.estatus==="Confirmada"
                   ?"bg-emerald-500/15 text-emerald-400"
                   :"bg-amber-500/15 text-amber-400"
@@ -330,20 +330,20 @@ function ActionCenter({
       </div>
 
       {/* Pagination — always shrink-0 at bottom, never pushed out */}
-      <div className="shrink-0 flex items-center justify-center gap-2 border-t border-border/20 pt-2 mt-auto">
+      <div className="shrink-0 flex items-center justify-center gap-2 border-t border-border/20 pt-1.5 mt-auto">
         <button
           onClick={()=>setPage(p=>Math.max(0,p-1))}
           disabled={safePage===0}
-          className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
-        ><ChevronLeft className="size-3.5"/></button>
+          className="flex size-6 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronLeft className="size-3"/></button>
         <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
           {safePage+1} / {totalPages}
         </span>
         <button
           onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))}
           disabled={safePage===totalPages-1}
-          className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
-        ><ChevronRight className="size-3.5"/></button>
+          className="flex size-6 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronRight className="size-3"/></button>
       </div>
     </div>
   )
