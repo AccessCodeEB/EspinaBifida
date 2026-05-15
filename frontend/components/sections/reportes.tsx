@@ -505,7 +505,7 @@ export function ReportesSection() {
                               try {
                                 const token = (await import("@/lib/token")).tokenStorage.get()
                                 const { resolveApiFetchUrl } = await import("@/lib/api-base")
-                                const url = resolveApiFetchUrl(`/v1/reportes/${r.ID_REPORTE}/descargar?formato=pdf`)
+                                const url = resolveApiFetchUrl(`/api/v1/reportes/${r.ID_REPORTE}/descargar?formato=pdf`)
                                 const res = await fetch(url, {
                                   credentials: "include",
                                   headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -532,7 +532,7 @@ export function ReportesSection() {
                               try {
                                 const token = (await import("@/lib/token")).tokenStorage.get()
                                 const { resolveApiFetchUrl } = await import("@/lib/api-base")
-                                const url = resolveApiFetchUrl(`/v1/reportes/${r.ID_REPORTE}/descargar?formato=xlsx`)
+                                const url = resolveApiFetchUrl(`/api/v1/reportes/${r.ID_REPORTE}/descargar?formato=xlsx`)
                                 const res = await fetch(url, {
                                   credentials: "include",
                                   headers: token ? { Authorization: `Bearer ${token}` } : {},

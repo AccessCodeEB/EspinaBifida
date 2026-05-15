@@ -23,7 +23,7 @@ export async function fetchReporteUrl(
   tipo = "estadisticas"
 ): Promise<string> {
   const token = tokenStorage.get()
-  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
+  const path = `/api/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
   const url = resolveApiFetchUrl(path)
 
   const res = await fetch(url, {
@@ -57,7 +57,7 @@ export async function downloadReporte(
   tipo = "estadisticas"
 ): Promise<void> {
   const token = tokenStorage.get()
-  const path = `/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
+  const path = `/api/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=${formato}&tipo=${tipo}`
   const url = resolveApiFetchUrl(path)
 
   const res = await fetch(url, {
@@ -94,9 +94,9 @@ export async function downloadReporte(
   URL.revokeObjectURL(objUrl)
 }
 
-/** GET /v1/reportes/historico */
+/** GET /api/v1/reportes/historico */
 export function getHistorico(page = 1, limit = 20) {
   return apiClient.get<{ data: ReporteHistorico[] }>(
-    `/v1/reportes/historico?page=${page}&limit=${limit}`
+    `/api/v1/reportes/historico?page=${page}&limit=${limit}`
   )
 }
