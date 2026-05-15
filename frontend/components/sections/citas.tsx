@@ -115,11 +115,8 @@ export function CitasSection() {
   }
 
   function handleSuggestSmartSlot() {
-    // Paso A: Validación
-    if (!form.curp || !form.especialista) {
-      toast.warning("Selecciona un especialista y un beneficiario primero para buscar disponibilidad.")
-      return
-    }
+    // Guard - button should already be visually disabled, but double-check
+    if (!form.curp || !form.especialista) return
 
     setIsFindingSlot(true)
     setSmartSuggestion(null)
@@ -340,27 +337,53 @@ export function CitasSection() {
 
             {/* Fecha y Hora + Smart Slot */}
             <div className="space-y-2">
-              {/* Botón IA */}
-              <button
-                type="button"
-                onClick={handleSuggestSmartSlot}
-                disabled={isFindingSlot}
-                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold transition-all duration-300 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, rgba(15,76,129,0.5) 0%, rgba(13,148,136,0.3) 100%)", backdropFilter: "blur(8px)" }}
-              >
-                <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 to-teal-500/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                {isFindingSlot ? (
-                  <>
-                    <span className="size-3.5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
-                    <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Buscando horario ideal...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="size-3.5 text-sky-400" />
-                    <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Sugerir mejor horario</span>
-                  </>
-                )}
-              </button>
+              {/* Botón IA — locked hasta que se seleccione beneficiario + especialista */}
+              {(() => {
+                const isUnlocked = !!(form.curp && form.especialista)
+                return (
+                  <button
+                    type="button"
+                    onClick={isUnlocked ? handleSuggestSmartSlot : undefined}
+                    disabled={isFindingSlot}
+                    className={[
+                      "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-300",
+                      isUnlocked
+                        ? "border-white/10 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] cursor-pointer"
+                        : "border-border/30 cursor-not-allowed",
+                    ].join(" ")}
+                    style={isUnlocked
+                      ? { background: "linear-gradient(135deg, rgba(15,76,129,0.5) 0%, rgba(13,148,136,0.3) 100%)", backdropFilter: "blur(8px)" }
+                      : { background: "rgba(255,255,255,0.04)", backdropFilter: "blur(8px)" }
+                    }
+                    title={!isUnlocked ? "Selecciona un beneficiario y especialista para activar" : undefined}
+                  >
+                    {/* Hover glow - only when unlocked */}
+                    {isUnlocked && <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 to-teal-500/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />}
+
+                    {/* Lock icon when locked */}
+                    {!isUnlocked && (
+                      <svg className="size-3.5 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    )}
+
+                    {isFindingSlot ? (
+                      <>
+                        <span className="size-3.5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+                        <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Buscando horario ideal...</span>
+                      </>
+                    ) : isUnlocked ? (
+                      <>
+                        <Sparkles className="size-3.5 text-sky-400" />
+                        <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Sugerir mejor horario</span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground/50">Sugerir mejor horario</span>
+                    )}
+                  </button>
+                )
+              })()}
 
               {/* Inputs Fecha y Hora */}
               <div className="grid grid-cols-2 gap-3">
