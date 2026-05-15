@@ -43,7 +43,7 @@ import {
   AlertCircle,
   Eye,
 } from "lucide-react"
-import { downloadReporte, fetchReporteUrl, getHistorico, type ReporteHistorico } from "@/services/reportes"
+import { downloadReporte, fetchReporteUrl, fetchReporteSheets, getHistorico, type ReporteHistorico } from "@/services/reportes"
 
 // ── Tipos de reporte disponibles ──────────────────────────────────────────────
 
@@ -146,6 +146,8 @@ export function ReportesSection() {
 
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewSheets, setPreviewSheets] = useState<{ nombre: string; headers: string[]; rows: (string | number | null)[][] }[] | null>(null)
+  const [previewActiveSheet, setPreviewActiveSheet] = useState(0)
   const [previewOpen, setPreviewOpen] = useState(false)
   const previewBlobRef = useRef<string | null>(null)
 
@@ -213,14 +215,22 @@ export function ReportesSection() {
     }
     setIsPreviewing(true)
     try {
-      // Liberar blob anterior si existe
-      if (previewBlobRef.current) {
-        URL.revokeObjectURL(previewBlobRef.current)
-        previewBlobRef.current = null
+      if (selectedFormat === "xlsx") {
+        const sheets = await fetchReporteSheets(fechas.fechaInicio, fechas.fechaFin, selectedReport ?? "estadisticas")
+        setPreviewSheets(sheets)
+        setPreviewActiveSheet(0)
+        setPreviewUrl(null)
+      } else {
+        // Liberar blob anterior si existe
+        if (previewBlobRef.current) {
+          URL.revokeObjectURL(previewBlobRef.current)
+          previewBlobRef.current = null
+        }
+        const url = await fetchReporteUrl(fechas.fechaInicio, fechas.fechaFin, "pdf", selectedReport ?? "estadisticas")
+        previewBlobRef.current = url
+        setPreviewUrl(url)
+        setPreviewSheets(null)
       }
-      const url = await fetchReporteUrl(fechas.fechaInicio, fechas.fechaFin, "pdf", selectedReport ?? "estadisticas")
-      previewBlobRef.current = url
-      setPreviewUrl(url)
       setPreviewOpen(true)
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : "Error al generar la vista previa.")
@@ -236,6 +246,7 @@ export function ReportesSection() {
       previewBlobRef.current = null
     }
     setPreviewUrl(null)
+    setPreviewSheets(null)
   }
 
   const currentReport = reportTypes.find(r => r.id === selectedReport)
@@ -515,19 +526,77 @@ export function ReportesSection() {
       {/* Modal vista previa */}
       <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) handleClosePreview() }}>
         <DialogContent
-          className="flex w-[50vw] !max-w-[50vw] flex-col gap-0 p-0"
-          style={{ height: `calc(50vw * ${11 / 8.5})`, maxHeight: "95vh" }}
+          className="flex w-[80vw] !max-w-[80vw] flex-col gap-0 p-0"
+          style={{ height: previewSheets ? "80vh" : `calc(50vw * ${11 / 8.5})`, maxHeight: "95vh" }}
         >
           <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <FileText className="size-4 text-red-500" />
+              {selectedFormat === "xlsx"
+                ? <FileSpreadsheet className="size-4 text-emerald-600" />
+                : <FileText className="size-4 text-red-500" />}
               Vista previa — {currentReport?.title}
             </DialogTitle>
             <DialogDescription className="text-xs">
               {fechasCalculadas ? `${fechasCalculadas.fechaInicio} al ${fechasCalculadas.fechaFin}` : "Reporte generado"}
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1">
+
+          {/* Pestañas de hojas (solo xlsx) */}
+          {previewSheets && previewSheets.length > 1 && (
+            <div className="shrink-0 flex gap-1 overflow-x-auto border-b px-4 pt-2">
+              {previewSheets.map((sheet, i) => (
+                <button
+                  key={sheet.nombre}
+                  onClick={() => setPreviewActiveSheet(i)}
+                  className={`shrink-0 rounded-t-lg border border-b-0 px-3 py-1.5 text-xs font-medium transition-colors
+                    ${i === previewActiveSheet
+                      ? "border-border bg-background text-foreground"
+                      : "border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/60"}`}
+                >
+                  {sheet.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="min-h-0 flex-1 overflow-auto">
+            {/* Vista tabla xlsx */}
+            {previewSheets && (() => {
+              const sheet = previewSheets[previewActiveSheet]
+              if (!sheet) return null
+              return (
+                <table className="w-full border-collapse text-xs">
+                  <thead className="sticky top-0 z-10 bg-muted/90">
+                    <tr>
+                      {sheet.headers.map((h, i) => (
+                        <th key={i} className="border border-border/40 px-3 py-2 text-left font-semibold text-foreground whitespace-nowrap">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sheet.rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={sheet.headers.length} className="py-8 text-center text-muted-foreground">
+                          Sin datos en este periodo
+                        </td>
+                      </tr>
+                    ) : sheet.rows.map((row, ri) => (
+                      <tr key={ri} className={ri % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                        {sheet.headers.map((_, ci) => (
+                          <td key={ci} className="border border-border/20 px-3 py-1.5 text-foreground whitespace-nowrap">
+                            {row[ci] != null ? String(row[ci]) : ""}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            })()}
+
+            {/* Vista PDF iframe */}
             {previewUrl && (
               <iframe
                 src={previewUrl}
@@ -537,6 +606,7 @@ export function ReportesSection() {
               />
             )}
           </div>
+
           <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
             <button onClick={handleClosePreview}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">

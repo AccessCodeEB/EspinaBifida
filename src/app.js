@@ -22,6 +22,9 @@ import inventarioV1Routes     from "./routes/inventario.v1.routes.js";
 import administradoresRoutes  from "./routes/administradores.routes.js";
 import rolesRoutes            from "./routes/roles.routes.js";
 import reportesRoutes         from "./routes/reportes.routes.js";
+import configuracionRoutes    from "./routes/configuracion.routes.js";
+import especialistasRoutes    from "./routes/especialistas.routes.js";
+import catalogoRoutes         from "./routes/servicios-catalogo.routes.js";
 
 const app = express();
 
@@ -55,6 +58,9 @@ app.use("/api/v1/administradores", administradoresRoutes);
 app.use("/roles",          rolesRoutes);
 app.use("/api/v1/roles", rolesRoutes);
 app.use("/api/v1/reportes", reportesRoutes);
+app.use("/configuracion",   configuracionRoutes);
+app.use("/especialistas",   especialistasRoutes);
+app.use("/servicios-catalogo", catalogoRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -94,6 +94,48 @@ export async function downloadReporte(
   URL.revokeObjectURL(objUrl)
 }
 
+/**
+ * Descarga el xlsx del reporte y lo parsea como hojas de tabla.
+ * Devuelve un array de { nombre, headers, rows } — uno por hoja.
+ */
+export async function fetchReporteSheets(
+  fechaInicio: string,
+  fechaFin: string,
+  tipo = "estadisticas"
+): Promise<{ nombre: string; headers: string[]; rows: (string | number | null)[][] }[]> {
+  const token = tokenStorage.get()
+  const path = `/api/v1/reportes/periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&formato=xlsx&tipo=${tipo}`
+  const url = resolveApiFetchUrl(path)
+
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Error desconocido")
+    let message = text
+    try {
+      const parsed = JSON.parse(text) as { error?: string; message?: string }
+      message = parsed.error ?? parsed.message ?? text
+    } catch { /* usar texto crudo */ }
+    throw new Error(message)
+  }
+
+  const arrayBuffer = await res.arrayBuffer()
+  const XLSX = await import("xlsx")
+  const wb = XLSX.read(arrayBuffer, { type: "array" })
+
+  return wb.SheetNames.map((nombre) => {
+    const ws = wb.Sheets[nombre]
+    const data: (string | number | null)[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null })
+    const headers = (data[0] ?? []).map((h) => String(h ?? ""))
+    const rows = data.slice(1)
+    return { nombre, headers, rows }
+  })
+}
+
 /** GET /api/v1/reportes/historico */
 export function getHistorico(page = 1, limit = 20) {
   return apiClient.get<{ data: ReporteHistorico[] }>(
