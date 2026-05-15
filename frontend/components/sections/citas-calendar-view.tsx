@@ -278,13 +278,20 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
 }
 
 // ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
+const PAGE_SIZE = 5
 function ActionCenter({
   citas,onNavigate
 }:{
   citas:Cita[]
   onNavigate:(c:Cita)=>void
 }){
+  const[page,setPage]=useState(0)
   const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
+  const totalPages=Math.max(1,Math.ceil(pending.length/PAGE_SIZE))
+  // clamp page when citas change
+  const safePage=Math.min(page,totalPages-1)
+  const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
+
   if(!pending.length)return(
     <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Citas Pendientes</p>
@@ -292,33 +299,55 @@ function ActionCenter({
     </div>
   )
   return(
-    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-3">
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-2">
+      {/* Header */}
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
         <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5">
-        {pending.map(c=>(
-          <div key={c.id} className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-foreground/80 truncate">{c.beneficiario}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-                  <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora} · {c.estatus}</p>
-                </div>
-              </div>
-              <button
-                onClick={()=>onNavigate(c)}
-                className="shrink-0 flex items-center gap-1 rounded-lg border border-border/50 bg-muted/30 hover:bg-primary/10 hover:border-primary/40 hover:text-primary px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors"
-              >
-                Ver
-                <ChevronRight className="size-3"/>
-              </button>
+
+      {/* Cards — fixed page, no scroll */}
+      <div className="flex-1 min-h-0 flex flex-col gap-1.5">
+        {slice.map(c=>(
+          <button
+            key={c.id}
+            onClick={()=>onNavigate(c)}
+            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-2 hover:bg-muted/40 hover:border-border/60 transition-colors group"
+          >
+            <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
+              {c.beneficiario}
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
+              <p className="text-[10px] text-muted-foreground truncate">{c.fecha} · {c.hora}</p>
+              <span className={`ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wide ${
+                c.estatus==="Confirmada"?"text-emerald-400":"text-amber-400"
+              }`}>{c.estatus}</span>
             </div>
-          </div>
+          </button>
         ))}
+        {/* Spacer so pagination sticks to bottom */}
+        <div className="flex-1"/>
       </div>
+
+      {/* Pagination */}
+      {totalPages>1&&(
+        <div className="flex items-center justify-center gap-2 shrink-0 pt-1">
+          <button
+            onClick={()=>setPage(p=>Math.max(0,p-1))}
+            disabled={safePage===0}
+            className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+          ><ChevronLeft className="size-3.5"/></button>
+          <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+            {safePage+1} / {totalPages}
+          </span>
+          <button
+            onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))}
+            disabled={safePage===totalPages-1}
+            className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+          ><ChevronRight className="size-3.5"/></button>
+        </div>
+      )}
     </div>
   )
 }
@@ -463,19 +492,22 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     return{date:d,layout:buildLayout(visible)}
   }),[citas,weekDates])
 
-  // Navigate to cita's exact day
+  // Navigate to cita's exact day AND open its popover
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
-    // scroll the grid to that appointment block
+    // After layout updates: scroll to block and open its popover
     setTimeout(()=>{
       const el=document.getElementById(`cita-block-${c.id}`)
       const container=document.getElementById("citas-grid")
       if(el && container) {
         const target = el.offsetTop - container.clientHeight / 2
         container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
+        // Open the popover by using the block's DOMRect
+        const rect=el.getBoundingClientRect()
+        setSelected({cita:c,rect})
       }
-    },120)
+    },200)
   }
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
