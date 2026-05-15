@@ -514,7 +514,10 @@ export function ReportesSection() {
 
       {/* Modal vista previa */}
       <Dialog open={previewOpen} onOpenChange={(open) => { if (!open) handleClosePreview() }}>
-        <DialogContent className="flex h-[92vh] max-h-[92vh] w-[95vw] max-w-[95vw] flex-col gap-0 p-0">
+        <DialogContent
+          className="flex w-[50vw] !max-w-[50vw] flex-col gap-0 p-0"
+          style={{ height: `calc(50vw * ${11 / 8.5})`, maxHeight: "95vh" }}
+        >
           <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <FileText className="size-4 text-red-500" />
@@ -525,7 +528,14 @@ export function ReportesSection() {
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1">
-            {previewUrl && <iframe src={previewUrl} className="size-full border-0" title="Vista previa del reporte" />}
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0"
+                style={{ width: "100%", height: "100%" }}
+                title="Vista previa del reporte"
+              />
+            )}
           </div>
           <div className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
             <button onClick={handleClosePreview}
