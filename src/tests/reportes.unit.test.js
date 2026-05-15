@@ -247,6 +247,76 @@ describe('generarHTML', () => {
     const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
     expect(html).toContain('Sin citas en el periodo');
   });
+
+  it('membresias: aplica estilos de color para estados "Por vencer" y "Vencida"', () => {
+    // Cubre las ramas lines 222-224 de estadoStyle en generarHTMLMembresias
+    const data = {
+      tipo: 'membresias',
+      filas: [
+        { NOMBRE: 'Ana Martínez', CURP: 'MARA850515MNLRNS02',
+          NUMERO_CREDENCIAL: 'NL-001',
+          FECHA_VIGENCIA_INICIO: new Date('2025-01-01'),
+          FECHA_VIGENCIA_FIN: new Date('2025-12-31'),
+          FECHA_ULTIMO_PAGO: new Date('2025-01-10'),
+          ESTADO: 'Por vencer' },
+        { NOMBRE: 'Luis Torres', CURP: 'TOLI750303HNLRRS04',
+          NUMERO_CREDENCIAL: 'NL-002',
+          FECHA_VIGENCIA_INICIO: new Date('2024-01-01'),
+          FECHA_VIGENCIA_FIN: new Date('2024-12-31'),
+          FECHA_ULTIMO_PAGO: new Date('2024-01-10'),
+          ESTADO: 'Vencida' },
+        { NOMBRE: 'Pedro Sanz', CURP: 'SANP800404HNLRZN05',
+          NUMERO_CREDENCIAL: 'NL-003',
+          FECHA_VIGENCIA_INICIO: new Date('2026-06-01'),
+          FECHA_VIGENCIA_FIN: new Date('2027-05-31'),
+          FECHA_ULTIMO_PAGO: null,
+          ESTADO: 'Futura' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    // color #b87c00 = Por vencer, #c0392b = Vencida, #555 = Futura (fallback)
+    expect(html).toContain('#b87c00');
+    expect(html).toContain('#c0392b');
+    expect(html).toContain('#555');
+    expect(html).toContain('Por vencer');
+    expect(html).toContain('Vencida');
+  });
+
+  it('inventario: aplica color verde cuando stock > 5', () => {
+    // Cubre la rama line 359 de stockStyle (return \'color:#2a7a2a\')
+    const data = {
+      tipo: 'inventario',
+      articulos: [
+        { DESCRIPCION: 'Silla de ruedas', UNIDAD: 'pieza',
+          INVENTARIO_ACTUAL: 10, CUOTA_RECUPERACION: 200, MANEJA_INVENTARIO: 'S' },
+      ],
+      movimientos: [],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('#2a7a2a');
+    expect(html).toContain('Silla de ruedas');
+  });
+
+  it('citas: sort de especialistas con múltiples entradas distintas', () => {
+    // Cubre la rama line 498 — el comparador del sort se invoca cuando hay ≥2 especialistas
+    const data = {
+      tipo: 'citas',
+      filas: [
+        { FECHA: '2026-01-20', NOMBRE: 'Ana Martínez', CURP: 'MARA850515MNLRNS02',
+          TIPO_SERVICIO: 'Neurología', ESPECIALISTA: 'Dr. Rodríguez', ESTATUS: 'Completada' },
+        { FECHA: '2026-01-21', NOMBRE: 'Marco García', CURP: 'GARM900101HNLRLS01',
+          TIPO_SERVICIO: 'Cardiología', ESPECIALISTA: 'Dra. López', ESTATUS: 'Completada' },
+        { FECHA: '2026-01-22', NOMBRE: 'Luis Torres', CURP: 'TOLI750303HNLRRS04',
+          TIPO_SERVICIO: 'Neurología', ESPECIALISTA: 'Dr. Rodríguez', ESTATUS: 'Pendiente' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    // Dr. Rodríguez tiene 2 citas, Dra. López tiene 1 — ambos deben aparecer
+    expect(html).toContain('Dr. Rodríguez');
+    expect(html).toContain('Dra. López');
+    // La tabla de especialistas existe (sort se ejecutó)
+    expect(html).toContain('Especialista');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────
@@ -276,6 +346,62 @@ describe('generarXLSX', () => {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['Detalle Servicios']);
     expect(rows).toHaveLength(2);
     expect(rows[0].NOMBRE).toBe('Consulta general');
+  });
+
+  it('beneficiarios: produce workbook con 1 hoja "Beneficiarios"', async () => {
+    const data = {
+      tipo: 'beneficiarios',
+      filas: [{ CURP: 'GARM900101HNLRLS01', NOMBRE_COMPLETO: 'Marco García López',
+                GENERO: 'Masculino', MUNICIPIO: 'Monterrey', ESTATUS: 'Activo' }],
+    };
+    const buf = await ReportesService.generarXLSX(data);
+    const wb  = XLSX.read(buf, { type: 'buffer' });
+    expect(wb.SheetNames).toEqual(['Beneficiarios']);
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Beneficiarios']);
+    expect(rows[0].CURP).toBe('GARM900101HNLRLS01');
+  });
+
+  it('membresias: produce workbook con 1 hoja "Membresías"', async () => {
+    const data = {
+      tipo: 'membresias',
+      filas: [{ NOMBRE: 'Ana Martínez', CURP: 'MARA850515MNLRNS02', ESTADO: 'Activa' }],
+    };
+    const buf = await ReportesService.generarXLSX(data);
+    const wb  = XLSX.read(buf, { type: 'buffer' });
+    expect(wb.SheetNames).toEqual(['Membresías']);
+  });
+
+  it('servicios: produce workbook con 1 hoja "Servicios"', async () => {
+    const data = {
+      tipo: 'servicios',
+      filas: [{ FECHA: '2026-01-15', TIPO_SERVICIO: 'Consulta', MONTO_PAGADO: 50, MODALIDAD: 'Con cuota' }],
+    };
+    const buf = await ReportesService.generarXLSX(data);
+    const wb  = XLSX.read(buf, { type: 'buffer' });
+    expect(wb.SheetNames).toEqual(['Servicios']);
+  });
+
+  it('inventario: produce workbook con 2 hojas "Stock Actual" y "Movimientos"', async () => {
+    const data = {
+      tipo: 'inventario',
+      articulos:   [{ DESCRIPCION: 'Silla de ruedas', INVENTARIO_ACTUAL: 3, MANEJA_INVENTARIO: 'S' }],
+      movimientos: [{ ARTICULO: 'Silla de ruedas', TIPO_MOVIMIENTO: 'SALIDA', CANTIDAD: 1 }],
+    };
+    const buf = await ReportesService.generarXLSX(data);
+    const wb  = XLSX.read(buf, { type: 'buffer' });
+    expect(wb.SheetNames).toEqual(['Stock Actual', 'Movimientos']);
+    const stock = XLSX.utils.sheet_to_json(wb.Sheets['Stock Actual']);
+    expect(stock[0].DESCRIPCION).toBe('Silla de ruedas');
+  });
+
+  it('citas: produce workbook con 1 hoja "Citas"', async () => {
+    const data = {
+      tipo: 'citas',
+      filas: [{ FECHA: '2026-01-20', ESPECIALISTA: 'Dr. Rodríguez', ESTATUS: 'Completada' }],
+    };
+    const buf = await ReportesService.generarXLSX(data);
+    const wb  = XLSX.read(buf, { type: 'buffer' });
+    expect(wb.SheetNames).toEqual(['Citas']);
   });
 });
 

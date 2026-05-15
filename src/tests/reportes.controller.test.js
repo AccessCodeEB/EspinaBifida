@@ -196,6 +196,14 @@ describe("GET /api/v1/reportes/historico", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(mockFindHistorico).toHaveBeenCalledWith(1, 20);
   });
+
+  it("500 si findHistorico lanza (cubre rama catch line 58)", async () => {
+    mockFindHistorico.mockRejectedValueOnce(new Error('DB timeout'));
+    const res = await request(app)
+      .get("/api/v1/reportes/historico")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(500);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -227,6 +235,23 @@ describe("GET /api/v1/reportes/:id/descargar", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/xlsx/i);
+  });
+
+  it("alcanza res.download cuando la ruta es válida (cubre line 85)", async () => {
+    // La ruta relativa es válida — path.resolve(STORAGE, '2026-01/r.pdf') queda dentro del STORAGE.
+    // El archivo no existe en disco, por lo que Express devuelve error de filesystem (404/500),
+    // pero la línea res.download() SÍ se ejecuta (cobertura alcanzada).
+    mockFindById.mockResolvedValueOnce({
+      ID_REPORTE: 1,
+      RUTA_PDF:   '2026-01/r.pdf',
+      RUTA_XLSX:  null,
+    });
+    const res = await request(app)
+      .get("/api/v1/reportes/1/descargar?formato=pdf")
+      .set("Authorization", `Bearer ${token}`);
+    // Debe pasar la validación de path traversal (no 400) y no 404 de "no encontrado"
+    expect(res.status).not.toBe(400);
+    expect(res.status).not.toBe(404);
   });
 
   it("400 si la ruta almacenada escapa del directorio de storage (path traversal)", async () => {

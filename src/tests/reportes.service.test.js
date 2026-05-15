@@ -12,6 +12,12 @@ const mockGetDetalleServicios     = jest.fn();
 const mockGetDistribucionCiudades = jest.fn();
 const mockGetEstudios             = jest.fn();
 const mockGetAtencionesPorMes     = jest.fn();
+const mockGetBeneficiariosPeriodo = jest.fn();
+const mockGetMembresias           = jest.fn();
+const mockGetServiciosPeriodo     = jest.fn();
+const mockGetArticulosStock       = jest.fn();
+const mockGetMovimientosPeriodo   = jest.fn();
+const mockGetCitasPeriodo         = jest.fn();
 
 jest.unstable_mockModule('../models/reportes.model.js', () => ({
   getResumenPeriodo:       mockGetResumenPeriodo,
@@ -19,6 +25,12 @@ jest.unstable_mockModule('../models/reportes.model.js', () => ({
   getDistribucionCiudades: mockGetDistribucionCiudades,
   getEstudios:             mockGetEstudios,
   getAtencionesPorMes:     mockGetAtencionesPorMes,
+  getBeneficiariosPeriodo: mockGetBeneficiariosPeriodo,
+  getMembresias:           mockGetMembresias,
+  getServiciosPeriodo:     mockGetServiciosPeriodo,
+  getArticulosStock:       mockGetArticulosStock,
+  getMovimientosPeriodo:   mockGetMovimientosPeriodo,
+  getCitasPeriodo:         mockGetCitasPeriodo,
 }));
 
 const mockGenerarHTML = jest.fn();
@@ -121,6 +133,59 @@ describe('generarReporte', () => {
     await expect(generarReporte(PERIODO.inicio, PERIODO.fin))
       .rejects.toThrow('ORA-00942');
   });
+
+  it('tipo beneficiarios llama getBeneficiariosPeriodo y retorna { tipo, filas }', async () => {
+    const filas = [{ CURP: 'GARM900101HNLRLS01', NOMBRE_COMPLETO: 'Marco García' }];
+    mockGetBeneficiariosPeriodo.mockResolvedValueOnce(filas);
+
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'beneficiarios');
+
+    expect(result).toEqual({ tipo: 'beneficiarios', filas });
+    expect(mockGetBeneficiariosPeriodo).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+  });
+
+  it('tipo membresias llama getMembresias y retorna { tipo, filas }', async () => {
+    const filas = [{ NOMBRE: 'Ana Martínez', ESTADO: 'Activa' }];
+    mockGetMembresias.mockResolvedValueOnce(filas);
+
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'membresias');
+
+    expect(result).toEqual({ tipo: 'membresias', filas });
+    expect(mockGetMembresias).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+  });
+
+  it('tipo servicios llama getServiciosPeriodo y retorna { tipo, filas }', async () => {
+    const filas = [{ FECHA: '2026-01-15', TIPO_SERVICIO: 'Consulta', MONTO_PAGADO: 50 }];
+    mockGetServiciosPeriodo.mockResolvedValueOnce(filas);
+
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'servicios');
+
+    expect(result).toEqual({ tipo: 'servicios', filas });
+    expect(mockGetServiciosPeriodo).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+  });
+
+  it('tipo inventario llama getArticulosStock + getMovimientosPeriodo y retorna { tipo, articulos, movimientos }', async () => {
+    const articulos   = [{ DESCRIPCION: 'Silla', INVENTARIO_ACTUAL: 3 }];
+    const movimientos = [{ ARTICULO: 'Silla', TIPO_MOVIMIENTO: 'SALIDA', CANTIDAD: 1 }];
+    mockGetArticulosStock    .mockResolvedValueOnce(articulos);
+    mockGetMovimientosPeriodo.mockResolvedValueOnce(movimientos);
+
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'inventario');
+
+    expect(result).toEqual({ tipo: 'inventario', articulos, movimientos });
+    expect(mockGetArticulosStock).toHaveBeenCalledTimes(1);
+    expect(mockGetMovimientosPeriodo).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+  });
+
+  it('tipo citas llama getCitasPeriodo y retorna { tipo, filas }', async () => {
+    const filas = [{ FECHA: '2026-01-20', ESPECIALISTA: 'Dr. López', ESTATUS: 'Completada' }];
+    mockGetCitasPeriodo.mockResolvedValueOnce(filas);
+
+    const result = await generarReporte(PERIODO.inicio, PERIODO.fin, 'citas');
+
+    expect(result).toEqual({ tipo: 'citas', filas });
+    expect(mockGetCitasPeriodo).toHaveBeenCalledWith(PERIODO.inicio, PERIODO.fin);
+  });
 });
 
 // ── generarPDF ────────────────────────────────────────────────────────────────
@@ -186,5 +251,53 @@ describe('generarXLSX', () => {
     expect(calls[2][0]).toEqual(DATA.detalle);
     expect(calls[3][0]).toEqual(DATA.ciudades);
     expect(calls[4][0]).toEqual(DATA.estudios);
+  });
+
+  it('beneficiarios: crea 1 hoja "Beneficiarios"', async () => {
+    const data = { tipo: 'beneficiarios', filas: [{ CURP: 'ABC', NOMBRE_COMPLETO: 'X' }] };
+    await generarXLSX(data);
+
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(1);
+    expect(mockBookAppendSheet.mock.calls[0][2]).toBe('Beneficiarios');
+    expect(mockJsonToSheet).toHaveBeenCalledWith(data.filas);
+  });
+
+  it('membresias: crea 1 hoja "Membresías"', async () => {
+    const data = { tipo: 'membresias', filas: [{ NOMBRE: 'Ana', ESTADO: 'Activa' }] };
+    await generarXLSX(data);
+
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(1);
+    expect(mockBookAppendSheet.mock.calls[0][2]).toBe('Membresías');
+  });
+
+  it('servicios: crea 1 hoja "Servicios"', async () => {
+    const data = { tipo: 'servicios', filas: [{ FECHA: '2026-01-15', TIPO_SERVICIO: 'Consulta' }] };
+    await generarXLSX(data);
+
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(1);
+    expect(mockBookAppendSheet.mock.calls[0][2]).toBe('Servicios');
+  });
+
+  it('inventario: crea 2 hojas "Stock Actual" y "Movimientos"', async () => {
+    const data = {
+      tipo: 'inventario',
+      articulos:   [{ DESCRIPCION: 'Silla', INVENTARIO_ACTUAL: 3 }],
+      movimientos: [{ ARTICULO: 'Silla', TIPO_MOVIMIENTO: 'SALIDA' }],
+    };
+    await generarXLSX(data);
+
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(2);
+    expect(mockBookAppendSheet.mock.calls[0][2]).toBe('Stock Actual');
+    expect(mockBookAppendSheet.mock.calls[1][2]).toBe('Movimientos');
+    expect(mockJsonToSheet).toHaveBeenCalledWith(data.articulos);
+    expect(mockJsonToSheet).toHaveBeenCalledWith(data.movimientos);
+  });
+
+  it('citas: crea 1 hoja "Citas"', async () => {
+    const data = { tipo: 'citas', filas: [{ FECHA: '2026-01-20', ESPECIALISTA: 'Dr. López' }] };
+    await generarXLSX(data);
+
+    expect(mockBookAppendSheet).toHaveBeenCalledTimes(1);
+    expect(mockBookAppendSheet.mock.calls[0][2]).toBe('Citas');
   });
 });

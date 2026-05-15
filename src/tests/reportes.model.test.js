@@ -139,6 +139,58 @@ describe('getEstudios', () => {
     expect(mockExecute).not.toHaveBeenCalled();
     expect(mockClose).not.toHaveBeenCalled();
   });
+
+  it('consulta Oracle y retorna filas cuando ESTUDIOS_IDS tiene valores', async () => {
+    ESTUDIOS_IDS.push(1, 2);
+    const rows = [{ NOMBRE: 'Urodinámico', CANTIDAD: 5 }];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    try {
+      const result = await getEstudios(PERIODO.inicio, PERIODO.fin);
+      expect(result).toEqual(rows);
+      expect(mockExecute).toHaveBeenCalledTimes(1);
+      expect(mockClose).toHaveBeenCalledTimes(1);
+    } finally {
+      ESTUDIOS_IDS.length = 0; // restaurar para no contaminar otros tests
+    }
+  });
+});
+
+// ── getAtencionesPorMes ───────────────────────────────────────────────────────
+
+describe('getAtencionesPorMes', () => {
+  it('retorna filas agrupadas por mes', async () => {
+    const rows = [
+      { MES: '2026-01', PACIENTES: 20, SERVICIOS: 35 },
+      { MES: '2026-02', PACIENTES: 15, SERVICIOS: 20 },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const { getAtencionesPorMes } = await import('../models/reportes.model.js');
+    const result = await getAtencionesPorMes(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay atenciones en el periodo', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const { getAtencionesPorMes } = await import('../models/reportes.model.js');
+    const result = await getAtencionesPorMes(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('ORA-01403'));
+
+    const { getAtencionesPorMes } = await import('../models/reportes.model.js');
+    await expect(getAtencionesPorMes(PERIODO.inicio, PERIODO.fin)).rejects.toThrow('ORA-01403');
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ── guardarRegistro ───────────────────────────────────────────────────────────
@@ -360,6 +412,12 @@ describe('getArticulosStock', () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
     const result = await getArticulosStock();
     expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('ORA-00942'));
+    await expect(getArticulosStock()).rejects.toThrow('ORA-00942');
+    expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });
 
