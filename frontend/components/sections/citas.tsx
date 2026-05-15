@@ -138,63 +138,61 @@ export function CitasSection() {
     }
   }
 
+  const NAVY = "#0f4c81"
+
   return (
     <div className="flex flex-col gap-6 pb-8">
       {/* ── Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Citas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gestión de citas con especialistas.</p>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Citas</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">Gestión y agenda de citas con especialistas</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Pill badges */}
-          {!loading && (
-            <div className="hidden sm:flex items-center gap-2 text-xs">
-              <span className="flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/30 px-2.5 py-1">
-                <span className="font-bold text-foreground">{stats.hoy}</span>
-                <span className="text-muted-foreground">hoy</span>
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1">
-                <span className="font-bold text-primary">{stats.semana}</span>
-                <span className="text-primary/70">semana</span>
-              </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1">
-                <span className="font-bold text-amber-400">{stats.pendientes}</span>
-                <span className="text-amber-400/70">pendientes</span>
-              </span>
-            </div>
-          )}
-          {/* Toggle pill */}
-          <div className="flex items-center rounded-xl border border-border/50 bg-muted/30 p-1 gap-1">
-            <button
-              onClick={() => switchView("calendar")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                activeView === "calendar"
-                  ? "bg-background text-foreground shadow-sm border border-border/40"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <CalendarDays className="size-3.5" />
-              Agenda
-            </button>
-            <button
-              onClick={() => switchView("list")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                activeView === "list"
-                  ? "bg-background text-foreground shadow-sm border border-border/40"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <List className="size-3.5" />
-              Historial
-            </button>
+        <div className="flex items-center gap-2">
+          {/* Toggle vista */}
+          <div className="flex items-center rounded-lg border border-border/70 bg-card p-0.5">
+            {(["calendar", "list"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => switchView(v)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeView === v
+                    ? "bg-[#0f4c81] text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {v === "calendar" ? <><CalendarDays className="size-3.5" />Agenda</> : <><List className="size-3.5" />Historial</>}
+              </button>
+            ))}
           </div>
-
-          <Button className="gap-2 shadow-sm" onClick={openDialog}>
+          <button
+            onClick={openDialog}
+            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: NAVY }}
+          >
             <Plus className="size-4" />Nueva Cita
-          </Button>
+          </button>
         </div>
       </div>
+
+      {/* ── KPIs ── */}
+      {!loading && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Citas hoy",      value: stats.hoy,       color: NAVY,      bg: `${NAVY}15`      },
+            { label: "Esta semana",    value: stats.semana,    color: "#10b981",  bg: "#10b98115"      },
+            { label: "Pendientes",     value: stats.pendientes, color: "#f59e0b", bg: "#f59e0b15"      },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
+              <div className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                <p className="text-xl font-bold tabular-nums text-foreground">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Main view (con fade) ── */}
       {loading ? (
@@ -225,78 +223,61 @@ export function CitasSection() {
 
       {/* ── Dialog Nueva Cita ── */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl">
-          <div className="px-6 py-4 border-b border-border/40 bg-muted/10">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold">Agendar Nueva Cita</DialogTitle>
-              <DialogDescription>Programme una visita con un especialista médico.</DialogDescription>
-            </DialogHeader>
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+          <div className="border-b border-border/40 px-6 py-4">
+            <DialogTitle className="text-base font-bold">Agendar nueva cita</DialogTitle>
+            <DialogDescription className="text-xs mt-0.5">Programa una visita con un especialista médico</DialogDescription>
           </div>
-          <div className="p-6 space-y-5">
+
+          <div className="space-y-4 px-6 py-5">
             {/* Beneficiario */}
-            <div className="space-y-1.5 relative">
-              <Label htmlFor="buscaBenef" className="text-sm font-semibold">Beneficiario</Label>
+            <div className="relative space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Beneficiario</label>
               <div className="relative">
                 <Input
-                  id="buscaBenef"
                   placeholder="Buscar por folio o nombre..."
-                  className="bg-muted/30 pr-8"
+                  className="h-10 pr-8 text-sm"
                   value={buscaBenef}
                   onFocus={() => setShowBenefList(true)}
                   onChange={e => { setBuscaBenef(e.target.value); setForm(f => ({ ...f, curp: "" })); setShowBenefList(true); setSaveError(null) }}
                 />
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setShowBenefList(!showBenefList)}
-                >
+                <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowBenefList(!showBenefList)}>
                   <ChevronDown className="size-4" />
                 </button>
               </div>
               {showBenefList && benefFiltrados.length > 0 && !form.curp && (
-                <div className="absolute z-20 mt-1 w-full max-h-56 rounded-xl border border-border/60 bg-background shadow-lg overflow-y-auto">
+                <div className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-border/60 bg-background shadow-lg">
                   {benefFiltrados.map(b => (
-                    <button
-                      key={b.folio}
-                      type="button"
-                      className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted transition-colors"
-                      onClick={() => {
-                        setForm(f => ({ ...f, curp: b.folio }))
-                        setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`)
-                        setShowBenefList(false)
-                        setSaveError(null)
-                      }}
-                    >
-                      <span className="font-semibold text-primary mr-2">{b.folio}</span>
-                      {b.nombres} {b.apellidoPaterno}
+                    <button key={b.folio} type="button"
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-muted transition-colors"
+                      onClick={() => { setForm(f => ({ ...f, curp: b.folio })); setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`); setShowBenefList(false); setSaveError(null) }}>
+                      <span className="font-semibold text-foreground">{b.nombres} {b.apellidoPaterno}</span>
+                      <span className="font-mono text-muted-foreground">{b.folio}</span>
                     </button>
                   ))}
                 </div>
               )}
-              {form.curp && <p className="text-xs text-emerald-600 font-medium">✓ CURP: {form.curp}</p>}
-              {!form.curp && buscaBenef && (
-                <p className="text-xs text-amber-600 font-medium">⚠ Selecciona un beneficiario de la lista</p>
-              )}
+              {form.curp && <p className="text-[11px] font-medium text-emerald-600">✓ Seleccionado: {form.curp}</p>}
+              {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600">Selecciona un beneficiario de la lista</p>}
             </div>
 
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">Tipo de Servicio</Label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de servicio</label>
               <Select value={form.idTipoServicio} onValueChange={v => { setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }}>
-                <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar tipo de servicio" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
-                  {TIPOS_SERVICIO_SUGERIDOS.map(t => (
-                    <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>
-                  ))}
+                  {TIPOS_SERVICIO_SUGERIDOS.map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Especialista */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-semibold">Especialista</Label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialista <span className="font-normal normal-case tracking-normal opacity-60">(opcional)</span></label>
               <Select value={form.especialista} onValueChange={v => { setForm(f => ({ ...f, especialista: v })); setSaveError(null) }}>
-                <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Seleccionar especialista (opcional)" /></SelectTrigger>
+                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialista" /></SelectTrigger>
                 <SelectContent>
                   {ESPECIALISTAS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                 </SelectContent>
@@ -304,20 +285,20 @@ export function CitasSection() {
             </div>
 
             {/* Fecha y Hora */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="fecha-cita" className="text-sm font-semibold">Fecha</Label>
-                <Input id="fecha-cita" type="date" className="bg-muted/30" value={form.fecha}
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
+                <Input type="date" className="h-10 text-sm" value={form.fecha}
                   onChange={e => { setForm(f => ({ ...f, fecha: e.target.value })); setSaveError(null) }} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">Hora (intervalos de 30 min)</Label>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
                 <select
-                  className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
                   value={form.hora}
                   onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null) }}
                 >
-                  <option value="">Seleccionar hora</option>
+                  <option value="">Seleccionar</option>
                   {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
@@ -325,22 +306,28 @@ export function CitasSection() {
 
             {/* Notas */}
             <div className="space-y-1.5">
-              <Label htmlFor="notas-cita" className="text-sm font-semibold">Notas u Observaciones</Label>
-              <Input id="notas-cita" placeholder="Opcional" className="bg-muted/30" value={form.notas}
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Notas <span className="font-normal normal-case tracking-normal opacity-60">(opcional)</span></label>
+              <Input className="h-10 text-sm" placeholder="Observaciones adicionales" value={form.notas}
                 onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} />
             </div>
 
             {saveError && (
-              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                <AlertCircle className="size-4 shrink-0" />{saveError}
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+                <AlertCircle className="mt-px size-3.5 shrink-0" />{saveError}
               </div>
             )}
           </div>
-          <div className="px-6 py-4 border-t border-border/40 bg-muted/10 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => setShowDialog(false)} disabled={saving}>Cancelar</Button>
-            <Button type="button" onClick={handleGuardar} disabled={saving || !!saveError}>
-              {saving ? "Guardando..." : "Guardar Cita"}
-            </Button>
+
+          <div className="flex justify-end gap-2 border-t border-border/40 px-6 py-4">
+            <button type="button" onClick={() => setShowDialog(false)} disabled={saving}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+              Cancelar
+            </button>
+            <button type="button" onClick={handleGuardar} disabled={saving || !!saveError}
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: NAVY }}>
+              {saving ? "Guardando..." : "Guardar cita"}
+            </button>
           </div>
         </DialogContent>
       </Dialog>

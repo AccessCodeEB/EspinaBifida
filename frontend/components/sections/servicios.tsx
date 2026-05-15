@@ -634,22 +634,25 @@ export function ServiciosSection() {
     )
   }
 
+  const NAVY = "#0f4c81"
+
   return (
     <div className="flex flex-col gap-6 pb-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Registro de Servicios</h1>
-          <p className="mt-1 text-base text-muted-foreground">Resumen mensual y consulta de servicios otorgados</p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Registro de Servicios</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">Resumen mensual y consulta de servicios otorgados</p>
+        </div>
+        <div className="flex items-center gap-2">
           <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <CalendarDays className="size-4" />
+              <button className="flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted">
+                <CalendarDays className="size-3.5" />
                 {monthInputToLabel(selectedMonth)}
-                <ChevronDown className="size-4" />
-              </Button>
+                <ChevronDown className="size-3.5 opacity-60" />
+              </button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-4">
               <div className="space-y-4">
@@ -717,9 +720,7 @@ export function ServiciosSection() {
             </PopoverContent>
           </Popover>
 
-          <Button
-            size="lg"
-            className="gap-2 text-base"
+          <button
             onClick={() => {
               setShowRegistroDialog(true)
               setBeneficiarioEncontrado(null)
@@ -731,77 +732,44 @@ export function ServiciosSection() {
               setFechaError("")
               setRegistroError("")
             }}
+            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: NAVY }}
           >
-            <Plus className="size-5" />
+            <Plus className="size-4" />
             Nuevo Servicio
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Servicios del mes</CardTitle>
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <ClipboardList className="size-4" />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: "Servicios del mes",    value: serviciosMesSeleccionado.length,             sub: `Período: ${monthInputToLabel(selectedMonth)}`, icon: ClipboardList,    color: NAVY       },
+          { label: "Monto total del mes",  value: formatMoney(montoMesSeleccionado),            sub: "Suma de servicios registrados",                icon: CircleDollarSign, color: "#10b981"  },
+          { label: "Pendientes",           value: pendientesMesSeleccionado,                    sub: "Servicios con estatus pendiente",              icon: AlertTriangle,    color: "#f59e0b"  },
+          { label: "Tipos distintos",      value: tiposDistintosMes,                            sub: `Top: ${topTipoMes.label} (${topTipoMes.value})`, icon: Layers3,        color: "#e11d48"  },
+        ].map(({ label, value, sub, icon: Icon, color }) => (
+          <div key={label} className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+              <div className="flex size-7 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}15` }}>
+                <Icon className="size-3.5" style={{ color }} />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{serviciosMesSeleccionado.length}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Periodo: {monthInputToLabel(selectedMonth)}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Monto total del mes</CardTitle>
-            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
-              <CircleDollarSign className="size-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{formatMoney(montoMesSeleccionado)}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Suma de servicios registrados en el mes</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pendientes por validar</CardTitle>
-            <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
-              <AlertTriangle className="size-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{pendientesMesSeleccionado}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Servicios con estatus Pendiente</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Servicios por tipo</CardTitle>
-            <div className="flex size-9 items-center justify-center rounded-lg bg-rose-600 text-white shadow-sm">
-              <Layers3 className="size-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{tiposDistintosMes}</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Top: {topTipoMes.label} ({topTipoMes.value})
-            </p>
-          </CardContent>
-        </Card>
+            <span className="text-xl font-bold tabular-nums tracking-tight text-foreground">{value}</span>
+            <span className="text-[11px] text-muted-foreground">{sub}</span>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-        <Card className="border-border/60 shadow-sm lg:col-span-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Monto por mes</CardTitle>
-            <CardDescription>Ultimos 6 meses con base en el mes seleccionado</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mt-4 h-[300px] w-full">
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm lg:col-span-4">
+          <div className="border-b border-border/40 px-5 py-4">
+            <p className="text-sm font-semibold text-foreground">Monto por mes</p>
+            <p className="text-[11px] text-muted-foreground">Últimos 6 meses con base en el mes seleccionado</p>
+          </div>
+          <div className="px-4 pb-4 pt-2">
+            <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthlyBarData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/60" />
@@ -832,16 +800,16 @@ export function ServiciosSection() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-border/60 shadow-sm lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">Servicios por tipo</CardTitle>
-            <CardDescription>Distribucion del mes seleccionado</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mt-4 flex h-[300px] w-full items-center justify-center">
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm lg:col-span-3">
+          <div className="border-b border-border/40 px-5 py-4">
+            <p className="text-sm font-semibold text-foreground">Servicios por tipo</p>
+            <p className="text-[11px] text-muted-foreground">Distribución del mes seleccionado</p>
+          </div>
+          <div className="px-4 pb-4 pt-2">
+            <div className="flex h-[260px] w-full items-center justify-center">
               {donutData.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay datos en este mes.</p>
               ) : (
@@ -879,268 +847,242 @@ export function ServiciosSection() {
                 </ResponsiveContainer>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Card className="border-border/50">
-        <CardHeader>
-          <div className="flex flex-col gap-4">
-            {pendingDelete ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Servicio {pendingDelete.servicio.folio} marcado para eliminar. Puedes deshacer en 8 segundos.
-                <Button variant="link" className="ml-2 h-auto p-0 text-amber-900" onClick={handleUndoDelete}>
-                  Deshacer
-                </Button>
-              </div>
-            ) : null}
+      {/* Tabla de servicios */}
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-lg">Servicios Registrados</CardTitle>
-                <CardDescription>
-                  {filtered.length} servicios encontrados en {monthInputToLabel(selectedMonth)}
-                </CardDescription>
-              </div>
+        {/* Alerta undo */}
+        {pendingDelete && (
+          <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+            <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
+            <p className="flex-1 text-xs text-amber-800 dark:text-amber-300">
+              Servicio <span className="font-semibold">{pendingDelete.servicio.folio}</span> marcado para eliminar. Puedes deshacer en 8 segundos.
+            </p>
+            <button onClick={handleUndoDelete} className="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400">
+              Deshacer
+            </button>
+          </div>
+        )}
 
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por folio, nombre o servicio..."
-                  className="h-12 pl-10 text-base"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4">
+
+          {/* Fila 1: título + búsqueda */}
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Servicios registrados</p>
+              <p className="text-[11px] text-muted-foreground">{filtered.length} resultados · {monthInputToLabel(selectedMonth)}</p>
             </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Fecha inicio</Label>
-                <Input 
-                  type="date" 
-                  value={fechaInicioFiltro} 
-                  onChange={(e) => setFechaInicioFiltro(e.target.value)}
-                  max={fechaFinFiltro || undefined}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Fecha fin</Label>
-                <Input 
-                  type="date" 
-                  value={fechaFinFiltro} 
-                  onChange={(e) => setFechaFinFiltro(e.target.value)}
-                  min={fechaInicioFiltro || undefined}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setFechaInicioFiltro("")
-                    setFechaFinFiltro("")
-                    setSearchTerm("")
-                  }}
-                >
-                  Limpiar filtros
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="secondary" onClick={() => applyQuickRange("full")}>Mes completo</Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => applyQuickRange("firstHalf")}>1-15</Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => applyQuickRange("secondHalf")}>16-fin</Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => applyQuickRange("last7")}>Ultimos 7 dias</Button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => applySortPreset("recent")}>Mas reciente</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => applySortPreset("highest")}>Mayor monto</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => applySortPreset("nameAZ")}>Nombre A-Z</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => applySortPreset("pendingFirst")}>Pendientes primero</Button>
-              <div className="inline-flex items-center rounded-md border px-2 text-xs text-muted-foreground">
-                Orden: {sortField} ({sortDirection === "asc" ? "asc" : "desc"})
-              </div>
+            <div className="relative w-56 shrink-0">
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Folio, nombre o servicio..."
+                className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-sm font-semibold">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("folio")}>
-                    Folio
-                    <ArrowUpDown className={`size-3 ${sortField === "folio" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="text-sm font-semibold">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("nombre")}>
-                    Nombre
-                    <ArrowUpDown className={`size-3 ${sortField === "nombre" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="hidden text-sm font-semibold md:table-cell">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("servicio")}>
-                    Servicio
-                    <ArrowUpDown className={`size-3 ${sortField === "servicio" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="hidden text-sm font-semibold lg:table-cell">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("fecha")}>
-                    Fecha
-                    <ArrowUpDown className={`size-3 ${sortField === "fecha" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="hidden text-sm font-semibold lg:table-cell">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("monto")}>
-                    Monto
-                    <ArrowUpDown className={`size-3 ${sortField === "monto" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="text-sm font-semibold text-center">
-                  <button type="button" className="inline-flex items-center gap-1" onClick={() => handleSortBy("estatus")}>
-                    Membresia (por status)
-                    <ArrowUpDown className={`size-3 ${sortField === "estatus" ? "text-foreground" : "text-muted-foreground"}`} />
-                  </button>
-                </TableHead>
-                <TableHead className="text-right text-sm font-semibold">Detalle</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {/* Fila 2: fechas + rangos rápidos + ordenar + limpiar */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Rango personalizado */}
+            <input type="date" value={fechaInicioFiltro} max={fechaFinFiltro || undefined}
+              onChange={(e) => setFechaInicioFiltro(e.target.value)}
+              className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs outline-none focus:border-[#0f4c81]" />
+            <span className="text-[10px] text-muted-foreground">—</span>
+            <input type="date" value={fechaFinFiltro} min={fechaInicioFiltro || undefined}
+              onChange={(e) => setFechaFinFiltro(e.target.value)}
+              className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs outline-none focus:border-[#0f4c81]" />
+
+            {/* Separador */}
+            <div className="h-5 w-px bg-border/60" />
+
+            {/* Rangos rápidos */}
+            {([
+              { label: "Este mes", fn: () => applyQuickRange("full") },
+              { label: "Últimos 7d", fn: () => applyQuickRange("last7") },
+            ] as const).map(({ label, fn }) => (
+              <button key={label} onClick={fn}
+                className="rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted">
+                {label}
+              </button>
+            ))}
+
+            {/* Separador */}
+            <div className="h-5 w-px bg-border/60" />
+
+            {/* Ordenar (select nativo) */}
+            <select
+              className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs text-foreground outline-none focus:border-[#0f4c81]"
+              onChange={(e) => applySortPreset(e.target.value as "recent" | "highest" | "nameAZ" | "pendingFirst")}
+              defaultValue=""
+            >
+              <option value="" disabled>Ordenar por…</option>
+              <option value="recent">Más reciente</option>
+              <option value="highest">Mayor monto</option>
+              <option value="nameAZ">Nombre A–Z</option>
+              <option value="pendingFirst">Pendientes primero</option>
+            </select>
+
+            {/* Limpiar */}
+            <button
+              onClick={() => { setFechaInicioFiltro(""); setFechaFinFiltro(""); setSearchTerm("") }}
+              className="ml-auto rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/40 bg-muted/20">
+                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("folio")}>Folio <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("nombre")}>Nombre <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("servicio")}>Servicio <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("fecha")}>Fecha <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("monto")}>Monto <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => handleSortBy("estatus")}>Estatus <ArrowUpDown className="size-3" /></button>
+                </th>
+                <th className="py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30">
               {paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
                     No hay servicios para los filtros seleccionados.
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ) : (
                 paginated.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-mono font-semibold text-primary">{s.folio}</TableCell>
-                    <TableCell className="font-medium">{s.nombre}</TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">{s.servicio}</TableCell>
-                    <TableCell className="hidden text-muted-foreground lg:table-cell">{s.fecha}</TableCell>
-                    <TableCell className="hidden font-medium lg:table-cell">{formatMoney(s.montoNumero)}</TableCell>
-                    <TableCell className="text-center">
-                      <StatusIcon status={s.estatus} />
-                    </TableCell>
-                    <TableCell className="text-right">
+                  <tr key={s.id} className="transition-colors hover:bg-muted/20">
+                    <td className="py-3 pl-5 font-mono text-[11px] text-foreground">{s.folio}</td>
+                    <td className="py-3 text-xs font-medium text-foreground">{s.nombre}</td>
+                    <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
+                    <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
+                    <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
+                    <td className="py-3 text-center"><StatusIcon status={s.estatus} /></td>
+                    <td className="py-3 pr-5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" className="gap-1" onClick={() => setServicioDetalle(s)}>
-                          <Eye className="size-4" />
-                          Ver
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setServicioParaEliminar(s)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <button onClick={() => setServicioDetalle(s)}
+                          className="flex items-center gap-1 rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted">
+                          <Eye className="size-3.5" />Ver
+                        </button>
+                        <button onClick={() => setServicioParaEliminar(s)}
+                          className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
+        </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {sortedFiltered.length === 0 ? 0 : start + 1}-{Math.min(end, sortedFiltered.length)} de {sortedFiltered.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage <= 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Anterior
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Pagina {currentPage} de {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage >= totalPages}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Siguiente
-              </Button>
-            </div>
+        {/* Paginación */}
+        <div className="flex items-center justify-between border-t border-border/40 px-5 py-3">
+          <span className="text-[11px] text-muted-foreground">
+            {sortedFiltered.length === 0 ? 0 : start + 1}–{Math.min(end, sortedFiltered.length)} de {sortedFiltered.length}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button disabled={currentPage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="rounded-lg border border-border/60 px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40">
+              Anterior
+            </button>
+            <span className="min-w-[4rem] text-center text-[11px] text-muted-foreground">
+              {currentPage} / {totalPages}
+            </span>
+            <button disabled={currentPage >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="rounded-lg border border-border/60 px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40">
+              Siguiente
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Detalle del servicio</DialogTitle>
-            <DialogDescription>Informacion del registro seleccionado</DialogDescription>
+            <DialogTitle className="text-base font-bold">Detalle del servicio</DialogTitle>
+            <DialogDescription className="text-xs">Información del registro seleccionado</DialogDescription>
           </DialogHeader>
-
           {servicioDetalle && (
-            <div className="grid gap-3 text-sm">
-              <div className="grid grid-cols-2 gap-2 rounded-md border p-3">
-                <p className="text-muted-foreground">Folio</p>
-                <p className="font-medium">{servicioDetalle.folio}</p>
-                <p className="text-muted-foreground">Nombre</p>
-                <p className="font-medium">{servicioDetalle.nombre}</p>
-                <p className="text-muted-foreground">Servicio</p>
-                <p className="font-medium">{servicioDetalle.servicio}</p>
-                <p className="text-muted-foreground">Fecha</p>
-                <p className="font-medium">{servicioDetalle.fecha}</p>
-                <p className="text-muted-foreground">Monto</p>
-                <p className="font-medium">{formatMoney(servicioDetalle.montoNumero)}</p>
-                <p className="text-muted-foreground">Estatus</p>
-                <p><StatusIcon status={servicioDetalle.estatus} /></p>
+            <div className="space-y-3 pt-1">
+              <div className="divide-y divide-border/40 rounded-xl border border-border/60">
+                {[
+                  { label: "Folio",    value: <span className="font-mono text-xs">{servicioDetalle.folio}</span> },
+                  { label: "Nombre",   value: servicioDetalle.nombre },
+                  { label: "Servicio", value: servicioDetalle.servicio },
+                  { label: "Fecha",    value: servicioDetalle.fecha },
+                  { label: "Monto",    value: <span className="font-bold">{formatMoney(servicioDetalle.montoNumero)}</span> },
+                  { label: "Estatus",  value: <StatusIcon status={servicioDetalle.estatus} /> },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+                    <span className="text-xs text-foreground">{value}</span>
+                  </div>
+                ))}
               </div>
-
-              {servicioDetalle.notas ? (
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">Notas</p>
-                  <p className="mt-1">{servicioDetalle.notas}</p>
+              {servicioDetalle.notas && (
+                <div className="rounded-xl border border-border/60 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                  <p className="mt-1 text-xs text-foreground">{servicioDetalle.notas}</p>
                 </div>
-              ) : null}
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* Dialog: Registro */}
       <Dialog open={showRegistroDialog} onOpenChange={setShowRegistroDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl">Registrar Nuevo Servicio</DialogTitle>
-            <DialogDescription>Busque al beneficiario y registre el servicio</DialogDescription>
+            <DialogTitle className="text-base font-bold">Registrar Nuevo Servicio</DialogTitle>
+            <DialogDescription className="text-xs">Busca al beneficiario y completa los datos del servicio</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex flex-col gap-2">
-              <Label className="text-base">Buscar Beneficiario</Label>
+          <div className="space-y-4 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Buscar beneficiario</label>
               <div className="relative">
                 <div className="flex gap-2">
-                  <Input
+                  <input
                     placeholder="CURP o nombre..."
-                    className="h-12 flex-1 text-base"
+                    className="h-10 flex-1 rounded-lg border border-border/70 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
                     value={busquedaBeneficiario}
                     onFocus={() => setShowSugerencias(true)}
                     onChange={(e) => {
                       setBusquedaBeneficiario(e.target.value)
                       setShowSugerencias(true)
-                      if (!e.target.value.trim()) {
-                        setBeneficiarioEncontrado(null)
-                      }
+                      if (!e.target.value.trim()) setBeneficiarioEncontrado(null)
                     }}
                   />
-                  <Button size="lg" variant="outline" onClick={handleBuscarBeneficiario}>
-                    <Search className="size-5" />
-                  </Button>
+                  <button onClick={handleBuscarBeneficiario}
+                    className="flex items-center justify-center rounded-lg border border-border/70 px-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <Search className="size-4" />
+                  </button>
                 </div>
 
                 {showSugerencias && busquedaNormalizada && (
@@ -1192,8 +1134,8 @@ export function ServiciosSection() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-base">Tipo de Servicio</Label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de servicio</label>
               <Select
                 value={tipoServicioSeleccionado}
                 onValueChange={(value) => {
@@ -1228,11 +1170,11 @@ export function ServiciosSection() {
             </div>
 
             {requiereDescripcionOtro && (
-              <div className="flex flex-col gap-2">
-                <Label className="text-base">Especificar servicio</Label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especificar servicio</label>
                 <Input
-                  placeholder="Describe que servicio se brindo..."
-                  className="h-12 text-base"
+                  placeholder="Describe qué servicio se brindó..."
+                  className="h-10 text-sm"
                   value={descripcionOtro}
                   required
                   onChange={(e) => {
@@ -1246,12 +1188,12 @@ export function ServiciosSection() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label className="text-base">Fecha</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
                 <Input
                   type="date"
-                  className="h-12 text-base"
+                  className="h-10 text-sm"
                   max={hoy}
                   value={fechaServicio}
                   onChange={(e) => {
@@ -1261,14 +1203,14 @@ export function ServiciosSection() {
                 />
                 {fechaError && <p className="text-sm font-medium text-destructive">{fechaError}</p>}
               </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-base">Monto</Label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   placeholder="$0.00"
-                  className="h-12 text-base"
+                  className="h-10 text-sm"
                   value={montoServicio}
                   onChange={(e) => {
                     setMontoServicio(e.target.value)
@@ -1278,84 +1220,59 @@ export function ServiciosSection() {
               </div>
             </div>
 
-            {registroError && <p className="text-sm font-medium text-destructive">{registroError}</p>}
+            {registroError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{registroError}</p>
+            )}
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" size="lg" className="text-base" onClick={() => setShowRegistroDialog(false)}>
+            <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
+              <button onClick={() => setShowRegistroDialog(false)}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
                 Cancelar
-              </Button>
-              <Button
-                size="lg"
-                className="text-base"
-                disabled={
-                  registroLoading ||
-                  !beneficiarioEncontrado ||
-                  expedienteBloqueado ||
-                  fechaEsFutura ||
-                  !Number.isInteger(idTipoServicioNumerico) ||
-                  idTipoServicioNumerico <= 0 ||
-                  !montoEsValido
-                }
+              </button>
+              <button
+                disabled={registroLoading || !beneficiarioEncontrado || expedienteBloqueado || fechaEsFutura || !Number.isInteger(idTipoServicioNumerico) || idTipoServicioNumerico <= 0 || !montoEsValido}
                 onClick={handleRegistrarServicio}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: NAVY }}
               >
-                {registroLoading ? "Registrando..." : "Registrar Servicio"}
-              </Button>
+                {registroLoading ? "Registrando..." : "Registrar servicio"}
+              </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Dialog: Eliminar */}
       <Dialog open={Boolean(servicioParaEliminar)} onOpenChange={(open) => !open && setServicioParaEliminar(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl">Eliminar Servicio</DialogTitle>
-            <DialogDescription>¿Estás seguro de que deseas eliminar este servicio?</DialogDescription>
+            <DialogTitle className="text-base font-bold">Eliminar servicio</DialogTitle>
+            <DialogDescription className="text-xs">Esta acción no se puede deshacer.</DialogDescription>
           </DialogHeader>
-
           {servicioParaEliminar && (
-            <div className="space-y-4">
-              <div className="rounded-md border p-3 bg-muted/50">
-                <div className="grid gap-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Folio:</span>
-                    <span className="font-medium">{servicioParaEliminar.folio}</span>
+            <div className="space-y-4 pt-1">
+              <div className="divide-y divide-border/40 rounded-xl border border-border/60">
+                {[
+                  { label: "Folio",        value: <span className="font-mono text-xs">{servicioParaEliminar.folio}</span> },
+                  { label: "Beneficiario", value: servicioParaEliminar.nombre },
+                  { label: "Servicio",     value: servicioParaEliminar.servicio },
+                  { label: "Monto",        value: <span className="font-bold">{formatMoney(servicioParaEliminar.montoNumero)}</span> },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+                    <span className="text-xs text-foreground">{value}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Beneficiario:</span>
-                    <span className="font-medium">{servicioParaEliminar.nombre}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Servicio:</span>
-                    <span className="font-medium">{servicioParaEliminar.servicio}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Monto:</span>
-                    <span className="font-medium">{formatMoney(servicioParaEliminar.montoNumero)}</span>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              <p className="text-sm text-amber-600 font-medium">
-                Esta acción no se puede deshacer.
-              </p>
-
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => setServicioParaEliminar(null)}
-                  disabled={eliminandoServicio}
-                >
+              <div className="flex gap-2 border-t border-border/40 pt-3">
+                <button onClick={() => setServicioParaEliminar(null)} disabled={eliminandoServicio}
+                  className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
                   Cancelar
-                </Button>
-                <Button 
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleEliminarServicio}
-                  disabled={eliminandoServicio}
-                >
+                </button>
+                <button onClick={handleEliminarServicio} disabled={eliminandoServicio}
+                  className="flex-1 rounded-lg border border-red-300 bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                   {eliminandoServicio ? "Eliminando..." : "Eliminar"}
-                </Button>
+                </button>
               </div>
             </div>
           )}

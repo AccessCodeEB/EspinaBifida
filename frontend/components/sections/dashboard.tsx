@@ -1,305 +1,553 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
-import { Inbox, ClipboardList, Package, CalendarDays, UserCheck } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { getInventario } from "@/services/inventario"
-import { getBeneficiarios } from "@/services/beneficiarios"
-import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
+import { useEffect, useMemo, useState } from "react"
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  Tooltip,
-} from "recharts"
+  Users, Inbox, ClipboardList, Package,
+  RefreshCw, TrendingUp, TrendingDown, Minus,
+  ChevronLeft, ChevronRight, MapPin, Phone,
+  Timer, CalendarDays, Banknote, CreditCard, Building2,
+  CheckCircle2, Clock, XCircle, AlertCircle,
+} from "lucide-react"
+import type { ArticuloInventario } from "@/services/inventario"
+import type { PagoReciente }       from "@/services/membresias"
+import type { Cita }               from "@/services/citas"
+import { esSolicitudPublicaPendiente } from "@/lib/solicitud-publica-beneficiario"
+import type { Beneficiario }       from "@/services/beneficiarios"
+import { getInventario }           from "@/services/inventario"
+import { getBeneficiarios }        from "@/services/beneficiarios"
+import { getPagosRecientes }       from "@/services/membresias"
+import { getCitas }                from "@/services/citas"
+import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
 
+const NAVY  = "#0f4c81"
+const AMBER = "#E8B043"
 const INVENTARIO_BAJO_UMBRAL = 3
+const PAGE_SIZE = 5
 
-const monthlyData = [
-  { mes: "Sep", atenciones: 65 },
-  { mes: "Oct", atenciones: 78 },
-  { mes: "Nov", atenciones: 90 },
-  { mes: "Dic", atenciones: 55 },
-  { mes: "Ene", atenciones: 72 },
-  { mes: "Feb", atenciones: 83 },
-]
+function fmtDate() {
+  return new Date().toLocaleDateString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  })
+}
 
-const locationData = [
-  { name: "Locales", value: 168, fill: "#005bb5" },
-  { name: "Foráneos", value: 79, fill: "#eab308" },
-]
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
 
-/** Solo membresías activas (estatus Activo), mismo criterio que Beneficiarios. */
-function MembresiasActivasCard({
-  activosMembresia,
-  loading,
-}: {
-  activosMembresia: number | null
-  loading: boolean
+function mesActualISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+function mesAnteriorISO() {
+  const d = new Date()
+  d.setMonth(d.getMonth() - 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+/* ── KPI ── */
+function KpiCard({ label, value, sub, icon: Icon, color, trend, loading }: {
+  label: string; value: string | number; sub: string
+  icon: React.ElementType; color: string
+  trend?: "up" | "down" | "flat"; loading?: boolean
 }) {
+  const TrendIcon  = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus
+  const trendColor = trend === "up" ? "text-emerald-500" : trend === "down" ? "text-red-500" : "text-slate-400"
   return (
-    <Card className="shadow-sm border-border/60 relative overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          Membresías
-        </CardTitle>
-        <div className="flex size-9 items-center justify-center rounded-lg shadow-sm bg-primary text-primary-foreground transition-colors duration-300">
-          <UserCheck className="size-4" />
+    <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+        <div className="flex size-8 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}15` }}>
+          <Icon className="size-3.5" style={{ color }} />
         </div>
-      </CardHeader>
-
-      <CardContent>
-        <div className="text-2xl font-bold tracking-tight text-foreground">
-          {loading ? "—" : activosMembresia === null ? "--" : String(activosMembresia)}
+      </div>
+      <div>
+        <div className="flex items-end gap-2">
+          <span className="text-2xl font-bold tracking-tight text-foreground">
+            {loading ? <span className="inline-block h-7 w-10 animate-pulse rounded bg-muted" /> : value}
+          </span>
+          {trend && !loading && <TrendIcon className={`mb-1 size-3.5 ${trendColor}`} />}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {loading ? "Cargando datos…" : "Membresías activas (estatus Activo, como en Beneficiarios)"}
-        </p>
-      </CardContent>
-    </Card>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
+      </div>
+    </div>
   )
 }
 
-export function DashboardSection() {
-  const [activeBar, setActiveBar] = useState<{ mes: string; atenciones: number } | null>(null)
-  const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
-
-  // Beneficiarios desde la API
-  const [activosMembresia, setActivosMembresia] = useState<number | null>(null)
-  const [solicitudesPendientes, setSolicitudesPendientes] = useState<number | null>(null)
-  const [loadingBenef, setLoadingBenef] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-
-    // Inventario
-    getInventario()
-      .then((items) => {
-        if (cancelled) return
-        const lowCount = items.filter((item) => Number(item.cantidad ?? 0) <= INVENTARIO_BAJO_UMBRAL).length
-        setInventarioBajoCount(lowCount)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setInventarioBajoCount(null)
-      })
-
-    getBeneficiarios()
-      .then((beneficiarios) => {
-        if (cancelled) return
-        const c = conteosEstatusBeneficiarios(beneficiarios)
-        setActivosMembresia(c.Activo)
-        setSolicitudesPendientes(conteoSolicitudesPendientes(beneficiarios))
-      })
-      .catch(() => {
-        if (cancelled) return
-        setActivosMembresia(null)
-        setSolicitudesPendientes(null)
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingBenef(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const metricCards = useMemo(
-    () => [
-      {
-        title: "Solicitudes pendientes",
-        value: solicitudesPendientes === null ? "--" : String(solicitudesPendientes),
-        description:
-          solicitudesPendientes === null
-            ? "Cargando beneficiarios…"
-            : "Registros de posibles beneficiarios en espera de revisión (Preregistro)",
-        icon: Inbox,
-        color: "bg-amber-500 text-white",
-        iconClassName: "",
-      },
-      {
-        title: "Servicios del Mes",
-        value: "83",
-        description: "Cierre proyectado: Febrero",
-        icon: ClipboardList,
-        color: "bg-primary text-primary-foreground",
-        iconClassName: "",
-      },
-      {
-        title: "Inventario Bajo",
-        value: inventarioBajoCount === null ? "--" : String(inventarioBajoCount),
-        description:
-          inventarioBajoCount === null
-            ? "No se pudo cargar inventario"
-            : `${inventarioBajoCount} ${inventarioBajoCount === 1 ? "artículo requiere" : "artículos requieren"} atención`,
-        icon: Package,
-        color: "bg-destructive text-destructive-foreground",
-        iconClassName: "text-white",
-      },
-    ],
-    [solicitudesPendientes, inventarioBajoCount]
-  )
+/* ── Artículos bajos con paginación ── */
+function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
+  stockBajo: ArticuloInventario[]; loading: boolean; umbral: number
+}) {
+  const [page, setPage] = useState(0)
+  const totalPages = Math.max(1, Math.ceil(stockBajo.length / PAGE_SIZE))
+  const paginated  = stockBajo.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+  useEffect(() => { setPage(0) }, [stockBajo])
 
   return (
-    <div className="flex flex-col gap-8 pb-8">
-      {/* Encabezado */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Resumen general del sistema de gestión.
-          </p>
+          <p className="text-sm font-semibold text-foreground">Artículos bajos</p>
+          <p className="text-[11px] text-muted-foreground">Con {umbral} unidades o menos</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-9 gap-2 text-muted-foreground hover:text-foreground">
-            <CalendarDays className="size-4" />
-            <span>Últimos 6 meses</span>
-          </Button>
-        </div>
+        {!loading && (
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+            stockBajo.length === 0
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+              : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+          }`}>
+            {stockBajo.length === 0 ? "Sin alertas" : `${stockBajo.length} alerta${stockBajo.length !== 1 ? "s" : ""}`}
+          </span>
+        )}
       </div>
-
-      {/* Tarjetas de Métricas */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Tarjeta especial de beneficiarios con slide */}
-        <MembresiasActivasCard activosMembresia={activosMembresia} loading={loadingBenef} />
-
-        {/* Tarjetas estáticas restantes */}
-        {metricCards.map((card) => (
-          <Card key={card.title} className="shadow-sm border-border/60">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <div className={`flex size-9 items-center justify-center rounded-lg shadow-sm ${card.color}`}>
-                <card.icon className={`size-[18px] ${card.iconClassName ?? ""}`} />
+      <div className="flex-1 divide-y divide-border/40">
+        {loading ? (
+          Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-5 py-3">
+              <div className="size-1.5 rounded-full bg-muted animate-pulse" />
+              <div className="flex-1 h-2.5 rounded bg-muted animate-pulse" />
+              <div className="h-2.5 w-8 rounded bg-muted animate-pulse" />
+              <div className="h-4 w-5 rounded bg-muted animate-pulse" />
+            </div>
+          ))
+        ) : stockBajo.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+              <Package className="size-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <p className="text-xs font-medium text-foreground">Inventario en orden</p>
+          </div>
+        ) : (
+          paginated.map((item) => {
+            const qty    = Number(item.cantidad ?? 0)
+            const isZero = qty === 0
+            return (
+              <div key={item.clave} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
+                <div className={`size-1.5 shrink-0 rounded-full ${isZero ? "bg-red-500" : "bg-amber-500"}`} />
+                <p className="flex-1 truncate text-xs text-foreground">{item.descripcion}</p>
+                <span className="shrink-0 text-[11px] text-muted-foreground">{item.unidad}</span>
+                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600" : "text-amber-600"}`}>
+                  {qty}
+                </span>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-foreground">{card.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {card.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+            )
+          })
+        )}
+      </div>
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+          <span className="text-[11px] text-muted-foreground">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, stockBajo.length)} de {stockBajo.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
+              className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+              <ChevronLeft className="size-3.5" />
+            </button>
+            <span className="min-w-[2.5rem] text-center text-[11px] font-medium text-foreground">{page + 1} / {totalPages}</span>
+            <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}
+              className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+              <ChevronRight className="size-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Dashboard ── */
+export function DashboardSection() {
+  const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
+  const [stockBajo, setStockBajo]                     = useState<ArticuloInventario[]>([])
+  const [loadingStock, setLoadingStock]               = useState(true)
+  const [activosMembresia, setActivosMembresia]       = useState<number | null>(null)
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState<number | null>(null)
+  const [listaSolicitudes, setListaSolicitudes]       = useState<Beneficiario[]>([])
+  const [loadingBenef, setLoadingBenef]               = useState(true)
+  const [beneficiarios, setBeneficiarios]             = useState<Beneficiario[]>([])
+  const [pagos, setPagos]                             = useState<PagoReciente[]>([])
+  const [loadingPagos, setLoadingPagos]               = useState(true)
+  const [citas, setCitas]                             = useState<Cita[]>([])
+  const [loadingCitas, setLoadingCitas]               = useState(true)
+  const [lastRefresh, setLastRefresh]                 = useState(new Date())
+
+  function loadData() {
+    setLoadingBenef(true); setLoadingStock(true)
+    setLoadingPagos(true); setLoadingCitas(true)
+    setLastRefresh(new Date())
+
+    getInventario()
+      .then((items) => {
+        const bajos = items
+          .filter((i) => Number(i.cantidad ?? 0) <= INVENTARIO_BAJO_UMBRAL)
+          .sort((a, b) => Number(b.cantidad ?? 0) - Number(a.cantidad ?? 0))
+        setInventarioBajoCount(bajos.length)
+        setStockBajo(bajos)
+      })
+      .catch(() => { setInventarioBajoCount(null); setStockBajo([]) })
+      .finally(() => setLoadingStock(false))
+
+    getBeneficiarios()
+      .then((b) => {
+        const c = conteosEstatusBeneficiarios(b)
+        setActivosMembresia(c.Activo)
+        const pendientes = b.filter(esSolicitudPublicaPendiente)
+        setSolicitudesPendientes(pendientes.length)
+        setListaSolicitudes(pendientes)
+        setBeneficiarios(b)
+      })
+      .catch(() => { setActivosMembresia(null); setSolicitudesPendientes(null); setListaSolicitudes([]); setBeneficiarios([]) })
+      .finally(() => setLoadingBenef(false))
+
+    getPagosRecientes(100)
+      .then(setPagos)
+      .catch(() => setPagos([]))
+      .finally(() => setLoadingPagos(false))
+
+    getCitas()
+      .then(setCitas)
+      .catch(() => setCitas([]))
+      .finally(() => setLoadingCitas(false))
+  }
+
+  useEffect(() => { loadData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Membresías por vencer ── */
+  const membresiasPorVencer = useMemo(() => {
+    return beneficiarios
+      .filter((b) => b.estatus !== "Baja" && b.diasRestantes != null)
+      .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999))
+      .slice(0, 8) // 4 por columna × 2 columnas
+  }, [beneficiarios])
+
+  /* ── Citas de hoy ── */
+  const citasHoy = useMemo(() => {
+    const hoy = todayISO()
+    return citas
+      .filter((c) => (c.fecha ?? "").startsWith(hoy))
+      .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
+  }, [citas])
+
+  /* ── Resumen financiero ── */
+  const financiero = useMemo(() => {
+    const mesActual  = mesActualISO()
+    const mesAnterior = mesAnteriorISO()
+
+    const pagosActual   = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesActual))
+    const pagosAnterior = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesAnterior))
+
+    const totalActual   = pagosActual.reduce((s, p) => s + (Number(p.monto) || 0), 0)
+    const totalAnterior = pagosAnterior.reduce((s, p) => s + (Number(p.monto) || 0), 0)
+
+    const porMetodo = {
+      efectivo:      pagosActual.filter((p) => p.metodoPago === "efectivo").reduce((s, p) => s + (Number(p.monto) || 0), 0),
+      transferencia: pagosActual.filter((p) => p.metodoPago === "transferencia").reduce((s, p) => s + (Number(p.monto) || 0), 0),
+      tarjeta:       pagosActual.filter((p) => p.metodoPago === "tarjeta").reduce((s, p) => s + (Number(p.monto) || 0), 0),
+    }
+
+    const diff = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior) * 100 : 0
+
+    return { totalActual, totalAnterior, diff, porMetodo, count: pagosActual.length }
+  }, [pagos])
+
+  const kpis = useMemo(() => [
+    {
+      label: "Beneficiarios activos", value: activosMembresia ?? "--",
+      sub: "Con membresía vigente", icon: Users, color: NAVY,
+      trend: "up" as const, loading: loadingBenef,
+    },
+    {
+      label: "Solicitudes pendientes", value: solicitudesPendientes ?? "--",
+      sub: "Pre-registros sin revisar", icon: Inbox, color: AMBER,
+      trend: solicitudesPendientes && solicitudesPendientes > 0 ? "up" as const : "flat" as const,
+      loading: loadingBenef,
+    },
+    {
+      label: "Servicios este mes", value: "83",
+      sub: "Cierre estimado: Febrero", icon: ClipboardList, color: "#10b981",
+      trend: "up" as const, loading: false,
+    },
+    {
+      label: "Artículos bajos", value: inventarioBajoCount ?? "--",
+      sub: inventarioBajoCount === 0 ? "Sin alertas" : "Requieren reposición",
+      icon: Package, color: inventarioBajoCount ? "#ef4444" : "#10b981",
+      trend: inventarioBajoCount ? "down" as const : "flat" as const, loading: false,
+    },
+  ], [activosMembresia, solicitudesPendientes, inventarioBajoCount, loadingBenef])
+
+  const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const estatusCitaStyle: Record<string, string> = {
+    Confirmada: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400",
+    Pendiente:  "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400",
+    Completada: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400",
+    Cancelada:  "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400",
+  }
+  const estatusCitaIcon: Record<string, React.ElementType> = {
+    Confirmada: CheckCircle2,
+    Pendiente:  Clock,
+    Completada: CheckCircle2,
+    Cancelada:  XCircle,
+  }
+
+  return (
+    <div className="flex flex-col gap-6 pb-8">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Panel de control</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground capitalize">{fmtDate()}</p>
+        </div>
+        <button onClick={loadData}
+          className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
+          <RefreshCw className="size-3.5" />
+          Actualizar
+          <span className="ml-1 text-[10px] opacity-60">
+            {lastRefresh.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </button>
       </div>
 
-      {/* Gráficas */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-        <Card className="shadow-sm border-border/60 lg:col-span-4">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {kpis.map((k) => <KpiCard key={k.label} {...k} />)}
+      </div>
+
+      {/* ── Solicitudes en espera + Agenda del día ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+        {/* Solicitudes en espera */}
+        <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
             <div>
-              <CardTitle className="text-base font-semibold">Atenciones Mensuales</CardTitle>
-              <CardDescription>Volumen de servicios otorgados por mes</CardDescription>
+              <p className="text-sm font-semibold text-foreground">Solicitudes en espera</p>
+              <p className="text-[11px] text-muted-foreground">Pre-registros pendientes de revisión</p>
             </div>
-            <div className="text-right min-w-[60px]">
-              {activeBar ? (
-                <>
-                  <p className="text-[10px] leading-none text-muted-foreground">{activeBar.mes}</p>
-                  <p className="text-sm font-bold text-foreground leading-snug">{activeBar.atenciones} <span className="text-[10px] font-normal text-muted-foreground">atenciones</span></p>
-                </>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={monthlyData}
-                  margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
-                  onMouseMove={(state) => {
-                    if (state.isTooltipActive && state.activePayload?.[0]) {
-                      setActiveBar(state.activePayload[0].payload)
-                    }
-                  }}
-                  onMouseLeave={() => setActiveBar(null)}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/60" />
-                  <XAxis
-                    dataKey="mes"
-                    className="text-xs"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    className="text-xs"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip content={() => null} cursor={{ fill: "rgba(0,0,0,0.06)" }} />
-                  <Bar
-                    dataKey="atenciones"
-                    fill="#005bb5"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={45}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            {!loadingBenef && listaSolicitudes.length > 0 && (
+              <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                {listaSolicitudes.length} pendiente{listaSolicitudes.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 divide-y divide-border/40">
+            {loadingBenef ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-4">
+                  <div className="size-9 shrink-0 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                    <div className="h-2 w-2/3 rounded bg-muted animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : listaSolicitudes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+                <div className="flex size-11 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+                  <Inbox className="size-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Sin solicitudes</p>
+                <p className="text-xs text-muted-foreground">No hay pre-registros en espera</p>
+              </div>
+            ) : (
+              listaSolicitudes.map((b) => {
+                const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
+                const inicial = nombre.charAt(0).toUpperCase()
+                const lugar   = [b.ciudad, b.estado].filter(Boolean).join(", ") || "—"
+                const tel     = b.telefonoCelular || null
+                return (
+                  <div key={b.curp ?? b.folio} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/20">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: NAVY }}>
+                      {inicial}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{nombre}</p>
+                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1"><MapPin className="size-3 shrink-0" />{lugar}</span>
+                        {tel && <><span className="opacity-30">·</span><span className="flex items-center gap-1"><Phone className="size-3 shrink-0" />{tel}</span></>}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
+                      Pendiente
+                    </span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
 
-        <Card className="shadow-sm border-border/60 lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">Locales vs Foráneos</CardTitle>
-            <CardDescription>Distribución geográfica de beneficiarios</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full mt-4 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={locationData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={60}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {locationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    position={{ x: 10, y: 10 }}
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                      color: "#0f172a",
-                      opacity: 1,
-                    }}
-                    labelStyle={{ fontWeight: 600, color: "#0f172a" }}
-                    itemStyle={{ color: "#0f172a" }}
-                    isAnimationActive={false}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconType="circle"
-                    wrapperStyle={{ fontSize: "12px", paddingTop: "15px" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+        {/* Agenda del día */}
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Agenda de hoy</p>
+              <p className="text-[11px] text-muted-foreground">
+                {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <CalendarDays className="size-4 text-muted-foreground" />
+          </div>
+          <div className="divide-y divide-border/40">
+            {loadingCitas ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3">
+                  <div className="h-8 w-10 rounded bg-muted animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                    <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : citasHoy.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <CalendarDays className="size-8 text-muted-foreground opacity-30" />
+                <p className="text-xs text-muted-foreground">Sin citas programadas para hoy</p>
+              </div>
+            ) : (
+              citasHoy.map((c) => {
+                const IconEstatus = estatusCitaIcon[c.estatus] ?? AlertCircle
+                return (
+                  <div key={c.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
+                    <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-muted/50 py-1.5 text-center">
+                      <span className="text-xs font-bold tabular-nums text-foreground leading-none">{(c.hora ?? "--").slice(0, 5)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">{c.beneficiario}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">{c.especialista || "—"}</p>
+                    </div>
+                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${estatusCitaStyle[c.estatus] ?? ""}`}>
+                      <IconEstatus className="size-3" />
+                      {c.estatus}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* ── Resumen financiero ── */}
+      <div className="rounded-xl border border-border/70 bg-card shadow-sm">
+        <div className="border-b border-border/40 px-5 py-4">
+          <p className="text-sm font-semibold text-foreground">Resumen financiero</p>
+          <p className="text-[11px] text-muted-foreground">Ingresos por membresías · mes actual vs anterior</p>
+        </div>
+        {loadingPagos ? (
+          <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card px-6 py-5 space-y-2">
+                <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                <div className="h-6 w-2/3 rounded bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 divide-x divide-y divide-border/40 sm:grid-cols-4 sm:divide-y-0">
+            <div className="px-6 py-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Este mes</p>
+              <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{fmt$(financiero.totalActual)}</p>
+              <div className="mt-1 flex items-center gap-1">
+                {financiero.diff >= 0
+                  ? <TrendingUp className="size-3 text-emerald-500" />
+                  : <TrendingDown className="size-3 text-red-500" />}
+                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {financiero.diff >= 0 ? "+" : ""}{financiero.diff.toFixed(1)}% vs mes anterior
+                </span>
+              </div>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Mes anterior</p>
+              <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{fmt$(financiero.totalAnterior)}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{financiero.count} pago{financiero.count !== 1 ? "s" : ""} este mes</p>
+            </div>
+            {[
+              { label: "Efectivo",      val: financiero.porMetodo.efectivo,      icon: Banknote,  color: "#10b981" },
+              { label: "Transferencia", val: financiero.porMetodo.transferencia, icon: Building2, color: NAVY },
+            ].map(({ label, val, icon: Icon, color }) => (
+              <div key={label} className="px-6 py-5">
+                <div className="flex items-center gap-1.5">
+                  <Icon className="size-3.5" style={{ color }} />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+                </div>
+                <p className="mt-1.5 text-xl font-bold tabular-nums text-foreground">{fmt$(val)}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {financiero.totalActual > 0 ? Math.round((val / financiero.totalActual) * 100) : 0}% del total
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Control de membresías + Artículos bajos ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+        {/* Control de membresías */}
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Control de membresías</p>
+              <p className="text-[11px] text-muted-foreground">Ordenado por proximidad de vencimiento</p>
+            </div>
+            <Timer className="size-4 text-muted-foreground" />
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-border/40">
+            {loadingBenef ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
+                  <div className="size-8 rounded-full bg-muted animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <div className="h-2.5 w-2/3 rounded bg-muted animate-pulse" />
+                    <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
+                  </div>
+                  <div className="h-5 w-10 rounded bg-muted animate-pulse shrink-0" />
+                </div>
+              ))
+            ) : membresiasPorVencer.length === 0 ? (
+              <div className="col-span-2 flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <CheckCircle2 className="size-8 text-emerald-500 opacity-50" />
+                <p className="text-xs text-muted-foreground">No hay membresías próximas a vencer</p>
+              </div>
+            ) : (
+              membresiasPorVencer.map((b) => {
+                const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
+                const dias    = b.diasRestantes ?? 0
+                const inicial = nombre.charAt(0).toUpperCase()
+                const badge =
+                  dias <= 0  ? { text: "Vencida", cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800" } :
+                  dias <= 7  ? { text: `${dias}d`, cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800" } :
+                  dias <= 14 ? { text: `${dias}d`, cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800" } :
+                               { text: `${dias}d`, cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800" }
+                const dotColor = dias <= 0 ? "bg-red-500" : dias <= 7 ? "bg-red-400" : dias <= 14 ? "bg-amber-400" : "bg-emerald-400"
+                return (
+                  <div key={b.curp ?? b.folio} className="flex items-center gap-2.5 border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/20 last:border-b-0">
+                    <div className="relative shrink-0">
+                      <div className="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ backgroundColor: NAVY }}>
+                        {inicial}
+                      </div>
+                      <span className={`absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-[1.5px] border-card ${dotColor}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-[11px] font-semibold text-foreground">{nombre}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{b.ciudad || "—"}</p>
+                    </div>
+                    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>
+                      {badge.text}
+                    </span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Artículos bajos */}
+        <ArticulosBajosPanel stockBajo={stockBajo} loading={loadingStock} umbral={INVENTARIO_BAJO_UMBRAL} />
+      </div>
+
     </div>
   )
 }

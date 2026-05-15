@@ -1,39 +1,27 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
+import { useState } from "react"
 import Link from "next/link"
-import { Eye, EyeOff, LogIn, AlertCircle, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
+
+const NAVY  = "#0f4c81"
+const AMBER = "#E8B043"
 
 interface LoginScreenProps {
-  /** Callback al hacer login exitoso */
   onLogin: (email: string, password: string) => Promise<void>
 }
 
-/**
- * Pantalla de login completa.
- * Usa el mismo sistema de diseño (tokens CSS, componentes UI, tipografía Inter)
- * que el resto del front. Se usa en `/panel` cuando no hay sesión activa.
- */
 export function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [email, setEmail]           = useState("")
-  const [password, setPassword]     = useState("")
-  const [showPw, setShowPw]         = useState(false)
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState<string | null>(null)
-  const [mounted, setMounted]       = useState(false)
-
-  // Micro-animación de entrada
-  useEffect(() => { setMounted(true) }, [])
+  const [email, setEmail]       = useState("")
+  const [password, setPassword] = useState("")
+  const [showPw, setShowPw]     = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email.trim())    { setError("Ingresa tu correo electrónico"); return }
-    if (!password)        { setError("Ingresa tu contraseña"); return }
-
+    if (!email.trim()) { setError("Ingresa tu correo electrónico"); return }
+    if (!password)     { setError("Ingresa tu contraseña"); return }
     setLoading(true)
     setError(null)
     try {
@@ -46,92 +34,145 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background relative overflow-hidden">
+    <div className="min-h-screen w-full flex">
 
-      {/* ── Fondo decorativo ─────────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════
+          PANEL IZQUIERDO  —  Identidad  (sin cambios)
+      ═══════════════════════════════════════════ */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% -10%, oklch(0.55 0.15 250 / 0.12) 0%, transparent 70%), " +
-            "radial-gradient(ellipse 60% 50% at 110% 80%,  oklch(0.82 0.14 85  / 0.10) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* ── Tarjeta principal ────────────────────────────────────── */}
-      <div
-        className={`
-          relative z-10 w-full max-w-md mx-4
-          transition-all duration-500 ease-out
-          ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
-        `}
+        className="hidden lg:flex lg:w-[46%] xl:w-[42%] flex-col justify-between p-12 xl:p-16 relative overflow-hidden"
+        style={{ backgroundColor: NAVY }}
       >
-        {/* Card con glassmorphism sutil */}
-        <div className="rounded-3xl border border-border/50 bg-card/90 shadow-2xl backdrop-blur-sm overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ backgroundColor: AMBER }} />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        <div
+          className="absolute -bottom-32 -right-32 size-[420px] rounded-full opacity-[0.06]"
+          style={{ backgroundColor: AMBER }}
+        />
 
-          {/* ── Header de la tarjeta ─────────────────────────────── */}
-          <div className="px-8 pt-10 pb-6 text-center">
-            {/* Logo */}
-            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-border/20">
-              <Image
-                src="/logo-espina-bifida.png"
-                alt="Logo Espina Bífida"
-                width={48}
-                height={48}
-                className="object-contain"
-                priority
-              />
-            </div>
+        <div className="relative">
+          <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
+            Asociación de Espina Bífida
+          </span>
+        </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Iniciar sesión
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Sistema de Gestión · Asociación de Espina Bífida
+        <div className="relative space-y-10">
+          <div>
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: AMBER }}>
+              Panel Administrativo
+            </p>
+            <h2 className="text-[2.25rem] xl:text-[2.6rem] font-bold leading-[1.15] tracking-tight text-white">
+              Gestión integral<br />de beneficiarios.
+            </h2>
+            <p className="mt-5 max-w-[280px] text-sm leading-[1.8] text-white/50">
+              Expedientes, membresías, servicios e inventario centralizados en un solo sistema.
             </p>
           </div>
 
-          {/* ── Formulario ───────────────────────────────────────── */}
-          <form
-            id="login-form"
-            onSubmit={handleSubmit}
-            className="px-8 pb-8 space-y-5"
-            autoComplete="on"
-            noValidate
-          >
-            {/* Correo */}
-            <div className="space-y-1.5">
-              <Label
+          <div className="relative pl-6">
+            <span
+              className="absolute -top-2 left-0 font-serif text-5xl leading-none"
+              style={{ color: AMBER, opacity: 0.7 }}
+              aria-hidden="true"
+            >"</span>
+            <p className="text-sm leading-[1.9] text-white/70 italic">
+              Si cambiamos una vida,<br />cambiamos familias completas.
+            </p>
+          </div>
+        </div>
+
+        <p className="relative text-[11px] text-white/25">
+          © {new Date().getFullYear()} Asociación de Espina Bífida de Nuevo León, A.B.P.
+        </p>
+      </div>
+
+      {/* ═══════════════════════════════════════════
+          PANEL DERECHO  —  Formulario mejorado
+      ═══════════════════════════════════════════ */}
+      <div className="relative flex flex-1 flex-col items-center justify-center bg-white px-6 py-12 dark:bg-slate-950 sm:px-12">
+
+        {/* Acento ámbar superior en móvil */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] lg:hidden" style={{ backgroundColor: AMBER }} />
+
+        {/* Nombre en móvil */}
+        <div className="mb-10 lg:hidden text-center">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+            Asociación de Espina Bífida
+          </span>
+        </div>
+
+        {/* Contenedor del formulario */}
+        <div className="w-full max-w-[400px]">
+
+          {/* Encabezado con acento ámbar */}
+          <div className="mb-10">
+            <div className="mb-5 flex items-center justify-center gap-3">
+              <div className="h-px w-8" style={{ backgroundColor: AMBER }} />
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">
+                Bienvenido
+              </span>
+              <div className="h-px w-8" style={{ backgroundColor: AMBER }} />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Iniciar sesión
+            </h1>
+            <p className="mt-2.5 text-[13px] text-slate-500 dark:text-slate-400">
+              Ingresa tus credenciales para continuar.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} autoComplete="on" noValidate className="space-y-5">
+
+            {/* Email */}
+            <div>
+              <label
                 htmlFor="login-email"
-                className="text-sm font-semibold text-foreground"
+                className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500"
               >
                 Correo electrónico
-              </Label>
-              <Input
+              </label>
+              <input
                 id="login-email"
                 type="email"
                 name="email"
                 autoComplete="email"
-                placeholder="admin@example.com"
+                placeholder="usuario@ejemplo.com"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(null) }}
-                className="h-11 bg-background border-border/60 focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm transition-all"
                 disabled={loading}
                 required
+                className="
+                  w-full rounded-xl border border-slate-200 bg-slate-50
+                  px-4 py-3.5 text-sm text-slate-900
+                  placeholder:text-slate-300 outline-none
+                  transition-all duration-150
+                  hover:border-slate-300 hover:bg-white
+                  focus:border-[#0f4c81] focus:bg-white focus:shadow-[0_0_0_4px_rgba(15,76,129,0.07)]
+                  disabled:opacity-50
+                  dark:border-slate-700 dark:bg-slate-800/60 dark:text-white
+                  dark:placeholder:text-slate-600 dark:hover:bg-slate-800
+                  dark:focus:border-blue-500 dark:focus:bg-slate-800
+                "
               />
             </div>
 
             {/* Contraseña */}
-            <div className="space-y-1.5">
-              <Label
+            <div>
+              <label
                 htmlFor="login-password"
-                className="text-sm font-semibold text-foreground"
+                className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500"
               >
                 Contraseña
-              </Label>
+              </label>
               <div className="relative">
-                <Input
+                <input
                   id="login-password"
                   type={showPw ? "text" : "password"}
                   name="password"
@@ -139,62 +180,86 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null) }}
-                  className="h-11 pr-11 bg-background border-border/60 focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm transition-all"
                   disabled={loading}
                   required
+                  className="
+                    w-full rounded-xl border border-slate-200 bg-slate-50
+                    px-4 py-3.5 pr-12 text-sm text-slate-900
+                    placeholder:text-slate-300 outline-none
+                    transition-all duration-150
+                    hover:border-slate-300 hover:bg-white
+                    focus:border-[#0f4c81] focus:bg-white focus:shadow-[0_0_0_4px_rgba(15,76,129,0.07)]
+                    disabled:opacity-50
+                    dark:border-slate-700 dark:bg-slate-800/60 dark:text-white
+                    dark:placeholder:text-slate-600 dark:hover:bg-slate-800
+                    dark:focus:border-blue-500 dark:focus:bg-slate-800
+                  "
                 />
                 <button
                   type="button"
-                  id="login-toggle-password"
-                  aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
+                  aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
                 >
-                  {showPw
-                    ? <EyeOff className="size-4" />
-                    : <Eye     className="size-4" />
-                  }
+                  {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Error inline */}
+            {/* Error */}
             {error && (
               <div
-                id="login-error"
                 role="alert"
-                className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200"
+                className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3.5 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400"
               >
-                <AlertCircle className="size-4 shrink-0" />
+                <AlertCircle className="mt-px size-3.5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Botón de envío */}
-            <Button
-              id="login-submit"
-              type="submit"
-              className="w-full h-11 gap-2 text-sm font-semibold shadow-sm mt-2 transition-all duration-200"
-              disabled={loading}
-            >
-              {loading
-                ? <><Loader2 className="size-4 animate-spin" /> Verificando...</>
-                : <><LogIn   className="size-4" />              Iniciar sesión</>
-              }
-            </Button>
-          </form>
-        </div>
+            {/* Botón */}
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={loading}
+                className="
+                  group relative w-full overflow-hidden rounded-xl
+                  py-3.5 text-sm font-semibold text-white
+                  shadow-[0_2px_16px_rgba(15,76,129,0.30)]
+                  transition-all duration-200
+                  hover:shadow-[0_4px_20px_rgba(15,76,129,0.40)]
+                  active:scale-[.99] active:shadow-[0_1px_8px_rgba(15,76,129,0.25)]
+                  disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none
+                "
+                style={{ backgroundColor: NAVY }}
+              >
+                <span className="absolute inset-0 translate-x-[-100%] bg-white/10 transition-transform duration-300 group-hover:translate-x-0" />
+                <span className="relative flex items-center justify-center gap-2">
+                  {loading
+                    ? <><Loader2 className="size-4 animate-spin" />Verificando...</>
+                    : "Acceder al panel"
+                  }
+                </span>
+              </button>
+            </div>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Acceso exclusivo para administradores autorizados.
-          {" "}
-          <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
-            Volver al inicio público
-          </Link>
-        </p>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-10 flex items-center gap-4">
+            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+            <Link
+              href="/"
+              className="text-[11px] font-medium text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Ir al sitio público
+            </Link>
+            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+          </div>
+        </div>
       </div>
+
     </div>
   )
 }

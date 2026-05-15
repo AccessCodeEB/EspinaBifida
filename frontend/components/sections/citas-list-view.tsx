@@ -16,20 +16,19 @@ type SortField = "fecha" | "beneficiario" | "especialista" | "estatus"
 type SortDir = "asc" | "desc"
 type FilterEstatus = "Todos" | Cita["estatus"]
 
-const STATUS_CONFIG: Record<string, { label: string; pill: string; Icon: typeof CheckCircle2 }> = {
-  Confirmada:  { label: "Confirmada",  pill: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30", Icon: CheckCircle2 },
-  Pendiente:   { label: "Pendiente",   pill: "bg-amber-500/15 text-amber-400 border border-amber-500/30",       Icon: Clock },
-  Completada:  { label: "Completada",  pill: "bg-sky-500/15 text-sky-400 border border-sky-500/30",             Icon: CheckCircle2 },
-  Cancelada:   { label: "Cancelada",   pill: "bg-red-500/15 text-red-400 border border-red-500/30",             Icon: XCircle },
+const STATUS_CONFIG: Record<string, { label: string; dot: string; cls: string; Icon: typeof CheckCircle2 }> = {
+  Confirmada:  { label: "Confirmada",  dot: "bg-emerald-500", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400", Icon: CheckCircle2 },
+  Pendiente:   { label: "Pendiente",   dot: "bg-amber-500",   cls: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400",           Icon: Clock        },
+  Completada:  { label: "Completada",  dot: "bg-blue-500",    cls: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400",                 Icon: CheckCircle2 },
+  Cancelada:   { label: "Cancelada",   dot: "bg-red-500",     cls: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400",                      Icon: XCircle      },
 }
 
 function StatusPill({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status]
   if (!cfg) return <span className="text-xs text-muted-foreground">{status}</span>
-  const { Icon } = cfg
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.pill}`}>
-      <Icon className="size-3" />
+    <span className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[10px] font-semibold ${cfg.cls}`}>
+      <span className={`size-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
   )
@@ -87,110 +86,123 @@ export function CitasListView({ citas, beneficiarios }: Props) {
   const STATUSES: FilterEstatus[] = ["Todos", "Pendiente", "Confirmada", "Completada", "Cancelada"]
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Search + filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Buscar paciente, doctor o folio..."
-            className="pl-9 bg-muted/30 border-border/50"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="size-4 text-muted-foreground shrink-0" />
-          {STATUSES.map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-all border ${
-                filterStatus === s
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-muted/30 text-muted-foreground border-border/40 hover:bg-muted"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col gap-4">
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total", val: citas.length, color: "text-foreground" },
-          { label: "Pendientes", val: citas.filter(c => c.estatus === "Pendiente").length, color: "text-amber-400" },
-          { label: "Confirmadas", val: citas.filter(c => c.estatus === "Confirmada").length, color: "text-emerald-400" },
-          { label: "Completadas", val: citas.filter(c => c.estatus === "Completada").length, color: "text-sky-400" },
+          { label: "Total",       val: citas.length,                                           color: "#0f4c81" },
+          { label: "Pendientes",  val: citas.filter(c => c.estatus === "Pendiente").length,   color: "#f59e0b" },
+          { label: "Confirmadas", val: citas.filter(c => c.estatus === "Confirmada").length,  color: "#10b981" },
+          { label: "Completadas", val: citas.filter(c => c.estatus === "Completada").length,  color: "#3b82f6" },
         ].map(({ label, val, color }) => (
-          <div key={label} className="rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
-            <p className={`text-2xl font-bold ${color}`}>{val}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+          <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
+            <div className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+              <p className="text-xl font-bold tabular-nums text-foreground">{val}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-border/50 overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-[80px_1fr_1fr_120px_130px] gap-4 px-5 py-3 bg-muted/30 border-b border-border/40">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Folio</span>
-          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("beneficiario")}>
-            <User className="size-3.5 mr-1.5" />Paciente<SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
-          </button>
-          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("especialista")}>
-            Doctor<SortIndicator field="especialista" current={sortField} dir={sortDir} />
-          </button>
-          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("fecha")}>
-            <Calendar className="size-3.5 mr-1.5" />Fecha<SortIndicator field="fecha" current={sortField} dir={sortDir} />
-          </button>
-          <button type="button" className="group flex items-center text-xs font-semibold text-muted-foreground uppercase tracking-wide text-left" onClick={() => toggleSort("estatus")}>
-            Estatus<SortIndicator field="estatus" current={sortField} dir={sortDir} />
-          </button>
-        </div>
+      {/* Tabla card */}
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
-        {/* Rows */}
-        {filtered.length === 0 ? (
-          <div className="py-16 text-center text-sm text-muted-foreground">
-            No se encontraron citas con esos criterios.
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              placeholder="Paciente, doctor o folio..."
+              className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
           </div>
-        ) : (
-          <div className="divide-y divide-border/30">
-            {filtered.map(cita => {
-              const diagnosisKey = cita.beneficiario?.toLowerCase() ?? ""
-              const diagnosis = benefMap.get(diagnosisKey)
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {STATUSES.map(s => {
+              const active = filterStatus === s
+              const cfg = STATUS_CONFIG[s]
               return (
-                <div
-                  key={cita.id}
-                  className="grid grid-cols-[80px_1fr_1fr_120px_130px] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors"
-                >
-                  <span className="font-mono text-xs text-primary font-semibold truncate">{cita.folio}</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{cita.beneficiario}</p>
-                    {diagnosis && (
-                      <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{diagnosis}</p>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-foreground/80 truncate">{cita.especialista || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground/80">{cita.fecha}</p>
-                    <p className="text-xs text-muted-foreground">{cita.hora}</p>
-                  </div>
-                  <StatusPill status={cita.estatus} />
-                </div>
+                <button key={s} onClick={() => setFilterStatus(s)}
+                  className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-all ${
+                    active
+                      ? "border-[#0f4c81] bg-[#0f4c81] text-white"
+                      : "border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}>
+                  {s !== "Todos" && cfg && <span className={`mr-1 inline-block size-1.5 rounded-full ${active ? "bg-white" : cfg.dot}`} />}
+                  {s}
+                </button>
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
 
-      <p className="text-xs text-muted-foreground text-right">
-        {filtered.length} de {citas.length} citas
-      </p>
+        {/* Tabla */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/40 bg-muted/20">
+                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-24">Folio</th>
+                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("beneficiario")}>
+                    <User className="size-3" />Paciente <SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
+                  </button>
+                </th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
+                  <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("especialista")}>
+                    Doctor <SortIndicator field="especialista" current={sortField} dir={sortDir} />
+                  </button>
+                </th>
+                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("fecha")}>
+                    <Calendar className="size-3" />Fecha <SortIndicator field="fecha" current={sortField} dir={sortDir} />
+                  </button>
+                </th>
+                <th className="py-2.5 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                  <button className="inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("estatus")}>
+                    Estatus <SortIndicator field="estatus" current={sortField} dir={sortDir} />
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-14 text-center text-xs text-muted-foreground">
+                    No se encontraron citas con esos criterios.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map(cita => {
+                  const diagnosisKey = cita.beneficiario?.toLowerCase() ?? ""
+                  const diagnosis = benefMap.get(diagnosisKey)
+                  return (
+                    <tr key={cita.id} className="transition-colors hover:bg-muted/20">
+                      <td className="py-3 pl-5 font-mono text-[11px] text-foreground">{cita.folio}</td>
+                      <td className="py-3 min-w-0">
+                        <p className="truncate text-xs font-semibold text-foreground">{cita.beneficiario}</p>
+                        {diagnosis && <p className="truncate text-[10px] text-muted-foreground">{diagnosis}</p>}
+                      </td>
+                      <td className="hidden py-3 text-xs text-foreground md:table-cell">{cita.especialista || "—"}</td>
+                      <td className="py-3">
+                        <p className="text-xs text-foreground">{cita.fecha}</p>
+                        <p className="text-[10px] text-muted-foreground">{cita.hora}</p>
+                      </td>
+                      <td className="py-3 pr-5"><StatusPill status={cita.estatus} /></td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t border-border/40 px-5 py-2.5">
+          <p className="text-[11px] text-muted-foreground">{filtered.length} de {citas.length} citas</p>
+        </div>
+      </div>
     </div>
   )
 }
