@@ -135,6 +135,26 @@ describe('generarHTML', () => {
     const html = generarHTML(DATA_VACIA, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
     expect(html).toContain('Sin estudios configurados');
   });
+
+  it('beneficiarios: genera tabla con filas', () => {
+    const data = {
+      tipo: 'beneficiarios',
+      filas: [
+        { CURP: 'GARM900101HNLRLS01', NOMBRE_COMPLETO: 'Marco García López',
+          GENERO: 'Masculino', MUNICIPIO: 'Monterrey', ESTATUS: 'Activo' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Marco García López');
+    expect(html).toContain('GARM900101HNLRLS01');
+    expect(html).toContain('Beneficiarios Atendidos');
+  });
+
+  it('beneficiarios: sin filas muestra mensaje vacío', () => {
+    const data = { tipo: 'beneficiarios', filas: [] };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin beneficiarios en el periodo');
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────

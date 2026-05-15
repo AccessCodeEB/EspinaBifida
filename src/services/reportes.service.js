@@ -9,8 +9,10 @@ import { generarHTML } from '../utils/reporteTemplate.js';
  */
 export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas') {
   switch (tipo) {
-    case 'beneficiarios':
-      return { tipo, filas: [] };
+    case 'beneficiarios': {
+      const filas = await ReportesModel.getBeneficiariosPeriodo(fechaInicio, fechaFin);
+      return { tipo, filas };
+    }
     case 'membresias':
       return { tipo, filas: [] };
     case 'servicios':

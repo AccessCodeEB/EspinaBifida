@@ -23,6 +23,7 @@ const {
   getDetalleServicios,
   getDistribucionCiudades,
   getEstudios,
+  getBeneficiariosPeriodo,
   guardarRegistro,
   findHistorico,
   findById,
@@ -214,6 +215,47 @@ describe('findHistorico', () => {
     const result = await findHistorico(1, 20);
 
     expect(result).toEqual([]);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getBeneficiariosPeriodo ───────────────────────────────────────────────────
+
+describe('getBeneficiariosPeriodo', () => {
+  it('retorna filas de beneficiarios con servicio en el periodo', async () => {
+    const rows = [
+      {
+        CURP: 'GARM900101HNLRLS01',
+        NOMBRE_COMPLETO: 'Marco García López',
+        GENERO: 'Masculino',
+        MUNICIPIO: 'Monterrey',
+        ESTADO: 'Nuevo León',
+        ESTATUS: 'Activo',
+      },
+    ];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await getBeneficiariosPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna [] si no hay servicios en el periodo', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const result = await getBeneficiariosPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result).toEqual([]);
+  });
+
+  it('cierra conexión si execute lanza', async () => {
+    mockExecute.mockRejectedValueOnce(new Error('ORA-00942'));
+
+    await expect(getBeneficiariosPeriodo(PERIODO.inicio, PERIODO.fin))
+      .rejects.toThrow('ORA-00942');
+
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

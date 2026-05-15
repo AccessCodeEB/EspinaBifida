@@ -163,6 +163,32 @@ export async function getEstudios(fechaInicio, fechaFin) {
   }
 }
 
+// ── 6. Beneficiarios con servicio en el periodo ───────────────────────────────
+export async function getBeneficiariosPeriodo(fechaInicio, fechaFin) {
+  const conn = await getConnection();
+  try {
+    const result = await conn.execute(`
+      SELECT DISTINCT
+        B.CURP,
+        B.NOMBRES || ' ' || B.APELLIDO_PATERNO || ' ' || B.APELLIDO_MATERNO AS NOMBRE_COMPLETO,
+        B.GENERO,
+        B.MUNICIPIO,
+        B.ESTADO,
+        B.ESTATUS
+      FROM BENEFICIARIOS B
+      JOIN SERVICIOS S ON B.CURP = S.CURP
+      WHERE S.FECHA BETWEEN :fi AND :ff
+      ORDER BY B.APELLIDO_PATERNO, B.NOMBRES
+    `,
+    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+
+    return result.rows;
+  } finally {
+    await conn.close();
+  }
+}
+
 // ── 5. Persistencia de reportes generados ────────────────────────────────────
 export async function guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx, generadoPor = null }) {
   const conn = await getConnection();
