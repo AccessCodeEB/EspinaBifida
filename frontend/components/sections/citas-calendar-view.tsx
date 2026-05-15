@@ -231,34 +231,57 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
   )
 }
 
-// ── Action Center ────────────────────────────────────────────────────────────
-function ActionCenter({citas,onNavigate}:{citas:Cita[];onNavigate:(c:Cita)=>void}){
-  const now=new Date();now.setHours(0,0,0,0)
-  const alerts=citas.filter(c=>{
-    if(c.estatus==="Cancelada"||c.estatus==="Completada")return false
-    const d=new Date(c.fecha+"T12:00:00");return d<now
-  }).slice(0,5)
-  if(!alerts.length)return(
+// ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
+function ActionCenter({
+  citas,onNavigate,onAction,updatingId
+}:{
+  citas:Cita[]
+  onNavigate:(c:Cita)=>void
+  onAction:(id:number,e:Cita["estatus"])=>void
+  updatingId:number|null
+}){
+  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada").slice(0,8)
+  if(!pending.length)return(
     <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Alertas</p>
-      <p className="text-xs text-muted-foreground/50">Sin alertas pendientes ✓</p>
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Citas Pendientes</p>
+      <p className="text-xs text-muted-foreground/50">Sin citas pendientes ✓</p>
     </div>
   )
   return(
-    <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
-        <AlertCircle className="size-3 text-amber-400"/>Requieren atención
+    <div className="rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-3">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+        <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
+        <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
-      <div className="space-y-1.5">
-        {alerts.map(c=>(
-          <button key={c.id} onClick={()=>onNavigate(c)}
-            className="w-full text-left rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 px-3 py-2.5 transition-colors group">
-            <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-              <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.estatus}</p>
+      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
+        {pending.map(c=>(
+          <div key={c.id} className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5 group">
+            <button className="w-full text-left" onClick={()=>onNavigate(c)}>
+              <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
+                <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora} · {c.estatus}</p>
+              </div>
+            </button>
+            <div className="flex gap-1.5 mt-2">
+              {c.estatus==="Pendiente"&&(
+                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Confirmada")}
+                  className="flex-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
+                  Confirmar
+                </button>
+              )}
+              {c.estatus==="Confirmada"&&(
+                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Completada")}
+                  className="flex-1 rounded-lg bg-sky-600/80 hover:bg-sky-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
+                  Completar
+                </button>
+              )}
+              <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Cancelada")}
+                className="rounded-lg border border-border/40 bg-muted/30 hover:bg-red-500/10 hover:border-red-400/40 hover:text-red-400 px-2 py-1 text-[10px] text-muted-foreground transition-colors disabled:opacity-40">
+                Cancelar
+              </button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </div>
@@ -375,7 +398,17 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   function prevMonth(){if(calMonth===0){setCalYear(y=>y-1);setCalMonth(11)}else setCalMonth(m=>m-1)}
   function nextMonth(){if(calMonth===11){setCalYear(y=>y+1);setCalMonth(0)}else setCalMonth(m=>m+1)}
-  function handleDay(d:Date){setWeekAnchor(getMon(d));setCalYear(d.getFullYear());setCalMonth(d.getMonth())}
+  // Mini-cal: ir al día exacto (no a la semana completa)
+  // Mantiene weekAnchor apuntando a la semana que contiene el día,
+  // pero además almacenamos el día seleccionado para destacarlo en el grid
+  const [selectedDay,setSelectedDay]=useState<Date|null>(null)
+
+  function handleDay(d:Date){
+    setWeekAnchor(getMon(d))
+    setCalYear(d.getFullYear())
+    setCalMonth(d.getMonth())
+    setSelectedDay(d)
+  }
 
   // Mini-cal cells with overflow
   const miniCells=useMemo(()=>{
@@ -395,10 +428,15 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     return{date:d,layout:buildLayout(visible)}
   }),[citas,weekDates])
 
-  // FIX #5: navigate to cita's week when clicking Action Center alert
+  // Navigate to cita's exact day
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
+    // scroll the grid to that appointment block (deferred so layout updates first)
+    setTimeout(()=>{
+      const el=document.getElementById(`cita-block-${c.id}`)
+      el?.scrollIntoView({behavior:"smooth",block:"center"})
+    },120)
   }
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
@@ -463,10 +501,8 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
             })}
           </div>
         </div>
-        {/* Detalle de cita seleccionada */}
-        <CitaDetailPanel selected={selected} onClose={()=>setSelected(null)} onAction={doUpdate} updatingId={updatingId}/>
-        {/* Requieren atención */}
-        <ActionCenter citas={citas} onNavigate={navigateToCita}/>
+        {/* Action Center — Pendientes */}
+        <ActionCenter citas={citas} onNavigate={navigateToCita} onAction={doUpdate} updatingId={updatingId}/>
       </div>
 
       {/* RIGHT */}

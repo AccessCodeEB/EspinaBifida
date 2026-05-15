@@ -17,6 +17,8 @@ import {
   Sun,
   LogOut,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
@@ -72,6 +74,7 @@ export function AppSidebar({
   onEditProfile,
   onLogout,
 }: AppSidebarProps) {
+  const [collapsed, setCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
 
@@ -80,10 +83,14 @@ export function AppSidebar({
     : "?"
 
   return (
-    <aside className="flex h-screen w-[220px] shrink-0 flex-col bg-[#111827] border-r border-white/[0.06]">
-
-      {/* ── Branding ── */}
-      <div className="flex items-center gap-3 px-5 py-5">
+    <aside
+      className={`flex h-screen shrink-0 flex-col bg-[#111827] border-r border-white/[0.06]
+        transition-[width] duration-300 ease-in-out overflow-hidden
+        ${collapsed ? "w-[60px]" : "w-[220px]"}`}
+    >
+      {/* ── Branding + Toggle ── */}
+      <div className="flex items-center gap-3 px-3 py-4 relative">
+        {/* Logo always visible */}
         <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08]">
           <Image
             src="/logo-espina-bifida.png"
@@ -93,45 +100,72 @@ export function AppSidebar({
             className="object-contain"
           />
         </div>
-        <div className="min-w-0">
+
+        {/* Text only when expanded */}
+        <div className={`min-w-0 flex-1 transition-all duration-200 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
           <p className="truncate text-[13px] font-semibold leading-tight text-white">Espina Bífida</p>
           <p className="text-[10px] leading-tight text-white/30">Nuevo León · Panel admin</p>
         </div>
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => { setCollapsed(v => !v); setSettingsOpen(false) }}
+          className="shrink-0 rounded-lg p-1.5 text-white/30 hover:bg-white/[0.07] hover:text-white/60 transition-colors"
+          title={collapsed ? "Expandir menú" : "Colapsar menú"}
+        >
+          {collapsed
+            ? <PanelLeftOpen className="size-4" />
+            : <PanelLeftClose className="size-4" />
+          }
+        </button>
       </div>
 
-
       {/* ── Navegación ── */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 space-y-3">
         {navGroups.map((group, gi) => (
           <div key={gi}>
-            {group.label && (
+            {/* Group label — only when expanded */}
+            {group.label && !collapsed && (
               <p className="mb-1 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
                 {group.label}
               </p>
+            )}
+            {/* Divider in collapsed mode */}
+            {group.label && collapsed && gi > 0 && (
+              <div className="my-1 mx-2 h-px bg-white/[0.06]" />
             )}
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon
                 const isActive = activeSection === item.id
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => onSectionChange(item.id)}
-                    className={`
-                      relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150
-                      ${isActive
-                        ? "bg-white/[0.09] text-white font-medium"
-                        : "text-white/45 hover:bg-white/[0.05] hover:text-white/70 font-normal"
-                      }
-                    `}
-                  >
-                    {/* Indicador activo */}
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[#E8B043]" />
+                  <div key={item.id} className="relative group">
+                    <button
+                      onClick={() => onSectionChange(item.id)}
+                      className={`
+                        relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150
+                        ${isActive
+                          ? "bg-white/[0.09] text-white font-medium"
+                          : "text-white/45 hover:bg-white/[0.05] hover:text-white/70 font-normal"
+                        }
+                      `}
+                    >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[#E8B043]" />
+                      )}
+                      <Icon className={`size-[17px] shrink-0 ${isActive ? "text-white" : "text-white/30"}`} />
+                      <span className={`truncate transition-all duration-200 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
+                        {item.title}
+                      </span>
+                    </button>
+
+                    {/* Tooltip en modo colapsado */}
+                    {collapsed && (
+                      <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#1e293b] border border-white/[0.10] px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+                        {item.title}
+                      </div>
                     )}
-                    <Icon className={`size-[17px] shrink-0 ${isActive ? "text-white" : "text-white/30"}`} />
-                    <span className="truncate">{item.title}</span>
-                  </button>
+                  </div>
                 )
               })}
             </div>
@@ -139,14 +173,12 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {/* ── Configuración expandible ── */}
-      <div className="px-3 pb-6">
-
-        {/* Línea superior — simétrica */}
+      {/* ── Configuración ── */}
+      <div className="px-2 pb-5">
         <div className="my-2 h-px bg-white/[0.06]" />
 
-        {/* Panel — se despliega hacia ARRIBA */}
-        {settingsOpen && (
+        {/* Settings panel (only when expanded) */}
+        {settingsOpen && !collapsed && (
           <div className="mb-1 overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.04]">
             <button
               onClick={() => { setSettingsOpen(false); onEditProfile?.() }}
@@ -164,7 +196,6 @@ export function AppSidebar({
               <Switch checked={isDarkMode ?? false} onCheckedChange={onToggleDarkMode} className="scale-[0.8]" />
             </div>
             <div className="mx-3 h-px bg-white/[0.06]" />
-
             {confirmLogout ? (
               <div className="px-4 py-3 space-y-2">
                 <p className="text-[11px] text-white/50 leading-tight">
@@ -197,19 +228,56 @@ export function AppSidebar({
           </div>
         )}
 
-        {/* Botón Configuración */}
-        <button
-          onClick={() => { setSettingsOpen((v) => !v); setConfirmLogout(false) }}
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150
-            ${settingsOpen ? "bg-white/[0.09] text-white/80" : "text-white/35 hover:bg-white/[0.05] hover:text-white/60"}`}
-        >
-          <Settings className="size-[17px] shrink-0" />
-          <span className="flex-1 text-sm">Configuración</span>
-          <ChevronRight className={`size-3.5 shrink-0 transition-transform duration-200 text-white/25 ${settingsOpen ? "-rotate-90" : ""}`} />
-        </button>
+        {/* Settings button */}
+        <div className="relative group">
+          <button
+            onClick={() => { if(!collapsed){ setSettingsOpen(v => !v); setConfirmLogout(false) } else { onEditProfile?.() } }}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150
+              ${settingsOpen && !collapsed ? "bg-white/[0.09] text-white/80" : "text-white/35 hover:bg-white/[0.05] hover:text-white/60"}`}
+          >
+            <Settings className="size-[17px] shrink-0" />
+            <span className={`flex-1 text-sm transition-all duration-200 ${collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"}`}>
+              Configuración
+            </span>
+            {!collapsed && (
+              <ChevronRight className={`size-3.5 shrink-0 transition-transform duration-200 text-white/25 ${settingsOpen ? "-rotate-90" : ""}`} />
+            )}
+          </button>
+          {collapsed && (
+            <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#1e293b] border border-white/[0.10] px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+              Configuración
+            </div>
+          )}
+        </div>
 
+        {/* Quick logout in collapsed mode */}
+        {collapsed && (
+          <div className="relative group mt-0.5">
+            <button
+              onClick={() => onLogout?.()}
+              className="flex w-full items-center justify-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-400/50 hover:bg-red-500/10 hover:text-red-400 transition-all duration-150"
+            >
+              <LogOut className="size-[17px] shrink-0" />
+            </button>
+            <div className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#1e293b] border border-white/[0.10] px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+              Cerrar sesión
+            </div>
+          </div>
+        )}
+
+        {/* User chip */}
+        {!collapsed && (
+          <div className="mt-3 flex items-center gap-2.5 rounded-lg px-3 py-2 bg-white/[0.04]">
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-semibold text-white/70 leading-tight">{userName ?? "Usuario"}</p>
+              <p className="truncate text-[9px] text-white/30">{userRole ?? ""}</p>
+            </div>
+          </div>
+        )}
       </div>
-
     </aside>
   )
 }
