@@ -245,7 +245,7 @@ export function InventarioSection() {
 
       {/* Alerta stock bajo */}
       {bajosStock > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="inline-flex self-start items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
             {bajosStock} artículo{bajosStock > 1 ? "s" : ""} con stock bajo — se recomienda reabastecer los marcados en rojo.

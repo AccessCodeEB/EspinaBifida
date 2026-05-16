@@ -854,7 +854,7 @@ export function ServiciosSection() {
                       labelStyle={{ fontWeight: 600, color: "var(--card-foreground)" }}
                       itemStyle={{ color: "var(--card-foreground)" }}
                     />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "15px" }} />
+                    <Legend verticalAlign="bottom" height={56} iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "15px", lineHeight: "2" }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}

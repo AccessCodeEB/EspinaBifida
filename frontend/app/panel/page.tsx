@@ -18,6 +18,7 @@ import { PreregistroSection } from "@/components/sections/preregistro"
 import { ReportesSection } from "@/components/sections/reportes"
 import { Switch } from "@/components/ui/switch"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
+import { AiChatPanel, type AiAction } from "@/components/ai-chat-panel"
 
 /** Secciones válidas de la SPA del panel */
 const VALID_SECTIONS = new Set([
@@ -98,10 +99,19 @@ function PanelHomeContent() {
     if (s && VALID_SECTIONS.has(s)) setActiveSection(s)
   }, [searchParams])
 
-  const handleSectionChange = (section: string) => {
+  const handleSectionChange = useCallback((section: string) => {
     setActiveSection(section)
     router.replace(`/panel?section=${section}`, { scroll: false })
-  }
+  }, [router])
+
+  const handleAiAction = useCallback((action: AiAction) => {
+    if (action.type === "navigate" && VALID_SECTIONS.has(action.to)) {
+      handleSectionChange(action.to)
+    } else {
+      // Las secciones escuchan este evento para abrir diálogos o ejecutar búsquedas
+      window.dispatchEvent(new CustomEvent("ai-action", { detail: action }))
+    }
+  }, [handleSectionChange])
 
   const editBeneficiarioParam = searchParams.get("editBeneficiario")
 
@@ -203,6 +213,7 @@ function PanelHomeContent() {
         onFotoPerfilUpdated={(fotoPerfilUrl) => updateSession({ fotoPerfilUrl })}
       />
 
+      <AiChatPanel onAction={handleAiAction} />
     </>
   )
 }
