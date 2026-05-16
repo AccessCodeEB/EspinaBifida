@@ -17,7 +17,7 @@ function newId(): string {
 
 /** Oculta el bloque de acción mientras el texto llega en streaming */
 function stripActionBlock(text: string): string {
-  return text.replace(/\{\{ACTION:[\s\S]*?\}\}/g, "").trimEnd()
+  return text.replace(/\{\{ACTION:[\s\S]*\}\}/g, "").trimEnd()
 }
 
 const INITIAL_MESSAGE: ChatMessage = {

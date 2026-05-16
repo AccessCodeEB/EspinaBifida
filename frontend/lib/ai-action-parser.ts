@@ -1,6 +1,6 @@
 import type { AiAction } from "./ai-chat-types"
 
-const ACTION_REGEX = /\{\{ACTION:([\s\S]*?)\}\}/
+const ACTION_REGEX = /\{\{ACTION:([\s\S]*)\}\}/
 
 export function parseAction(text: string): { clean: string; action: AiAction | null } {
   const match = text.match(ACTION_REGEX)
