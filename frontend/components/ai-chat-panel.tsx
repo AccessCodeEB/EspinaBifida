@@ -1,9 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bot, ChevronDown, Loader2, Send, Sparkles, X } from "lucide-react"
+import { Bot, CalendarCheck, ChevronDown, Loader2, Send, Sparkles, X } from "lucide-react"
 import { parseAction } from "@/lib/ai-action-parser"
 import type { AiAction, ChatApiMessage, ChatMessage } from "@/lib/ai-chat-types"
+import { getBeneficiarios } from "@/services/beneficiarios"
+import { createCita } from "@/services/citas"
 
 export type { AiAction }
 
@@ -18,6 +20,59 @@ function newId(): string {
 /** Oculta el bloque de acción mientras el texto llega en streaming */
 function stripActionBlock(text: string): string {
   return text.replace(/\{\{ACTION:[\s\S]*\}\}/g, "").trimEnd()
+}
+
+function normalizeStr(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim()
+}
+
+type CreateCitaAction = Extract<AiAction, { type: "createCita" }>
+
+async function ejecutarCreacionCita(action: CreateCitaAction): Promise<string> {
+  const benefs = await getBeneficiarios()
+  const query = normalizeStr(action.beneficiarioBusqueda)
+
+  const matches = benefs.filter((b) => {
+    const nombreCompleto = normalizeStr(`${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`)
+    const nombreCorto = normalizeStr(`${b.nombres} ${b.apellidoPaterno}`)
+    const folio = normalizeStr(b.folio ?? "")
+    return (
+      nombreCompleto.includes(query) ||
+      nombreCorto.includes(query) ||
+      query.includes(nombreCorto) ||
+      folio === query
+    )
+  })
+
+  if (matches.length === 0) {
+    return `No encontré ningún beneficiario con el nombre "${action.beneficiarioBusqueda}". Verifica el nombre e intenta de nuevo.`
+  }
+
+  if (matches.length > 1) {
+    const lista = matches
+      .slice(0, 4)
+      .map((b) => `${b.nombres} ${b.apellidoPaterno} (${b.folio})`)
+      .join(", ")
+    return `Hay varios beneficiarios con ese nombre: ${lista}. Escribe el nombre completo o el folio exacto.`
+  }
+
+  const benef = matches[0]
+  const nombreMostrar = `${benef.nombres} ${benef.apellidoPaterno}`.trim()
+
+  await createCita({
+    curp: benef.folio,
+    idTipoServicio: action.idTipoServicio,
+    fecha: action.fecha,
+    hora: action.hora,
+    especialista: action.especialista,
+    notas: action.notas,
+  })
+
+  return `Cita agendada correctamente para ${nombreMostrar} el ${action.fecha} a las ${action.hora}${action.especialista ? ` con ${action.especialista}` : ""}.`
 }
 
 const INITIAL_MESSAGE: ChatMessage = {
@@ -38,6 +93,8 @@ function ActionBadge({
 }) {
   const [executed, setExecuted] = useState(false)
 
+  if (action.type === "createCita") return null
+
   const label =
     action.type === "navigate"
       ? `Ir a ${action.to}`
@@ -54,6 +111,15 @@ function ActionBadge({
       <Sparkles className="size-3 shrink-0" />
       {executed ? "Ejecutado ✓" : label}
     </button>
+  )
+}
+
+function CitaBadge({ fecha, hora, especialista }: { fecha: string; hora: string; especialista?: string }) {
+  return (
+    <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+      <CalendarCheck className="size-3 shrink-0" />
+      {fecha} · {hora}{especialista ? ` · ${especialista.split(" - ")[0]}` : ""}
+    </div>
   )
 }
 
@@ -75,8 +141,15 @@ function MessageBubble({
         }`}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
-        {!isUser && message.action && (
+        {!isUser && message.action && message.action.type !== "createCita" && (
           <ActionBadge action={message.action} onExecute={onExecute} />
+        )}
+        {!isUser && message.action?.type === "createCita" && (
+          <CitaBadge
+            fecha={message.action.fecha}
+            hora={message.action.hora}
+            especialista={message.action.especialista}
+          />
         )}
       </div>
     </div>
@@ -155,6 +228,27 @@ export function AiChatPanel({ onAction }: { onAction: (action: AiAction) => void
         action: action ?? undefined,
       }
       setMessages((prev) => [...prev, assistantMsg])
+
+      if (action?.type === "createCita") {
+        setStreamingContent(null)
+        setLoading(false)
+        // Auto-ejecutar en background, mostrar resultado como nuevo mensaje
+        ejecutarCreacionCita(action as CreateCitaAction)
+          .then((resultado) => {
+            setMessages((prev) => [
+              ...prev,
+              { id: newId(), role: "assistant", content: resultado },
+            ])
+          })
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : "Error al crear la cita"
+            setMessages((prev) => [
+              ...prev,
+              { id: newId(), role: "assistant", content: `⚠️ ${msg}` },
+            ])
+          })
+        return
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return
       const msg = err instanceof Error ? err.message : "Error desconocido"

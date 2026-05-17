@@ -48,12 +48,16 @@ export async function POST(request: Request) {
   const trimmed = messages.slice(-MAX_HISTORY)
 
   try {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Monterrey" }).format(new Date())
+
+    const systemContent = AI_SYSTEM_PROMPT.replace(/\{\{FECHA_HOY\}\}/g, today)
+
     const stream = await getClient().chat.completions.create({
       model: GROQ_MODEL,
       max_tokens: 1024,
       stream: true,
       messages: [
-        { role: "system", content: AI_SYSTEM_PROMPT },
+        { role: "system", content: systemContent },
         ...trimmed,
       ],
     })
