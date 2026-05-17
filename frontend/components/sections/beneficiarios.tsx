@@ -890,6 +890,29 @@ export function BeneficiariosSection({
                     Cerrar
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={async () => {
+                      const url = await buildCredencialBlobUrl({
+                        ...credencialBeneficiario,
+                        fotoPerfilUrl: resolvePublicUploadUrl(credencialBeneficiario.fotoPerfilUrl ?? undefined),
+                      })
+                      const nombre = [credencialBeneficiario.nombres, credencialBeneficiario.apellidoPaterno]
+                        .filter(Boolean).join("-").replace(/\s+/g, "-")
+                      const a = document.createElement("a")
+                      a.href = url
+                      a.download = `credencial-${nombre}.html`
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      setTimeout(() => URL.revokeObjectURL(url), 2000)
+                    }}
+                  >
+                    <Download className="size-4" />
+                    Descargar
+                  </Button>
+                  <Button
                     size="sm"
                     className="gap-1.5"
                     onClick={async () => {
@@ -966,6 +989,26 @@ export function BeneficiariosSection({
               }}
             >
               Cerrar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!credImpresionUrl}
+              onClick={() => {
+                if (!credImpresionUrl || !credencialBeneficiario) return
+                const nombre = [credencialBeneficiario.nombres, credencialBeneficiario.apellidoPaterno]
+                  .filter(Boolean).join("-").replace(/\s+/g, "-")
+                const a = document.createElement("a")
+                a.href = credImpresionUrl
+                a.download = `credencial-${nombre}.html`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+              }}
+            >
+              <Download className="size-4" />
+              Descargar
             </Button>
             <Button
               size="sm"
