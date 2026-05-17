@@ -333,7 +333,7 @@ export function DashboardSection() {
           className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
           <RefreshCw className="size-3.5" />
           Actualizar
-          <span className="ml-1 text-[10px] opacity-60">
+          <span className="ml-1 text-[10px] leading-none opacity-60">
             {lastRefresh.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
           </span>
         </button>
