@@ -134,12 +134,16 @@ export function ProfilePhotoUpload({
         toast.error("Formato no válido. Usa JPEG, PNG, WebP o GIF.")
         return
       }
-      // Redimensionar antes de mostrar el crop (garantiza base64 manejable en Oracle)
+      // Redimensionar antes de guardar (garantiza base64 manejable en Oracle)
       const resized = await resizeImageFile(file)
-      if (!enableCrop) {
-        await onFileSelected(resized)
-        return
-      }
+
+      // Guardar la foto original tal cual, antes de abrir el crop
+      await onFileSelected(resized)
+
+      if (!enableCrop) return
+
+      // Abrir crop para que el usuario refine el encuadre;
+      // si aplica, se guarda la versión recortada encima de la original
       const url = URL.createObjectURL(resized)
       setCropSrc((prev) => {
         if (prev) URL.revokeObjectURL(prev)
