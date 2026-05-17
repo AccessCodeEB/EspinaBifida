@@ -99,6 +99,22 @@ function PanelHomeContent() {
     if (s && VALID_SECTIONS.has(s)) setActiveSection(s)
   }, [searchParams])
 
+  // Bloquear back/forward del navegador para que no salgan del panel de administrador
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    // Empujar una entrada al historial para que siempre haya un "/panel" arriba del stack
+    window.history.pushState(null, '', '/panel')
+
+    const preventLeave = () => {
+      window.history.pushState(null, '', '/panel')
+    }
+
+    // capture: true para interceptar antes de que Next.js procese el evento
+    window.addEventListener('popstate', preventLeave, true)
+    return () => window.removeEventListener('popstate', preventLeave, true)
+  }, [isAuthenticated])
+
   const handleSectionChange = useCallback((section: string) => {
     setActiveSection(section)
     router.replace(`/panel?section=${section}`, { scroll: false })
