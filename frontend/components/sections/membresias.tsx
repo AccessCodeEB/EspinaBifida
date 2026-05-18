@@ -340,7 +340,7 @@ export function MembresiasSection() {
                             style={{ backgroundColor: NAVY }}
                           >
                             <CreditCard className="size-3.5" />
-                            Pago
+                            Renovar
                           </button>
                         )}
                       </td>
