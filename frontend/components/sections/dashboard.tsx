@@ -164,6 +164,7 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
 /* ── Dashboard ── */
 export function DashboardSection() {
   const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
+  const [agotadosCount, setAgotadosCount]             = useState<number | null>(null)
   const [stockBajo, setStockBajo]                     = useState<ArticuloInventario[]>([])
   const [loadingStock, setLoadingStock]               = useState(true)
   const [activosMembresia, setActivosMembresia]       = useState<number | null>(null)
@@ -192,7 +193,9 @@ export function DashboardSection() {
             return qty <= min
           })
           .sort((a, b) => Number(b.cantidad ?? 0) - Number(a.cantidad ?? 0))
+        const agotados = items.filter((i) => Number(i.cantidad ?? 0) <= 0)
         setInventarioBajoCount(bajos.length)
+        setAgotadosCount(agotados.length)
         setStockBajo(bajos)
       })
       .catch(() => { setInventarioBajoCount(null); setStockBajo([]) })
@@ -302,12 +305,12 @@ export function DashboardSection() {
       trend: "up" as const, loading: false,
     },
     {
-      label: "Artículos bajos", value: inventarioBajoCount ?? "--",
-      sub: inventarioBajoCount === 0 ? "Sin alertas" : "Requieren reposición",
-      icon: Package, color: inventarioBajoCount ? "#ef4444" : "#10b981",
-      trend: inventarioBajoCount ? "down" as const : "flat" as const, loading: false,
+      label: "Artículos agotados", value: agotadosCount ?? "--",
+      sub: agotadosCount === 0 ? "Sin agotados" : "Sin existencias",
+      icon: Package, color: agotadosCount ? "#ef4444" : "#10b981",
+      trend: agotadosCount ? "down" as const : "flat" as const, loading: false,
     },
-  ], [activosMembresia, solicitudesPendientes, inventarioBajoCount, loadingBenef])
+  ], [activosMembresia, solicitudesPendientes, inventarioBajoCount, agotadosCount, loadingBenef])
 
   const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
