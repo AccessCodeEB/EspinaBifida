@@ -45,7 +45,7 @@ describe('rateLimiter configs', () => {
 describe('loginLimiter blocks after max attempts (real behavior)', () => {
   let app;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const express = (await import('express')).default;
     const { rateLimit } = await import('express-rate-limit');
     const testLimiter = rateLimit({

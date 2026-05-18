@@ -39,6 +39,8 @@ const authLimiterOptions = {
 };
 
 export const loginLimiter = rateLimit(loginLimiterOptions);
+// express-rate-limit v7 does not expose .options on the middleware function;
+// attach the options object manually so tests can assert configured values.
 loginLimiter.options = loginLimiterOptions;
 
 export const publicLimiter = rateLimit(publicLimiterOptions);
