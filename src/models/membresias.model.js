@@ -16,10 +16,10 @@ export async function findAll() {
               c.MONTO,
               c.METODO_PAGO,
               c.REFERENCIA,
-              (c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE)) AS DIAS_RESTANTES,
+              (TRUNC(c.FECHA_VIGENCIA_FIN) - TRUNC(SYSDATE)) AS DIAS_RESTANTES,
               CASE
-                WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30 THEN 'Activa'
-                WHEN c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE) AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30 THEN 'Por vencer'
+                WHEN TRUNC(c.FECHA_VIGENCIA_FIN) >= TRUNC(SYSDATE) AND TRUNC(c.FECHA_VIGENCIA_FIN) - TRUNC(SYSDATE) > 30 THEN 'Activa'
+                WHEN TRUNC(c.FECHA_VIGENCIA_FIN) >= TRUNC(SYSDATE) AND TRUNC(c.FECHA_VIGENCIA_FIN) - TRUNC(SYSDATE) <= 30 THEN 'Por vencer'
                 ELSE 'Vencida'
               END AS ESTATUS_MEMBRESIA
        FROM CREDENCIALES c
@@ -260,7 +260,11 @@ export async function create({
 }) {
   const toDate = (v) => {
     if (!v) return null;
-    return v instanceof Date ? v : new Date(v);
+    if (v instanceof Date) return v;
+    // Parsear ISO YYYY-MM-DD como medianoche UTC para evitar desfase de zona horaria
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v).trim());
+    if (m) return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    return new Date(v);
   };
 
   const conn = await getConnection();

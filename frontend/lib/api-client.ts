@@ -48,6 +48,10 @@ async function request<T>(
     } catch {
       /* usar texto crudo */
     }
+    // Errores internos del servidor: mostrar mensaje amigable en lugar de detalles técnicos
+    if (res.status >= 500) {
+      message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
+    }
     throw new ApiError(res.status, message, code)
   }
 
@@ -97,6 +101,9 @@ async function requestFormData<T>(path: string, form: FormData, init: RequestIni
       if (typeof parsed?.code === "string") code = parsed.code
     } catch {
       /* usar texto crudo */
+    }
+    if (res.status >= 500) {
+      message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
     }
     throw new ApiError(res.status, message, code)
   }
