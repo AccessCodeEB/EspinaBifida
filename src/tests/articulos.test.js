@@ -18,6 +18,7 @@ const { default: request } = await import("supertest");
 import jwt from "jsonwebtoken";
 
 const tokenAdmin = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
+const tokenRecepcion = jwt.sign({ idAdmin: 2, idRol: 2 }, TEST_SECRET);
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 const articuloBase = {
@@ -38,6 +39,11 @@ const articuloRow = {
   INVENTARIO_ACTUAL:  10,
   MANEJA_INVENTARIO:  "S",
   ID_CATEGORIA:       3,
+};
+
+const articuloRowSinStock = {
+  ...articuloRow,
+  INVENTARIO_ACTUAL: 0,
 };
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -246,20 +252,34 @@ describe("PUT /api/v1/articulos/:id — actualizar artículo", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("DELETE /api/v1/articulos/:id — eliminar artículo", () => {
-  test("elimina artículo sin movimientos (200)", async () => {
-    // findById → existe
-    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
-    // countMovimientosByArticulo → 0
-    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
-    // DELETE
+  test("elimina artículo si el stock es 0 (200)", async () => {
+    // findById del controller → existe
+    mockExecute.mockResolvedValueOnce({ rows: [articuloRowSinStock] });
+    // findById del service → existe y stock en 0
+    mockExecute.mockResolvedValueOnce({ rows: [articuloRowSinStock] });
+    // UPDATE ACTIVO = 'N'
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .delete("/api/v1/articulos/101")
-      .set("Authorization", `Bearer ${tokenAdmin}`);
+      .set("Authorization", `Bearer ${tokenRecepcion}`);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/eliminado/i);
+  });
+
+  test("devuelve 409 si el artículo todavía tiene stock", async () => {
+    // findById del controller → existe
+    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
+    // findById del service → existe con stock > 0
+    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
+
+    const res = await request(app)
+      .delete("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenRecepcion}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("ARTICULO_CON_STOCK");
   });
 
   test("devuelve 401 sin token", async () => {
@@ -276,19 +296,5 @@ describe("DELETE /api/v1/articulos/:id — eliminar artículo", () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/no encontrado/i);
-  });
-
-  test("devuelve 409 si el artículo tiene movimientos registrados", async () => {
-    // findById → existe
-    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
-    // countMovimientosByArticulo → 5
-    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 5 }] });
-
-    const res = await request(app)
-      .delete("/api/v1/articulos/101")
-      .set("Authorization", `Bearer ${tokenAdmin}`);
-
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe("ARTICULO_HAS_MOVIMIENTOS");
   });
 });

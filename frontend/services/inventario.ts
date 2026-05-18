@@ -34,6 +34,7 @@ export interface NuevoArticuloPayload {
   inventarioActual: number
   manejaInventario: "S" | "N"
   idCategoria: number
+  stockMinimo?: number
 }
 
 function toArticuloInventario(row: Record<string, unknown>): ArticuloInventario {
@@ -90,6 +91,11 @@ export function registrarMovimiento(data: MovimientoPayload) {
 /** POST /articulos */
 export function crearArticulo(data: NuevoArticuloPayload) {
   return apiClient.post<{ message: string }>("/articulos", data)
+}
+
+/** PATCH /articulos/:id */
+export function actualizarArticulo(idArticulo: string | number, data: Partial<NuevoArticuloPayload>) {
+  return apiClient.put<{ message: string }>(`/articulos/${idArticulo}`, data)
 }
 
 /** DELETE /articulos/:id */

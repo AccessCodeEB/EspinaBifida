@@ -3,8 +3,27 @@
 -- Run once against Oracle DB:
 --   sqlplus user/pass@connection @scripts/stored-procedures.sql
 --
--- PREREQUISITE: scripts/add-stock-resultante-column.sql must run first.
+-- Este script asegura primero la columna STOCK_RESULTANTE y luego compila
+-- el procedure/triggers necesarios para inventario.
 -- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Prerrequisito local: columna STOCK_RESULTANTE en MOVIMIENTOS_INVENTARIO
+-- -----------------------------------------------------------------------------
+DECLARE
+  v_count NUMBER := 0;
+BEGIN
+  SELECT COUNT(*)
+    INTO v_count
+    FROM USER_TAB_COLUMNS
+   WHERE TABLE_NAME = 'MOVIMIENTOS_INVENTARIO'
+     AND COLUMN_NAME = 'STOCK_RESULTANTE';
+
+  IF v_count = 0 THEN
+    EXECUTE IMMEDIATE 'ALTER TABLE MOVIMIENTOS_INVENTARIO ADD (STOCK_RESULTANTE NUMBER DEFAULT 0 NOT NULL)';
+  END IF;
+END;
+/
 
 -- -----------------------------------------------------------------------------
 -- SP 1: Registrar movimiento de inventario (ENTRADA o SALIDA)
@@ -62,6 +81,27 @@ EXCEPTION
   WHEN OTHERS THEN
     RAISE;
 END SP_REGISTRAR_MOVIMIENTO_INVENTARIO;
+/
+
+-- SEQUENCE para ID_MOVIMIENTO (si no existe)
+CREATE SEQUENCE SEQ_MOVIMIENTOS_INVENTARIO
+  START WITH 1
+  INCREMENT BY 1
+  NOCACHE
+  NOCYCLE;
+/
+
+-- Trigger para asignar ID_MOVIMIENTO automáticamente
+CREATE OR REPLACE TRIGGER TRG_MOV_INV_BI
+BEFORE INSERT ON MOVIMIENTOS_INVENTARIO
+FOR EACH ROW
+BEGIN
+  IF :NEW.ID_MOVIMIENTO IS NULL THEN
+    SELECT SEQ_MOVIMIENTOS_INVENTARIO.NEXTVAL
+    INTO :NEW.ID_MOVIMIENTO
+    FROM DUAL;
+  END IF;
+END TRG_MOV_INV_BI;
 /
 
 -- -----------------------------------------------------------------------------

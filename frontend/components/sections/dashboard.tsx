@@ -184,8 +184,13 @@ export function DashboardSection() {
 
     getInventario()
       .then((items) => {
+        // Use per-item minimo when available; fallback to INVENTARIO_BAJO_UMBRAL
         const bajos = items
-          .filter((i) => Number(i.cantidad ?? 0) <= INVENTARIO_BAJO_UMBRAL)
+          .filter((i) => {
+            const qty = Number(i.cantidad ?? 0)
+            const min = Number(i.minimo ?? INVENTARIO_BAJO_UMBRAL)
+            return qty <= min
+          })
           .sort((a, b) => Number(b.cantidad ?? 0) - Number(a.cantidad ?? 0))
         setInventarioBajoCount(bajos.length)
         setStockBajo(bajos)

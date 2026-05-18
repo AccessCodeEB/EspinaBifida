@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
-  getInventario, registrarMovimiento, crearArticulo, eliminarArticulo,
+  getInventario, registrarMovimiento, crearArticulo, eliminarArticulo, actualizarArticulo,
   type ArticuloInventario,
 } from "@/services/inventario"
 
@@ -28,6 +28,7 @@ type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
 type SortDirection = "asc" | "desc"
 const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 const NAVY  = "#0f4c81"
+const DEFAULT_CATEGORIA_ID = 1
 
 function field<T extends object>(label: string, children: React.ReactNode) {
   return (
@@ -51,12 +52,14 @@ export function InventarioSection() {
   const [motivoMovimiento, setMotivoMovimiento]   = useState<string>("")
   const [savingMovimiento, setSavingMovimiento]   = useState(false)
   const [movimientoError, setMovimientoError]     = useState<string | null>(null)
+  const [stockMinimoEditar, setStockMinimoEditar] = useState<string>("0")
+  const [savingStockMinimo, setSavingStockMinimo] = useState(false)
 
   const [showAgregarDialog, setShowAgregarDialog]   = useState(false)
   const [showEliminarDialog, setShowEliminarDialog] = useState(false)
   const [articuloForm, setArticuloForm] = useState({
     idArticulo: "", descripcion: "", unidad: "PZA.",
-    cuotaRecuperacion: "0", inventarioActual: "0", idCategoria: "1",
+    cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5",
   })
   const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>("PZA.")
   const [unidadNueva, setUnidadNueva]   = useState<string>("")
@@ -78,13 +81,20 @@ export function InventarioSection() {
   }
   useEffect(() => { loadData() }, [])
 
+  
+
   const refreshInventario = async () => { const data = await getInventario(); setInventario(data) }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-sm text-muted-foreground">Cargando inventario...</p></div>
   if (error)   return <div className="flex h-64 items-center justify-center"><p className="text-sm text-destructive">{error}</p></div>
 
+  const EXCLUDED_UNITS = ["UNIDAD", "CITA"]
   const unidadesDisponibles = Array.from(
-    new Set(inventario.map(i => i.unidad).filter(u => String(u ?? "").trim() !== ""))
+    new Set(inventario.map(i => i.unidad).filter(u => {
+      const s = String(u ?? "").trim()
+      if (!s) return false
+      return !EXCLUDED_UNITS.includes(s.toUpperCase())
+    }))
   ).sort((a, b) => a.localeCompare(b, "es"))
   const unidadesParaAlta = Array.from(new Set(["PZA.", ...unidadesDisponibles])).sort((a, b) => a.localeCompare(b, "es"))
 
@@ -111,8 +121,8 @@ export function InventarioSection() {
     return (Number(a.cantidad) - Number(b.cantidad)) * f
   })
 
-  const bajosStock = inventario.filter(i => i.cantidad < i.minimo).length
   const sinStock   = inventario.filter(i => i.cantidad === 0).length
+  const bajosStock = inventario.filter(i => i.cantidad > 0 && i.cantidad < i.minimo).length
 
   function handleSort(f: SortField) {
     setUnidadFilterIndex(-1)
@@ -133,33 +143,55 @@ export function InventarioSection() {
   function openMovimiento(item: ArticuloInventario | null = null) {
     setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
     setCantidadMovimiento("0"); setMotivoMovimiento(""); setMovimientoError(null)
+    setStockMinimoEditar(item ? String(item.minimo) : "0")
     setShowMovimientoDialog(true)
   }
-  function closeMovimientoDialog() { setShowMovimientoDialog(false); setSavingMovimiento(false); setMovimientoError(null) }
+  function closeMovimientoDialog() { setShowMovimientoDialog(false); setSavingMovimiento(false); setSavingStockMinimo(false); setMovimientoError(null); setStockMinimoEditar("0") }
 
   const normQty = (v: string) => { const p = Math.trunc(Number(v)); return isNaN(p) ? 0 : p }
 
   async function handleConfirmMovimiento() {
     const id = Number(selectedItem ? selectedItem.clave : selectedArticuloId)
     const qty = normQty(cantidadMovimiento)
+    const minimo = Number(stockMinimoEditar)
+    
     if (!id || isNaN(id)) { setMovimientoError("Selecciona un artículo válido."); return }
-    if (qty === 0) { setMovimientoError("La cantidad no puede ser 0."); return }
-    setSavingMovimiento(true); setMovimientoError(null)
+    if (isNaN(minimo) || minimo < 0) { setMovimientoError("Stock mínimo debe ser ≥ 0."); return }
+    if (qty === 0 && minimo === (selectedItem?.minimo ?? 5)) { setMovimientoError("Sin cambios para guardar."); return }
+    
+    setSavingMovimiento(true); setSavingStockMinimo(true); setMovimientoError(null)
     try {
-      await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "Movimiento manual" })
+      // 1. Guardar stock mínimo si cambió
+      if (minimo !== (selectedItem?.minimo ?? 5)) {
+        await actualizarArticulo(id, { stockMinimo: minimo })
+      }
+      
+      // 2. Registrar movimiento si hay cantidad
+      if (qty !== 0) {
+        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "Movimiento manual" })
+      }
+      
       await refreshInventario()
       closeMovimientoDialog()
-      toast.success(qty > 0 ? "Entrada registrada correctamente" : "Salida registrada correctamente")
+      
+      const updates: string[] = []
+      if (minimo !== (selectedItem?.minimo ?? 5)) updates.push("Stock mínimo actualizado")
+      if (qty !== 0) updates.push(qty > 0 ? "Entrada registrada" : "Salida registrada")
+      
+      toast.success(updates.length > 0 ? updates.join(" • ") : "Cambios guardados")
     } catch (err: unknown) {
-      setMovimientoError(err instanceof Error ? err.message : "No se pudo registrar el movimiento")
-      toast.error(err instanceof Error ? err.message : "No se pudo registrar el movimiento")
+      const msg = err instanceof Error ? err.message : "No se pudo guardar los cambios"
+      setMovimientoError(msg)
+      toast.error(msg)
+    } finally {
       setSavingMovimiento(false)
+      setSavingStockMinimo(false)
     }
   }
 
   function openAgregarArticulo() {
     setArticuloError(null); setSavingArticulo(false)
-    setArticuloForm({ idArticulo: "", descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", inventarioActual: "0", idCategoria: "1" })
+    setArticuloForm({ idArticulo: "", descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5" })
     setUnidadSeleccionada("PZA."); setUnidadNueva(""); setShowAgregarDialog(true)
   }
   function handleUnidadSeleccion(value: string) {
@@ -174,17 +206,26 @@ export function InventarioSection() {
 
   async function handleAgregarArticulo() {
     const id = Number(articuloForm.idArticulo), cuota = Number(articuloForm.cuotaRecuperacion)
-    const inv = Number(articuloForm.inventarioActual), cat = Number(articuloForm.idCategoria)
+    const inv = Number(articuloForm.inventarioActual), minimo = Number(articuloForm.stockMinimo)
     if (isNaN(id)) { setArticuloError("La clave debe ser numérica."); return }
     if (!articuloForm.descripcion.trim()) { setArticuloError("La descripción es obligatoria."); return }
     const unidadFinal = unidadSeleccionada === OTRA_UNIDAD_VALUE ? unidadNueva.trim() : articuloForm.unidad.trim()
     if (!unidadFinal) { setArticuloError("La unidad es obligatoria."); return }
     if (isNaN(cuota) || cuota < 0) { setArticuloError("La cuota debe ser ≥ 0."); return }
     if (isNaN(inv) || inv < 0) { setArticuloError("La cantidad inicial debe ser ≥ 0."); return }
-    if (isNaN(cat)) { setArticuloError("La categoría debe ser numérica."); return }
+    if (isNaN(minimo) || minimo < 0) { setArticuloError("El stock mínimo debe ser ≥ 0."); return }
     setSavingArticulo(true); setArticuloError(null)
     try {
-      await crearArticulo({ idArticulo: id, descripcion: articuloForm.descripcion.trim(), unidad: unidadFinal, cuotaRecuperacion: cuota, inventarioActual: inv, manejaInventario: "S", idCategoria: cat })
+      await crearArticulo({
+        idArticulo: id,
+        descripcion: articuloForm.descripcion.trim(),
+        unidad: unidadFinal,
+        cuotaRecuperacion: cuota,
+        inventarioActual: inv,
+        manejaInventario: "S",
+        idCategoria: DEFAULT_CATEGORIA_ID,
+        stockMinimo: minimo,
+      })
       await refreshInventario(); setShowAgregarDialog(false)
       toast.success("Artículo agregado al inventario")
     } catch (err: unknown) {
@@ -224,12 +265,11 @@ export function InventarioSection() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {[
           { label: "Total artículos",  value: inventario.length, color: NAVY,      icon: Package },
           { label: "Stock bajo",       value: bajosStock,        color: "#f59e0b", icon: AlertTriangle },
           { label: "Sin stock",        value: sinStock,          color: "#ef4444", icon: AlertTriangle },
-          { label: "Mostrando",        value: sortedFiltered.length, color: "#10b981", icon: Package },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between">
@@ -243,15 +283,8 @@ export function InventarioSection() {
         ))}
       </div>
 
-      {/* Alerta stock bajo */}
-      {bajosStock > 0 && (
-        <div className="inline-flex self-start items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
-          <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-            {bajosStock} artículo{bajosStock > 1 ? "s" : ""} con stock bajo — se recomienda reabastecer los marcados en rojo.
-          </p>
-        </div>
-      )}
+      {/* Entry banner (top-center) */}
+      
 
       {/* Tabla */}
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
@@ -393,13 +426,18 @@ export function InventarioSection() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setCantidadMovimiento(p => String(normQty(p) - 1))}
                   className="flex size-10 items-center justify-center rounded-lg border border-border text-lg font-bold text-muted-foreground hover:bg-muted transition-colors">−</button>
-                <div className={`min-w-[5rem] flex-1 rounded-lg border border-border bg-background py-2.5 text-center text-lg font-bold tabular-nums ${qtyColor}`}>
-                  {qty > 0 ? `+${qty}` : qty}
-                </div>
+                <Input
+                  className={`h-10 flex-1 text-center text-lg font-bold tabular-nums ${qtyColor}`}
+                  type="number"
+                  step="1"
+                  placeholder="Ej. 500 o -500"
+                  value={cantidadMovimiento}
+                  onChange={e => setCantidadMovimiento(e.target.value)}
+                />
                 <button onClick={() => setCantidadMovimiento(p => String(normQty(p) + 1))}
                   className="flex size-10 items-center justify-center rounded-lg border border-border text-lg font-bold text-muted-foreground hover:bg-muted transition-colors">+</button>
               </div>
-              <p className="text-[11px] text-muted-foreground">Positivo = entrada · Negativo = salida</p>
+              <p className="text-[11px] text-muted-foreground">Escribe un número positivo para entrada o negativo para salida.</p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -407,17 +445,27 @@ export function InventarioSection() {
               <Input className="h-10 text-sm" placeholder="Descripción del movimiento" value={motivoMovimiento} onChange={e => setMotivoMovimiento(e.target.value)} />
             </div>
 
+            {/* Divisor */}
+            <div className="border-t border-border/40 pt-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Stock mínimo</p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Nuevo mínimo</label>
+                <Input className="h-10 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
+                <p className="text-[11px] text-muted-foreground">Stock actual: <span className="font-medium">{selectedItem?.cantidad ?? 0}</span> · Mínimo actual: <span className="font-medium">{selectedItem?.minimo ?? 0}</span></p>
+              </div>
+            </div>
+
             {movimientoError && (
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{movimientoError}</p>
             )}
 
             <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
-              <button onClick={closeMovimientoDialog} disabled={savingMovimiento}
+              <button onClick={closeMovimientoDialog} disabled={savingMovimiento || savingStockMinimo}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">Cancelar</button>
-              <button onClick={handleConfirmMovimiento} disabled={savingMovimiento}
+              <button onClick={handleConfirmMovimiento} disabled={savingMovimiento || savingStockMinimo}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: NAVY }}>
-                {savingMovimiento ? "Guardando..." : "Confirmar"}
+                {savingMovimiento || savingStockMinimo ? "Guardando..." : "Confirmar y guardar"}
               </button>
             </div>
           </div>
@@ -426,47 +474,66 @@ export function InventarioSection() {
 
       {/* ── Dialog: Agregar artículo ── */}
       <Dialog open={showAgregarDialog} onOpenChange={setShowAgregarDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl w-[min(95vw,56rem)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Agregar artículo</DialogTitle>
             <DialogDescription className="text-xs">Crea un artículo nuevo en el inventario.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-1">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Clave (ID)</label>
-              <Input className="h-10 text-sm" type="number" min="1" placeholder="Ej. 500" value={articuloForm.idArticulo} onChange={e => setArticuloForm(p => ({ ...p, idArticulo: e.target.value }))} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Descripción</label>
-              <Input className="h-10 text-sm" placeholder="Nombre del artículo" value={articuloForm.descripcion} onChange={e => setArticuloForm(p => ({ ...p, descripcion: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Unidad</label>
-                <Select value={unidadSeleccionada} onValueChange={handleUnidadSeleccion}>
-                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Unidad" /></SelectTrigger>
-                  <SelectContent>
-                    {unidadesParaAlta.map((u, i) => <SelectItem key={`u-${i}`} value={u}>{u}</SelectItem>)}
-                    <SelectItem value={OTRA_UNIDAD_VALUE}>Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-                {unidadSeleccionada === OTRA_UNIDAD_VALUE && (
-                  <Input className="h-10 text-sm mt-1" placeholder="Nueva unidad" value={unidadNueva} onChange={e => setUnidadNueva(e.target.value)} />
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Categoría (ID)</label>
-                <Input className="h-10 text-sm" type="number" min="1" value={articuloForm.idCategoria} onChange={e => setArticuloForm(p => ({ ...p, idCategoria: e.target.value }))} />
+          <div className="space-y-5 pt-1">
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Datos del artículo</p>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Clave del artículo</label>
+                  <Input className="h-10 text-sm" type="number" min="1" placeholder="Ej. 500" value={articuloForm.idArticulo} onChange={e => setArticuloForm(p => ({ ...p, idArticulo: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Descripción</label>
+                  <Input className="h-10 text-sm" placeholder="Nombre del artículo" value={articuloForm.descripcion} onChange={e => setArticuloForm(p => ({ ...p, descripcion: e.target.value }))} />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota recuperación</label>
-                <Input className="h-10 text-sm" type="number" min="0" step="0.01" value={articuloForm.cuotaRecuperacion} onChange={e => setArticuloForm(p => ({ ...p, cuotaRecuperacion: e.target.value }))} />
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Clasificación automática</p>
+              <div className="grid grid-cols-1 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Unidad de medida</label>
+                  <Select value={unidadSeleccionada} onValueChange={handleUnidadSeleccion}>
+                    <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Unidad" /></SelectTrigger>
+                    <SelectContent>
+                      {unidadesParaAlta.map((u, i) => <SelectItem key={`u-${i}`} value={u}>{u}</SelectItem>)}
+                      <SelectItem value={OTRA_UNIDAD_VALUE}>Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {unidadSeleccionada === OTRA_UNIDAD_VALUE && (
+                    <Input className="h-10 text-sm mt-1" placeholder="Nueva unidad" value={unidadNueva} onChange={e => setUnidadNueva(e.target.value)} />
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad inicial</label>
-                <Input className="h-10 text-sm" type="number" min="0" value={articuloForm.inventarioActual} onChange={e => setArticuloForm(p => ({ ...p, inventarioActual: e.target.value }))} />
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Inventario inicial</p>
+              <div className="space-y-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio de recuperación</label>
+                  <Input className="h-10 text-sm" type="number" min="0" step="0.01" value={articuloForm.cuotaRecuperacion} onChange={e => setArticuloForm(p => ({ ...p, cuotaRecuperacion: e.target.value }))} />
+                  <p className="text-[11px] text-muted-foreground">Monto que se cobra o recupera por este artículo.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Existencia inicial</label>
+                    <Input className="h-10 text-sm" type="number" min="0" value={articuloForm.inventarioActual} onChange={e => setArticuloForm(p => ({ ...p, inventarioActual: e.target.value }))} />
+                    <p className="text-[11px] text-muted-foreground">Con cuántas piezas arranca el artículo.</p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Stock de alerta</label>
+                    <Input className="h-10 text-sm" type="number" min="0" value={articuloForm.stockMinimo} onChange={e => setArticuloForm(p => ({ ...p, stockMinimo: e.target.value }))} />
+                    <p className="text-[11px] text-muted-foreground">Nivel mínimo para marcar aviso de reposición.</p>
+                  </div>
+                </div>
               </div>
             </div>
             {articuloError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{articuloError}</p>}
@@ -501,10 +568,10 @@ export function InventarioSection() {
                     <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[420px] p-0" align="start">
+                <PopoverContent className="w-[420px] max-h-[280px] p-0 overflow-hidden" align="start">
                   <Command shouldFilter>
                     <CommandInput placeholder="Clave o descripción..." />
-                    <CommandList>
+                    <CommandList className="max-h-[240px] overflow-y-auto">
                       <CommandEmpty>No se encontraron artículos.</CommandEmpty>
                       <CommandGroup>
                         {inventario.map((item, idx) => {
