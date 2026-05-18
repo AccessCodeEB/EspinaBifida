@@ -253,3 +253,89 @@ describe("GET /membresias/:curp/activa — validarMembresiaActiva", () => {
     expect(res.body.estatus).toBe("VENCIDA");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// postSyncEstados — líneas 57–61 (nunca cubierto)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /membresias/sync-estados — postSyncEstados", () => {
+  test("sincroniza estados y responde 200 con mensaje", async () => {
+    // syncEstados → UPDATE CREDENCIALES SET ESTATUS...
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 5 });
+
+    const res = await request(app)
+      .post("/membresias/sync-estados")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("error en syncEstados → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB error"));
+
+    const res = await request(app)
+      .post("/membresias/sync-estados")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBeGreaterThanOrEqual(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getPagosRecientes — líneas 66–71 (cubre mapPago, líneas 31-32)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const pagoRow = {
+  ID_CREDENCIAL:         7,
+  CURP,
+  NOMBRE_COMPLETO:       "Juan García",
+  FECHA_EMISION:         "2026-01-01",
+  FECHA_VIGENCIA_INICIO: "2026-01-01",
+  FECHA_VIGENCIA_FIN:    "2027-01-01",
+  FECHA_ULTIMO_PAGO:     "2026-01-15",
+  MONTO:                 500,
+  METODO_PAGO:           "transferencia",
+  REFERENCIA:            "REF-001",
+  OBSERVACIONES:         "Alta inicial",
+};
+
+describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
+  test("retorna lista de pagos mapeada con mapPago (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [pagoRow] });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0]).toMatchObject({
+      idCredencial: 7,
+      curp:         CURP,
+      monto:        500,
+      metodoPago:   "transferencia",
+      referencia:   "REF-001",
+    });
+  });
+
+  test("acepta query param ?limit=5", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [pagoRow] });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes?limit=5")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  test("error en getPagosRecientes → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB error"));
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBeGreaterThanOrEqual(500);
+  });
+});

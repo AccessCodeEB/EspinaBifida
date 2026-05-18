@@ -1,7 +1,7 @@
 "use client"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
@@ -14,11 +14,11 @@ const DIAS_S=["L","M","X","J","V","S","D"]
 const DIAS_L=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-blue-500",Completada:"border-l-slate-400",Cancelada:"border-l-red-500"}
-const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-blue-500/10",Completada:"bg-slate-500/10",Cancelada:"bg-red-500/10"}
-const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-400",Cancelada:"bg-red-500"}
-const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-blue-600 dark:text-blue-400",Completada:"text-slate-500",Cancelada:"text-red-600 dark:text-red-400"}
-const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-blue-500",Completada:"bg-slate-500",Cancelada:"bg-red-500"}
+const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-amber-500",Completada:"border-l-blue-500",Cancelada:"border-l-red-500"}
+const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-amber-500/10",Completada:"bg-blue-500/10",Cancelada:"bg-red-500/10"}
+const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-amber-500",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
+const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-amber-600 dark:text-amber-400",Completada:"text-blue-600 dark:text-blue-400",Cancelada:"text-red-600 dark:text-red-400"}
+const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-amber-500",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
 const POPUP_LABEL:Record<string,string>={Confirmada:"Confirmada",Pendiente:"Pendiente",Completada:"Completada",Cancelada:"Cancelada"}
 
 function sameDay(a:Date,b:Date){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
@@ -91,7 +91,18 @@ export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:
 function NowLine(){
   const[now,setNow]=useState(()=>new Date())
   const ref=useRef<HTMLDivElement>(null)
-  useEffect(()=>{ref.current?.scrollIntoView({behavior:"smooth",block:"center"});const id=setInterval(()=>setNow(new Date()),60_000);return()=>clearInterval(id)},[])
+  useEffect(()=>{
+    setTimeout(() => {
+      const el = ref.current
+      const container = document.getElementById("citas-grid")
+      if(el && container) {
+        const target = el.offsetTop - container.clientHeight / 2
+        container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
+      }
+    }, 150)
+    const id=setInterval(()=>setNow(new Date()),60_000);
+    return()=>clearInterval(id)
+  },[])
   const top=minsToTop(now.getHours()*60+now.getMinutes())
   if(top<0||top>GRID_H)return null
   return(
@@ -237,7 +248,7 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
               <button
                 disabled={isUpdating}
                 onClick={() => onAction(cita.id, "Cancelada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
               >
                 <X className="size-3.5"/>Cancelar
               </button>
@@ -267,57 +278,74 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
 }
 
 // ── Action Center (Citas Pendientes) ───────────────────────────────────────────────────────
+const PAGE_SIZE = 5
 function ActionCenter({
-  citas,onNavigate,onAction,updatingId
+  citas,onNavigate
 }:{
   citas:Cita[]
   onNavigate:(c:Cita)=>void
-  onAction:(id:number,e:Cita["estatus"])=>void
-  updatingId:number|null
 }){
-  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada").slice(0,8)
+  const[page,setPage]=useState(0)
+  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
+  const totalPages=Math.max(1,Math.ceil(pending.length/PAGE_SIZE))
+  const safePage=Math.min(page,totalPages-1)
+  const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
+
   if(!pending.length)return(
-    <div className="rounded-2xl border border-border/40 bg-card/60 p-4">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Citas Pendientes</p>
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Citas Pendientes</p>
       <p className="text-xs text-muted-foreground/50">Sin citas pendientes ✓</p>
     </div>
   )
   return(
-    <div className="rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col gap-3">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 flex flex-col gap-2">
+      {/* Header */}
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
         <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
-      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-0.5">
-        {pending.map(c=>(
-          <div key={c.id} className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5 group">
-            <button className="w-full text-left" onClick={()=>onNavigate(c)}>
-              <p className="text-[11px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">{c.beneficiario}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-                <p className="text-[10px] text-muted-foreground">{c.fecha} · {c.hora} · {c.estatus}</p>
-              </div>
-            </button>
-            <div className="flex gap-1.5 mt-2">
-              {c.estatus==="Pendiente"&&(
-                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Confirmada")}
-                  className="flex-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
-                  Confirmar
-                </button>
-              )}
-              {c.estatus==="Confirmada"&&(
-                <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Completada")}
-                  className="flex-1 rounded-lg bg-sky-600/80 hover:bg-sky-600 py-1 text-[10px] font-semibold text-white transition-colors disabled:opacity-40">
-                  Completar
-                </button>
-              )}
-              <button disabled={updatingId===c.id} onClick={()=>onAction(c.id,"Cancelada")}
-                className="rounded-lg border border-border/40 bg-muted/30 hover:bg-red-500/10 hover:border-red-400/40 hover:text-red-400 px-2 py-1 text-[10px] text-muted-foreground transition-colors disabled:opacity-40">
-                Cancelar
-              </button>
+
+      {/* Cards — flex-1, clipped with overflow-hidden so pagination is never pushed out */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-1.5">
+        {slice.map(c=>(
+          <button
+            key={c.id}
+            onClick={()=>onNavigate(c)}
+            className="w-full shrink-0 text-left rounded-xl border border-border/30 bg-muted/20 px-3 py-2 hover:bg-muted/40 hover:border-border/60 transition-colors group"
+          >
+            <p className="text-[12px] font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
+              {c.beneficiario}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
+              <p className="text-[10px] text-muted-foreground whitespace-nowrap">{c.fecha} · {c.hora}</p>
+              <span className={`ml-auto shrink-0 flex items-center justify-center rounded-md border p-1 ${
+                c.estatus==="Confirmada"
+                  ?"border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  :"border-amber-500/30 bg-amber-500/10 text-amber-400"
+              }`}>
+                {c.estatus==="Confirmada" ? <CheckCircle2 className="size-3.5" /> : <Clock className="size-3.5" />}
+              </span>
             </div>
-          </div>
+          </button>
         ))}
+      </div>
+
+      {/* Pagination — always shrink-0 at bottom, never pushed out */}
+      <div className="shrink-0 flex items-center justify-center gap-2 border-t border-border/20 pt-1.5 mt-auto">
+        <button
+          onClick={()=>setPage(p=>Math.max(0,p-1))}
+          disabled={safePage===0}
+          className="flex size-6 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronLeft className="size-3"/></button>
+        <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+          {safePage+1} / {totalPages}
+        </span>
+        <button
+          onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))}
+          disabled={safePage===totalPages-1}
+          className="flex size-6 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-25 disabled:cursor-not-allowed"
+        ><ChevronRight className="size-3"/></button>
       </div>
     </div>
   )
@@ -382,7 +410,7 @@ function CitaDetailPanel({selected,onClose,onAction,updatingId}:{
               <Check className="size-3.5"/>Completar
             </button>
             <button disabled={isUpdating} onClick={()=>onAction(cita.id,"Cancelada")}
-              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50">
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-300 bg-red-50 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60">
               <X className="size-3.5"/>Cancelar
             </button>
           </>}
@@ -463,15 +491,25 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     return{date:d,layout:buildLayout(visible)}
   }),[citas,weekDates])
 
-  // Navigate to cita's exact day
+  // Navigate to cita's exact day AND open its popover
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
-    // scroll the grid to that appointment block (deferred so layout updates first)
+    // After layout updates: scroll to block (using rect relative to container) and open popover
     setTimeout(()=>{
       const el=document.getElementById(`cita-block-${c.id}`)
-      el?.scrollIntoView({behavior:"smooth",block:"center"})
-    },120)
+      const container=document.getElementById("citas-grid")
+      if(el && container) {
+        // Use getBoundingClientRect to get position relative to the scroll container
+        const elRect=el.getBoundingClientRect()
+        const containerRect=container.getBoundingClientRect()
+        const target=container.scrollTop + (elRect.top - containerRect.top) - container.clientHeight/2 + el.clientHeight/2
+        container.scrollTo({ top: Math.max(0, target), behavior: "smooth" })
+        // Open the popover using the block's DOMRect
+        const rect=el.getBoundingClientRect()
+        setSelected({cita:c,rect})
+      }
+    },200)
   }
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
@@ -496,11 +534,11 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   return(
     <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr] flex-1 min-h-0">
         {/* LEFT */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 min-h-0">
         {/* Mini-cal */}
-        <div className="rounded-2xl border border-border/50 bg-card p-3">
+        <div className="rounded-2xl border border-border/50 bg-card p-3 shrink-0">
           <div className="flex items-center justify-between mb-2">
             <button onClick={prevMonth} className="rounded-lg p-1 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
             <span className="text-xs font-bold">{MESES[calMonth]} {calYear}</span>
@@ -538,11 +576,11 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           </div>
         </div>
         {/* Action Center — Pendientes */}
-        <ActionCenter citas={citas} onNavigate={navigateToCita} onAction={doUpdate} updatingId={updatingId}/>
+        <ActionCenter citas={citas} onNavigate={navigateToCita}/>
       </div>
 
       {/* RIGHT */}
-      <div id="calendar-grid-container" className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col relative">
+      <div id="calendar-grid-container" className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col relative flex-1 min-h-0">
         {/* Nav */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/40 shrink-0">
           <div className="flex items-center gap-2">
@@ -569,7 +607,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           })}
         </div>
         {/* Scrollable grid */}
-        <div className="flex flex-1 overflow-y-auto" style={{maxHeight:"calc(100vh - 240px)"}}>
+        <div id="citas-grid" className="flex flex-1 overflow-y-auto relative">
           {/* Hours column — FIX #6: pt-0 + offset labels to align with grid lines */}
           <div className="w-14 shrink-0 relative border-r border-border/20" style={{height:`${GRID_H}px`}}>
             {HOURS.slice(0,-1).map((h,i)=>(

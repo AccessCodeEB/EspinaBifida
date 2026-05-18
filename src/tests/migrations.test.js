@@ -2,6 +2,7 @@ import { jest } from "@jest/globals";
 import {
   mockExecute,
   mockClose,
+  mockCommit,
   dbModuleMock,
   resetMocks,
 } from "./helpers/mockDb.js";
@@ -938,5 +939,93 @@ describe("runMigration005 — connection.close() lanza (finally catch)", () => {
     mockClose.mockRejectedValueOnce(new Error("close failed"));
 
     await expect(runMigration005()).resolves.toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration006 — Agrega columna STOCK_MINIMO a ARTICULOS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration006 } = await import("../migrations/006_articulos_stock_minimo.js");
+
+describe("runMigration006 — columna ya existe", () => {
+  test("omite el ALTER TABLE y solo hace commit", async () => {
+    mockExecute.mockResolvedValueOnce(cntResult(1)); // STOCK_MINIMO ya existe
+    // conn.commit() uses mockCommit, not mockExecute
+
+    await runMigration006();
+
+    // Solo el SELECT de USER_TAB_COLUMNS
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    // commit llamado via conn.commit()
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    // Verifica que NO se ejecutó ningún ALTER
+    const calls = mockExecute.mock.calls.map((c) => (c[0]?.trim ? c[0].trim() : c[0]));
+    expect(calls.some((s) => /ALTER TABLE/.test(s))).toBe(false);
+  });
+});
+
+describe("runMigration006 — columna no existe (estado inicial)", () => {
+  test("ejecuta ALTER TABLE ADD STOCK_MINIMO y hace commit", async () => {
+    mockExecute.mockResolvedValueOnce(cntResult(0)); // STOCK_MINIMO no existe
+    mockExecute.mockResolvedValueOnce({});            // ALTER TABLE
+    // conn.commit() via mockCommit
+
+    await runMigration006();
+
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    const calls = mockExecute.mock.calls.map((c) => (c[0]?.trim ? c[0].trim() : c[0]));
+    expect(calls[1]).toMatch(/ALTER TABLE ARTICULOS ADD STOCK_MINIMO NUMBER DEFAULT 5/i);
+  });
+});
+
+describe("runMigration006 — formato posicional [0] en SELECT CNT", () => {
+  test("interpreta CNT desde el primer elemento del array (ya existe)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [[1]] }); // posicional, existe
+
+    await runMigration006();
+
+    // Solo el SELECT
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration006 — error durante la ejecución", () => {
+  test("captura el error y cierra la conexión", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges"));
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    // La migración006 no tiene try/catch → debe lanzar. Pero verifiquemos el finally
+    await expect(runMigration006()).rejects.toThrow("ORA-01031");
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration006 — falla al obtener conexión", () => {
+  test("captura el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    await expect(runMigration006()).rejects.toThrow("ORA-12541");
+
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("runMigration006 — connection.close() lanza (finally)", () => {
+  test("close falla pero la migración termina antes de lanzar", async () => {
+    mockExecute.mockResolvedValueOnce(cntResult(1)); // existe → solo 1 execute
+    // commit via mockCommit (ya configurado como mockResolvedValue)
+    mockClose.mockRejectedValueOnce(new Error("close failed"));
+
+    // conn.close() lanza en finally → la promesa rechaza
+    await expect(runMigration006()).rejects.toThrow("close failed");
   });
 });

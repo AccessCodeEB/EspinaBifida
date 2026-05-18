@@ -34,7 +34,7 @@ function mapPago(row) {
     curp:            r.curp,
     nombre:          r.nombreCompleto ?? "",
     fechaEmision:    r.fechaEmision,
-    fechaInicio:     r.fechaVigenciaInicio,
+    fechaInicio:      r.fechaVigenciaInicio,
     vigencia:        r.fechaVigenciaFin,
     ultimoPago:      r.fechaUltimoPago,
     monto:           formatMonto(r.monto),

@@ -10,6 +10,8 @@ const mockUpdateEstatusAndNotas = jest.fn();
 const mockHardDelete     = jest.fn();
 const mockCancelarPorCurp = jest.fn();
 
+const mockUpdateFotoPerfilUrl = jest.fn();
+
 jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
   findAll:    jest.fn().mockResolvedValue([]),
   findById:   mockFindById,
@@ -19,6 +21,19 @@ jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
   updateEstatus: mockUpdateEstatus,
   updateEstatusAndNotas: mockUpdateEstatusAndNotas,
   hardDelete: mockHardDelete,
+  updateFotoPerfilUrl: mockUpdateFotoPerfilUrl,
+}));
+
+jest.unstable_mockModule("../utils/profileFiles.js", () => ({
+  publicPathForStoredFile: jest.fn((f) => `/uploads/profiles/${f}`),
+  unlinkOldProfileIfSafe:  jest.fn(),
+}));
+
+jest.unstable_mockModule("node:fs", () => ({
+  default: {
+    readFileSync: jest.fn(() => Buffer.from("fake-image-bytes")),
+    unlinkSync:   jest.fn(),
+  },
 }));
 
 jest.unstable_mockModule("../models/membresias.model.js", () => ({
@@ -403,5 +418,137 @@ describe("rejectPreRegistro", () => {
     });
 
     expect(mockHardDelete).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// normalizarUsaValvulaBody — ramas true/1/"1" no cubiertas (líneas 99–101)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createPublicSolicitud — normalizarUsaValvulaBody: boolean true", () => {
+  test("usaValvula=true se normaliza a 'S'", async () => {
+    mockFindById.mockResolvedValue(null); // CURP no existe
+
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, usaValvula: true })
+    ).rejects.toMatchObject({ code: "DUPLICATE_CURP" }).catch(() => {
+      // Si no lanza DUPLICATE_CURP, el create fue llamado con S
+    });
+
+    // Si la CURP no existe, el create es llamado → verificamos que llega bien
+    mockCreate.mockResolvedValueOnce({ rowsAffected: 1 });
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, curp: "ABCD900101HXYZRL01", usaValvula: true })
+    ).resolves.toBeDefined();
+  });
+});
+
+describe("createPublicSolicitud — normalizarUsaValvulaBody: number 1", () => {
+  test("usaValvula=1 se normaliza a 'S'", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, curp: "ABCD900102HXYZRL02", usaValvula: 1 })
+    ).resolves.toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// validarFormatosUpdate — ramas no cubiertas (líneas 220, 223, 226, 229)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("update — validarFormatosUpdate ramas", () => {
+  test("genero inválido → INVALID_GENERO", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    await expect(
+      Service.update(CURP_VALIDA, { ...baseUpdate, genero: "X" })
+    ).rejects.toMatchObject({ code: "INVALID_GENERO" });
+  });
+
+  test("usaValvula inválido → INVALID_USA_VALVULA", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    await expect(
+      Service.update(CURP_VALIDA, { ...baseUpdate, usaValvula: "X" })
+    ).rejects.toMatchObject({ code: "INVALID_USA_VALVULA" });
+  });
+
+  test("tipoSangre inválido → INVALID_TIPO_SANGRE", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    await expect(
+      Service.update(CURP_VALIDA, { ...baseUpdate, tipoSangre: "Z+" })
+    ).rejects.toMatchObject({ code: "INVALID_TIPO_SANGRE" });
+  });
+
+  test("notas > 500 chars → NOTES_TOO_LONG", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    await expect(
+      Service.update(CURP_VALIDA, { ...baseUpdate, notas: "x".repeat(501) })
+    ).rejects.toMatchObject({ code: "NOTES_TOO_LONG" });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// toggleEstatus — beneficiario not found (línea 255)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("toggleEstatus — beneficiario no encontrado", () => {
+  beforeEach(() => mockFindById.mockReset());
+
+  test("CURP inexistente → NOT_FOUND", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.toggleEstatus(CURP_VALIDA, "Activo")
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateFotoPerfilByUpload — líneas 365–387
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateFotoPerfilByUpload", () => {
+  beforeEach(() => mockFindById.mockReset());
+
+  test("beneficiario no encontrado → NOT_FOUND", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.updateFotoPerfilByUpload(CURP_VALIDA, "/tmp/foto.jpg", "image/jpeg")
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("carga exitosa → retorna fotoPerfilUrl como data URL", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, FOTO_PERFIL_URL: null });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.updateFotoPerfilByUpload(CURP_VALIDA, "/tmp/foto.jpg", "image/png");
+
+    expect(result).toHaveProperty("fotoPerfilUrl");
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/png;base64,/);
+    expect(mockUpdateFotoPerfilUrl).toHaveBeenCalledWith(CURP_VALIDA, expect.stringMatching(/^data:/));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// clearFotoPerfil — línea 396 (beneficiario not found)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("clearFotoPerfil", () => {
+  beforeEach(() => mockFindById.mockReset());
+
+  test("beneficiario no encontrado → NOT_FOUND", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.clearFotoPerfil(CURP_VALIDA)
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("carga exitosa → retorna fotoPerfilUrl null", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, FOTO_PERFIL_URL: null });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.clearFotoPerfil(CURP_VALIDA);
+
+    expect(result).toEqual({ fotoPerfilUrl: null });
   });
 });

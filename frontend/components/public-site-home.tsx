@@ -122,7 +122,7 @@ export function PublicSiteHome() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-12">
 
           <RevealOnMount className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
+            <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white dark:bg-slate-800">
               <Image
                 src="/logo-espina-bifida.png"
                 alt="Logo Espina Bífida"

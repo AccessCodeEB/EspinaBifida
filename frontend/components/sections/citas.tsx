@@ -35,8 +35,20 @@ export function CitasSection() {
   const [citas, setCitas] = useState<Cita[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeView, setActiveView] = useState<ActiveView>("calendar")
+  const [activeView, setActiveView] = useState<ActiveView>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("citas_activeView")
+      if (saved === "calendar" || saved === "list") return saved
+    }
+    return "calendar"
+  })
   const [viewVisible, setViewVisible] = useState(true)
+
+  // Scroll to top when entering the Citas section
+  useEffect(() => {
+    const main = document.querySelector("main")
+    if (main) main.scrollTo({ top: 0, behavior: "instant" })
+  }, [])
 
   // Dialog nueva cita
   const [showDialog, setShowDialog] = useState(false)
@@ -88,11 +100,15 @@ export function CitasSection() {
     return { hoy, semana, pendientes }
   }, [citas, today])
 
-  // Smooth view transition
+  // Smooth view transition + persist
   function switchView(view: ActiveView) {
     if (view === activeView) return
     setViewVisible(false)
-    setTimeout(() => { setActiveView(view); setViewVisible(true) }, 180)
+    setTimeout(() => {
+      setActiveView(view)
+      setViewVisible(true)
+      sessionStorage.setItem("citas_activeView", view)
+    }, 180)
   }
 
   const benefFiltrados = useMemo(() => {
@@ -194,7 +210,7 @@ export function CitasSection() {
   const NAVY = "#0f4c81"
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="flex flex-col gap-6 flex-1 min-h-0">
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
@@ -257,7 +273,7 @@ export function CitasSection() {
       ) : (
         <div
           style={{ transition: "opacity 180ms ease, transform 180ms ease" }}
-          className={viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}
+          className={`flex-1 min-h-0 flex flex-col ${viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
         >
           {activeView === "calendar" ? (
             <CitasCalendarView
@@ -322,8 +338,8 @@ export function CitasSection() {
                   ))}
                 </div>
               )}
-              {form.curp && <p className="text-[11px] font-medium text-emerald-600">✓ Seleccionado: {form.curp}</p>}
-              {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600">Selecciona un beneficiario de la lista</p>}
+              {form.curp && <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">✓ Seleccionado: {form.curp}</p>}
+              {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>}
             </div>
 
             {/* Tipo de Servicio */}

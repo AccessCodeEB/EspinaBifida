@@ -18,6 +18,7 @@ import { PreregistroSection } from "@/components/sections/preregistro"
 import { ReportesSection } from "@/components/sections/reportes"
 import { Switch } from "@/components/ui/switch"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
+import { AiChatPanel, type AiAction } from "@/components/ai-chat-panel"
 
 /** Secciones válidas de la SPA del panel */
 const VALID_SECTIONS = new Set([
@@ -98,10 +99,35 @@ function PanelHomeContent() {
     if (s && VALID_SECTIONS.has(s)) setActiveSection(s)
   }, [searchParams])
 
-  const handleSectionChange = (section: string) => {
+  // Bloquear back/forward del navegador para que no salgan del panel de administrador
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    // Empujar una entrada al historial para que siempre haya un "/panel" arriba del stack
+    window.history.pushState(null, '', '/panel')
+
+    const preventLeave = () => {
+      window.history.pushState(null, '', '/panel')
+    }
+
+    // capture: true para interceptar antes de que Next.js procese el evento
+    window.addEventListener('popstate', preventLeave, true)
+    return () => window.removeEventListener('popstate', preventLeave, true)
+  }, [isAuthenticated])
+
+  const handleSectionChange = useCallback((section: string) => {
     setActiveSection(section)
     router.replace(`/panel?section=${section}`, { scroll: false })
-  }
+  }, [router])
+
+  const handleAiAction = useCallback((action: AiAction) => {
+    if (action.type === "navigate" && VALID_SECTIONS.has(action.to)) {
+      handleSectionChange(action.to)
+    } else {
+      // Las secciones escuchan este evento para abrir diálogos o ejecutar búsquedas
+      window.dispatchEvent(new CustomEvent("ai-action", { detail: action }))
+    }
+  }, [handleSectionChange])
 
   const editBeneficiarioParam = searchParams.get("editBeneficiario")
 
@@ -183,7 +209,7 @@ function PanelHomeContent() {
 
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <main className="flex-1 flex flex-col overflow-y-auto p-4 md:p-6">
             <SectionContent
               section={activeSection}
               openEditBeneficiarioCurp={activeSection === "beneficiarios" ? editBeneficiarioParam : null}
@@ -203,6 +229,7 @@ function PanelHomeContent() {
         onFotoPerfilUpdated={(fotoPerfilUrl) => updateSession({ fotoPerfilUrl })}
       />
 
+      <AiChatPanel onAction={handleAiAction} />
     </>
   )
 }

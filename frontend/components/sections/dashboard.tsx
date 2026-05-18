@@ -131,7 +131,7 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
                 <div className={`size-1.5 shrink-0 rounded-full ${isZero ? "bg-red-500" : "bg-amber-500"}`} />
                 <p className="flex-1 truncate text-xs text-foreground">{item.descripcion}</p>
                 <span className="shrink-0 text-[11px] text-muted-foreground">{item.unidad}</span>
-                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600" : "text-amber-600"}`}>
+                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                   {qty}
                 </span>
               </div>
@@ -306,13 +306,14 @@ export function DashboardSection() {
 
   const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  const estatusCitaStyle: Record<string, string> = {
-    Confirmada: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400",
-    Pendiente:  "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400",
-    Completada: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400",
-    Cancelada:  "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400",
+  // Agenda de hoy: badges con color por estatus (estilo del mockup)
+  const agendaStatusStyle: Record<string, string> = {
+    Confirmada: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    Pendiente:  "border-amber-500/30  bg-amber-500/10  text-amber-400",
+    Completada: "border-blue-500/30   bg-blue-500/10   text-blue-400",
+    Cancelada:  "border-red-500/30    bg-red-500/10    text-red-400",
   }
-  const estatusCitaIcon: Record<string, React.ElementType> = {
+  const agendaItemIcon: Record<string, React.ElementType> = {
     Confirmada: CheckCircle2,
     Pendiente:  Clock,
     Completada: CheckCircle2,
@@ -332,7 +333,7 @@ export function DashboardSection() {
           className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
           <RefreshCw className="size-3.5" />
           Actualizar
-          <span className="ml-1 text-[10px] opacity-60">
+          <span className="ml-1 text-[10px] leading-none opacity-60">
             {lastRefresh.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
           </span>
         </button>
@@ -435,7 +436,6 @@ export function DashboardSection() {
               </div>
             ) : (
               citasHoy.map((c) => {
-                const IconEstatus = estatusCitaIcon[c.estatus] ?? AlertCircle
                 return (
                   <div key={c.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
                     <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-muted/50 py-1.5 text-center">
@@ -445,8 +445,8 @@ export function DashboardSection() {
                       <p className="truncate text-xs font-semibold text-foreground">{c.beneficiario}</p>
                       <p className="truncate text-[11px] text-muted-foreground">{c.especialista || "—"}</p>
                     </div>
-                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${estatusCitaStyle[c.estatus] ?? ""}`}>
-                      <IconEstatus className="size-3" />
+                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${agendaStatusStyle[c.estatus] ?? "border-border/60 bg-muted/30 text-muted-foreground"}`}>
+                      {(() => { const Icon = agendaItemIcon[c.estatus] ?? AlertCircle; return <Icon className="size-3" /> })()}
                       {c.estatus}
                     </div>
                   </div>
@@ -481,7 +481,7 @@ export function DashboardSection() {
                 {financiero.diff >= 0
                   ? <TrendingUp className="size-3 text-emerald-500" />
                   : <TrendingDown className="size-3 text-red-500" />}
-                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {financiero.diff >= 0 ? "+" : ""}{financiero.diff.toFixed(1)}% vs mes anterior
                 </span>
               </div>
@@ -666,10 +666,12 @@ export function DashboardSection() {
                 <Tooltip
                   contentStyle={{
                     borderRadius: "10px",
-                    border: "1px solid rgba(0,0,0,0.08)",
+                    border: "1px solid var(--border)",
                     padding: "8px 12px",
                     fontSize: "12px",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                    backgroundColor: "var(--card)",
+                    color: "var(--card-foreground)",
                   }}
                   formatter={(value: number, name: string) =>
                     name === "ingresos"

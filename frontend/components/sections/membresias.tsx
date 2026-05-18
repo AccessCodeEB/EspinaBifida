@@ -323,7 +323,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
                       className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all"
                       style={tipoTarjeta === t
                         ? { borderColor: c, backgroundColor: c, color: "#fff" }
-                        : { borderColor: "#e2e8f0", backgroundColor: "#fff", color: "#0f172a" }
+                        : { borderColor: "var(--border)", backgroundColor: "var(--card)", color: "var(--card-foreground)" }
                       }>
                       {t}
                     </button>

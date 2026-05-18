@@ -8,6 +8,10 @@ const mockFindMembresiaActivaByCurp = jest.fn();
 const mockSetBeneficiarioInactivo   = jest.fn();
 const mockCreate                    = jest.fn();
 
+const mockSyncEstados       = jest.fn();
+const mockFindPagosRecientes = jest.fn();
+const mockFindAll            = jest.fn();
+
 jest.unstable_mockModule("../models/membresias.model.js", () => ({
   findBeneficiarioByCurp:    mockFindBeneficiarioByCurp,
   findLastByCurp:            mockFindLastByCurp,
@@ -16,6 +20,9 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
   setBeneficiarioInactivo:   mockSetBeneficiarioInactivo,
   cancelarPorCurp:           jest.fn(),
   create:                    mockCreate,
+  syncEstados:               mockSyncEstados,
+  findPagosRecientes:        mockFindPagosRecientes,
+  findAll:                   mockFindAll,
 }));
 
 // Importaciones después de los mocks (ESM)
@@ -306,5 +313,96 @@ describe("getEstatusMembresia", () => {
       observaciones:     "Alta inicial",
     });
     expect(result.membresia.fecha_vigencia_fin).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getAll, syncEstados, getPagosRecientes — líneas 64–74
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getAll", () => {
+  test("delega en findAll del modelo", async () => {
+    mockFindAll.mockResolvedValueOnce([{ ID_CREDENCIAL: 1 }]);
+    const result = await Service.getAll();
+    expect(result).toEqual([{ ID_CREDENCIAL: 1 }]);
+    expect(mockFindAll).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("syncEstados", () => {
+  test("delega en syncEstados del modelo sin retornar nada", async () => {
+    mockSyncEstados.mockResolvedValueOnce(undefined);
+    await expect(Service.syncEstados()).resolves.toBeUndefined();
+    expect(mockSyncEstados).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getPagosRecientes", () => {
+  test("usa limit=20 por defecto y devuelve resultados del modelo", async () => {
+    mockFindPagosRecientes.mockResolvedValueOnce([{ ID_CREDENCIAL: 5 }]);
+    const result = await Service.getPagosRecientes();
+    expect(result).toEqual([{ ID_CREDENCIAL: 5 }]);
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(20);
+  });
+
+  test("clampea el limit mínimo a 1 cuando se pasa -5", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes(-5);
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(1);
+  });
+
+  test("clampea el limit máximo a 100 cuando se pasa 200", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes(200);
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(100);
+  });
+
+  test("valor no numérico usa default 20", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes("abc");
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(20);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// registrarMembresia — ramas de monto y metodoPago no cubiertas (líneas 155–164)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("registrarMembresia — validación de monto y metodoPago", () => {
+  beforeEach(() => {
+    mockFindBeneficiarioByCurp.mockResolvedValue({ CURP });
+  });
+
+  test("monto negativo → BAD_REQUEST", async () => {
+    await expect(
+      Service.registrarMembresia({
+        curp: CURP,
+        numero_credencial: "CRED-001",
+        fecha_emision: "2026-01-01",
+        monto: -50,
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("monto no numérico → BAD_REQUEST", async () => {
+    await expect(
+      Service.registrarMembresia({
+        curp: CURP,
+        numero_credencial: "CRED-001",
+        fecha_emision: "2026-01-01",
+        monto: "no-es-numero",
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("metodo_pago inválido → BAD_REQUEST", async () => {
+    await expect(
+      Service.registrarMembresia({
+        curp: CURP,
+        numero_credencial: "CRED-001",
+        fecha_emision: "2026-01-01",
+        metodo_pago: "bitcoin",
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });

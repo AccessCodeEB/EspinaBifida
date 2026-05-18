@@ -39,6 +39,7 @@ function mapInventarioRow(row) {
     cuotaRecuperacion: row.CUOTA_RECUPERACION,
     inventarioActual,
     stock:            inventarioActual,
+    minimo:           Number(row.STOCK_MINIMO ?? 5),
   };
 }
 
