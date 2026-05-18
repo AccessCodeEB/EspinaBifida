@@ -21,4 +21,27 @@ export default {
       branches: 70,
     },
   },
+
+  // Soporte TypeScript para tests del frontend
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        useESM: false,
+        diagnostics: false,
+        tsconfig: {
+          allowJs: true,
+          esModuleInterop: true,
+          types: ["jest"],
+          paths: { "@/*": ["./frontend/*"] },
+          baseUrl: ".",
+        },
+      },
+    ],
+  },
+
+  // Alias @/ → frontend/
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/frontend/$1",
+  },
 };
