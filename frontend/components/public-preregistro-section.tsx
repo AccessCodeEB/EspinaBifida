@@ -154,9 +154,7 @@ export function PublicPreregistroSection({
       genero: form.genero,
       estado: form.estado,
     })
-    if (prefix) {
-      setForm((p) => ({ ...p, curp: prefix }))
-    }
+    setForm((p) => ({ ...p, curp: prefix }))
   }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estado])
 
   const turnstileSiteKey = useMemo(
