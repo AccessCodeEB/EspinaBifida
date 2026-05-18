@@ -1,5 +1,6 @@
 import type { Beneficiario } from "@/services/beneficiarios"
 import { MARCADOR_SOLICITUD_PUBLICA_PENDIENTE } from "@/lib/solicitud-publica-beneficiario"
+import { ESTADOS, MUNICIPIOS } from "@/data/mx-estados-municipios"
 
 /** Valores permitidos por CHECK en BD (columna TIPOS_SANGRE) y en la API como `tipoSangre`. */
 export const TIPOS_SANGRE_OPCIONES: string[] = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
@@ -188,15 +189,24 @@ export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record
     errs.curp = "CURP inválida"
   }
   if (!form.fechaNacimiento) errs.fechaNacimiento = "Obligatorio"
-  if (!form.ciudad.trim()) errs.ciudad = "Obligatorio"
-  else {
-    const ce = errTextNoDigits(form.ciudad)
-    if (ce) errs.ciudad = ce
+  if (!form.genero) {
+    errs.genero = "Obligatorio"
+  } else if (form.genero !== "H" && form.genero !== "M") {
+    errs.genero = "Selecciona un género válido"
   }
-  if (!form.estado.trim()) errs.estado = "Obligatorio"
-  else {
-    const ee = errTextNoDigits(form.estado)
-    if (ee) errs.estado = ee
+  if (!form.ciudad.trim()) {
+    errs.ciudad = "Obligatorio"
+  } else if (
+    form.estado &&
+    MUNICIPIOS[form.estado] &&
+    !MUNICIPIOS[form.estado].includes(form.ciudad)
+  ) {
+    errs.ciudad = "Selecciona una ciudad válida"
+  }
+  if (!form.estado.trim()) {
+    errs.estado = "Obligatorio"
+  } else if (!ESTADOS.includes(form.estado)) {
+    errs.estado = "Selecciona un estado válido"
   }
 
   const celErr = errPhoneField(form.telefonoCelular, true)

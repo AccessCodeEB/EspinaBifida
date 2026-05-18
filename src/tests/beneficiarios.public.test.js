@@ -48,7 +48,7 @@ const solicitudValida = {
   apellidoMaterno:  "Pérez",
   fechaNacimiento:  "1990-06-15",
   ciudad:           "Monterrey",
-  estado:           "NL",
+  estado:           "Nuevo León",
   telefonoCelular:  "8181234567",
   correoElectronico: "maria@test.com",
   tipo:             "Espina Bífida",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile"
 import Link from "next/link"
 import {
@@ -36,6 +36,8 @@ import {
   type BeneficiarioAltaForm,
 } from "@/lib/beneficiario-alta"
 import { cn } from "@/lib/utils"
+import { ESTADOS, MUNICIPIOS } from "@/data/mx-estados-municipios"
+import { generateCurpPrefix } from "@/lib/curp-generator"
 
 const AMBER = "#E8B043"
 const NAVY  = "#0f4c81"
@@ -140,6 +142,20 @@ export function PublicPreregistroSection({
   const [done, setDone] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState("")
   const turnstileRef = useRef<TurnstileInstance | null>(null)
+  const curpEditadoManualmente = useRef(false)
+
+  useEffect(() => {
+    if (curpEditadoManualmente.current) return
+    const prefix = generateCurpPrefix({
+      apellidoPaterno: form.apellidoPaterno,
+      apellidoMaterno: form.apellidoMaterno,
+      nombres: form.nombres,
+      fechaNacimiento: form.fechaNacimiento,
+      genero: form.genero,
+      estado: form.estado,
+    })
+    setForm((p) => ({ ...p, curp: prefix }))
+  }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estado])
 
   const turnstileSiteKey = useMemo(
     () =>
@@ -154,6 +170,20 @@ export function PublicPreregistroSection({
   )
 
   const change = useCallback((field: keyof BeneficiarioAltaForm, value: string | boolean) => {
+    if (field === "curp") {
+      curpEditadoManualmente.current = true
+      if (value === "") curpEditadoManualmente.current = false
+    }
+    if (field === "estado") {
+      setForm((p) => ({ ...p, [field]: value as string, ciudad: "" }))
+      setErrors((e) => {
+        const next = { ...e }
+        delete next[field as string]
+        delete next.ciudad
+        return next
+      })
+      return
+    }
     setForm((p) => ({ ...p, [field]: value }))
     setErrors((e) => {
       if (!e[field as string]) return e
@@ -168,6 +198,7 @@ export function PublicPreregistroSection({
     setErrors({})
     setDone(false)
     setTurnstileToken("")
+    curpEditadoManualmente.current = false
     turnstileRef.current?.reset()
   }, [])
 
@@ -354,21 +385,6 @@ export function PublicPreregistroSection({
               />
             </FieldShell>
 
-            <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp">
-              <Input
-                id="prereg-curp"
-                value={form.curp}
-                onChange={(e) => change("curp", e.target.value.toUpperCase())}
-                maxLength={18}
-                className={cn(
-                  "h-11 rounded-lg bg-white font-mono uppercase tracking-wide dark:bg-slate-900",
-                  errors.curp && "border-red-400"
-                )}
-                placeholder="18 caracteres"
-                autoComplete="off"
-              />
-            </FieldShell>
-
             <FieldShell label="Fecha de nacimiento" required error={errors.fechaNacimiento} htmlFor="prereg-fn">
               <div className="relative">
                 <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -382,23 +398,75 @@ export function PublicPreregistroSection({
               </div>
             </FieldShell>
 
-            <FieldShell label="Ciudad" required error={errors.ciudad} htmlFor="prereg-ciudad">
-              <Input
-                id="prereg-ciudad"
-                value={form.ciudad}
-                onChange={(e) => change("ciudad", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.ciudad && "border-red-400")}
-                placeholder="Ciudad"
-              />
+            <FieldShell label="Género" required error={errors.genero} htmlFor="prereg-genero">
+              <Select
+                value={form.genero || undefined}
+                onValueChange={(v) => change("genero", v)}
+              >
+                <SelectTrigger
+                  id="prereg-genero"
+                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.genero && "border-red-400")}
+                >
+                  <SelectValue placeholder="Selecciona un género" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="M">Femenino</SelectItem>
+                  <SelectItem value="H">Masculino</SelectItem>
+                </SelectContent>
+              </Select>
             </FieldShell>
 
-            <FieldShell label="Estado" required error={errors.estado} htmlFor="prereg-edo">
+            <FieldShell label="Estado" required error={errors.estado} htmlFor="prereg-estado">
+              <Select
+                value={form.estado || undefined}
+                onValueChange={(v) => change("estado", v)}
+              >
+                <SelectTrigger
+                  id="prereg-estado"
+                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.estado && "border-red-400")}
+                >
+                  <SelectValue placeholder="Selecciona un estado" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {ESTADOS.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldShell>
+
+            <FieldShell label="Ciudad / Municipio" required error={errors.ciudad} htmlFor="prereg-ciudad">
+              <Select
+                value={form.ciudad || undefined}
+                onValueChange={(v) => change("ciudad", v)}
+                disabled={!form.estado}
+              >
+                <SelectTrigger
+                  id="prereg-ciudad"
+                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.ciudad && "border-red-400")}
+                >
+                  <SelectValue placeholder={form.estado ? "Selecciona una ciudad" : "Primero elige el estado"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {(MUNICIPIOS[form.estado] ?? []).map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldShell>
+
+            <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp" className="sm:col-span-2">
               <Input
-                id="prereg-edo"
-                value={form.estado}
-                onChange={(e) => change("estado", e.target.value)}
-                className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.estado && "border-red-400")}
-                placeholder="Estado"
+                id="prereg-curp"
+                value={form.curp}
+                onChange={(e) => change("curp", e.target.value.toUpperCase())}
+                maxLength={18}
+                className={cn(
+                  "h-11 rounded-lg bg-white font-mono uppercase tracking-wide dark:bg-slate-900",
+                  errors.curp && "border-red-400"
+                )}
+                placeholder="Se autocompleta — agrega los últimos 2 caracteres (homoclave)"
+                autoComplete="off"
               />
             </FieldShell>
           </div>
