@@ -26,6 +26,20 @@ describe('rateLimiter configs', () => {
     expect(publicLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
     expect(authLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
   });
+
+  test('all limiters do NOT skip in production environment', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const fakeReq = {};
+      const fakeRes = {};
+      expect(loginLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
+      expect(publicLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
+      expect(authLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });
 
 describe('loginLimiter blocks after max attempts (real behavior)', () => {
