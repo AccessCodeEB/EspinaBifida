@@ -29,6 +29,7 @@ yarn-error.log*
 # 🗂️ Build (por si luego usan TS)
 dist/
 build/
+*.tsbuildinfo
 
 # 💻 OS files
 .DS_Store
