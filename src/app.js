@@ -6,6 +6,7 @@ import path from "path";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { loginLimiter, publicLimiter, authLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config({ path: path.join(REPO_ROOT, ".env.defaults") });
 // Sin override: respeta variables ya definidas (p. ej. JWT_SECRET en CI o en tests).
@@ -38,6 +39,13 @@ app.use(cors({
 app.use(express.json());
 mountProfilePhotosRemoteFallback(app);
 app.use("/uploads", express.static(path.join(REPO_ROOT, "uploads")));
+
+// Rate limiting — specific limiters before their routes, global limiter for all routes
+app.post('/administradores/login', loginLimiter);
+app.post('/api/v1/administradores/login', loginLimiter);
+app.post('/beneficiarios/solicitud-publica', publicLimiter);
+app.post('/api/v1/beneficiarios/solicitud-publica', publicLimiter);
+app.use(authLimiter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
