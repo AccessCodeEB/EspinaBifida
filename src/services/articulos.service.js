@@ -1,56 +1,60 @@
 import * as ArticulosModel from "../models/articulos.model.js";
-import * as InventarioService from "./inventario.service.js";
-import { badRequest } from "../utils/httpErrors.js";
+import { badRequest, conflict } from "../utils/httpErrors.js";
 
 function normalizeData(data = {}) {
-  const normalized = {
-    idArticulo: data.idArticulo ?? null,
-    descripcion: data.descripcion ?? null,
-    unidad: data.unidad ?? null,
-    cuotaRecuperacion: data.cuotaRecuperacion ?? null,
-    inventarioActual: data.inventarioActual ?? null,
-    manejaInventario: data.manejaInventario ?? null,
-    idCategoria: data.idCategoria ?? null
+  // Solo normalizar los campos que efectivamente vienen en el request
+  const normalized = {};
+  
+  // Mapeo de campos a validar
+  const fieldValidators = {
+    idArticulo: (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num)) throw badRequest("idArticulo debe ser numerico");
+      return num;
+    },
+    descripcion: (val) => val === null || val === undefined ? null : String(val).trim(),
+    unidad: (val) => val === null || val === undefined ? null : String(val).trim(),
+    cuotaRecuperacion: (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num) || num < 0) throw badRequest("cuotaRecuperacion debe ser un numero >= 0");
+      return num;
+    },
+    inventarioActual: (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num) || num < 0) throw badRequest("inventarioActual debe ser un numero >= 0");
+      return num;
+    },
+    manejaInventario: (val) => {
+      if (val === null || val === undefined) return null;
+      const str = String(val).trim().toUpperCase();
+      if (!["S", "N"].includes(str)) throw badRequest("manejaInventario debe ser 'S' o 'N'");
+      return str;
+    },
+    idCategoria: (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num)) throw badRequest("idCategoria debe ser numerico");
+      return num;
+    },
+    stockMinimo: (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num) || num < 0) throw badRequest("stockMinimo debe ser un numero >= 0");
+      return num;
+    }
   };
-
-  if (normalized.manejaInventario !== null && normalized.manejaInventario !== undefined) {
-    normalized.manejaInventario = String(normalized.manejaInventario).trim().toUpperCase();
-    if (!["S", "N"].includes(normalized.manejaInventario)) {
-      throw badRequest("manejaInventario debe ser 'S' o 'N'");
+  
+  // Aplicar validaciones solo a los campos que vienen en el request
+  for (const [key, validator] of Object.entries(fieldValidators)) {
+    if (key in data) {
+      normalized[key] = validator(data[key]);
     }
   }
 
-  if (normalized.cuotaRecuperacion !== null && normalized.cuotaRecuperacion !== undefined) {
-    const cuota = Number(normalized.cuotaRecuperacion);
-    if (Number.isNaN(cuota) || cuota < 0) {
-      throw badRequest("cuotaRecuperacion debe ser un numero mayor o igual a 0");
-    }
-    normalized.cuotaRecuperacion = cuota;
-  }
 
-  if (normalized.inventarioActual !== null && normalized.inventarioActual !== undefined) {
-    const inventario = Number(normalized.inventarioActual);
-    if (Number.isNaN(inventario) || inventario < 0) {
-      throw badRequest("inventarioActual debe ser un numero mayor o igual a 0");
-    }
-    normalized.inventarioActual = inventario;
-  }
-
-  if (normalized.idCategoria !== null && normalized.idCategoria !== undefined) {
-    const categoria = Number(normalized.idCategoria);
-    if (Number.isNaN(categoria)) {
-      throw badRequest("idCategoria debe ser numerico");
-    }
-    normalized.idCategoria = categoria;
-  }
-
-  if (normalized.idArticulo !== null && normalized.idArticulo !== undefined) {
-    const idArticulo = Number(normalized.idArticulo);
-    if (Number.isNaN(idArticulo)) {
-      throw badRequest("idArticulo debe ser numerico");
-    }
-    normalized.idArticulo = idArticulo;
-  }
 
   return normalized;
 }
@@ -75,6 +79,16 @@ export const update = (id, data) =>
   ArticulosModel.update(id, normalizeData(data));
 
 export async function deleteById(id) {
-  await InventarioService.assertArticuloSinMovimientos(id);
+  const articulo = await ArticulosModel.findById(id);
+  if (!articulo) return null;
+
+  const stockActual = Number(articulo.INVENTARIO_ACTUAL || 0);
+  if (stockActual > 0) {
+    throw conflict(
+      "No se puede eliminar el artículo porque todavía tiene stock disponible.",
+      "ARTICULO_CON_STOCK"
+    );
+  }
+
   return ArticulosModel.deleteById(id);
 }

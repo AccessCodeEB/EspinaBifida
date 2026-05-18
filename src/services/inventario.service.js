@@ -80,7 +80,7 @@ export async function assertArticuloSinMovimientos(idArticulo) {
   const total = await InventarioModel.countMovimientosByArticulo(idArticulo);
   if (total > 0) {
     throw conflict(
-      "No se puede eliminar el artículo porque tiene movimientos registrados",
+      "No se puede eliminar el artículo porque ya tiene entradas o salidas registradas.",
       "ARTICULO_HAS_MOVIMIENTOS"
     );
   }

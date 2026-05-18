@@ -36,6 +36,7 @@ export function errorHandler(err, req, res, _next) {
   let code       = "INTERNAL_ERROR";
   let message    = "Error interno del servidor";
   let details;
+  const isDevelopment = process.env.NODE_ENV !== "production";
 
   if (isHttpError(err)) {
     statusCode = err.statusCode;
@@ -66,6 +67,18 @@ export function errorHandler(err, req, res, _next) {
 
   if (statusCode >= 500) {
     console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
+    if (isDevelopment) {
+      message = err?.message ? String(err.message) : message;
+      details = {
+        ...(details ?? {}),
+        debug: {
+          name: err?.name ?? "Error",
+          message: err?.message ?? null,
+          errorNum: err?.errorNum ?? null,
+          code: err?.code ?? null,
+        },
+      };
+    }
   }
 
   if (code === "INSUFFICIENT_STOCK") {
