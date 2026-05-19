@@ -251,6 +251,29 @@ describe("GET /api/v1/movimientos — historial de movimientos", () => {
   });
 });
 
+// ─── countMovimientosByArticulo — inventario.model.js L78-83 ──────────────────
+
+describe("countMovimientosByArticulo — modelo directo", () => {
+  test("retorna conteo de movimientos para un artículo", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 5 }] });
+
+    // Importar el modelo directamente (ya fue cargado por el import de app)
+    const { countMovimientosByArticulo } = await import("../models/inventario.model.js");
+    const total = await countMovimientosByArticulo(101);
+
+    expect(total).toBe(5);
+  });
+
+  test("retorna 0 cuando no hay movimientos", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+
+    const { countMovimientosByArticulo } = await import("../models/inventario.model.js");
+    const total = await countMovimientosByArticulo(999);
+
+    expect(total).toBe(0);
+  });
+});
+
 // ─── SP error codes adicionales (inventario.model.js líneas 25-31) ────────────
 
 describe("POST /api/v1/movimientos — códigos de error SP adicionales", () => {
