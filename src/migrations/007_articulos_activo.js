@@ -31,6 +31,7 @@ export async function runMigration007() {
   }
 }
 
+/* istanbul ignore next */
 if (import.meta.url === `file://${process.argv[1]}`) {
   runMigration007().catch((err) => {
     console.error("[migration-007] ❌ Error ejecutando migración:", err);

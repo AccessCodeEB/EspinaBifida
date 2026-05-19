@@ -11,7 +11,7 @@ function formatISODateUTC(date) {
   return `${y}-${m}-${d}`;
 }
 
-/* c8 ignore next */
+/* istanbul ignore next */
 function addMonthsUTC(date, n = 1) {
   const d = new Date(date.getTime());
   d.setUTCMonth(d.getUTCMonth() + n);
@@ -128,7 +128,7 @@ export async function registrarMembresia(data) {
   }
 
   // Meses: cuántos meses se pagan (mínimo 1, máximo 12)
-  /* c8 ignore next */
+  /* istanbul ignore next */
   const meses = Math.max(1, Math.min(12, Math.round(Number(data?.meses ?? 1)) || 1));
 
   // Vigencia: N meses desde la fecha de inicio
@@ -167,7 +167,7 @@ export async function registrarMembresia(data) {
     fechaEmision: formatISODateUTC(fechaEmision),
     fechaVigenciaInicio: formatISODateUTC(fechaVigenciaInicio),
     fechaVigenciaFin: formatISODateUTC(fechaVigenciaFin),
-    fechaUltimoPago: fechaUltimoPago ? formatISODateUTC(fechaUltimoPago) : /* c8 ignore next */ null,
+    fechaUltimoPago: /* istanbul ignore next */ fechaUltimoPago ? formatISODateUTC(fechaUltimoPago) : null,
     observaciones: data?.observaciones ?? null,
     monto,
     metodoPago,

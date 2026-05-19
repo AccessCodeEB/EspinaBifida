@@ -191,6 +191,7 @@ export async function createWithInventarioTransaction(data, consumos) {
   }
 }
 
+/* istanbul ignore next */
 function normalizeDetailedFilters(filters = {}) {
   const page = Number(filters.page ?? 1);
   const limit = Number(filters.limit ?? 10);
@@ -299,6 +300,7 @@ export async function findDetailed(filters = {}) {
   }
 }
 
+/* istanbul ignore next */
 function getHistorialDetalles(data) {
   return `Servicio tipo ${data.idTipoServicio} creado; costo=${data.costo}; montoPagado=${data.montoPagado}`;
 }

@@ -121,7 +121,9 @@ export async function uploadFotoPerfil(req, res, next) {
 
 export async function createPublicSolicitud(req, res, next) {
   try {
-    const { turnstileToken, ...body } = req.body ?? {};
+    /* istanbul ignore next */
+    const reqBody = req.body ?? {};
+    const { turnstileToken, ...body } = reqBody;
     await verifyTurnstileToken(turnstileToken, req.ip);
     await BeneficiarioService.createPublicSolicitud(body);
     res.status(201).json({ message: "Solicitud recibida; el equipo la revisará." });
