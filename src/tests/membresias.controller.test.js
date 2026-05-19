@@ -406,4 +406,30 @@ describe("GET /membresias/pagos/recientes — ramas null de mapPago", () => {
     expect(res.body[0].referencia).toBeNull();
     expect(res.body[0].observaciones).toBeNull();
   });
+
+  test("NOMBRE_COMPLETO null en mapPago → nombre = '' (L35 ?? branch)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...pagoRow, NOMBRE_COMPLETO: null }],
+    });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].nombre).toBe("");
+  });
+});
+
+describe("GET /membresias — NOMBRE_COMPLETO null en mapMembresia (L16 ?? branch)", () => {
+  test("NOMBRE_COMPLETO null → nombre = ''", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, NOMBRE_COMPLETO: null }],
+    });
+
+    const res = await request(app).get("/membresias");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].nombre).toBe("");
+  });
 });

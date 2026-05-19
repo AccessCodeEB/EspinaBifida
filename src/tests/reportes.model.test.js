@@ -61,6 +61,15 @@ describe('getResumenPeriodo', () => {
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
+  it('CANT_CREDENCIALES null → ?? 0 (L64 right-side branch)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CANT_CREDENCIALES: null }] });
+    mockExecute.mockResolvedValueOnce({ rows: [{}] });
+
+    const result = await getResumenPeriodo(PERIODO.inicio, PERIODO.fin);
+
+    expect(result.CANT_CREDENCIALES).toBe(0);
+  });
+
   it('cierra la conexión aunque execute lance', async () => {
     mockExecute.mockRejectedValueOnce(new Error('ORA-00942'));
 

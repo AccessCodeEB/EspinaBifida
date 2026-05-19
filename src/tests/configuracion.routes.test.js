@@ -212,6 +212,25 @@ describe("GET /configuracion/resumen-financiero", () => {
     expect(res.status).toBe(500);
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
+
+  it("campos null → ?? 0 branches (L74-75, L86-90)", async () => {
+    // actual y anterior sin campos → todas las ?? 0 right-side branches
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{ TOTAL: null, EFECTIVO: null, TRANSFERENCIA: null, TARJETA: null, CANTIDAD: null }] })
+      .mockResolvedValueOnce({ rows: [{ TOTAL: null, EFECTIVO: null, TRANSFERENCIA: null, TARJETA: null, CANTIDAD: null }] });
+
+    const res = await request(configApp)
+      .get("/configuracion/resumen-financiero?mes=2026-03")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.totalActual).toBe(0);
+    expect(res.body.totalAnterior).toBe(0);
+    expect(res.body.cantidadPagos).toBe(0);
+    expect(res.body.desglosePorMetodo.efectivo).toBe(0);
+    expect(res.body.desglosePorMetodo.transferencia).toBe(0);
+    expect(res.body.desglosePorMetodo.tarjeta).toBe(0);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

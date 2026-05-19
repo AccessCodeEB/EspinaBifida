@@ -217,3 +217,137 @@ describe('deleteById — con consumos', () => {
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });
+
+// ── create — rows vacíos / NEXT_ID null → ?? 0 (L106) ────────────────────────
+
+describe('create — idServicio ?? 0 (L106)', () => {
+  it('rows?.[0]?.NEXT_ID null → ?? 0 → lanza error (L106)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: null }] });
+
+    await expect(ServiciosModel.create({
+      curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0,
+    })).rejects.toThrow('No se pudo generar ID_SERVICIO');
+  });
+
+  it('rows vacío → rows?.[0] undefined → NEXT_ID undefined → ?? 0 (L106)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    await expect(ServiciosModel.create({
+      curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0,
+    })).rejects.toThrow('No se pudo generar ID_SERVICIO');
+  });
+});
+
+// ── createWithInventarioTransaction — normalizeConsumoMotivo false (L138) ─────
+
+describe('createWithInventarioTransaction — normalizeConsumoMotivo sin motivo (L138)', () => {
+  it('consumo sin motivo → usa default "Consumo por servicio N" (L139)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 55 }] }); // SEQ
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+    mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 5 });
+
+    // consumo sin motivo → normalizeConsumoMotivo usa rama false → default
+    const result = await ServiciosModel.createWithInventarioTransaction(
+      { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
+      [{ idProducto: 1, cantidad: 1 /* sin motivo */ }]
+    );
+
+    expect(result.idServicio).toBe(55);
+    const [, data] = mockApplyMovimiento.mock.calls[0];
+    expect(data.motivo).toMatch(/Consumo por servicio/);
+  });
+
+  it('consumo con motivo → usa el motivo proporcionado (L138 true branch)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 66 }] }); // SEQ
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+    mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 8 });
+
+    const result = await ServiciosModel.createWithInventarioTransaction(
+      { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
+      [{ idProducto: 1, cantidad: 1, motivo: 'Comodato #12' }]
+    );
+
+    expect(result.idServicio).toBe(66);
+    const [, data] = mockApplyMovimiento.mock.calls[0];
+    expect(data.motivo).toBe('Comodato #12');
+  });
+
+  it('createWithInventarioTransaction — NEXT_ID null → lanza (L149)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: null }] });
+
+    await expect(ServiciosModel.createWithInventarioTransaction(
+      { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 }, []
+    )).rejects.toThrow('No se pudo generar ID_SERVICIO');
+  });
+});
+
+// ── findDetailed — normalizeDetailedFilters + SQL (L194-294) ─────────────────
+
+describe('findDetailed — normalizeDetailedFilters y SQL (L194-294)', () => {
+  it('con filtros básicos vacíos → retorna data y total (L230-296)', async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [] })  // rowsResult
+      .mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] }); // totalResult
+
+    const result = await ServiciosModel.findDetailed({});
+
+    expect(result).toMatchObject({ page: 1, limit: 10, total: 0, data: [] });
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+  });
+
+  it('con filtros completos (curp, idTipoServicio, fechas, costos, montoPagado) (L201-227)', async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{ ID_SERVICIO: 1 }] })
+      .mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });
+
+    const result = await ServiciosModel.findDetailed({
+      curp: 'GAEJ900101HMNRRL09',
+      idTipoServicio: 2,
+      fechaDesde: '2026-01-01',
+      fechaHasta: '2026-12-31',
+      costoMin: 0,
+      costoMax: 500,
+      montoPagadoMin: 0,
+      montoPagadoMax: 200,
+      page: 2,
+      limit: 5,
+    });
+
+    expect(result.page).toBe(2);
+    expect(result.limit).toBe(5);
+    expect(result.total).toBe(1);
+  });
+
+  it('page inválido → safePage = 1; limit inválido → safeLimit = 10 (L197-198)', async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+
+    const result = await ServiciosModel.findDetailed({ page: -1, limit: 200 });
+
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(10);
+  });
+
+  it('totalResult.rows?.[0]?.TOTAL null → ?? 0 (L294)', async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ TOTAL: null }] });
+
+    const result = await ServiciosModel.findDetailed({});
+
+    expect(result.total).toBe(0);
+  });
+
+  it('normalizeDetailedFilters sin argumentos → usa default {} (L194)', async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+
+    // findDetailed también tiene default {}
+    const result = await ServiciosModel.findDetailed();
+
+    expect(result.page).toBe(1);
+    expect(result.limit).toBe(10);
+  });
+});

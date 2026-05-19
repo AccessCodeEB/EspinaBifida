@@ -160,4 +160,52 @@ describe("GET /uploads/profiles/:filename", () => {
     expect(res.status).toBe(404);
     fetchSpy.mockRestore();
   });
+
+  test("remoto OK sin content-type → usa 'application/octet-stream' (L62 || branch)", async () => {
+    process.env.PROFILE_PHOTOS_REMOTE_BASE = "http://example.invalid";
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64"
+    );
+    const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength),
+      headers: { get: () => null }, // no content-type → L62 uses "application/octet-stream"
+    });
+
+    const name = `zz-remote-no-ct-${Date.now()}.jpg`;
+    const full = path.join(profilesDir, name);
+    try { if (fs.existsSync(full)) fs.unlinkSync(full); } catch { /* */ }
+
+    const res = await request(app).get(`/uploads/profiles/${name}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/octet-stream/i);
+
+    fetchSpy.mockRestore();
+    try { fs.unlinkSync(full); } catch { /* */ }
+  });
+
+  test("error sin message property → e?.message undefined → ?? e (L67 right branch)", async () => {
+    process.env.PROFILE_PHOTOS_REMOTE_BASE = "http://example.invalid";
+    const errSinMsg = Object.create(null); // no prototype, no message
+    errSinMsg.code = "CUSTOM_ERROR";
+    const fetchSpy = jest.spyOn(global, "fetch").mockRejectedValue(errSinMsg);
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    const res = await request(app).get(
+      `/uploads/profiles/zz-err-no-msg-${Date.now()}.jpg`
+    );
+    expect(res.status).toBe(502);
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    fetchSpy.mockRestore();
+  });
+
+  test("nombre con path separador → base !== trimmed → safeProfileFilename retorna null (L14)", async () => {
+    // e.g. "sub/file.jpg" → basename="file.jpg" !== "sub/file.jpg" → null → 404
+    const res = await request(app).get("/uploads/profiles/sub%2Ffile.jpg");
+    expect(res.status).toBe(404);
+  });
 });

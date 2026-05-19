@@ -31,6 +31,7 @@ jest.unstable_mockModule("oracledb", () => ({
 const {
   findPagosRecientes,
   hasPeriodOverlap,
+  setBeneficiarioInactivo,
   setBeneficiarioBaja,
   syncEstados,
   create,
@@ -243,5 +244,67 @@ describe("create — error paths", () => {
     await expect(create(payload)).rejects.toThrow("ORA-01017");
     expect(mockRollback).toHaveBeenCalledTimes(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("fecha con formato ISO datetime (no YYYY-MM-DD) → new Date(v) (L215)", async () => {
+    // Usa un timestamp ISO completo — no pasa el regex /^\d{4}-\d{2}-\d{2}$/ → L215
+    const err = new Error("ORA-99999");
+    err.errorNum = 99999;
+    mockExecute.mockRejectedValueOnce(err);
+
+    await expect(create({
+      ...payload,
+      fechaVigenciaInicio: "2026-01-01T12:00:00.000Z", // no YYYY-MM-DD → L215
+    })).rejects.toThrow();
+    // L215 se ejecutó: new Date("2026-01-01T12:00:00.000Z")
+  });
+
+  it("fecha como objeto Date → if (v instanceof Date) true branch (L211)", async () => {
+    // Pasar un Date real → L211 true branch ejecutado
+    const err = new Error("ORA-99999");
+    err.errorNum = 99999;
+    mockExecute.mockRejectedValueOnce(err);
+
+    await expect(create({
+      ...payload,
+      fechaVigenciaInicio: new Date("2026-01-01"),
+    })).rejects.toThrow();
+    // toDate recibió un Date → L211 `if (v instanceof Date) return v` → true
+  });
+
+  it("monto null → monto ?? null usa null (L245)", async () => {
+    // monto: null → monto ?? null → right side null
+    const err = new Error("ORA-20004");
+    err.errorNum = 20004;
+    mockExecute.mockRejectedValueOnce(err);
+
+    await expect(create({
+      ...payload,
+      monto: null,
+      metodoPago: null,
+      referencia: null,
+    })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    // L245: monto ?? null → null (right side)
+  });
+});
+
+// ─── setBeneficiarioInactivo — rowsAffected ?? 0 (L129) ──────────────────────
+
+describe("setBeneficiarioInactivo — rowsAffected ?? 0 (L129)", () => {
+  it("rowsAffected undefined → ?? 0 → retorna 0", async () => {
+    mockExecute.mockResolvedValueOnce({}); // sin rowsAffected
+
+    const result = await setBeneficiarioInactivo(CURP);
+
+    expect(result).toBe(0);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("rowsAffected 1 → retorna 1 (L129 left side)", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const result = await setBeneficiarioInactivo(CURP);
+
+    expect(result).toBe(1);
   });
 });

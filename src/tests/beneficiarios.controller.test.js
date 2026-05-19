@@ -140,6 +140,16 @@ describe("GET /beneficiarios — getAll con datos", () => {
 
     expect(res.body[0].tipoSangre).toBe("A+");
   });
+
+  test("DIAS_RESTANTES no nulo → Math.floor aplicado (L37 true branch)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...beneficiarioRow, DIAS_RESTANTES: 45.7 }],
+    });
+
+    const res = await request(app).get("/beneficiarios");
+
+    expect(res.body[0].diasRestantes).toBe(45);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

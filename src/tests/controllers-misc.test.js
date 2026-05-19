@@ -299,6 +299,30 @@ describe("GET /api/v1/citas — listar citas", () => {
 
     expect(res.status).toBe(200);
   });
+
+  test("ESTATUS null → estatusRaw='' → mapea a 'Pendiente' (L18-19 null branches)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...citaRow, ESTATUS: null }],
+    });
+
+    const res = await request(app).get("/api/v1/citas");
+
+    expect(res.status).toBe(200);
+    // estatusRaw="" → ESTATUS_MAP[""] undefined → r.estatus null → "Pendiente"
+    expect(res.body[0].estatus).toBe("Pendiente");
+  });
+
+  test("ESTATUS desconocido → ESTATUS_MAP falla → usa r.estatus (L19 ?? r.estatus branch)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...citaRow, ESTATUS: "OTRO_ESTADO" }],
+    });
+
+    const res = await request(app).get("/api/v1/citas");
+
+    expect(res.status).toBe(200);
+    // ESTATUS_MAP["OTRO_ESTADO"] undefined → ?? r.estatus = "OTRO_ESTADO"
+    expect(res.body[0].estatus).toBe("OTRO_ESTADO");
+  });
 });
 
 describe("GET /api/v1/citas/:id — obtener cita por ID", () => {
@@ -838,6 +862,17 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
     const res = await request(app)
       .put("/api/v1/citas/1")
       .send({});
+
+    expect(res.status).toBe(200);
+  });
+
+  test("actualiza cita con curp en body → usa data.curp.toUpperCase() (L71 true-branch)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({ curp: "gaej900101hmnrrl09" }); // curp en minúsculas → se convierte a mayúsculas
 
     expect(res.status).toBe(200);
   });

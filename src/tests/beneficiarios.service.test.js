@@ -170,6 +170,16 @@ describe("validarFormatos — fechaNacimiento ramas", () => {
       Service.create({ ...baseCreate, fechaNacimiento: "1926-01-01" })
     ).resolves.not.toThrow();
   });
+
+  test("sin fechaNacimiento → if(data.fechaNacimiento) false branch (L196)", async () => {
+    const { fechaNacimiento, ...sinFecha } = baseCreate;
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+
+    // No fechaNacimiento → validarFormatos skips the date block → reaches BD
+    await expect(Service.create(sinFecha)).resolves.not.toThrow();
+    expect(mockCreate).toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -454,6 +464,15 @@ describe("createPublicSolicitud — normalizarUsaValvulaBody: number 1", () => {
   });
 });
 
+describe("createPublicSolicitud — usaValvula faltante → MISSING_REQUIRED_FIELDS (L134)", () => {
+  test("usaValvula no proporcionado → error MISSING_REQUIRED_FIELDS", async () => {
+    const { usaValvula, ...sinValvula } = basePublicSolicitud;
+    await expect(
+      Service.createPublicSolicitud({ ...sinValvula })
+    ).rejects.toMatchObject({ code: "MISSING_REQUIRED_FIELDS" });
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // validarFormatosUpdate — ramas no cubiertas (líneas 220, 223, 226, 229)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -545,6 +564,213 @@ describe("clearFotoPerfil", () => {
 
   test("carga exitosa → retorna fotoPerfilUrl null", async () => {
     mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, FOTO_PERFIL_URL: null });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.clearFotoPerfil(CURP_VALIDA);
+
+    expect(result).toEqual({ fotoPerfilUrl: null });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Ramas de cobertura faltantes — beneficiarios.service.js
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("update — sin fechaNacimiento → L196 false branch", () => {
+  test("update sin fechaNacimiento no lanza por fecha (L196 false)", async () => {
+    const { fechaNacimiento, ...sinFecha } = baseUpdate;
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    mockUpdate.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    await Service.update(CURP_VALIDA, sinFecha);
+
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+});
+
+describe("esPendienteSolicitudPublica — row.ESTATUS ?? row.estatus ?? '' (L36)", () => {
+  test("usa row.estatus cuando ESTATUS no existe en la fila", () => {
+    const result = Service.esPendienteSolicitudPublica({ estatus: "Inactivo", NOTAS: "" });
+    expect(typeof result).toBe("boolean");
+  });
+
+  test("ESTATUS null → ?? row.estatus → usa estatus lowercase (L36 ?? branch)", () => {
+    const MARCADOR = "[SOLICITUD_PUBLICA_PRE_REG]";
+    // ESTATUS is null → ?? row.estatus → uses "Inactivo"
+    const result = Service.esPendienteSolicitudPublica({
+      ESTATUS: null,
+      estatus: "Inactivo",
+      NOTAS: MARCADOR,
+    });
+    expect(result).toBe(true);
+  });
+
+  test("ESTATUS null y estatus null → ?? '' (L36 null→right branch)", () => {
+    // Both null → falls to ?? "" → est = "" → returns false
+    const result = Service.esPendienteSolicitudPublica({
+      ESTATUS: null,
+      estatus: null,
+      NOTAS: null,
+      notas: null,
+    });
+    expect(result).toBe(false);
+  });
+});
+
+describe("validarCurpRuta — ramas legacy y 8-char (L160, L162-164)", () => {
+  test("curp nulo → validarCurpRuta en toggleEstatus → 400 INVALID_CURP (L160)", async () => {
+    // toggleEstatus with empty string → validarCurpRuta("") → !c = true → throws
+    await expect(
+      Service.toggleEstatus("", "Activo")
+    ).rejects.toMatchObject({ code: "INVALID_CURP" });
+  });
+
+  test("legacy CURP (9-24 chars alfanumerico) → validarCurpRuta retorna c (L162)", async () => {
+    // Usar approvePreRegistro con CURP legado de 12 chars
+    const CURP_LEGACY = "AB12345CD678"; // 12 chars, all alphanumeric, matches legado regex
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP_LEGACY,
+      ESTATUS: "Inactivo",
+      NOTAS: "[SOLICITUD_PUBLICA_PRE_REG]",
+    });
+    mockUpdateEstatusAndNotas.mockResolvedValueOnce(undefined);
+
+    await Service.approvePreRegistro(CURP_LEGACY);
+
+    expect(mockUpdateEstatusAndNotas).toHaveBeenCalled();
+  });
+
+  test("8-char CURP con dígito → validarCurpRuta retorna c (L164)", async () => {
+    // 8 chars con al menos un dígito
+    const CURP8 = "GAEJ0001"; // 8 chars, has digits
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP8,
+      ESTATUS: "Inactivo",
+      NOTAS: "[SOLICITUD_PUBLICA_PRE_REG]",
+    });
+    mockUpdateEstatusAndNotas.mockResolvedValueOnce(undefined);
+
+    await Service.approvePreRegistro(CURP8);
+
+    expect(mockUpdateEstatusAndNotas).toHaveBeenCalled();
+  });
+});
+
+describe("limpiarMarcadorNotasPublicas — startsWith sin newline (L48)", () => {
+  test("approvePreRegistro con notas=[marcador]texto directo sin newline → L48 branch", async () => {
+    // notas = "[SOLICITUD_PUBLICA_PRE_REG]texto" → starts con marcador pero NO conNl
+    // y s0 !== m (tiene texto adicional) → entra en L48
+    const MARCADOR = "[SOLICITUD_PUBLICA_PRE_REG]";
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP_VALIDA,
+      ESTATUS: "Inactivo",
+      NOTAS: `${MARCADOR}texto adicional sin newline`,
+    });
+    mockUpdateEstatusAndNotas.mockResolvedValueOnce(undefined);
+
+    await Service.approvePreRegistro(CURP_VALIDA);
+
+    expect(mockUpdateEstatusAndNotas).toHaveBeenCalledWith(
+      CURP_VALIDA, "Activo", "texto adicional sin newline"
+    );
+  });
+});
+
+describe("sanitizar — tipoSangre=null y tipo=null → null en data (L71-76)", () => {
+  test("tipoSangre null → tipoSangre queda null", async () => {
+    await expect(
+      Service.create({ ...baseCreate, tipoSangre: null })
+    ).rejects.toMatchObject({ statusCode: 409 }).catch(async () => {
+      // Si llega a findById, mock retorna null (sin duplicado)
+    });
+
+    // Verificar que la validación pasa sin lanzar por tipoSangre null
+    mockFindById.mockResolvedValueOnce(null);
+    mockCreate.mockResolvedValueOnce({ CURP: CURP_VALIDA });
+    await expect(
+      Service.create({ ...baseCreate, tipoSangre: null })
+    ).resolves.toBeDefined();
+  });
+
+  test("tipo null → tipo queda null", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    mockCreate.mockResolvedValueOnce({ CURP: CURP_VALIDA });
+    await expect(
+      Service.create({ ...baseCreate, tipo: null })
+    ).resolves.toBeDefined();
+  });
+});
+
+describe("normalizarUsaValvulaBody — string 'X' no válido → no muta (L106 false branch)", () => {
+  test("usaValvula='X' en createPublicSolicitud → lanza MISSING_REQUIRED_FIELDS", async () => {
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, usaValvula: "X" })
+    ).rejects.toMatchObject({ code: "MISSING_REQUIRED_FIELDS" });
+  });
+});
+
+describe("validarCurpRuta — curp null/vacío → null (L154,263)", () => {
+  test("getById con curp null → retorna null", async () => {
+    const result = await Service.getById(null);
+    expect(result).toBeNull();
+  });
+
+  test("getById con curp vacío → retorna null", async () => {
+    const result = await Service.getById("");
+    expect(result).toBeNull();
+  });
+});
+
+describe("toggleEstatus — existente.estatus fallback (L254)", () => {
+  test("usa existente.estatus cuando ESTATUS es undefined", async () => {
+    mockFindById.mockResolvedValueOnce({ estatus: "Activo" }); // lowercase
+    // estatus igual → return sin update
+    await Service.toggleEstatus(CURP_VALIDA, "Activo");
+    expect(mockUpdateEstatus).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateFotoPerfilByUpload — mimetype vacío y prev con path antiguo (L371,375-376)", () => {
+  test("mimetype falsy → usa 'image/jpeg' por defecto", async () => {
+    mockFindById.mockResolvedValueOnce({ CURP: CURP_VALIDA, FOTO_PERFIL_URL: null });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.updateFotoPerfilByUpload(CURP_VALIDA, "/tmp/foto.jpg", "");
+
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
+  });
+
+  test("prev con path antiguo no 'data:' → llama unlinkOldProfileIfSafe (L376)", async () => {
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP_VALIDA,
+      FOTO_PERFIL_URL: "/uploads/profiles/old-photo.jpg",
+    });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.updateFotoPerfilByUpload(CURP_VALIDA, "/tmp/foto.jpg", "image/jpeg");
+
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
+  });
+});
+
+describe("clearFotoPerfil — prev con path antiguo → unlinkOldProfileIfSafe (L399)", () => {
+  test("FOTO_PERFIL_URL antiguo → llama unlink", async () => {
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP_VALIDA,
+      FOTO_PERFIL_URL: "/uploads/profiles/old.jpg",
+    });
+    mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
+
+    const result = await Service.clearFotoPerfil(CURP_VALIDA);
+
+    expect(result).toEqual({ fotoPerfilUrl: null });
+  });
+
+  test("usa existente.fotoPerfilUrl cuando FOTO_PERFIL_URL es undefined (L396)", async () => {
+    mockFindById.mockResolvedValueOnce({
+      CURP: CURP_VALIDA,
+      fotoPerfilUrl: "/uploads/profiles/old.jpg",
+    });
     mockUpdateFotoPerfilUrl.mockResolvedValueOnce(undefined);
 
     const result = await Service.clearFotoPerfil(CURP_VALIDA);

@@ -794,6 +794,42 @@ describe("runMigration004 — connection.close() lanza (finally catch)", () => {
   });
 });
 
+describe("runMigration004 — filas sin CNT ni [0] → ?? 0 branch (L17,L29,L41)", () => {
+  test("row con objeto vacío → r[0]?.CNT undefined → r[0]?.[0] undefined → ?? 0 (branch L17/29/41)", async () => {
+    // Row objects with no CNT and no positional [0] → both ?? fallbacks hit → ?? 0 → 0 → ALTER added
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{}] }) // CHECK MONTO: CNT=undef,[0]=undef → ?? 0 → 0 → ALTER
+      .mockResolvedValueOnce({})             // ALTER ADD MONTO
+      .mockResolvedValueOnce({ rows: [{}] }) // CHECK METODO_PAGO → ?? 0 → ALTER
+      .mockResolvedValueOnce({})             // ALTER ADD METODO_PAGO
+      .mockResolvedValueOnce({ rows: [{}] }) // CHECK REFERENCIA → ?? 0 → ALTER
+      .mockResolvedValueOnce({})             // ALTER ADD REFERENCIA
+      .mockResolvedValueOnce({})             // SP
+      .mockResolvedValueOnce({});            // Trigger
+
+    await runMigration004();
+
+    // 3 checks + 3 ALTERs + SP + Trigger = 8 calls
+    expect(mockExecute).toHaveBeenCalledTimes(8);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration004 — error sin message → ?? err branch (L119)", () => {
+  test("error sin propiedad message → err?.message undefined → ?? err (L119 right branch)", async () => {
+    const errSinMsg = Object.create(null); // sin prototype, sin message
+    errSinMsg.errorNum = 99;
+    mockExecute.mockRejectedValueOnce(errSinMsg);
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration004()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // runMigration005 — MONTO_SUGERIDO, tipos de servicio, ESPECIALISTAS, CONFIGURACION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -939,6 +975,49 @@ describe("runMigration005 — connection.close() lanza (finally catch)", () => {
     mockClose.mockRejectedValueOnce(new Error("close failed"));
 
     await expect(runMigration005()).resolves.toBeUndefined();
+  });
+});
+
+describe("runMigration005 — filas sin CNT → ?? 0 branches (L21,L52,L67,L97)", () => {
+  test("rows con objeto vacío → CNT undefined → ?? 0 → trata como 0 (add/create)", async () => {
+    // All 4 checks (MONTO_SUGERIDO, 3×servicios, ESPECIALISTAS, CONFIGURACION) get empty-obj rows
+    // MONTO_SUGERIDO check → {} → CNT=undef → ?? 0 → 0 → ADD
+    mockExecute.mockResolvedValueOnce({ rows: [{}] }); // CHECK MONTO_SUGERIDO → ?? 0 L21
+    mockExecute.mockResolvedValueOnce({});             // ALTER ADD MONTO_SUGERIDO
+    // 4× UPDATE montos
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({});
+    // 3× servicios checks → {} → ?? 0 → add
+    for (let i = 0; i < 3; i++) {
+      mockExecute.mockResolvedValueOnce({ rows: [{}] }); // CHECK servicio → ?? 0 L52
+      mockExecute.mockResolvedValueOnce({});              // INSERT servicio
+    }
+    // ESPECIALISTAS check → {} → ?? 0 L67
+    mockExecute.mockResolvedValueOnce({ rows: [{}] });
+    mockExecute.mockResolvedValueOnce({});             // CREATE TABLE ESPECIALISTAS
+    for (let i = 0; i < 4; i++) mockExecute.mockResolvedValueOnce({}); // INSERTs
+    // CONFIGURACION check → {} → ?? 0 L97
+    mockExecute.mockResolvedValueOnce({ rows: [{}] });
+    mockExecute.mockResolvedValueOnce({});             // CREATE TABLE CONFIGURACION
+    for (let i = 0; i < 5; i++) mockExecute.mockResolvedValueOnce({}); // INSERTs
+
+    await runMigration005();
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration005 — error sin message → ?? err branch (L123)", () => {
+  test("error sin propiedad message → err?.message undefined → ?? err (L123)", async () => {
+    const errSinMsg = Object.create(null);
+    errSinMsg.errorNum = 99;
+    mockExecute.mockRejectedValueOnce(errSinMsg);
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration005()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
 

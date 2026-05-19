@@ -317,6 +317,85 @@ describe('generarHTML', () => {
     // La tabla de especialistas existe (sort se ejecutó)
     expect(html).toContain('Especialista');
   });
+
+  it('estadisticas sin porMes en data → usa default [] (L25 porMes = [])', () => {
+    const datasinPorMes = { ...DATA_VACIA };
+    delete datasinPorMes.porMes; // porMes ausente → usa default []
+    expect(() => generarHTML(datasinPorMes, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' }))
+      .not.toThrow();
+  });
+
+  it('beneficiarios: MUNICIPIO null → muestra guion (L204 ?? branch)', () => {
+    const data = {
+      tipo: 'beneficiarios',
+      filas: [
+        { CURP: 'GARM900101HNLRLS01', NOMBRE_COMPLETO: 'Marco García',
+          GENERO: 'Masculino', MUNICIPIO: null, ESTATUS: 'Activo' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Marco García');
+  });
+
+  it('membresias: NUMERO_CREDENCIAL null y fechas null → guion (L272-274)', () => {
+    const data = {
+      tipo: 'membresias',
+      filas: [
+        { NOMBRE: 'Sin Credencial', CURP: 'MARA850515MNLRNS02',
+          NUMERO_CREDENCIAL: null, FECHA_VIGENCIA_INICIO: null,
+          FECHA_VIGENCIA_FIN: null, FECHA_ULTIMO_PAGO: null,
+          ESTADO: 'Activa' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin Credencial');
+  });
+
+  it('servicios: COSTO null y MONTO_PAGADO null → usa 0 (L339-340)', () => {
+    const data = {
+      tipo: 'servicios',
+      filas: [
+        { FECHA: '2026-01-15', NOMBRE: 'Marco', CURP: 'GARM900101HNLRLS01',
+          TIPO_SERVICIO: 'Consulta', COSTO: null, MONTO_PAGADO: null, MODALIDAD: 'Exento' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('$0.00');
+  });
+
+  it('inventario: stock <= 0 → color rojo (L408)', () => {
+    const data = {
+      tipo: 'inventario',
+      articulos: [
+        { DESCRIPCION: 'Sin stock', UNIDAD: 'pieza',
+          INVENTARIO_ACTUAL: 0, CUOTA_RECUPERACION: null, MANEJA_INVENTARIO: 'S' },
+        { DESCRIPCION: 'No rastreado', UNIDAD: 'pieza',
+          INVENTARIO_ACTUAL: 0, CUOTA_RECUPERACION: 50, MANEJA_INVENTARIO: 'N' },
+      ],
+      movimientos: [
+        { FECHA: '2026-01-10', ARTICULO: 'Silla', TIPO_MOVIMIENTO: 'ENTRADA',
+          CANTIDAD: 1, MOTIVO: null },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('#c0392b'); // stock <= 0
+    expect(html).toContain('No'); // MANEJA_INVENTARIO N → "No"
+  });
+
+  it('citas: ESPECIALISTA null → "Sin asignar" (L450) y estatusStyle Cancelada (L519)', () => {
+    const data = {
+      tipo: 'citas',
+      filas: [
+        { FECHA: '2026-01-20', NOMBRE: 'Ana', CURP: 'MARA850515MNLRNS02',
+          TIPO_SERVICIO: 'Neurología', ESPECIALISTA: null, ESTATUS: 'Cancelada' },
+        { FECHA: '2026-01-22', NOMBRE: 'Marco', CURP: 'GARM900101HNLRLS01',
+          TIPO_SERVICIO: 'Cardiología', ESPECIALISTA: null, ESTATUS: 'Pendiente' },
+      ],
+    };
+    const html = generarHTML(data, { fechaInicio: '2026-01-01', fechaFin: '2026-01-31' });
+    expect(html).toContain('Sin asignar');
+    expect(html).toContain('#c0392b'); // Cancelada
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────

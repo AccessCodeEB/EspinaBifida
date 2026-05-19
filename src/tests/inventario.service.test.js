@@ -164,3 +164,31 @@ describe('assertArticuloSinMovimientos', () => {
       .rejects.toMatchObject({ statusCode: 409, code: 'ARTICULO_HAS_MOVIMIENTOS' });
   });
 });
+
+// ── Ramas faltantes en normalizeMovimientoData ─────────────────────────────────
+
+describe('createMovimiento — ramas ?? y || faltantes (L4, L11)', () => {
+  it('tipo null → || "" → INVALID_MOVIMIENTO_TIPO (L11 || branch)', async () => {
+    // data.tipo es null → null || "" → "" → no es ENTRADA ni SALIDA
+    await expect(Service.createMovimiento({ idProducto: 1, tipo: null, cantidad: 1 }))
+      .rejects.toMatchObject({ statusCode: 400, code: 'INVALID_MOVIMIENTO_TIPO' });
+  });
+
+  it('tipo undefined → || "" → INVALID_MOVIMIENTO_TIPO (L11 || branch)', async () => {
+    await expect(Service.createMovimiento({ idProducto: 1, cantidad: 1 }))
+      .rejects.toMatchObject({ statusCode: 400, code: 'INVALID_MOVIMIENTO_TIPO' });
+  });
+
+  it('llamada con data={} → default param branch (L4)', async () => {
+    // Al no pasar data, usa {} por defecto → idProducto undefined → NaN → INVALID_ID
+    // Nota: normalizarMovimientoData(data={}) se puede llamar con argumento explícito {} también
+    await expect(Service.createMovimiento({}))
+      .rejects.toMatchObject({ statusCode: 400, code: 'INVALID_ID' });
+  });
+
+  it('createMovimiento sin argumentos → data=undefined → normalizeMovimientoData usa {} default (L4)', async () => {
+    // data = undefined → normalizeMovimientoData(undefined) → usa default {} → idProducto NaN → 400
+    await expect(Service.createMovimiento(undefined))
+      .rejects.toMatchObject({ statusCode: 400, code: 'INVALID_ID' });
+  });
+});

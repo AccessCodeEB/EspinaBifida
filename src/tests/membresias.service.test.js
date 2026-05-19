@@ -479,6 +479,26 @@ describe("getEstatusMembresia — credencial con campos opcionales nulos (mapMem
     expect(result.membresia.fecha_ultimo_pago).toBeNull();
     expect(result.membresia.observaciones).toBeNull();
   });
+
+  test("credencial con ID_CREDENCIAL undefined → id_credencial = null", async () => {
+    const futuro = new Date();
+    futuro.setFullYear(futuro.getFullYear() + 1);
+
+    mockFindLastByCurp.mockResolvedValue({
+      // ID_CREDENCIAL not set → undefined → ?? null branch
+      CURP:                  CURP,
+      NUMERO_CREDENCIAL:     "CRED-001",
+      FECHA_EMISION:         null,
+      FECHA_VIGENCIA_INICIO: null,
+      FECHA_VIGENCIA_FIN:    futuro,
+      FECHA_ULTIMO_PAGO:     null,
+      OBSERVACIONES:         null,
+    });
+
+    const result = await Service.getEstatusMembresia(CURP);
+
+    expect(result.membresia.id_credencial).toBeNull();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

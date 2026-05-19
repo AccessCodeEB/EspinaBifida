@@ -122,3 +122,19 @@ describe('deleteById', () => {
     expect(result).toEqual({});
   });
 });
+
+// ── normalizeData default parameter (L4) ──────────────────────────────────────
+
+describe('create — normalizeData(data = {}) default param (L4)', () => {
+  it('create con undefined → normalizeData usa {} default → lanza por idArticulo null', () => {
+    expect(() => Service.create(undefined)).toThrow(/idArticulo/);
+  });
+});
+
+describe('normalizeData — idArticulo undefined (L11: val===undefined branch)', () => {
+  it('crea con idArticulo: undefined → lanza por idArticulo obligatorio', () => {
+    // { idArticulo: undefined } → 'idArticulo' in data = true → validator(undefined)
+    // → val === null = false → val === undefined = true → return null → throw
+    expect(() => Service.create({ idArticulo: undefined })).toThrow(/idArticulo/);
+  });
+});

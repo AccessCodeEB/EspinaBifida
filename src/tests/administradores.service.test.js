@@ -236,6 +236,32 @@ describe("updateFotoPerfilByUpload", () => {
       Service.updateFotoPerfilByUpload(1, { mimetype: "image/png" }, caller)
     ).rejects.toMatchObject({ statusCode: 400 });
   });
+
+  test("mime fallback 'image/jpeg' cuando file.mimetype es vacío (L179)", async () => {
+    const caller = { idAdmin: 1, idRol: 1 };
+    mockFindById.mockResolvedValueOnce(adminRow);
+
+    const result = await Service.updateFotoPerfilByUpload(1, {
+      path: "/tmp/espina-test-profile.bin",
+      mimetype: "", // falsy → usa "image/jpeg"
+      filename: "upload.jpg",
+    }, caller);
+
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
+  });
+
+  test("prev con URL externa (no 'data:') → intenta eliminar archivo (L182)", async () => {
+    const caller = { idAdmin: 1, idRol: 1 };
+    const adminWithExternalPhoto = {
+      ...adminRow,
+      FOTO_PERFIL_URL: "/uploads/profiles/old-photo.jpg", // no empieza con "data:"
+    };
+    mockFindById.mockResolvedValueOnce(adminWithExternalPhoto);
+
+    const result = await Service.updateFotoPerfilByUpload(1, fakeUploadedFile, caller);
+
+    expect(result.fotoPerfilUrl).toMatch(/^data:image\/jpeg;base64,/);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -329,6 +355,17 @@ describe("update — validaciones (líneas 123–133)", () => {
     await expect(
       Service.update(1, { idRol: 1, nombreCompleto: "Admin Test", email: "admin@test.com" })
     ).resolves.toBeUndefined();
+  });
+
+  test("email no proporcionado → usa admin.EMAIL (L132: ?? admin.EMAIL)", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockRolesFindById.mockResolvedValueOnce({ ID_ROL: 1 });
+    mockUpdate.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    await Service.update(1, { idRol: 1, nombreCompleto: "Admin Test" });
+
+    const callArgs = mockUpdate.mock.calls[0][1];
+    expect(callArgs.email).toBe(adminRow.EMAIL);
   });
 });
 

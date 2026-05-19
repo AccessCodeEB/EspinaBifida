@@ -60,6 +60,17 @@ describe("findAll", () => {
     await expect(findAll()).rejects.toThrow("ORA-00942");
     expect(mockExecute).toHaveBeenCalledTimes(1);
   });
+
+  it("error sin message ni errorNum → ?? '' branch en isInvalidIdentifierError (L4)", async () => {
+    // err sin message → err?.message = undefined → ?? "" → string("") → no ORA-00904 → rethrows
+    const errSinMsg = { errorNum: undefined }; // no es Error → err?.message undefined
+    Object.setPrototypeOf(errSinMsg, null); // sin prototipo
+
+    mockExecute.mockRejectedValueOnce(errSinMsg);
+
+    await expect(findAll()).rejects.toBe(errSinMsg);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─── findById ───────────────────────────────────────────────────────────────

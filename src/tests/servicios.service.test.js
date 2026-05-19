@@ -215,6 +215,24 @@ describe('getDetailed', () => {
     expect(mockFindDetailed).toHaveBeenCalledTimes(1);
   });
 
+  it('normaliza curp truthy, idTipoServicio, montoPagadoMin, montoPagadoMax (L165,167,173,177)', async () => {
+    mockFindDetailed.mockResolvedValueOnce([]);
+
+    await Service.getDetailed({
+      curp: CURP,
+      idTipoServicio: 1,
+      montoPagadoMin: 0,
+      montoPagadoMax: 100,
+    });
+
+    expect(mockFindDetailed).toHaveBeenCalledTimes(1);
+    const args = mockFindDetailed.mock.calls[0][0];
+    expect(args.curp).toBe(CURP);
+    expect(args.idTipoServicio).toBe(1);
+    expect(args.montoPagadoMin).toBe(0);
+    expect(args.montoPagadoMax).toBe(100);
+  });
+
   it('400 cuando fechaDesde > fechaHasta', async () => {
     await expect(Service.getDetailed({
       fechaDesde: '2026-02-01', fechaHasta: '2026-01-01',
@@ -295,5 +313,39 @@ describe('getByCurpPaginated', () => {
 
     expect(mockFindByCurpPaginated).toHaveBeenCalledWith(CURP, 1, 10);
     expect(result).toEqual({ data: [], total: 0 });
+  });
+});
+
+// ── Ramas de cobertura faltantes ──────────────────────────────────────────────
+
+describe('createConValidacion — curp null → ?? "" branch (L59)', () => {
+  it('400 cuando curp es null (data.curp ?? "")', async () => {
+    await expect(Service.createConValidacion({
+      curp: null, idTipoServicio: 1, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, message: /curp/ });
+  });
+
+  it('400 cuando curp es undefined (data.curp ?? "")', async () => {
+    await expect(Service.createConValidacion({
+      idTipoServicio: 1, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, message: /curp/ });
+  });
+});
+
+describe('normalizeConsumos — idArticulo alias (L37)', () => {
+  it('acepta idArticulo como alias de idProducto', async () => {
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, costo: 0,
+      consumos: [{ idArticulo: 99, cantidad: 2 }],
+    })).rejects.toMatchObject({ statusCode: 404 }); // beneficiario no encontrado es OK aquí
+  });
+});
+
+describe('update — servicio.COSTO undefined → ?? 0 (L151)', () => {
+  it('usa 0 cuando servicio.COSTO es undefined', async () => {
+    mockFindById.mockResolvedValueOnce({ ID_SERVICIO: 1, COSTO: undefined, NOTAS: null });
+
+    await expect(Service.update(1, { montoPagado: 1 }))
+      .rejects.toMatchObject({ statusCode: 400, message: /costo/ });
   });
 });
