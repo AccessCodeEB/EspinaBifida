@@ -8,9 +8,9 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 **Área:** Frontend — Componentes
 **Archivos modificados:** `sections/servicios.tsx` (orquestador)
-**Archivos creados:** `servicios/ServiciosChartsKpis.tsx`, `servicios/ServiciosTable.tsx`, `servicios/ServicioFormDialog.tsx`, `servicios/types.ts`
+**Archivos creados:** `servicios/types.ts`, `servicios/ServiciosChartsKpis.tsx`, `servicios/ServiciosTable.tsx`, `servicios/ServicioFormDialog.tsx`
 **Problema:** Un solo archivo de 1,310 líneas mezclaba tabla con filtros/paginación, formulario de registro de servicio y gráficas/KPIs del mes.
-**Solución:** Tres subcomponentes con props explícitas + archivo de tipos compartidos. `ServiciosChartsKpis` encapsula KPIs y gráficas; `ServiciosTable` encapsula filtros, tabla y paginación; `ServicioFormDialog` encapsula el formulario de registro con búsqueda de beneficiario. El orquestador coordina estado y ensambla los tres.
+**Solución:** Cuatro subcomponentes. El orquestador coordina estado y ensambla. `ServiciosChartsKpis` encapsula KPIs y gráficas; `ServiciosTable` encapsula filtros, tabla y paginación; `ServicioFormDialog` encapsula el formulario de registro con búsqueda de beneficiario. `ConsumoArticulosForm` no se creó porque la funcionalidad de artículos consumidos aún no está implementada en el frontend.
 **Impacto:** Componente principal reducido de 1,310 a ~716 líneas. La reducción del orquestador es menor que en beneficiarios.tsx porque todo el estado compartido entre subcomponentes permanece en el nivel superior.
 
 ---
