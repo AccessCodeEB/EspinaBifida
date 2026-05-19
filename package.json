@@ -41,6 +41,7 @@
     "oracledb": "^6.10.0",
     "puppeteer": "^24.42.0",
     "react-easy-crop": "^5.5.7",
+    "ws": "^8.20.1",
     "xlsx": "0.18.5"
   },
   "devDependencies": {
