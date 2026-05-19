@@ -5,9 +5,9 @@ import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
+import { EMAIL_REGEX } from "../utils/validators.js";
 
 const SALT_ROUNDS = 10;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function generarToken(admin) {
   return jwt.sign(
