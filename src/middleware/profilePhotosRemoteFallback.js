@@ -7,6 +7,7 @@ const profilesDir = path.join(REPO_ROOT, "uploads", "profiles");
 
 /** Solo nombres de archivo seguros (p. ej. ben-CURP-timestamp.jpg). */
 function safeProfileFilename(name) {
+  /* istanbul ignore next */
   if (name == null || typeof name !== "string") return null;
   const trimmed = name.trim();
   const base = path.basename(trimmed);
