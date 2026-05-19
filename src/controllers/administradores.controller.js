@@ -3,7 +3,7 @@ import { toCamel } from "../utils/dbTransform.js";
 import { badRequest } from "../utils/httpErrors.js";
 
 function mapAdminPublic(row) {
-  /* c8 ignore next */
+  /* istanbul ignore next */
   if (!row) return null;
   const a = toCamel(row);
   return {

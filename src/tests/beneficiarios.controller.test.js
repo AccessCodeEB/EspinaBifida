@@ -354,3 +354,29 @@ describe("POST /beneficiarios/:curp/foto-perfil — uploadFotoPerfil sin archivo
     expect(res.status).toBe(400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// uploadFotoPerfil — con archivo → éxito (L110-116)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /beneficiarios/:curp/foto-perfil — uploadFotoPerfil éxito", () => {
+  test("actualiza foto de perfil exitosamente (200)", async () => {
+    // findById → beneficiario existe (para updateFotoPerfilByUpload)
+    mockExecute.mockResolvedValueOnce({ rows: [{ ...beneficiarioRow, FOTO_PERFIL_URL: null }] });
+    // updateFotoPerfilUrl → éxito
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const smallJpeg = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ]);
+
+    const res = await request(app)
+      .post(`/beneficiarios/${CURP}/foto-perfil`)
+      .attach("foto", smallJpeg, { filename: "avatar.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/foto/i);
+    expect(res.body).toHaveProperty("fotoPerfilUrl");
+  });
+});
