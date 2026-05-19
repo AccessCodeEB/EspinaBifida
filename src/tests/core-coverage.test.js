@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { jest } from "@jest/globals";
+import jwt from "jsonwebtoken";
 import {
   HttpError,
   badRequest,
@@ -14,6 +15,7 @@ import {
 } from "../utils/httpErrors.js";
 import { notFoundHandler, errorHandler } from "../middleware/errorHandler.js";
 import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
+import { verifyToken, checkRole } from "../middleware/auth.js";
 import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { REPO_ROOT } from "../repoRoot.js";
 
@@ -219,5 +221,69 @@ describe("unlinkOldProfileIfSafe — ramas adicionales de seguridad", () => {
     expect(() =>
       unlinkOldProfileIfSafe("/uploads/profiles/nonexistent-file-xyz.png")
     ).not.toThrow();
+  });
+});
+
+describe("auth middleware — ramas adicionales", () => {
+  function makeAuthReqRes() {
+    const req = { headers: {} };
+    const res = {
+      statusCode: 200,
+      body: undefined,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload) {
+        this.body = payload;
+        return this;
+      },
+    };
+    const next = jest.fn();
+    return { req, res, next };
+  }
+
+  test("verifyToken: authHeader existe pero no empieza con 'Bearer ' → 401 token no proporcionado", () => {
+    const { req, res, next } = makeAuthReqRes();
+    req.headers["authorization"] = "Basic abc123";
+
+    verifyToken(req, res, next);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toBe("Token no proporcionado");
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test("verifyToken: token expirado → 401 'Token expirado'", () => {
+    const { req, res, next } = makeAuthReqRes();
+    req.headers["authorization"] = "Bearer fake-expired-token";
+
+    // Mock jwt.verify para lanzar TokenExpiredError
+    const originalVerify = jwt.verify;
+    jwt.verify = jest.fn(() => {
+      const err = new Error("jwt expired");
+      err.name = "TokenExpiredError";
+      throw err;
+    });
+
+    verifyToken(req, res, next);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toBe("Token expirado");
+    expect(next).not.toHaveBeenCalled();
+
+    jwt.verify = originalVerify;
+  });
+
+  test("checkRole: req.user no definido → 401 'No autenticado'", () => {
+    const middleware = checkRole(1, 2);
+    const { req, res, next } = makeAuthReqRes();
+    req.user = undefined;
+
+    middleware(req, res, next);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toBe("No autenticado");
+    expect(next).not.toHaveBeenCalled();
   });
 });
