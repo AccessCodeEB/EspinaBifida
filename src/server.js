@@ -37,7 +37,10 @@ createPool()
       console.log(`Server running on port ${PORT}`)
     );
 
+    let shuttingDown = false;
     const shutdown = (signal) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
       console.log(`${signal} recibido — cerrando servidor...`);
       server.close(async () => {
         await closePool();

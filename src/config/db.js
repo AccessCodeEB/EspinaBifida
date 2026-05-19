@@ -36,8 +36,13 @@ export async function getConnection() {
 }
 
 export async function closePool() {
-  if (_pool) {
-    await _pool.close(10); // drainTime = 10s
-    _pool = null;
+  if (!_pool) return;
+  const pool = _pool;
+  _pool = null; // marcar como cerrado antes del await para evitar doble cierre
+  try {
+    await pool.close(10); // drainTime = 10s
+  } catch (err) {
+    // NJS-064: pool ya estaba cerrándose (doble señal SIGINT/SIGTERM) — ignorar
+    if (err?.code !== "NJS-064") throw err;
   }
 }
