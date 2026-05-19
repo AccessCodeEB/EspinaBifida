@@ -20,6 +20,7 @@ jest.unstable_mockModule("../config/db.js", () => ({
   getConnection: jest.fn().mockResolvedValue(mockConn),
   createPool: jest.fn().mockResolvedValue(undefined),
   closePool: jest.fn().mockResolvedValue(undefined),
+  withConnection: jest.fn(async (fn) => fn(mockConn)),
 }));
 
 const { default: app } = await import("../app.js");

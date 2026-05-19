@@ -26,4 +26,5 @@ export const dbModuleMock = {
   getConnection: jest.fn().mockResolvedValue(mockConn),
   createPool:    jest.fn().mockResolvedValue(undefined),
   closePool:     jest.fn().mockResolvedValue(undefined),
+  withConnection: jest.fn(async (fn) => fn(mockConn)),
 };

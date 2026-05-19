@@ -1,26 +1,15 @@
-import { getConnection } from "../config/db.js";
+import { withConnection } from "../config/db.js";
 
-export async function findAll() {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
-      `SELECT ID_ROL, NOMBRE_ROL, DESCRIPCION FROM ROLES ORDER BY ID_ROL`
-    );
-    return result.rows;
-  } finally {
-    await conn.close();
-  }
-}
+export const findAll = () =>
+  withConnection(conn =>
+    conn.execute(`SELECT ID_ROL, NOMBRE_ROL, DESCRIPCION FROM ROLES ORDER BY ID_ROL`)
+      .then(r => r.rows)
+  );
 
-export async function findById(idRol) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findById = (idRol) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT ID_ROL, NOMBRE_ROL, DESCRIPCION FROM ROLES WHERE ID_ROL = :idRol`,
       { idRol }
-    );
-    return result.rows[0] ?? null;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows[0] ?? null)
+  );
