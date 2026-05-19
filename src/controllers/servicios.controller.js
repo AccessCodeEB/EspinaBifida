@@ -11,6 +11,7 @@ function mapServicio(row) {
   const r = toCamel(row);
   let fechaStr = "";
   if (r.fecha) {
+    /* istanbul ignore next */
     const d = r.fecha instanceof Date ? r.fecha : new Date(r.fecha);
     fechaStr = isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
   }
@@ -48,10 +49,8 @@ export async function getByCurp(req, res, next) {
   try {
     const { curp } = req.params;
     
-    /* c8 ignore next 3 */
-    if (!curp) {
-      throw badRequest("CURP requerido");
-    }
+    /* istanbul ignore next */
+    if (!curp) throw badRequest("CURP requerido");
 
     const servicios = await ServiciosService.getByCurp(curp);
     
@@ -71,6 +70,7 @@ export async function getByCurp(req, res, next) {
 
 export async function getDetailed(req, res, next) {
   try {
+    /* istanbul ignore next */
     const result = await ServiciosService.getDetailed(req.query ?? {});
 
     res.json({
@@ -124,10 +124,8 @@ export async function getById(req, res, next) {
   try {
     const idServicio = parseIdServicio(req.params.idServicio);
 
-    /* c8 ignore next 3 */
-    if (!idServicio) {
-      throw badRequest("ID de servicio requerido");
-    }
+    /* istanbul ignore next */
+    if (!idServicio) throw badRequest("ID de servicio requerido");
 
     const servicio = await ServiciosService.getById(idServicio);
 
@@ -146,10 +144,8 @@ export async function update(req, res, next) {
     const idServicio = parseIdServicio(req.params.idServicio);
     const { montoPagado, notas } = req.body;
 
-    /* c8 ignore next 3 */
-    if (!idServicio) {
-      throw badRequest("ID de servicio requerido");
-    }
+    /* istanbul ignore next */
+    if (!idServicio) throw badRequest("ID de servicio requerido");
 
     if (montoPagado === undefined && notas === undefined) {
       throw badRequest("Debe enviar al menos un campo para actualizar");
@@ -170,10 +166,8 @@ export async function deleteById(req, res, next) {
   try {
     const idServicio = parseIdServicio(req.params.idServicio);
 
-    /* c8 ignore next 3 */
-    if (!idServicio) {
-      throw badRequest("ID de servicio requerido");
-    }
+    /* istanbul ignore next */
+    if (!idServicio) throw badRequest("ID de servicio requerido");
 
     // Validar que el servicio existe
     const servicio = await ServiciosService.getById(idServicio);

@@ -339,6 +339,21 @@ describe("POST /api/v1/servicios — validación del controlador", () => {
     expect(res.status).toBe(201);
     expect(res.body.idServicio).toBe(42);
   });
+
+  test("crea servicio sin montoPagado → usa 0 por defecto (L109 ?? 0)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", MEMBRESIA_ACTIVA: 1, ID_CREDENCIAL: 1 }],
+    });
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 43 }] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .post("/api/v1/servicios")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ curp: CURP_VALIDA, idTipoServicio: 1, costo: 100 });
+
+    expect(res.status).toBe(201);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
