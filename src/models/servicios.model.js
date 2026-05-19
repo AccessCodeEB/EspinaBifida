@@ -148,7 +148,7 @@ export async function createWithInventarioTransaction(data, consumos) {
 
     const idServicio = Number(idResult.rows?.[0]?.NEXT_ID ?? 0);
     if (!Number.isInteger(idServicio) || idServicio <= 0) {
-      throw new Error("No se pudo generar ID_SERVICIO");
+      throw internal("No se pudo generar ID_SERVICIO");
     }
 
     await conn.execute(
