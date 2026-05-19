@@ -250,3 +250,54 @@ describe("GET /api/v1/movimientos — historial de movimientos", () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ─── SP error codes adicionales (inventario.model.js líneas 25-31) ────────────
+
+describe("POST /api/v1/movimientos — códigos de error SP adicionales", () => {
+  test("devuelve 422 si SP lanza ORA-20001 (stock insuficiente variante)", async () => {
+    const oraErr = Object.assign(
+      new Error("ORA-20001: Stock insuficiente para la operacion"),
+      { errorNum: 20001 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
+
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ ...movimientoBase, tipo: "SALIDA", cantidad: 100 });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("INSUFFICIENT_STOCK");
+    expect(mockRollback).toHaveBeenCalled();
+  });
+
+  test("devuelve 400 si SP lanza ORA-20005 (tipo de movimiento inválido a nivel DB)", async () => {
+    const oraErr = Object.assign(
+      new Error("ORA-20005: Tipo de movimiento invalido"),
+      { errorNum: 20005 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
+
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send(movimientoBase);
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_MOVIMIENTO_TIPO");
+    expect(mockRollback).toHaveBeenCalled();
+  });
+
+  test("propaga error genérico del SP como 500", async () => {
+    const genericErr = new Error("ORA-01031: insufficient privileges");
+    mockExecute.mockRejectedValueOnce(genericErr);
+
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send(movimientoBase);
+
+    expect(res.status).toBe(500);
+    expect(mockRollback).toHaveBeenCalled();
+  });
+});
