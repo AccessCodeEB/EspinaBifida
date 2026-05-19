@@ -47,3 +47,13 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Problema:** 10 funciones con boilerplate repetido (~60 líneas extra).
 **Solución:** 10 funciones refactorizadas con `withConnection`. `create` se conserva sin cambios (stored procedure con commit/rollback explícito).
 **Impacto:** Eliminadas ~60 líneas. Tests pasan sin cambios.
+
+---
+
+## 2026-05-18 withConnection + fix raw Error — servicios.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/servicios.model.js`
+**Problema:** (1) Boilerplate repetido en 8 funciones. (2) Dos `throw new Error(...)` generaban respuestas 500 sin el formato estándar.
+**Solución:** Funciones simples refactorizadas. `createWithInventarioTransaction` y `deleteById` (con rollback) conservadas. Los dos `throw new Error` reemplazados con `throw internal(...)` de `httpErrors.js`.
+**Impacto:** Eliminadas ~48 líneas. Errores de secuencia Oracle producen respuestas 500 con formato consistente.
