@@ -603,3 +603,19 @@ describe("PUT /api/v1/beneficiarios/:curp — actualizar beneficiario", () => {
     expect(res.body.message).toMatch(/actualizado/i);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMINISTRADORES — uploadFotoPerfil sin archivo
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /api/v1/administradores/:idAdmin/foto-perfil — sin archivo adjunto", () => {
+  test("devuelve 400 si no se envía imagen (req.file ausente → MISSING_FILE)", async () => {
+    const res = await request(app)
+      .post("/api/v1/administradores/1/foto-perfil")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+      // No .attach() → req.file será undefined → controller lanza badRequest
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("MISSING_FILE");
+  });
+});
