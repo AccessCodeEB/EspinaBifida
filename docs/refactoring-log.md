@@ -87,3 +87,13 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Problema:** 13 funciones (11 SELECTs puros + 1 INSERT + 1 SELECT paginado) con boilerplate repetido (~68 líneas extra).
 **Solución:** Todas las 13 funciones refactorizadas con `withConnection`. Como no hay rollback en ninguna (puro SELECT o INSERT sin lógica de error), la simplicidad es máxima. `getEstudios` tiene un ternario para retornar `Promise.resolve([])` si `ESTUDIOS_IDS` está vacío.
 **Impacto:** Eliminadas ~68 líneas de boilerplate. Tests pasan sin cambios (661/661 pasados).
+
+---
+
+## 2026-05-18 Eliminar AppError legacy
+
+**Área:** Backend — Middleware
+**Archivos modificados:** `src/middleware/errorHandler.js`, `src/services/administradores.service.js`, `src/tests/core-coverage.test.js`
+**Problema:** La clase `AppError` marcada como "kept for compatibility" estaba siendo usada en 4 lugares en `administradores.service.js`, pero era redundante con la clase `HttpError` más moderna. La rama `instanceof AppError` en el handler de errores era código de transición innecesario.
+**Solución:** Reemplazadas todas las 4 instancias de `new AppError(...)` con las funciones de conveniencia de `httpErrors.js`: `unauthorized(...)` para 401s, `forbidden(...)` para 403s. Eliminada la clase `AppError` y su rama `instanceof` del errorHandler. Test actualizado para verificar `HttpError` en lugar de `AppError`.
+**Impacto:** Eliminadas 16 líneas de código legado. API de errores unificada (solo `HttpError`). Tests pasan sin cambios (671/671 pasados).
