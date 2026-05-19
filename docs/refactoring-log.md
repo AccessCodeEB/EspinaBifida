@@ -57,3 +57,13 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Problema:** (1) Boilerplate repetido en 8 funciones. (2) Dos `throw new Error(...)` generaban respuestas 500 sin el formato estándar.
 **Solución:** Funciones simples refactorizadas. `createWithInventarioTransaction` y `deleteById` (con rollback) conservadas. Los dos `throw new Error` reemplazados con `throw internal(...)` de `httpErrors.js`.
 **Impacto:** Eliminadas ~48 líneas. Errores de secuencia Oracle producen respuestas 500 con formato consistente.
+
+---
+
+## 2026-05-18 withConnection — reportes.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/reportes.model.js`
+**Problema:** 13 funciones (11 SELECTs puros + 1 INSERT + 1 SELECT paginado) con boilerplate repetido (~68 líneas extra).
+**Solución:** Todas las 13 funciones refactorizadas con `withConnection`. Como no hay rollback en ninguna (puro SELECT o INSERT sin lógica de error), la simplicidad es máxima. `getEstudios` tiene un ternario para retornar `Promise.resolve([])` si `ESTUDIOS_IDS` está vacío.
+**Impacto:** Eliminadas ~68 líneas de boilerplate. Tests pasan sin cambios (661/661 pasados).
