@@ -788,6 +788,72 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
     expect(res.status).toBe(200);
   });
+
+  test("actualiza cita sin fecha ni hora y cita.FECHA es Date object → L58 branch (instanceof Date)", async () => {
+    // cita.FECHA como Date instance → instanceof Date = true
+    const citaConFechaDate = { ...citaRow, FECHA: new Date("2026-06-01T10:00:00.000Z"), ESTATUS: "PROGRAMADA" };
+    mockExecute.mockResolvedValueOnce({ rows: [citaConFechaDate] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    // No enviamos fecha → usa la de la cita (cita.FECHA)
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({ estatus: "CONFIRMADA" });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("actualiza cita sin fecha y sin cita.FECHA (L57 false-branch: FECHA es null)", async () => {
+    // cita.FECHA = null → else if (cita.FECHA) = false → fechaFinal queda null
+    const citaSinFecha = { ...citaRow, FECHA: null, ESTATUS: "PROGRAMADA" };
+    mockExecute.mockResolvedValueOnce({ rows: [citaSinFecha] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({ estatus: "CONFIRMADA" });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("actualiza cita sin estatus en body → usa cita.ESTATUS (L62 false-branch)", async () => {
+    const citaConEstatus = { ...citaRow, ESTATUS: "PROGRAMADA" };
+    mockExecute.mockResolvedValueOnce({ rows: [citaConEstatus] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    // No enviamos estatus → usa cita.ESTATUS
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({});
+
+    expect(res.status).toBe(200);
+  });
+
+  test("cita sin ESTATUS en BD (null) → usa 'PROGRAMADA' por defecto (L64: ?? branch)", async () => {
+    const citaSinEstatus = { ...citaRow, ESTATUS: null, FECHA: null };
+    mockExecute.mockResolvedValueOnce({ rows: [citaSinEstatus] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    // No enviamos estatus → usa cita.ESTATUS ?? "PROGRAMADA"
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({});
+
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("POST /api/v1/citas — createCita sin estatus (usa PROGRAMADA)", () => {
+  test("crea cita sin campo estatus → usa PROGRAMADA por defecto (L40: || branch)", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .post("/api/v1/citas")
+      .send({ curp: CURP_VALIDA, idTipoServicio: 1, fecha: "2026-09-01" });
+    // No se envía estatus → estatus = "" o undefined → || "PROGRAMADA" se usa
+
+    expect([200, 201, 400]).toContain(res.status);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

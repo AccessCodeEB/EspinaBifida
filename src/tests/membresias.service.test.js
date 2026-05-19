@@ -215,6 +215,22 @@ describe("validarMembresiaActivaPorCurp", () => {
 // 112 (inicio > fin), 123 (ultimo_pago formato), 127 (último pago futuro)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+describe("registrarMembresia — beneficiario no encontrado", () => {
+  test("CURP inexistente → NOT_FOUND (L109-110)", async () => {
+    mockFindBeneficiarioByCurp.mockResolvedValue(null);
+
+    await expect(
+      Service.registrarMembresia({ curp: CURP })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("curp vacío → BAD_REQUEST (L92)", async () => {
+    await expect(
+      Service.registrarMembresia({ curp: "" })
+    ).rejects.toMatchObject({ statusCode: 400, message: /curp/ });
+  });
+});
+
 describe("registrarMembresia — validaciones de fechas", () => {
   beforeEach(() => {
     // La mayoría de estos tests pasan la validación de beneficiario,
