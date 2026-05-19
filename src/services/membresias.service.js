@@ -112,7 +112,7 @@ export async function registrarMembresia(data) {
   }
 
   const fechaEmision = parseISODate(fechaEmisionStr);
-  /* c8 ignore next 3 */
+  /* istanbul ignore next 3 */
   if (!fechaEmision) {
     throw badRequest("fecha_emision debe tener formato YYYY-MM-DD");
   }
@@ -122,7 +122,7 @@ export async function registrarMembresia(data) {
       ? String(data.fecha_vigencia_inicio).trim()
       : fechaEmisionStr
   );
-  /* c8 ignore next 3 */
+  /* istanbul ignore next 3 */
   if (!fechaVigenciaInicio) {
     throw badRequest("fecha_vigencia_inicio debe tener formato YYYY-MM-DD");
   }
@@ -138,7 +138,7 @@ export async function registrarMembresia(data) {
     ? parseISODate(String(data.fecha_ultimo_pago).trim())
     : hoy;
 
-  /* c8 ignore next 3 */
+  /* istanbul ignore next 3 */
   if (data?.fecha_ultimo_pago && !fechaUltimoPago) {
     throw badRequest("fecha_ultimo_pago debe tener formato YYYY-MM-DD");
   }
