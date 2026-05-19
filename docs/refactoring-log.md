@@ -29,3 +29,11 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Solución:** Reemplazado con `withConnection`. La constante `SELECT_CON_ROL` se conserva.
 **Impacto:** Eliminadas ~48 líneas de boilerplate. Tests pasan sin cambios.
 **Nota:** Se mejoró `mockDb.js` para que `withConnection` en tests llame realmente al `finally` block.
+
+## 2026-05-18 withConnection — inventario.model.js, articulos.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/inventario.model.js`, `src/models/articulos.model.js`
+**Problema:** Boilerplate repetido. `inventario.model.js` mezclaba funciones simples con `createMovimientoConTransaccion` que necesita rollback explícito.
+**Solución:** Funciones simples en ambos archivos usan `withConnection`. `createMovimientoConTransaccion` conservada sin cambios (com comentario explicativo) porque necesita `conn.rollback()` en error. `articulos.model.js` usa `async conn =>` para funciones con inner try/catch del fallback ORA-00904.
+**Impacto:** Eliminadas ~79 líneas de boilerplate. Tests pasan sin cambios (661/661 pasados).
