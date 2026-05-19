@@ -4,6 +4,17 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 ---
 
+## 2026-05-18 División de beneficiarios.tsx
+
+**Área:** Frontend — Componentes
+**Archivos modificados:** `sections/beneficiarios.tsx` (orquestador)
+**Archivos creados:** `beneficiarios/BeneficiariosTable.tsx`, `beneficiarios/BeneficiarioFormDialog.tsx`, `beneficiarios/BeneficiarioDetailPanel.tsx`
+**Problema:** Un solo archivo de 1,328 líneas mezclaba tabla, panel de detalle y formulario. Difícil de leer y mantener.
+**Solución:** Tres subcomponentes con props explícitas. El orquestador coordina estado y ensambla.
+**Impacto:** Componente principal reducido de 1,328 a ~100 líneas. Cada subcomponente tiene una responsabilidad clara.
+
+---
+
 ## 2026-05-18 Servicios usan validators.js
 
 **Área:** Backend — Servicios
