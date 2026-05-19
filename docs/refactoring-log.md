@@ -4,6 +4,17 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 ---
 
+## 2026-05-18 División de servicios.tsx
+
+**Área:** Frontend — Componentes
+**Archivos modificados:** `sections/servicios.tsx` (orquestador)
+**Archivos creados:** `servicios/ServiciosChartsKpis.tsx`, `servicios/ServiciosTable.tsx`, `servicios/ServicioFormDialog.tsx`, `servicios/types.ts`
+**Problema:** Un solo archivo de 1,310 líneas mezclaba tabla con filtros/paginación, formulario de registro de servicio y gráficas/KPIs del mes.
+**Solución:** Tres subcomponentes con props explícitas + archivo de tipos compartidos. `ServiciosChartsKpis` encapsula KPIs y gráficas; `ServiciosTable` encapsula filtros, tabla y paginación; `ServicioFormDialog` encapsula el formulario de registro con búsqueda de beneficiario. El orquestador coordina estado y ensambla los tres.
+**Impacto:** Componente principal reducido de 1,310 a ~716 líneas. La reducción del orquestador es menor que en beneficiarios.tsx porque todo el estado compartido entre subcomponentes permanece en el nivel superior.
+
+---
+
 ## 2026-05-18 División de beneficiarios.tsx
 
 **Área:** Frontend — Componentes
