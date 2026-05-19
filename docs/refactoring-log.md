@@ -4,6 +4,16 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 ---
 
+## 2026-05-18 Servicios usan validators.js
+
+**Área:** Backend — Servicios
+**Archivos modificados:** `beneficiarios.service.js`, `servicios.service.js`, `membresias.service.js`
+**Problema:** Cada servicio tenía su propia copia de regex (CURP, EMAIL, TEL) y funciones de parse.
+**Solución:** Importan desde `src/utils/validators.js`. Se eliminan las implementaciones locales.
+**Impacto:** ~50 líneas de duplicación eliminadas. Tests existentes pasan sin cambios.
+
+---
+
 ## 2026-05-18 withConnection — beneficiarios.model.js
 
 **Área:** Backend — Modelos
