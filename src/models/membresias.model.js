@@ -1,11 +1,10 @@
 import oracledb from "oracledb";
-import { getConnection } from "../config/db.js";
+import { getConnection, withConnection } from "../config/db.js";
 import { HttpError } from "../utils/httpErrors.js";
 
-export async function findAll() {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findAll = () =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT c.CURP,
               b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO, '') AS NOMBRE_COMPLETO,
               c.NUMERO_CREDENCIAL,
@@ -30,17 +29,12 @@ export async function findAll() {
          WHERE c2.CURP = c.CURP
        )
        ORDER BY c.FECHA_VIGENCIA_FIN ASC`
-    );
-    return result.rows;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows)
+  );
 
-export async function findPagosRecientes(limit = 20) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findPagosRecientes = (limit = 20) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT c.ID_CREDENCIAL,
               c.CURP,
               b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO, '') AS NOMBRE_COMPLETO,
@@ -57,32 +51,22 @@ export async function findPagosRecientes(limit = 20) {
        ORDER BY c.FECHA_EMISION DESC, c.ID_CREDENCIAL DESC
        FETCH FIRST :limit ROWS ONLY`,
       { limit }
-    );
-    return result.rows;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows)
+  );
 
-export async function findBeneficiarioByCurp(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findBeneficiarioByCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT CURP
        FROM BENEFICIARIOS
        WHERE CURP = :curp`,
       { curp }
-    );
-    return result.rows[0] ?? null;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows[0] ?? null)
+  );
 
-export async function findLastByCurp(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findLastByCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT
          ID_CREDENCIAL,
          CURP,
@@ -97,38 +81,24 @@ export async function findLastByCurp(curp) {
        ORDER BY FECHA_EMISION DESC, ID_CREDENCIAL DESC
        FETCH FIRST 1 ROWS ONLY`,
       { curp }
-    );
-    return result.rows[0] ?? null;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows[0] ?? null)
+  );
 
-export async function hasPeriodOverlap(curp, fechaInicio, fechaFin) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const hasPeriodOverlap = (curp, fechaInicio, fechaFin) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT COUNT(1) AS TOTAL
        FROM CREDENCIALES
        WHERE CURP = :curp
          AND FECHA_VIGENCIA_INICIO <= TO_DATE(:fechaFin, 'YYYY-MM-DD')
          AND NVL(FECHA_VIGENCIA_FIN, DATE '9999-12-31') >= TO_DATE(:fechaInicio, 'YYYY-MM-DD')`,
-      {
-        curp,
-        fechaInicio,
-        fechaFin,
-      }
-    );
-    return Number(result.rows?.[0]?.TOTAL ?? 0) > 0;
-  } finally {
-    await conn.close();
-  }
-}
+      { curp, fechaInicio, fechaFin }
+    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0) > 0)
+  );
 
-export async function findMembresiaActivaByCurp(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findMembresiaActivaByCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT
          ID_CREDENCIAL,
          CURP,
@@ -144,51 +114,36 @@ export async function findMembresiaActivaByCurp(curp) {
        ORDER BY FECHA_VIGENCIA_FIN DESC, ID_CREDENCIAL DESC
        FETCH FIRST 1 ROWS ONLY`,
       { curp }
-    );
-    return result.rows[0] ?? null;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows[0] ?? null)
+  );
 
-export async function setBeneficiarioInactivo(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const setBeneficiarioInactivo = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS
        SET ESTATUS = 'Inactivo'
        WHERE CURP = :curp
          AND NVL(ESTATUS, 'Activo') NOT IN ('Inactivo', 'Baja')`,
       { curp },
       { autoCommit: true }
-    );
-    return result.rowsAffected ?? 0;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rowsAffected ?? 0)
+  );
 
-export async function setBeneficiarioBaja(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const setBeneficiarioBaja = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS
        SET ESTATUS = 'Baja'
        WHERE CURP = :curp
          AND ESTATUS NOT IN ('Baja')`,
       { curp },
       { autoCommit: true }
-    );
-    return result.rowsAffected ?? 0;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rowsAffected ?? 0)
+  );
 
 /** Sincroniza ESTATUS de todos los beneficiarios según días vencidos de su membresía. */
-export async function syncEstados() {
-  const conn = await getConnection();
-  try {
+export const syncEstados = () =>
+  withConnection(async conn => {
     // Credencial vencida (cualquier antigüedad) → Inactivo
     // Solo aplica a beneficiarios con al menos una credencial registrada
     await conn.execute(
@@ -224,15 +179,11 @@ export async function syncEstados() {
       {},
       { autoCommit: true }
     );
-  } finally {
-    await conn.close();
-  }
-}
+  });
 
-export async function cancelarPorCurp(curp) {
-  const conn = await getConnection();
-  try {
-    await conn.execute(
+export const cancelarPorCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE CREDENCIALES
        SET FECHA_VIGENCIA_FIN = TRUNC(SYSDATE),
            OBSERVACIONES = 'Cancelada por baja de beneficiario'
@@ -240,11 +191,8 @@ export async function cancelarPorCurp(curp) {
          AND (FECHA_VIGENCIA_FIN IS NULL OR FECHA_VIGENCIA_FIN > TRUNC(SYSDATE))`,
       { curp },
       { autoCommit: true }
-    );
-  } finally {
-    await conn.close();
-  }
-}
+    )
+  );
 
 export async function create({
   curp,
