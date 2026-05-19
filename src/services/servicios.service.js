@@ -1,5 +1,6 @@
 import * as ServiciosModel from "../models/servicios.model.js";
 import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
+import { parseISODate } from "../utils/validators.js";
 
 // Validar beneficiario activo y crear servicio
 const ESTATUS_BLOQUEADOS = ["Inactivo", "Baja"];
@@ -26,18 +27,12 @@ function validateMontoReglas(costo, montoPagado) {
   }
 }
 
+/** Parsea fecha ISO y la devuelve como string YYYY-MM-DD (formato esperado por el modelo). */
 function parseAndValidateDate(dateStr, fieldName) {
   if (!dateStr) return null;
-  if (typeof dateStr !== "string") {
-    throw badRequest(`${fieldName} debe tener formato YYYY-MM-DD`);
-  }
-
-  const value = dateStr.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw badRequest(`${fieldName} debe tener formato YYYY-MM-DD`);
-  }
-
-  return value;
+  const d = parseISODate(dateStr, fieldName);
+  if (!d) return null;
+  return d.toISOString().split("T")[0];
 }
 
 function normalizeConsumos(consumos) {

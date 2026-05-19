@@ -4,6 +4,7 @@ import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
+import { CURP_REGEX, EMAIL_REGEX, TEL_REGEX, CP_REGEX, sanitizeString } from "../utils/validators.js";
 
 /** Coincide con `MARCADOR_SOLICITUD_PUBLICA_PENDIENTE` en `frontend/lib/solicitud-publica-beneficiario.ts`. */
 export const MARCADOR_SOLICITUD_PUBLICA_PENDIENTE = "[SOLICITUD_PUBLICA_PRE_REG]";
@@ -48,10 +49,6 @@ function limpiarMarcadorNotasPublicas(notas) {
   return s0.trim();
 }
 
-const CURP_REGEX   = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
-const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const TEL_REGEX    = /^\d{10}$/;
-const CP_REGEX     = /^\d{5}$/;
 const TIPOS_SANGRE = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const CAMPOS_OBLIGATORIOS = [
@@ -68,7 +65,7 @@ function sanitizar(data) {
     "hospitalNacimiento",
   ];
   for (const campo of campos) {
-    if (data[campo]) data[campo] = String(data[campo]).trim();
+    if (data[campo]) data[campo] = sanitizeString(String(data[campo]));
   }
   if (Object.prototype.hasOwnProperty.call(data, "tipoSangre")) {
     const t = String(data.tipoSangre ?? "").trim();
