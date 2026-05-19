@@ -50,6 +50,16 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 ---
 
+## 2026-05-18 Módulo de validadores compartidos
+
+**Área:** Backend — Utilidades
+**Archivos creados:** `src/utils/validators.js`, `src/tests/validators.test.js`
+**Problema:** Cada servicio reimplementaba sus propios helpers: `parseNumber` en servicios.service, `parseISODate` en membresias.service, regex CURP/EMAIL/TEL en beneficiarios.service. Cambiar una regla requería actualizaciones en múltiples lugares.
+**Solución:** Módulo centralizado con `CURP_REGEX`, `EMAIL_REGEX`, `TEL_REGEX`, `CP_REGEX`, `sanitizeString`, `parsePositiveNumber`, `parseISODate`.
+**Impacto:** ~50 líneas de código duplicado consolidadas. 10 nuevos tests unitarios. Todos los tests pasan (671/671 pasados).
+
+---
+
 ## 2026-05-18 withConnection + fix raw Error — servicios.model.js
 
 **Área:** Backend — Modelos
