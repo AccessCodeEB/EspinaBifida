@@ -12,3 +12,12 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Solución:** Reemplazado con `withConnection(fn)` definido en `src/config/db.js`.
 **Impacto:** Eliminadas ~30 líneas de boilerplate. Tests existentes pasan sin cambios.
 **Archivos de test:** `src/tests/helpers/mockDb.js`, `src/tests/inventario.criteria.test.js` actualizados para incluir `withConnection` en los mocks.
+
+## 2026-05-18 withConnection — administradores.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/administradores.model.js`
+**Problema:** 8 funciones con boilerplate repetido (~48 líneas extra).
+**Solución:** Reemplazado con `withConnection`. La constante `SELECT_CON_ROL` se conserva.
+**Impacto:** Eliminadas ~48 líneas de boilerplate. Tests pasan sin cambios.
+**Nota:** Se mejoró `mockDb.js` para que `withConnection` en tests llame realmente al `finally` block.
