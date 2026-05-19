@@ -200,6 +200,47 @@ describe("POST /api/v1/articulos — crear artículo", () => {
 
     expect(res.status).toBe(201);
   });
+
+  test("falla si stockMinimo es texto (NaN) → 400", async () => {
+    const res = await request(app)
+      .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ ...articuloBase, stockMinimo: "abc" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/stockMinimo/i);
+  });
+
+  test("falla si stockMinimo es negativo → 400", async () => {
+    const res = await request(app)
+      .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ ...articuloBase, stockMinimo: -1 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/stockMinimo/i);
+  });
+
+  test("falla si idArticulo no es numérico (NaN) → 400", async () => {
+    const res = await request(app)
+      .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ ...articuloBase, idArticulo: "not-a-number" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/idArticulo/i);
+  });
+
+  test("acepta stockMinimo = 0 (borde válido)", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ ...articuloBase, stockMinimo: 0 });
+
+    expect(res.status).toBe(201);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
