@@ -27,14 +27,6 @@ function validateMontoReglas(costo, montoPagado) {
   }
 }
 
-/** Parsea fecha ISO y la devuelve como string YYYY-MM-DD (formato esperado por el modelo). */
-function parseAndValidateDate(dateStr, fieldName) {
-  if (!dateStr) return null;
-  const d = parseISODate(dateStr, fieldName);
-  if (!d) return null;
-  return d.toISOString().split("T")[0];
-}
-
 function normalizeConsumos(consumos) {
   if (consumos === undefined || consumos === null) return [];
   if (!Array.isArray(consumos)) {
@@ -173,8 +165,8 @@ export async function getDetailed(filters) {
     curp: filters.curp ? String(filters.curp).trim().toUpperCase() : null,
     idTipoServicio:
       filters.idTipoServicio !== undefined ? parseNumber(filters.idTipoServicio, "idTipoServicio") : null,
-    fechaDesde: parseAndValidateDate(filters.fechaDesde, "fechaDesde"),
-    fechaHasta: parseAndValidateDate(filters.fechaHasta, "fechaHasta"),
+    fechaDesde: parseISODate(filters.fechaDesde, "fechaDesde")?.toISOString().split("T")[0] ?? null,
+    fechaHasta: parseISODate(filters.fechaHasta, "fechaHasta")?.toISOString().split("T")[0] ?? null,
     costoMin: filters.costoMin !== undefined ? parseNumber(filters.costoMin, "costoMin") : null,
     costoMax: filters.costoMax !== undefined ? parseNumber(filters.costoMax, "costoMax") : null,
     montoPagadoMin:
