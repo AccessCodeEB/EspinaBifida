@@ -46,3 +46,17 @@ export async function closePool() {
     if (err?.code !== "NJS-064") throw err;
   }
 }
+
+/**
+ * Ejecuta fn(conn) con una conexión del pool, garantizando conn.close() al terminar.
+ * Usar para operaciones simples sin rollback. Para transacciones con rollback,
+ * manejar la conexión manualmente.
+ */
+export async function withConnection(fn) {
+  const conn = await getConnection();
+  try {
+    return await fn(conn);
+  } finally {
+    await conn.close();
+  }
+}
