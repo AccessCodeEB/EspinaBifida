@@ -37,3 +37,13 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 **Problema:** Boilerplate repetido. `inventario.model.js` mezclaba funciones simples con `createMovimientoConTransaccion` que necesita rollback explícito.
 **Solución:** Funciones simples en ambos archivos usan `withConnection`. `createMovimientoConTransaccion` conservada sin cambios (com comentario explicativo) porque necesita `conn.rollback()` en error. `articulos.model.js` usa `async conn =>` para funciones con inner try/catch del fallback ORA-00904.
 **Impacto:** Eliminadas ~79 líneas de boilerplate. Tests pasan sin cambios (661/661 pasados).
+
+---
+
+## 2026-05-18 withConnection — membresias.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/membresias.model.js`
+**Problema:** 10 funciones con boilerplate repetido (~60 líneas extra).
+**Solución:** 10 funciones refactorizadas con `withConnection`. `create` se conserva sin cambios (stored procedure con commit/rollback explícito).
+**Impacto:** Eliminadas ~60 líneas. Tests pasan sin cambios.
