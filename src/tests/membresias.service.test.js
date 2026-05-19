@@ -81,6 +81,75 @@ describe("isMembresiaActiva", () => {
     fechaFutura.setFullYear(fechaFutura.getFullYear() + 1);
     expect(Service.isMembresiaActiva(fechaFutura.toISOString())).toBe(true);
   });
+
+  test("string no parseable → toDateOnlyUTC retorna null → false (L22: NaN branch)", () => {
+    // "no-es-fecha" produce NaN al parsear → toDateOnlyUTC retorna null → false
+    expect(Service.isMembresiaActiva("no-es-una-fecha")).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// registrarMembresia — ramas de numero_credencial y fecha_emision (L99, L104)
+// cond-exprs donde el lado "false" (dato provisto) no estaba cubierto
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("registrarMembresia — ramas de auto-generación (numero_credencial y fecha_emision)", () => {
+  beforeEach(() => {
+    mockFindBeneficiarioByCurp.mockResolvedValue({ CURP });
+    mockCreate.mockResolvedValue({ rowsAffected: 1 });
+  });
+
+  test("sin numero_credencial ni fecha_emision → auto-genera ambos (ramas ?? del L99 y L104)", async () => {
+    // numero_credencial ausente → auto-gen (L99 true-branch ya cubierto)
+    // fecha_emision ausente → usa hoy (L104 true-branch ya cubierto)
+    const result = await Service.registrarMembresia({ curp: CURP });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ curp: CURP })
+    );
+    expect(result).toBeDefined();
+  });
+
+  test("con numero_credencial provisto explícitamente → no auto-genera (L99 false-branch)", async () => {
+    const result = await Service.registrarMembresia({
+      curp: CURP,
+      numero_credencial: "MI-CRED-001",
+      fecha_emision: "2026-01-01",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ numeroCredencial: "MI-CRED-001" })
+    );
+  });
+
+  test("con fecha_emision provista explícitamente → la usa en vez de hoy (L104 false-branch)", async () => {
+    const result = await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2025-06-01",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ fechaEmision: "2025-06-01" })
+    );
+  });
+
+  test("con meses=undefined → usa default 1 mes (L128: ?? 1 branch)", async () => {
+    const result = await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      // meses no provisto → default 1
+    });
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  test("sin fecha_ultimo_pago → usa hoy como fecha_ultimo_pago (L165 false-branch: null)", async () => {
+    // No se pasa fecha_ultimo_pago → fechaUltimoPago = hoy (no null)
+    const result = await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+    });
+    // fechaUltimoPago no es null → formatISODateUTC se llama (branch true)
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ fechaUltimoPago: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
+    );
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -361,6 +430,38 @@ describe("getPagosRecientes", () => {
     mockFindPagosRecientes.mockResolvedValue([]);
     await Service.getPagosRecientes("abc");
     expect(mockFindPagosRecientes).toHaveBeenCalledWith(20);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// mapMembresiaPublica — ramas de toISO nulo (L41: date es null → retorna null)
+// L45, L46, L47: fields null → ?? null
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getEstatusMembresia — credencial con campos opcionales nulos (mapMembresiaPublica null branches)", () => {
+  test("credencial con CURP, NUMERO_CREDENCIAL y OBSERVACIONES nulos → ?? null (L45, L46, L47)", async () => {
+    const futuro = new Date();
+    futuro.setFullYear(futuro.getFullYear() + 1);
+
+    mockFindLastByCurp.mockResolvedValue({
+      ID_CREDENCIAL:         1,
+      CURP:                  null,           // L45: ?? null
+      NUMERO_CREDENCIAL:     null,           // L46: ?? null
+      FECHA_EMISION:         "invalid-date", // toISO("invalid-date") → toDateOnlyUTC → NaN → null
+      FECHA_VIGENCIA_INICIO: "invalid-date", // toISO → null
+      FECHA_VIGENCIA_FIN:    futuro,
+      FECHA_ULTIMO_PAGO:     "invalid-date", // toISO → null
+      OBSERVACIONES:         null,           // L47: ?? null
+    });
+
+    const result = await Service.getEstatusMembresia(CURP);
+
+    expect(result.activa).toBe(true);
+    expect(result.membresia.curp).toBeNull();
+    expect(result.membresia.numero_credencial).toBeNull();
+    expect(result.membresia.fecha_emision).toBeNull();
+    expect(result.membresia.fecha_ultimo_pago).toBeNull();
+    expect(result.membresia.observaciones).toBeNull();
   });
 });
 

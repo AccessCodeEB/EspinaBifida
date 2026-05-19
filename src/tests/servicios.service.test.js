@@ -7,19 +7,21 @@
  */
 import { jest } from '@jest/globals';
 
-const mockFindAll         = jest.fn();
-const mockFindByCurp      = jest.fn();
-const mockFindById        = jest.fn();
-const mockCreate          = jest.fn();
-const mockCreateWithInv   = jest.fn();
-const mockUpdate          = jest.fn();
-const mockFindDetailed    = jest.fn();
-const mockDeleteById      = jest.fn();
-const mockFindBeneficiario = jest.fn();
+const mockFindAll              = jest.fn();
+const mockFindByCurp           = jest.fn();
+const mockFindByCurpPaginated  = jest.fn();
+const mockFindById             = jest.fn();
+const mockCreate               = jest.fn();
+const mockCreateWithInv        = jest.fn();
+const mockUpdate               = jest.fn();
+const mockFindDetailed         = jest.fn();
+const mockDeleteById           = jest.fn();
+const mockFindBeneficiario     = jest.fn();
 
 jest.unstable_mockModule('../models/servicios.model.js', () => ({
   findAll:                           mockFindAll,
   findByCurp:                        mockFindByCurp,
+  findByCurpPaginated:               mockFindByCurpPaginated,
   findById:                          mockFindById,
   create:                            mockCreate,
   createWithInventarioTransaction:   mockCreateWithInv,
@@ -234,6 +236,11 @@ describe('getDetailed', () => {
       .rejects.toMatchObject({ statusCode: 400, message: /costoMin/ });
   });
 
+  it('400 cuando costoMax es negativo (L193)', async () => {
+    await expect(Service.getDetailed({ costoMax: -5 }))
+      .rejects.toMatchObject({ statusCode: 400, message: /costoMax/ });
+  });
+
   it('400 cuando costoMin > costoMax', async () => {
     await expect(Service.getDetailed({ costoMin: 100, costoMax: 50 }))
       .rejects.toMatchObject({ statusCode: 400, message: /costoMin/ });
@@ -247,5 +254,46 @@ describe('getDetailed', () => {
   it('400 cuando limit > 100', async () => {
     await expect(Service.getDetailed({ limit: 101 }))
       .rejects.toMatchObject({ statusCode: 400, message: /limit/ });
+  });
+});
+
+// ── createConValidacion — curp vacío (L65) e idTipoServicio no entero (L69) ──────
+
+describe('createConValidacion — curp vacío e idTipoServicio inválido', () => {
+  it('400 cuando curp es string vacío (L65)', async () => {
+    await expect(Service.createConValidacion({
+      curp: '', idTipoServicio: 1, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, message: /curp/ });
+  });
+
+  it('400 cuando idTipoServicio es 0 (no positivo) (L69)', async () => {
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 0, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, message: /idTipoServicio/ });
+  });
+
+  it('400 cuando idTipoServicio es decimal (no entero) (L69)', async () => {
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1.5, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, message: /idTipoServicio/ });
+  });
+
+  it('400 cuando costo es NaN (parseNumber L11)', async () => {
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, costo: 'no-numero',
+    })).rejects.toMatchObject({ statusCode: 400, message: /costo/ });
+  });
+});
+
+// ── getByCurpPaginated — función arrow (L131) ────────────────────────────────
+
+describe('getByCurpPaginated', () => {
+  it('delega en findByCurpPaginated del modelo con curp, page y limit', async () => {
+    mockFindByCurpPaginated.mockResolvedValueOnce({ data: [], total: 0 });
+
+    const result = await Service.getByCurpPaginated(CURP, 1, 10);
+
+    expect(mockFindByCurpPaginated).toHaveBeenCalledWith(CURP, 1, 10);
+    expect(result).toEqual({ data: [], total: 0 });
   });
 });

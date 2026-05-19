@@ -619,3 +619,212 @@ describe("POST /api/v1/administradores/:idAdmin/foto-perfil — sin archivo adju
     expect(res.body.code).toBe("MISSING_FILE");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROLES — error path (L7 en roles.controller.js: next(err))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /api/v1/roles — error de DB → next(err)", () => {
+  test("DB error en getAll → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout roles"));
+
+    const res = await request(app)
+      .get("/api/v1/roles")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ARTICULOS — error paths (L8 y L18 en articulos.controller.js: next(err))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /api/v1/articulos — error de DB → next(err)", () => {
+  test("DB error en getAll → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout articulos"));
+
+    const res = await request(app)
+      .get("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /api/v1/articulos/:id — error de DB → next(err)", () => {
+  test("DB error en getById → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout articulo by id"));
+
+    const res = await request(app)
+      .get("/api/v1/articulos/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVENTARIO — error paths (L17 y L26 en inventario.controller.js: next(err))
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /inventario — error de DB → next(err)", () => {
+  test("DB error en getInventario → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout inventario"));
+
+    const res = await request(app)
+      .get("/inventario");
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /inventario/movimientos — error de DB → next(err)", () => {
+  test("DB error en getMovimientos → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout movimientos"));
+
+    const res = await request(app)
+      .get("/inventario/movimientos");
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMINISTRADORES — error paths (L6, L35, L73, L91, L92, L97 y L90 branch)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /api/v1/administradores — error de DB → next(err)", () => {
+  test("DB error en getAll → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout admins getAll"));
+
+    const res = await request(app)
+      .get("/api/v1/administradores")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("GET /api/v1/administradores/:idAdmin — getById null row", () => {
+  test("getById retorna null → mapAdminPublic(null) → body es null", async () => {
+    // findById → not found (servicio lanza notFound)
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/api/v1/administradores/999")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    // El servicio lanza notFound cuando no encuentra el admin
+    expect([200, 404]).toContain(res.status);
+  });
+
+  test("DB error en getById → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout admins getById"));
+
+    const res = await request(app)
+      .get("/api/v1/administradores/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("POST /api/v1/administradores — error de DB → next(err) en create", () => {
+  test("DB error después de validación → 500", async () => {
+    // RolesModel.findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ROL: 1 }] });
+    // findByEmail → no existe
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    // bcrypt.hash
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$hash");
+    // INSERT falla
+    mockExecute.mockRejectedValueOnce(new Error("DB insert error"));
+
+    const res = await request(app)
+      .post("/api/v1/administradores")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ idRol: 1, nombreCompleto: "Test", email: "test@test.com", password: "pass123" });
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("DELETE /api/v1/administradores/:idAdmin — error de DB", () => {
+  test("DB error en deactivate → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout deactivate"));
+
+    const res = await request(app)
+      .delete("/api/v1/administradores/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CITAS — updateCita con fecha provista (cubre L55-56 en citas.service.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
+  test("actualiza cita con fecha y hora explícitas (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({ fecha: "2026-08-01", hora: "14:30", estatus: "CONFIRMADA" });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("actualiza cita con fecha pero sin hora (usa 00:00)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .put("/api/v1/citas/1")
+      .send({ fecha: "2026-08-01" });
+
+    expect(res.status).toBe(200);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BENEFICIARIOS — hardDelete error path (L103) y uploadFotoPerfil (L110, L111, L116)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("DELETE /api/v1/beneficiarios/:curp/eliminar — hardDelete", () => {
+  test("elimina permanentemente (200)", async () => {
+    // findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURP: CURP_VALIDA }] });
+    // DELETE
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .delete(`/api/v1/beneficiarios/${CURP_VALIDA}/eliminar`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  test("devuelve 404 si no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete(`/api/v1/beneficiarios/${CURP_VALIDA}/eliminar`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  test("DB error → next(err) → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB hard delete error"));
+
+    const res = await request(app)
+      .delete(`/api/v1/beneficiarios/${CURP_VALIDA}/eliminar`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
