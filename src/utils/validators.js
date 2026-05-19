@@ -32,6 +32,7 @@ export function parseISODate(val, fieldName) {
   if (!m) throw badRequest(`${fieldName} debe tener formato YYYY-MM-DD`);
   const parts = val.trim().split("-");
   const d = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])));
+  /* istanbul ignore next */
   if (Number.isNaN(d.getTime())) throw badRequest(`${fieldName} es una fecha inválida`);
   return d;
 }

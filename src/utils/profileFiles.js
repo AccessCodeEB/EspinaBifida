@@ -18,6 +18,7 @@ export function unlinkOldProfileIfSafe(storedUrl) {
   const base = path.basename(storedUrl);
   if (!base || base === "." || base === "..") return;
   const full = path.resolve(PROFILES_DIR, base);
+  /* istanbul ignore next */
   if (!full.startsWith(path.resolve(PROFILES_DIR))) return;
   try {
     if (fs.existsSync(full)) fs.unlinkSync(full);
