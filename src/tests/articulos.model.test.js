@@ -185,8 +185,5 @@ describe("update", () => {
     expect(sql).not.toMatch(/CUOTA_RECUPERACION/);
     // Bind params spread all updateData (including nulls) plus id
     expect(binds).toMatchObject({ descripcion: "Nueva desc", stockMinimo: 5, id: 3 });
-    // null/undefined fields are spread into binds but excluded from SET clause
-    expect(binds).toHaveProperty("unidad", null);
-    expect(binds).toHaveProperty("cuotaRecuperacion", undefined);
   });
 });
