@@ -894,3 +894,155 @@ describe("DELETE /api/v1/beneficiarios/:curp/eliminar — hardDelete", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// errorHandler — notFoundHandler + ramas especiales
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("errorHandler — notFoundHandler (ruta desconocida)", () => {
+  test("devuelve 404 al acceder a una ruta inexistente", async () => {
+    const res = await request(app)
+      .get("/api/v1/ruta-que-no-existe-nunca");
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("ROUTE_NOT_FOUND");
+  });
+});
+
+describe("errorHandler — LIMIT_FILE_SIZE (archivo demasiado grande)", () => {
+  test("devuelve 400 con código FILE_TOO_LARGE cuando multer rechaza por tamaño", async () => {
+    // Subimos un archivo al endpoint de foto de perfil con un buffer grande
+    // multer está configurado con límite de 2 MB; superamos ese límite
+    const bufferGrande = Buffer.alloc(3 * 1024 * 1024); // 3 MB
+
+    const res = await request(app)
+      .post("/api/v1/administradores/1/foto-perfil")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .attach("foto", bufferGrande, { filename: "grande.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("FILE_TOO_LARGE");
+  });
+});
+
+describe("errorHandler — NJS-044 (bind error Oracle)", () => {
+  test("devuelve 400 con código BIND_ERROR cuando OracleDB lanza NJS-044", async () => {
+    const njs044Err = Object.assign(new Error("NJS-044 bind param inválido"), { code: "NJS-044" });
+    mockExecute.mockRejectedValueOnce(njs044Err);
+
+    // GET /api/v1/servicios (getAll) propagará el error al errorHandler
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("BIND_ERROR");
+  });
+});
+
+describe("errorHandler — mapOracleError (ORA-00001 duplicado)", () => {
+  test("devuelve 409 cuando Oracle lanza ORA-00001 (duplicate key)", async () => {
+    const oraErr = Object.assign(new Error("ORA-00001: unique constraint violated"), { errorNum: 1 });
+    mockExecute.mockRejectedValueOnce(oraErr);
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("DUPLICATE_RECORD");
+  });
+});
+
+describe("errorHandler — 500 con err sin message ni name (L45/L49/L50 false-branches)", () => {
+  test("error sin message ni name → usa defaults '?' en debug info", async () => {
+    // Object.create(null) → sin prototype, sin name, sin message
+    const errVacio = Object.create(null);
+    // message no definido → undefined → err?.message es undefined → L45 usa message original
+    // name no definido → undefined → err?.name ?? "Error" usa "Error" (L49)
+    // message undefined → err?.message ?? null retorna null (L50)
+    mockExecute.mockRejectedValueOnce(errVacio);
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(500);
+  });
+
+  test("error con message vacío → L45 false-branch (no sobreescribe message)", async () => {
+    const errConMsgVacio = { message: "" }; // message falsy
+    mockExecute.mockRejectedValueOnce(errConMsgVacio);
+
+    const res = await request(app).get("/api/v1/servicios");
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("errorHandler — INSUFFICIENT_STOCK (stock insuficiente SP)", () => {
+  test("devuelve 422 con código INSUFFICIENT_STOCK", async () => {
+    // ORA-20002 es mapeado a INSUFFICIENT_STOCK por inventario.model
+    const oraErr = Object.assign(
+      new Error("ORA-20002: Stock insuficiente"),
+      { errorNum: 20002 }
+    );
+    mockExecute.mockRejectedValueOnce(oraErr);
+
+    const res = await request(app)
+      .post("/api/v1/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ idArticulo: 1, tipo: "SALIDA", cantidad: 999 });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("INSUFFICIENT_STOCK");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMINISTRADORES — changePassword éxito (L73)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /api/v1/administradores/:idAdmin/foto-perfil — uploadFotoPerfil éxito (L91-97)", () => {
+  test("actualiza foto de perfil exitosamente (200)", async () => {
+    // findById → admin existe (para updateFotoPerfilByUpload)
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, FOTO_PERFIL_URL: null }],
+    });
+    // updateFotoPerfilUrl → éxito
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const smallJpeg = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ]);
+
+    const res = await request(app)
+      .post("/api/v1/administradores/1/foto-perfil")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .attach("foto", smallJpeg, { filename: "avatar.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/foto/i);
+    expect(res.body).toHaveProperty("fotoPerfilUrl");
+  });
+});
+
+describe("PATCH /api/v1/administradores/:idAdmin/password — changePassword éxito", () => {
+  test("cambia la contraseña exitosamente (200)", async () => {
+    // findById(1) → retorna admin con EMAIL
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, EMAIL: "admin@test.com" }],
+    });
+    // findByEmail → retorna admin con PASSWORD_HASH
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, PASSWORD_HASH: "$2a$10$hash" }],
+    });
+    mockBcryptCompare.mockResolvedValueOnce(true);
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    // updatePassword → éxito
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch("/api/v1/administradores/1/password")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ passwordActual: "pass123", passwordNueva: "newpass456" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/contraseña/i);
+  });
+});

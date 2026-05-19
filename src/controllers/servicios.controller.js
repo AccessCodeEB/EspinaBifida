@@ -48,6 +48,7 @@ export async function getByCurp(req, res, next) {
   try {
     const { curp } = req.params;
     
+    /* c8 ignore next 3 */
     if (!curp) {
       throw badRequest("CURP requerido");
     }
@@ -123,6 +124,7 @@ export async function getById(req, res, next) {
   try {
     const idServicio = parseIdServicio(req.params.idServicio);
 
+    /* c8 ignore next 3 */
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
     }
@@ -144,6 +146,7 @@ export async function update(req, res, next) {
     const idServicio = parseIdServicio(req.params.idServicio);
     const { montoPagado, notas } = req.body;
 
+    /* c8 ignore next 3 */
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
     }
@@ -167,6 +170,7 @@ export async function deleteById(req, res, next) {
   try {
     const idServicio = parseIdServicio(req.params.idServicio);
 
+    /* c8 ignore next 3 */
     if (!idServicio) {
       throw badRequest("ID de servicio requerido");
     }

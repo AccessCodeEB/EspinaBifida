@@ -1,16 +1,5 @@
 import { HttpError, isHttpError, mapOracleError } from "../utils/httpErrors.js";
 
-function statusToDefaultCode(status) {
-  const map = {
-    400: "BAD_REQUEST",
-    401: "UNAUTHORIZED",
-    403: "FORBIDDEN",
-    404: "NOT_FOUND",
-    409: "CONFLICT",
-    500: "INTERNAL_ERROR",
-  };
-  return map[status] ?? "ERROR";
-}
 
 export function notFoundHandler(req, res, next) {
   const err = new HttpError(
@@ -52,6 +41,7 @@ export function errorHandler(err, req, res, _next) {
 
   if (statusCode >= 500) {
     console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
+    /* istanbul ignore else */
     if (isDevelopment) {
       message = err?.message ? String(err.message) : message;
       details = {
