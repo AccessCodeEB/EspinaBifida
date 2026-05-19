@@ -17,8 +17,10 @@ export default {
   // Falla el run si no se alcanzan los umbrales
   coverageThreshold: {
     global: {
-      lines:    70,
-      branches: 70,
+      statements: 100,
+      branches:   100,
+      functions:  100,
+      lines:      100,
     },
   },
 

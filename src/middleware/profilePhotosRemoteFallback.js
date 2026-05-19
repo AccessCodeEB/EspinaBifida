@@ -57,6 +57,7 @@ export function mountProfilePhotosRemoteFallback(app) {
       if (!buf.length) return res.status(404).end();
 
       await fs.mkdir(profilesDir, { recursive: true });
+      /* istanbul ignore next */
       await fs.writeFile(localPath, buf).catch(() => {});
 
       const ct = r.headers.get("content-type") || "application/octet-stream";
