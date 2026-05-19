@@ -339,3 +339,71 @@ describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
     expect(res.status).toBeGreaterThanOrEqual(500);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Ramas null coalescing — formatMonto + mapMembresia (GET /membresias)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /membresias — ramas null de mapMembresia y formatMonto", () => {
+  test("MONTO null → formatMonto retorna null; DIAS_RESTANTES null → diasRestantes null", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ...membresiaRow,
+        MONTO:          null,
+        DIAS_RESTANTES: null,
+        METODO_PAGO:    null,
+        REFERENCIA:     null,
+      }],
+    });
+
+    const res = await request(app).get("/membresias");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].monto).toBeNull();
+    expect(res.body[0].diasRestantes).toBeNull();
+    expect(res.body[0].metodoPago).toBeNull();
+    expect(res.body[0].referencia).toBeNull();
+  });
+
+  test("MONTO 'abc' → formatMonto rama NaN → null; DIAS_RESTANTES '45.7' → Math.floor → 45", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ...membresiaRow,
+        MONTO:          "abc",
+        DIAS_RESTANTES: "45.7",
+      }],
+    });
+
+    const res = await request(app).get("/membresias");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].monto).toBeNull();
+    expect(res.body[0].diasRestantes).toBe(45);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Ramas null coalescing — mapPago (GET /membresias/pagos/recientes)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /membresias/pagos/recientes — ramas null de mapPago", () => {
+  test("METODO_PAGO, REFERENCIA y OBSERVACIONES nulos → retornan null en respuesta", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ...pagoRow,
+        METODO_PAGO:  null,
+        REFERENCIA:   null,
+        OBSERVACIONES: null,
+      }],
+    });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].metodoPago).toBeNull();
+    expect(res.body[0].referencia).toBeNull();
+    expect(res.body[0].observaciones).toBeNull();
+  });
+});
