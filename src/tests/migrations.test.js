@@ -1029,3 +1029,67 @@ describe("runMigration006 — connection.close() lanza (finally)", () => {
     await expect(runMigration006()).rejects.toThrow("close failed");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration007 — Agrega columna ACTIVO a ARTICULOS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration007 } = await import("../migrations/007_articulos_activo.js");
+
+describe("runMigration007 — columna ACTIVO ya existe", () => {
+  test("retorna sin ejecutar ALTER si la columna ya existe", async () => {
+    // columnExists → SELECT USER_TAB_COLUMNS → TOTAL = 1
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    await runMigration007();
+
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    const sql = mockExecute.mock.calls[0][0];
+    expect(sql).toMatch(/USER_TAB_COLUMNS/i);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration007 — columna ACTIVO no existe (estado inicial)", () => {
+  test("ejecuta ALTER TABLE ADD ACTIVO cuando la columna no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] }); // columna no existe
+    mockExecute.mockResolvedValueOnce({});                         // ALTER TABLE
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    await runMigration007();
+
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    const alter = mockExecute.mock.calls[1][0].trim();
+    expect(alter).toMatch(/ALTER TABLE ARTICULOS/i);
+    expect(alter).toMatch(/ACTIVO CHAR\(1\)/i);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration007 — error durante ALTER TABLE", () => {
+  test("cierra conexión y relanza el error", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] }); // columna no existe
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges")); // ALTER falla
+
+    await expect(runMigration007()).rejects.toThrow("ORA-01031");
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration007 — falla al obtener conexión", () => {
+  test("lanza el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    await expect(runMigration007()).rejects.toThrow("ORA-12541");
+
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+});
