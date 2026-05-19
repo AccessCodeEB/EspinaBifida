@@ -1,9 +1,8 @@
-import { getConnection } from "../config/db.js";
+import { withConnection } from "../config/db.js";
 
-export async function findAll() {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const findAll = () =>
+  withConnection(conn =>
+    conn.execute(
       `SELECT b.NOMBRES, b.APELLIDO_PATERNO, b.APELLIDO_MATERNO,
               b.CURP, b.GENERO, b.FECHA_NACIMIENTO, b.TIPOS_SANGRE,
               b.NOMBRE_PADRE_MADRE, b.CALLE, b.COLONIA, b.CIUDAD,
@@ -13,21 +12,14 @@ export async function findAll() {
               b.HOSPITAL_NACIMIENTO,
               b.USA_VALVULA, b.TIPO, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
               CASE
-                WHEN EXISTS (
-                  SELECT 1 FROM CREDENCIALES c
-                  WHERE c.CURP = b.CURP
-                    AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
-                    AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30
-                ) THEN 'Activa'
-                WHEN EXISTS (
-                  SELECT 1 FROM CREDENCIALES c
-                  WHERE c.CURP = b.CURP
-                    AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
-                    AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30
-                ) THEN 'Por vencer'
-                WHEN EXISTS (
-                  SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
-                ) THEN 'Vencida'
+                WHEN EXISTS (SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
+                  AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+                  AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) > 30) THEN 'Activa'
+                WHEN EXISTS (SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
+                  AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
+                  AND c.FECHA_VIGENCIA_FIN - TRUNC(SYSDATE) <= 30) THEN 'Por vencer'
+                WHEN EXISTS (SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP)
+                  THEN 'Vencida'
                 ELSE 'Sin membresia'
               END AS MEMBRESIA_ESTATUS,
               (SELECT TRUNC(c.FECHA_VIGENCIA_FIN) - TRUNC(SYSDATE)
@@ -38,227 +30,143 @@ export async function findAll() {
               b.FOTO_PERFIL_URL
        FROM BENEFICIARIOS b
        ORDER BY b.APELLIDO_PATERNO`
-    );
-    return result.rows;
-  } finally {
-    await conn.close();
-  }
-}
+    ).then(r => r.rows)
+  );
 
-export async function findById(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
-      `SELECT * FROM BENEFICIARIOS WHERE CURP = :curp`,
-      { curp }
-    );
-    return result.rows[0] ?? null;
-  } finally {
-    await conn.close();
-  }
-}
+export const findById = (curp) =>
+  withConnection(conn =>
+    conn.execute(`SELECT * FROM BENEFICIARIOS WHERE CURP = :curp`, { curp })
+      .then(r => r.rows[0] ?? null)
+  );
 
 export async function create(data) {
-  const conn = await getConnection();
-  try {
+  return withConnection(conn => {
     const {
-      nombres, apellidoPaterno, apellidoMaterno, curp,
-      fechaNacimiento, genero, nombrePadreMadre,
-      calle, colonia, ciudad, municipio, estado, cp,
+      nombres, apellidoPaterno, apellidoMaterno, curp, fechaNacimiento, genero,
+      nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
-      contactoEmergencia, telefonoEmergencia,
-      hospitalNacimiento,
+      contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
       tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
-
-    await conn.execute(
+    return conn.execute(
       `INSERT INTO BENEFICIARIOS (
          NOMBRES, APELLIDO_PATERNO, APELLIDO_MATERNO, CURP,
          FECHA_NACIMIENTO, GENERO, NOMBRE_PADRE_MADRE,
          CALLE, COLONIA, CIUDAD, MUNICIPIO, ESTADO, CP,
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
-         CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA,
-         HOSPITAL_NACIMIENTO,
+         CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA, HOSPITAL_NACIMIENTO,
          TIPOS_SANGRE, TIPO, USA_VALVULA, NOTAS, ESTATUS
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
          :calle, :colonia, :ciudad, :municipio, :estado, :cp,
          :telefonoCasa, :telefonoCelular, :correoElectronico,
-         :contactoEmergencia, :telefonoEmergencia,
-         :hospitalNacimiento,
+         :contactoEmergencia, :telefonoEmergencia, :hospitalNacimiento,
          :tipoSangre, :tipo, :usaValvula, :notas, :estatus
        )`,
       {
-        nombres:             nombres              ?? null,
-        apellidoPaterno:     apellidoPaterno      ?? null,
-        apellidoMaterno:     apellidoMaterno      ?? null,
-        curp,
-        fechaNacimiento:     fechaNacimiento      ?? null,
-        genero:              genero               ?? null,
-        nombrePadreMadre:    nombrePadreMadre     ?? null,
-        calle:               calle                ?? null,
-        colonia:             colonia              ?? null,
-        ciudad:              ciudad               ?? null,
-        municipio:           municipio            ?? null,
-        estado:              estado               ?? null,
-        cp:                  cp                   ?? null,
-        telefonoCasa:        telefonoCasa         ?? null,
-        telefonoCelular:     telefonoCelular      ?? null,
-        correoElectronico:   correoElectronico    ?? null,
-        contactoEmergencia:  contactoEmergencia   ?? null,
-        telefonoEmergencia:  telefonoEmergencia   ?? null,
-        hospitalNacimiento:  hospitalNacimiento   ?? null,
-        tipoSangre:          tipoSangre           ?? null,
-        tipo:                tipo                 ?? null,
-        usaValvula:          usaValvula           ?? "N",
-        notas:               notas                ?? null,
-        estatus:             estatus              ?? "Activo",
+        nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
+        apellidoMaterno: apellidoMaterno ?? null, curp,
+        fechaNacimiento: fechaNacimiento ?? null, genero: genero ?? null,
+        nombrePadreMadre: nombrePadreMadre ?? null,
+        calle: calle ?? null, colonia: colonia ?? null, ciudad: ciudad ?? null,
+        municipio: municipio ?? null, estado: estado ?? null, cp: cp ?? null,
+        telefonoCasa: telefonoCasa ?? null, telefonoCelular: telefonoCelular ?? null,
+        correoElectronico: correoElectronico ?? null,
+        contactoEmergencia: contactoEmergencia ?? null,
+        telefonoEmergencia: telefonoEmergencia ?? null,
+        hospitalNacimiento: hospitalNacimiento ?? null,
+        tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
+        usaValvula: usaValvula ?? "N", notas: notas ?? null,
+        estatus: estatus ?? "Activo",
       },
       { autoCommit: true }
     );
-  } finally {
-    await conn.close();
-  }
+  });
 }
 
 export async function update(curp, data) {
-  const conn = await getConnection();
-  try {
+  return withConnection(conn => {
     const {
-      nombres, apellidoPaterno, apellidoMaterno,
-      fechaNacimiento, genero, nombrePadreMadre,
-      calle, colonia, ciudad, municipio, estado, cp,
+      nombres, apellidoPaterno, apellidoMaterno, fechaNacimiento, genero,
+      nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
       telefonoCasa, telefonoCelular, correoElectronico,
-      contactoEmergencia, telefonoEmergencia,
-      hospitalNacimiento,
+      contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
       tipoSangre, tipo, usaValvula, notas, estatus,
     } = data;
-
-    const result = await conn.execute(
+    return conn.execute(
       `UPDATE BENEFICIARIOS SET
-         NOMBRES               = :nombres,
-         APELLIDO_PATERNO      = :apellidoPaterno,
-         APELLIDO_MATERNO      = :apellidoMaterno,
-         FECHA_NACIMIENTO      = TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'),
-         GENERO                = :genero,
-         NOMBRE_PADRE_MADRE    = :nombrePadreMadre,
-         CALLE                 = :calle,
-         COLONIA               = :colonia,
-         CIUDAD                = :ciudad,
-         MUNICIPIO             = :municipio,
-         ESTADO                = :estado,
-         CP                    = :cp,
-         TELEFONO_CASA         = :telefonoCasa,
-         TELEFONO_CELULAR      = :telefonoCelular,
-         CORREO_ELECTRONICO    = :correoElectronico,
-         CONTACTO_EMERGENCIA   = :contactoEmergencia,
-         TELEFONO_EMERGENCIA   = :telefonoEmergencia,
-         HOSPITAL_NACIMIENTO   = :hospitalNacimiento,
-         TIPOS_SANGRE          = :tipoSangre,
-         TIPO                  = :tipo,
-         USA_VALVULA           = :usaValvula,
-         NOTAS                 = :notas,
-         ESTATUS               = :estatus
+         NOMBRES = :nombres, APELLIDO_PATERNO = :apellidoPaterno,
+         APELLIDO_MATERNO = :apellidoMaterno,
+         FECHA_NACIMIENTO = TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'),
+         GENERO = :genero, NOMBRE_PADRE_MADRE = :nombrePadreMadre,
+         CALLE = :calle, COLONIA = :colonia, CIUDAD = :ciudad,
+         MUNICIPIO = :municipio, ESTADO = :estado, CP = :cp,
+         TELEFONO_CASA = :telefonoCasa, TELEFONO_CELULAR = :telefonoCelular,
+         CORREO_ELECTRONICO = :correoElectronico,
+         CONTACTO_EMERGENCIA = :contactoEmergencia,
+         TELEFONO_EMERGENCIA = :telefonoEmergencia,
+         HOSPITAL_NACIMIENTO = :hospitalNacimiento,
+         TIPOS_SANGRE = :tipoSangre, TIPO = :tipo,
+         USA_VALVULA = :usaValvula, NOTAS = :notas, ESTATUS = :estatus
        WHERE CURP = :curp`,
       {
-        nombres:             nombres              ?? null,
-        apellidoPaterno:     apellidoPaterno      ?? null,
-        apellidoMaterno:     apellidoMaterno      ?? null,
-        curp,
-        fechaNacimiento:     fechaNacimiento      ?? null,
-        genero:              genero               ?? null,
-        nombrePadreMadre:    nombrePadreMadre     ?? null,
-        calle:               calle                ?? null,
-        colonia:             colonia              ?? null,
-        ciudad:              ciudad               ?? null,
-        municipio:           municipio            ?? null,
-        estado:              estado               ?? null,
-        cp:                  cp                   ?? null,
-        telefonoCasa:        telefonoCasa         ?? null,
-        telefonoCelular:     telefonoCelular      ?? null,
-        correoElectronico:   correoElectronico    ?? null,
-        contactoEmergencia:  contactoEmergencia   ?? null,
-        telefonoEmergencia:  telefonoEmergencia   ?? null,
-        hospitalNacimiento:  hospitalNacimiento   ?? null,
-        tipoSangre:          tipoSangre           ?? null,
-        tipo:                tipo                 ?? null,
-        usaValvula:          usaValvula           ?? "N",
-        notas:               notas                ?? null,
-        estatus:             estatus              ?? "Activo",
+        nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
+        apellidoMaterno: apellidoMaterno ?? null, curp,
+        fechaNacimiento: fechaNacimiento ?? null, genero: genero ?? null,
+        nombrePadreMadre: nombrePadreMadre ?? null,
+        calle: calle ?? null, colonia: colonia ?? null, ciudad: ciudad ?? null,
+        municipio: municipio ?? null, estado: estado ?? null, cp: cp ?? null,
+        telefonoCasa: telefonoCasa ?? null, telefonoCelular: telefonoCelular ?? null,
+        correoElectronico: correoElectronico ?? null,
+        contactoEmergencia: contactoEmergencia ?? null,
+        telefonoEmergencia: telefonoEmergencia ?? null,
+        hospitalNacimiento: hospitalNacimiento ?? null,
+        tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
+        usaValvula: usaValvula ?? "N", notas: notas ?? null,
+        estatus: estatus ?? "Activo",
       },
       { autoCommit: true }
-    );
-    return result.rowsAffected ?? 0;
-  } finally {
-    await conn.close();
-  }
+    ).then(r => r.rowsAffected ?? 0);
+  });
 }
 
-export async function updateFotoPerfilUrl(curp, fotoPerfilUrl) {
-  const conn = await getConnection();
-  try {
-    await conn.execute(
+export const updateFotoPerfilUrl = (curp, fotoPerfilUrl) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS SET FOTO_PERFIL_URL = :fotoPerfilUrl WHERE CURP = :curp`,
-      { curp, fotoPerfilUrl },
-      { autoCommit: true }
-    );
-  } finally {
-    await conn.close();
-  }
-}
+      { curp, fotoPerfilUrl }, { autoCommit: true }
+    )
+  );
 
-export async function updateEstatus(curp, estatus) {
-  const conn = await getConnection();
-  try {
-    await conn.execute(
+export const updateEstatus = (curp, estatus) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS SET ESTATUS = :estatus WHERE CURP = :curp`,
-      { estatus, curp },
-      { autoCommit: true }
-    );
-  } finally {
-    await conn.close();
-  }
-}
+      { estatus, curp }, { autoCommit: true }
+    )
+  );
 
-/** Actualiza estatus y notas en una sola operación (p. ej. aprobar solicitud pública). */
-export async function updateEstatusAndNotas(curp, estatus, notas) {
-  const conn = await getConnection();
-  try {
-    await conn.execute(
+export const updateEstatusAndNotas = (curp, estatus, notas) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS SET ESTATUS = :estatus, NOTAS = :notas WHERE CURP = :curp`,
-      { estatus, notas: notas ?? null, curp },
-      { autoCommit: true }
-    );
-  } finally {
-    await conn.close();
-  }
-}
+      { estatus, notas: notas ?? null, curp }, { autoCommit: true }
+    )
+  );
 
-export async function deactivate(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const deactivate = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `UPDATE BENEFICIARIOS SET ESTATUS = 'Baja' WHERE CURP = :curp`,
-      { curp },
-      { autoCommit: true }
-    );
-    return result.rowsAffected ?? 0;
-  } finally {
-    await conn.close();
-  }
-}
+      { curp }, { autoCommit: true }
+    ).then(r => r.rowsAffected ?? 0)
+  );
 
-export async function hardDelete(curp) {
-  const conn = await getConnection();
-  try {
-    const result = await conn.execute(
+export const hardDelete = (curp) =>
+  withConnection(conn =>
+    conn.execute(
       `DELETE FROM BENEFICIARIOS WHERE CURP = :curp`,
-      { curp },
-      { autoCommit: true }
-    );
-    return result.rowsAffected ?? 0;
-  } finally {
-    await conn.close();
-  }
-}
+      { curp }, { autoCommit: true }
+    ).then(r => r.rowsAffected ?? 0)
+  );
