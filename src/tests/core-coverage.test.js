@@ -12,7 +12,7 @@ import {
   isHttpError,
   mapOracleError,
 } from "../utils/httpErrors.js";
-import { AppError, notFoundHandler, errorHandler } from "../middleware/errorHandler.js";
+import { notFoundHandler, errorHandler } from "../middleware/errorHandler.js";
 import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
 import { publicPathForStoredFile, unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { REPO_ROOT } from "../repoRoot.js";
@@ -83,9 +83,9 @@ describe("errorHandler middleware", () => {
     expect(res.body.details).toEqual({ campo: "curp" });
   });
 
-  test("maneja AppError con mapeo por status", () => {
+  test("maneja HttpError 401 con code UNAUTHORIZED", () => {
     const res = makeRes();
-    errorHandler(new AppError("no auth", 401), req, res);
+    errorHandler(new HttpError(401, "no auth", "UNAUTHORIZED"), req, res);
     expect(res.statusCode).toBe(401);
     expect(res.body.code).toBe("UNAUTHORIZED");
   });

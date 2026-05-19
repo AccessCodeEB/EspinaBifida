@@ -3,8 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
-import { AppError } from "../middleware/errorHandler.js";
-import { notFound, badRequest, conflict, HttpError, forbidden } from "../utils/httpErrors.js";
+import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 
 const SALT_ROUNDS = 10;
@@ -47,10 +46,10 @@ export async function login(email, password) {
 
   const emailNorm = email.trim().toLowerCase();
   const admin = await AdminModel.findByEmail(emailNorm);
-  if (!admin) throw new AppError("Credenciales inválidas", 401);
+  if (!admin) throw unauthorized("Credenciales inválidas");
 
   if (admin.ACTIVO === 0 || admin.ACTIVO === "0") {
-    throw new AppError("Cuenta desactivada. Contacta al administrador", 403);
+    throw forbidden("Cuenta desactivada. Contacta al administrador");
   }
 
   const stored = normalizePasswordHash(admin.PASSWORD_HASH);
@@ -67,7 +66,7 @@ export async function login(email, password) {
     }
   }
 
-  if (!passwordValida) throw new AppError("Credenciales inválidas", 401);
+  if (!passwordValida) throw unauthorized("Credenciales inválidas");
 
   const token = generarToken(admin);
 
@@ -149,7 +148,7 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva },
   if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
 
   const valida = await bcrypt.compare(passwordActual, admin.PASSWORD_HASH);
-  if (!valida) throw new AppError("Contraseña actual incorrecta", 401);
+  if (!valida) throw unauthorized("Contraseña actual incorrecta");
 
   const nuevoHash = await bcrypt.hash(passwordNueva, SALT_ROUNDS);
   await AdminModel.updatePassword(idAdmin, nuevoHash);

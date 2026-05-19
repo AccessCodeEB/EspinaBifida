@@ -1,15 +1,5 @@
 import { HttpError, isHttpError, mapOracleError } from "../utils/httpErrors.js";
 
-// Clase legada — conservada para compatibilidad con código existente.
-export class AppError extends Error {
-  constructor(message, statusCode, details = undefined) {
-    super(message);
-    this.name = "AppError";
-    this.statusCode = statusCode;
-    this.details = details;
-  }
-}
-
 function statusToDefaultCode(status) {
   const map = {
     400: "BAD_REQUEST",
@@ -41,11 +31,6 @@ export function errorHandler(err, req, res, _next) {
   if (isHttpError(err)) {
     statusCode = err.statusCode;
     code       = err.code;
-    message    = err.message;
-    details    = err.details;
-  } else if (err instanceof AppError) {
-    statusCode = err.statusCode ?? 500;
-    code       = statusToDefaultCode(statusCode);
     message    = err.message;
     details    = err.details;
   } else if (err?.code === "LIMIT_FILE_SIZE") {
