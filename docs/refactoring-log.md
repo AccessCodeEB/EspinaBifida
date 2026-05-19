@@ -4,6 +4,14 @@ Registro continuo de mejoras al codebase. Cada entrada documenta qué se cambió
 
 ---
 
+## 2026-05-18 withConnection — beneficiarios.model.js
+
+**Área:** Backend — Modelos
+**Archivos modificados:** `src/models/beneficiarios.model.js`
+**Problema:** 8 funciones con boilerplate repetido (~48 líneas extra). Variable llamada inconsistentemente `conn`.
+**Solución:** Todas las funciones con `withConnection`. `create` y `update` usan forma `async function` para mantener legibilidad del destructuring de muchos campos.
+**Impacto:** Eliminadas ~93 líneas. Tests pasan sin cambios (661/661 pasados).
+
 ## 2026-05-18 withConnection — roles.model.js, citas.model.js
 
 **Área:** Backend — Modelos
