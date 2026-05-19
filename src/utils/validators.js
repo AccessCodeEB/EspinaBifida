@@ -1,7 +1,9 @@
 import { badRequest } from "./httpErrors.js";
 
 export const CURP_REGEX  = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// [^\s@.]+ excluye el punto de cada segmento del dominio, eliminando la ambigüedad
+// que causaría backtracking catastrófico (ReDoS) en inputs sin punto en el dominio.
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 export const TEL_REGEX   = /^\d{10}$/;
 export const CP_REGEX    = /^\d{5}$/;
 
