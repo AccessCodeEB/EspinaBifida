@@ -126,4 +126,38 @@ describe("GET /uploads/profiles/:filename", () => {
     warnSpy.mockRestore();
     fetchSpy.mockRestore();
   });
+
+  test("sendFile callback con error delega a next(err) — errorHandler responde con error", async () => {
+    // Trigger sendFile error by placing a directory where a file is expected.
+    // fs.access resolves (directory exists), but res.sendFile fails because it
+    // cannot serve a directory — calls callback(err) → next(err) → errorHandler.
+    fs.mkdirSync(profilesDir, { recursive: true });
+    const name = `zz-sendfile-dir-${Date.now()}.jpg`;
+    const dirPath = path.join(profilesDir, name);
+    fs.mkdirSync(dirPath, { recursive: true });
+
+    const res = await request(app).get(`/uploads/profiles/${name}`);
+
+    // sendFile callback receives an error → next(err) → errorHandler → non-200
+    expect(res.status).not.toBe(200);
+
+    fs.rmdirSync(dirPath);
+  });
+
+  test("buffer vacío desde remoto retorna 404 (línea 56: if (!buf.length))", async () => {
+    process.env.PROFILE_PHOTOS_REMOTE_BASE = "http://example.invalid";
+    const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new ArrayBuffer(0), // empty buffer
+      headers: { get: () => null },
+    });
+
+    const res = await request(app).get(
+      `/uploads/profiles/zz-empty-buf-${Date.now()}.jpg`
+    );
+
+    expect(res.status).toBe(404);
+    fetchSpy.mockRestore();
+  });
 });
