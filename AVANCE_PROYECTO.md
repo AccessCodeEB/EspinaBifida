@@ -1,7 +1,7 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-17 (Martes)
-**Próxima entrega:** 2026-05-19 (Jueves)
+**Actualización:** 2026-05-19 (Martes)
+**Próxima entrega:** 2026-05-22 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
 ---
@@ -56,11 +56,18 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente en todo el backend
-- 29 archivos de prueba (Jest + Supertest)
+- 31 archivos de prueba (Jest + Supertest), 671 tests pasando
 - Pool de conexiones Oracle con reconexión automática
 - Transformación automática de columnas Oracle a camelCase
 - Soporte de modo oscuro (dark mode)
 - Integración Cloudflare Turnstile en formulario público
+
+### Refactoring continuo (completado 2026-05-18)
+
+- **Helper `withConnection`** en `src/config/db.js` — elimina el boilerplate `getConnection/try/finally/close` de todos los modelos. Los modelos con rollback explícito (`createWithInventarioTransaction`, `create` en membresías) se conservaron sin cambios.
+- **Módulo de validadores compartidos** (`src/utils/validators.js`) — centraliza `CURP_REGEX`, `EMAIL_REGEX`, `TEL_REGEX`, `CP_REGEX`, `sanitizeString`, `parsePositiveNumber`, `parseISODate`. Los tres servicios principales importan desde aquí.
+- **Eliminación de `AppError` legacy** — clase y rama `instanceof AppError` eliminadas de `errorHandler.js`. Todo el código usa `HttpError` de `httpErrors.js`.
+- **División de componentes frontend grandes** — `beneficiarios.tsx` (1,328 → ~100 líneas) dividido en `BeneficiariosTable`, `BeneficiarioFormDialog`, `BeneficiarioDetailPanel`. `servicios.tsx` (1,310 líneas) dividido en `ServiciosTable`, `ServicioFormDialog`, `ServiciosChartsKpis`.
 
 ---
 
@@ -109,7 +116,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Semana | Fechas | Objetivo |
 |---|---|---|
-| **Semana 1** | 19 — 23 May | Validación de entradas (Zod/Joi) + rate limiting en endpoints públicos |
+| **Semana 1** | 19 — 23 May | ~~Refactoring backend/frontend~~ ✅ + Rate limiting en endpoints públicos (pendiente) |
 | **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) |
 | **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E básicas (flujos críticos) |
 | **Semana 4** | 09 — 13 Jun | CI/CD en GitHub Actions + revisión final con socio formador |
