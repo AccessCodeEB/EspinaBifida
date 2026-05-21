@@ -29,10 +29,17 @@ import catalogoRoutes         from "./routes/servicios-catalogo.routes.js";
 
 const app = express();
 
+// CORS: environment-aware.
+// Si FRONTEND_URL está definida, solo se permite ese origen y localhost:3001 (dev).
+// Si no está definida, se permite todo (fallback de desarrollo).
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    return callback(null, true);
+    if (!origin) return callback(null, true); // curl, SSR, mobile apps
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) return callback(null, true); // dev: permitir todo
+    const allowed = [frontendUrl, "http://localhost:3001"];
+    if (allowed.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS: origen no permitido"));
   },
   credentials: true,
 }));
