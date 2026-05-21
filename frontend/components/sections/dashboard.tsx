@@ -22,7 +22,9 @@ import { getBeneficiarios }        from "@/services/beneficiarios"
 import { getPagosRecientes }       from "@/services/membresias"
 import { getCitas }                from "@/services/citas"
 import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
+import { buildEstadoOrigenCounts } from "@/lib/beneficiarios-origen"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
+import { BeneficiariosOrigenMapCard } from "./dashboard/BeneficiariosOrigenMapCard"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
@@ -286,6 +288,8 @@ export function DashboardSection() {
       return { mes: label, ingresos: parseFloat(ingresos.toFixed(2)), nuevos: miembros }
     })
   }, [pagos, beneficiarios])
+
+  const stateCounts = useMemo(() => buildEstadoOrigenCounts(beneficiarios), [beneficiarios])
 
   const kpis = useMemo(() => [
     {
@@ -711,6 +715,8 @@ export function DashboardSection() {
           </div>
         )}
       </div>
+
+      <BeneficiariosOrigenMapCard stateCounts={stateCounts} loading={loadingBenef} />
 
     </div>
   )
