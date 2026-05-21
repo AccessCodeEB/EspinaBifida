@@ -1,13 +1,15 @@
 export default {
   testEnvironment: "node",
 
+  // Excluir worktrees de Claude Code y cobertura generada
+  testPathIgnorePatterns: ["/node_modules/", "/.claude/worktrees/", "/coverage/"],
+
   // Archivos fuente sobre los que se mide cobertura
   collectCoverageFrom: [
     "src/**/*.js",
-    "!src/server.js",          // entrypoint — no tiene lógica testeable
-    "!src/config/db.js",       // infraestructura Oracle — siempre mockeada
-    "!src/config/database.js", // idem
-    "!src/tests/**",           // los tests mismos no se miden
+    "!src/server.js",      // entrypoint — no tiene lógica testeable
+    "!src/config/db.js",   // infraestructura Oracle — siempre mockeada
+    "!src/tests/**",       // los tests mismos no se miden
   ],
 
   coverageDirectory: "coverage",
