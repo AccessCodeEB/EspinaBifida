@@ -6,6 +6,7 @@ import { runMigration003 } from "./migrations/003_administradores_foto_perfil_cl
 import { runMigration004 } from "./migrations/004_credenciales_pago_fields.js";
 import { runMigration005 } from "./migrations/005_configuracion_especialistas.js";
 import { runMigration006 } from "./migrations/006_articulos_stock_minimo.js";
+import { runMigration007 } from "./migrations/007_articulos_activo.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 
 const REQUIRED_ENV = [
@@ -32,6 +33,7 @@ createPool()
     await runMigration004();
     await runMigration005();
     await runMigration006();
+    await runMigration007();
     initScheduler();
     const server = app.listen(Number(PORT), () =>
       console.log(`Server running on port ${PORT}`)
