@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
-  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw,
+  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,6 +71,8 @@ export function InventarioSection() {
   const [sortField, setSortField]       = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [unidadFilterIndex, setUnidadFilterIndex] = useState<number>(-1)
+  const [stockFilter, setStockFilter] = useState<"bajo" | "sin" | null>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const loadData = () => {
     setLoading(true)
@@ -104,7 +106,12 @@ export function InventarioSection() {
     String(item.clave).toLowerCase().includes(searchTerm.toLowerCase())
   )
   const filteredByUnidad = activeUnidadFilter ? filtered.filter(i => i.unidad === activeUnidadFilter) : filtered
-  const sortedFiltered = [...filteredByUnidad].sort((a, b) => {
+  const filteredByStock = stockFilter === "sin"
+    ? filteredByUnidad.filter(i => i.cantidad === 0)
+    : stockFilter === "bajo"
+    ? filteredByUnidad.filter(i => i.cantidad > 0 && i.cantidad < i.minimo)
+    : filteredByUnidad
+  const sortedFiltered = [...filteredByStock].sort((a, b) => {
     if (!sortField) return 0
     const f = sortDirection === "asc" ? 1 : -1
     if (sortField === "clave") {
@@ -296,6 +303,8 @@ export function InventarioSection() {
             <p className="text-[11px] text-muted-foreground">
               {sortedFiltered.length} de {inventario.length} artículos
               {activeUnidadFilter && <> · Unidad: <span className="font-medium">{activeUnidadFilter}</span></>}
+              {stockFilter === "bajo" && <> · <span className="font-medium text-amber-600">Stock bajo</span></>}
+              {stockFilter === "sin"  && <> · <span className="font-medium text-red-600">Sin stock</span></>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -310,6 +319,67 @@ export function InventarioSection() {
                 className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
               />
             </div>
+            {/* Filtro de stock */}
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                    stockFilter
+                      ? stockFilter === "sin"
+                        ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
+                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Filter className="size-3.5" />
+                  Filtrar
+                  {stockFilter && (
+                    <span
+                      onClick={e => { e.stopPropagation(); setStockFilter(null) }}
+                      className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10"
+                    >
+                      <X className="size-2.5" />
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-52 p-1.5">
+                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtrar por stock</p>
+                <button
+                  onClick={() => { setStockFilter(null); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    !stockFilter ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Package className="size-3.5" />
+                  Todos los artículos
+                </button>
+                <button
+                  onClick={() => { setStockFilter("bajo"); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    stockFilter === "bajo"
+                      ? "bg-amber-50 font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "text-muted-foreground hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/20 dark:hover:text-amber-400"
+                  }`}
+                >
+                  <AlertTriangle className="size-3.5 text-amber-500" />
+                  Stock bajo
+                  <span className="ml-auto tabular-nums font-medium">{bajosStock}</span>
+                </button>
+                <button
+                  onClick={() => { setStockFilter("sin"); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    stockFilter === "sin"
+                      ? "bg-red-50 font-medium text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                      : "text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/20 dark:hover:text-red-400"
+                  }`}
+                >
+                  <AlertTriangle className="size-3.5 text-red-500" />
+                  Sin stock
+                  <span className="ml-auto tabular-nums font-medium">{sinStock}</span>
+                </button>
+              </PopoverContent>
+            </Popover>
             {/* Acciones */}
             <button onClick={openAgregarArticulo}
               className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50">
