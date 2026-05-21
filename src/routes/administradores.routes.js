@@ -25,7 +25,9 @@ router.post(
 router.get("/:idAdmin",             verifyToken,                  AdminController.getById);
 router.post("/",                    verifyToken, checkRole(1),    AdminController.create);
 router.put("/:idAdmin",             verifyToken, checkRole(1),    AdminController.update);
-router.patch("/:idAdmin/password",  verifyToken,                  AdminController.changePassword);
-router.delete("/:idAdmin",          verifyToken, checkRole(1),    AdminController.deactivate);
+router.patch("/:idAdmin/password",        verifyToken,                  AdminController.changePassword);
+router.post("/:idAdmin/solicitar-codigo", verifyToken,                  AdminController.solicitarCodigo);
+router.patch("/:idAdmin/telefono",        verifyToken, adminSelfOrSuper, AdminController.updateTelefono);
+router.delete("/:idAdmin",               verifyToken, checkRole(1),    AdminController.deactivate);
 
 export default router;

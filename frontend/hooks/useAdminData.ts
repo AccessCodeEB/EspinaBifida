@@ -7,12 +7,12 @@ import {
   getAdmin,
   updateAdmin,
   changePassword,
-  requestPasswordCode,
+  solicitarCodigo,
   type Admin,
 } from "@/services/administradores"
 
 const EMPTY_FORM  = { nombreCompleto: "", email: "", idRol: 0 }
-const EMPTY_PW    = { passwordActual: "", passwordNueva: "", confirmar: "" }
+const EMPTY_PW    = { passwordActual: "", passwordNueva: "", confirmar: "", codigo: "" }
 const EMPTY_LOGIN = { email: "", password: "" }
 
 export function useAdminData(open: boolean) {
@@ -136,6 +136,7 @@ export function useAdminData(open: boolean) {
       await changePassword(admin.idAdmin, {
         passwordActual: pwForm.passwordActual,
         passwordNueva:  pwForm.passwordNueva,
+        codigo:         pwForm.codigo,
       })
       setPwOk(true)
       setPwForm(EMPTY_PW)
@@ -169,15 +170,10 @@ export function useAdminData(open: boolean) {
     setSendingCode(true)
     setCodeError(null)
     try {
-      await requestPasswordCode(admin.idAdmin)
+      await solicitarCodigo(admin.idAdmin)
       setCodeSent(true)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : ""
-      setCodeError(
-        msg === "NOT_IMPLEMENTED"
-          ? "La verificación por email estará disponible próximamente."
-          : msg
-      )
+      setCodeError(err instanceof Error ? err.message : "Error al enviar el código")
     } finally {
       setSendingCode(false)
     }

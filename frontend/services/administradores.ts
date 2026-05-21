@@ -25,6 +25,7 @@ export interface Admin {
   fechaCreacion:  string
   nombreRol:      string
   fotoPerfilUrl?: string | null
+  telefono?:      string | null
 }
 
 export interface UpdateAdminBody {
@@ -36,6 +37,7 @@ export interface UpdateAdminBody {
 export interface ChangePasswordBody {
   passwordActual: string
   passwordNueva:  string
+  codigo:         string
 }
 
 export function getAdmin(id: number) {
@@ -50,6 +52,14 @@ export function changePassword(id: number, body: ChangePasswordBody) {
   return apiClient.patch<{ message: string }>(`/administradores/${id}/password`, body)
 }
 
+export function solicitarCodigo(id: number) {
+  return apiClient.post<{ message: string }>(`/administradores/${id}/solicitar-codigo`, {})
+}
+
+export function updateTelefono(id: number, telefono: string | null) {
+  return apiClient.patch<{ message: string }>(`/administradores/${id}/telefono`, { telefono })
+}
+
 /** POST multipart /administradores/:id/foto-perfil — campo de archivo: `foto` */
 export function uploadAdminFotoPerfil(idAdmin: number, file: File) {
   const fd = new FormData()
@@ -58,13 +68,4 @@ export function uploadAdminFotoPerfil(idAdmin: number, file: File) {
     `/administradores/${idAdmin}/foto-perfil`,
     fd
   )
-}
-
-/**
- * Prepared for future email verification flow.
- * When implemented the backend will send a one-time code to the admin's email.
- * Backend endpoint to add: POST /administradores/:id/request-password-code
- */
-export function requestPasswordCode(_id: number): Promise<{ message: string }> {
-  return Promise.reject(new Error("NOT_IMPLEMENTED"))
 }

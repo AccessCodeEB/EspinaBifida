@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   User, Shield, Lock, Save, CheckCircle, Loader2, Eye, EyeOff, X,
+  Phone, MessageSquare,
 } from "lucide-react"
 import {
   Dialog,
@@ -19,6 +20,8 @@ import {
   getAdmin,
   updateAdmin,
   changePassword,
+  solicitarCodigo,
+  updateTelefono,
   uploadAdminFotoPerfil,
   type Admin,
 } from "@/services/administradores"
@@ -37,9 +40,12 @@ interface PwForm {
   passwordActual: string
   passwordNueva:  string
   confirmar:      string
+  codigo:         string
 }
 
-const EMPTY_PW: PwForm = { passwordActual: "", passwordNueva: "", confirmar: "" }
+const EMPTY_PW: PwForm = { passwordActual: "", passwordNueva: "", confirmar: "", codigo: "" }
+
+type PwStep = "form" | "codigo"
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -86,12 +92,19 @@ export function EditProfileDialog({
 
   // ── Estado del formulario de contraseña ────────────────────────────
   const [showPwSection, setShowPwSection] = useState(false)
+  const [pwStep,   setPwStep]   = useState<PwStep>("form")
   const [pwForm,   setPwForm]   = useState<PwForm>(EMPTY_PW)
   const [pwSaving, setPwSaving] = useState(false)
   const [pwError,  setPwError]  = useState<string | null>(null)
   const [pwOk,     setPwOk]     = useState(false)
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew,     setShowNew]     = useState(false)
+
+  // ── Estado del teléfono ─────────────────────────────────────────────
+  const [telefono,        setTelefono]       = useState<string>("")
+  const [telefonoSaving,  setTelefonoSaving] = useState(false)
+  const [telefonoError,   setTelefonoError]  = useState<string | null>(null)
+  const [telefonoOk,      setTelefonoOk]     = useState(false)
 
   const [fotoUploading, setFotoUploading] = useState(false)
   const [adminFotoRevision, setAdminFotoRevision] = useState(0)
@@ -108,12 +121,18 @@ export function EditProfileDialog({
     setShowPwSection(false)
     setPwForm(EMPTY_PW)
 
+    setTelefono("")
+    setTelefonoOk(false)
+    setTelefonoError(null)
+    setPwStep("form")
+
     setLoadingAdmin(true)
     setLoadError(null)
     getAdmin(adminId)
       .then((data) => {
         setAdmin(data)
         setForm({ nombreCompleto: data.nombreCompleto, email: data.email })
+        setTelefono(data.telefono ?? "")
       })
       .catch(() => setLoadError("No se pudieron cargar los datos. Intenta de nuevo."))
       .finally(() => setLoadingAdmin(false))
@@ -144,24 +163,66 @@ export function EditProfileDialog({
     }
   }
 
-  // ── Cambiar contraseña ──────────────────────────────────────────────
-  async function handleChangePassword() {
+  // ── Guardar teléfono ────────────────────────────────────────────────
+  async function handleSaveTelefono() {
     if (!admin) return
-    if (!pwForm.passwordActual)                      { setPwError("Ingresa tu contraseña actual");  return }
-    if (!pwForm.passwordNueva)                       { setPwError("Ingresa la nueva contraseña");   return }
-    if (pwForm.passwordNueva.length < 6)             { setPwError("Mínimo 6 caracteres");           return }
-    if (pwForm.passwordNueva !== pwForm.confirmar)   { setPwError("Las contraseñas no coinciden");  return }
+    const cleaned = telefono.replace(/\D/g, "")
+    if (cleaned !== "" && cleaned.length !== 10) {
+      setTelefonoError("El teléfono debe tener 10 dígitos"); return
+    }
+    setTelefonoSaving(true); setTelefonoError(null); setTelefonoOk(false)
+    try {
+      await updateTelefono(admin.idAdmin, cleaned === "" ? null : cleaned)
+      setAdmin((prev) => prev ? { ...prev, telefono: cleaned === "" ? null : cleaned } : prev)
+      setTelefono(cleaned)
+      setTelefonoOk(true)
+      toast.success("Teléfono actualizado")
+    } catch (err: unknown) {
+      setTelefonoError(err instanceof Error ? err.message : "Error al guardar")
+    } finally {
+      setTelefonoSaving(false)
+    }
+  }
 
-    setPwSaving(true)
-    setPwError(null)
-    setPwOk(false)
+  // ── Cambiar contraseña — paso 1: solicitar código SMS ──────────────
+  async function handleSolicitarCodigo() {
+    if (!admin) return
+    if (!pwForm.passwordActual)                    { setPwError("Ingresa tu contraseña actual"); return }
+    if (!pwForm.passwordNueva)                     { setPwError("Ingresa la nueva contraseña");  return }
+    if (pwForm.passwordNueva.length < 6)           { setPwError("Mínimo 6 caracteres");          return }
+    if (pwForm.passwordNueva !== pwForm.confirmar) { setPwError("Las contraseñas no coinciden"); return }
+    if (!admin.telefono) {
+      setPwError("Registra un número de teléfono en tu perfil antes de cambiar la contraseña.")
+      return
+    }
+
+    setPwSaving(true); setPwError(null)
+    try {
+      await solicitarCodigo(admin.idAdmin)
+      setPwStep("codigo")
+      toast.success("Código enviado a tu número registrado")
+    } catch (err: unknown) {
+      setPwError(err instanceof Error ? err.message : "Error al enviar el código")
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
+  // ── Cambiar contraseña — paso 2: confirmar con código ──────────────
+  async function handleConfirmarCodigo() {
+    if (!admin) return
+    if (!pwForm.codigo.trim()) { setPwError("Ingresa el código SMS"); return }
+
+    setPwSaving(true); setPwError(null); setPwOk(false)
     try {
       await changePassword(admin.idAdmin, {
         passwordActual: pwForm.passwordActual,
         passwordNueva:  pwForm.passwordNueva,
+        codigo:         pwForm.codigo.trim(),
       })
       setPwOk(true)
       setPwForm(EMPTY_PW)
+      setPwStep("form")
       setShowPwSection(false)
     } catch (err: unknown) {
       setPwError(err instanceof Error ? err.message : "Error al cambiar contraseña")
@@ -327,6 +388,46 @@ export function EditProfileDialog({
                 )}
               </div>
 
+              {/* ── Teléfono (editable por cualquier admin) ── */}
+              <div className="px-6 py-5 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-1.5">
+                  <Phone className="size-3" />Teléfono de contacto
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Número (10 dígitos)
+                  </label>
+                  <Input
+                    id="ep-telefono"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="Ej. 8181234567"
+                    value={telefono}
+                    onChange={(e) => { setTelefono(e.target.value.replace(/\D/g, "").slice(0, 10)); setTelefonoOk(false); setTelefonoError(null) }}
+                    className="h-9 text-sm border-border/60 bg-background focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Se usará para recibir el código SMS al cambiar tu contraseña.
+                  </p>
+                </div>
+                {telefonoError && <p className="text-xs text-red-600 dark:text-red-400">{telefonoError}</p>}
+                {telefonoOk && (
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="size-3.5" />Teléfono actualizado.
+                  </div>
+                )}
+                <button
+                  type="button"
+                  disabled={telefonoSaving}
+                  onClick={handleSaveTelefono}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  {telefonoSaving ? <><Loader2 className="size-3.5 animate-spin" />Guardando...</> : <><Phone className="size-3.5" />Guardar teléfono</>}
+                </button>
+              </div>
+
 
               {/* ── Contraseña ── */}
               <div className="px-6 py-5">
@@ -343,12 +444,13 @@ export function EditProfileDialog({
                 {!showPwSection ? (
                   <button
                     type="button"
-                    onClick={() => { setShowPwSection(true); setPwOk(false) }}
+                    onClick={() => { setShowPwSection(true); setPwStep("form"); setPwOk(false) }}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/70 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     <Lock className="size-3.5 text-muted-foreground" />Cambiar contraseña
                   </button>
-                ) : (
+                ) : pwStep === "form" ? (
+                  /* ── Paso 1: capturar contraseñas ── */
                   <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
                     {([
                       { id: "ep-pw-actual", label: "Contraseña actual",  key: "passwordActual" as const, show: showCurrent, toggle: () => setShowCurrent(v => !v) },
@@ -375,17 +477,67 @@ export function EditProfileDialog({
                         onChange={(e) => { setPwForm((p) => ({ ...p, confirmar: e.target.value })); setPwError(null) }}
                         className="h-9 text-sm border-border/60 focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30" />
                     </div>
+
+                    {!admin?.telefono && (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                        <Phone className="size-3.5 mt-0.5 shrink-0" />
+                        <span>Necesitas un teléfono registrado para recibir el código SMS. Agrégalo en la sección de arriba.</span>
+                      </div>
+                    )}
+
                     {pwError && <p className="text-xs text-red-600 dark:text-red-400">{pwError}</p>}
                     <div className="flex gap-2 pt-1">
                       <button type="button" disabled={pwSaving}
-                        onClick={() => { setShowPwSection(false); setPwForm(EMPTY_PW); setPwError(null) }}
+                        onClick={() => { setShowPwSection(false); setPwForm(EMPTY_PW); setPwError(null); setPwStep("form") }}
                         className="flex-1 rounded-lg border border-border/70 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
                         Cancelar
                       </button>
-                      <button type="button" disabled={pwSaving} onClick={handleChangePassword}
+                      <button type="button" disabled={pwSaving || !admin?.telefono} onClick={handleSolicitarCodigo}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                         style={{ backgroundColor: NAVY }}>
-                        {pwSaving ? <><Loader2 className="size-3.5 animate-spin" />Guardando...</> : "Confirmar"}
+                        {pwSaving ? <><Loader2 className="size-3.5 animate-spin" />Enviando...</> : <><MessageSquare className="size-3.5" />Enviar código SMS</>}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── Paso 2: ingresar código SMS ── */
+                  <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                      <MessageSquare className="size-3.5 shrink-0" />
+                      <span>Ingresa el código de 6 dígitos enviado al número <strong>{admin?.telefono}</strong>.</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Código SMS</label>
+                      <Input
+                        id="ep-pw-codigo"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={pwForm.codigo}
+                        onChange={(e) => { setPwForm((p) => ({ ...p, codigo: e.target.value.replace(/\D/g, "").slice(0, 6) })); setPwError(null) }}
+                        className="h-10 text-center text-xl font-mono tracking-[0.5em] border-border/60 focus-visible:ring-1 focus-visible:ring-[#0f4c81]/30"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setPwStep("form"); setPwError(null) }}
+                      className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                    >
+                      ¿No llegó el código? Volver y reenviar
+                    </button>
+                    {pwError && <p className="text-xs text-red-600 dark:text-red-400">{pwError}</p>}
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" disabled={pwSaving}
+                        onClick={() => { setShowPwSection(false); setPwForm(EMPTY_PW); setPwError(null); setPwStep("form") }}
+                        className="flex-1 rounded-lg border border-border/70 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                        Cancelar
+                      </button>
+                      <button type="button" disabled={pwSaving || pwForm.codigo.length !== 6} onClick={handleConfirmarCodigo}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                        style={{ backgroundColor: NAVY }}>
+                        {pwSaving ? <><Loader2 className="size-3.5 animate-spin" />Verificando...</> : <><CheckCircle className="size-3.5" />Confirmar cambio</>}
                       </button>
                     </div>
                   </div>

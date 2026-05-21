@@ -6,6 +6,10 @@ import * as RolesModel from "../models/roles.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
+import { saveOtp, verifyOtp } from "../utils/otpStore.js";
+import { sendSmsCode } from "../utils/sms.js";
+
+const PHONE_REGEX = /^\d{10}$/;
 
 const SALT_ROUNDS = 10;
 
@@ -133,7 +137,28 @@ export async function update(idAdmin, { idRol, nombreCompleto, email }) {
   });
 }
 
-export async function changePassword(idAdmin, { passwordActual, passwordNueva }, callerIdAdmin) {
+export async function solicitarCodigo(idAdmin, callerIdAdmin) {
+  if (callerIdAdmin !== idAdmin) {
+    throw new HttpError(403, "Solo puedes solicitar el código para tu propia cuenta");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+  if (!adminRow.TELEFONO) {
+    throw badRequest(
+      "No tienes un número de teléfono registrado. Agrégalo primero en tu perfil.",
+      "NO_PHONE"
+    );
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  saveOtp(idAdmin, code);
+  await sendSmsCode(adminRow.TELEFONO, code);
+
+  return { message: "Código enviado al número registrado" };
+}
+
+export async function changePassword(idAdmin, { passwordActual, passwordNueva, codigo }, callerIdAdmin) {
   if (callerIdAdmin !== idAdmin) {
     throw new HttpError(403, "Solo puedes cambiar tu propia contraseña");
   }
@@ -142,9 +167,15 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva },
   }
   validarPassword(passwordNueva);
 
-  const admin = await AdminModel.findByEmail(
-    (await AdminModel.findById(idAdmin))?.EMAIL
-  );
+  if (!codigo) throw badRequest("Se requiere el código SMS enviado a tu teléfono", "MISSING_OTP");
+  if (!verifyOtp(idAdmin, String(codigo))) {
+    throw badRequest("Código SMS inválido o expirado", "INVALID_OTP");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  const admin = await AdminModel.findByEmail(adminRow.EMAIL);
   if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
 
   const valida = await bcrypt.compare(passwordActual, admin.PASSWORD_HASH);
@@ -152,6 +183,25 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva },
 
   const nuevoHash = await bcrypt.hash(passwordNueva, SALT_ROUNDS);
   await AdminModel.updatePassword(idAdmin, nuevoHash);
+}
+
+export async function updateTelefono(idAdmin, telefono, callerIdAdmin) {
+  if (callerIdAdmin !== idAdmin) {
+    throw new HttpError(403, "Solo puedes actualizar tu propio teléfono");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  if (telefono !== null && telefono !== undefined && telefono !== "") {
+    const cleaned = String(telefono).replace(/\D/g, "");
+    if (!PHONE_REGEX.test(cleaned)) {
+      throw badRequest("El teléfono debe tener exactamente 10 dígitos", "INVALID_PHONE");
+    }
+    await AdminModel.updateTelefono(idAdmin, cleaned);
+  } else {
+    await AdminModel.updateTelefono(idAdmin, null);
+  }
 }
 
 export async function deactivate(idAdmin) {

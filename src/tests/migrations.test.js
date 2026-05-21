@@ -1172,3 +1172,60 @@ describe("runMigration007 — falla al obtener conexión", () => {
     expect(mockClose).not.toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration008 — Agrega columna TELEFONO a ADMINISTRADORES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration008 } = await import("../migrations/008_administradores_telefono.js");
+
+describe("runMigration008 — columna TELEFONO ya existe", () => {
+  test("retorna sin ejecutar ALTER si la columna ya existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    await runMigration008();
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration008 — columna TELEFONO no existe", () => {
+  test("ejecuta ALTER TABLE ADD TELEFONO", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+    mockExecute.mockResolvedValueOnce({});
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    await runMigration008();
+
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    const alter = mockExecute.mock.calls[1][0].trim();
+    expect(alter).toMatch(/ALTER TABLE ADMINISTRADORES/i);
+    expect(alter).toMatch(/TELEFONO/i);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration008 — error durante ALTER TABLE", () => {
+  test("cierra conexión y relanza el error", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges"));
+
+    const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    await expect(runMigration008()).rejects.toThrow("ORA-01031");
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    errSpy.mockRestore();
+  });
+});
+
+describe("runMigration008 — falla al obtener conexión", () => {
+  test("lanza el error sin intentar cerrar conexión", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+    await expect(runMigration008()).rejects.toThrow("ORA-12541");
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+});

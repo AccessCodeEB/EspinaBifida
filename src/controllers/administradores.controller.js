@@ -15,6 +15,7 @@ function mapAdminPublic(row) {
     fechaCreacion:  a.fechaCreacion,
     nombreRol:      a.nombreRol,
     fotoPerfilUrl:  a.fotoPerfilUrl ?? null,
+    telefono:       a.telefono ?? null,
   };
 }
 
@@ -81,6 +82,31 @@ export async function deactivate(req, res, next) {
   try {
     await AdminService.deactivate(Number(req.params.idAdmin));
     res.json({ message: "Administrador desactivado exitosamente" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function solicitarCodigo(req, res, next) {
+  try {
+    const result = await AdminService.solicitarCodigo(
+      Number(req.params.idAdmin),
+      req.user.idAdmin
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateTelefono(req, res, next) {
+  try {
+    await AdminService.updateTelefono(
+      Number(req.params.idAdmin),
+      req.body.telefono ?? null,
+      req.user.idAdmin
+    );
+    res.json({ message: "Teléfono actualizado exitosamente" });
   } catch (err) {
     next(err);
   }

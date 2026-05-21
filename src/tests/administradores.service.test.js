@@ -1,11 +1,12 @@
 import { jest } from "@jest/globals";
 
 // ─── Mocks del modelo ─────────────────────────────────────────────────────────
-const mockFindById       = jest.fn();
-const mockFindByEmail    = jest.fn();
-const mockUpdatePassword = jest.fn();
-const mockCreate         = jest.fn();
-const mockUpdate         = jest.fn();
+const mockFindById        = jest.fn();
+const mockFindByEmail     = jest.fn();
+const mockUpdatePassword  = jest.fn();
+const mockUpdateTelefono  = jest.fn();
+const mockCreate          = jest.fn();
+const mockUpdate          = jest.fn();
 
 jest.unstable_mockModule("../models/administradores.model.js", () => ({
   findById:           mockFindById,
@@ -14,8 +15,26 @@ jest.unstable_mockModule("../models/administradores.model.js", () => ({
   create:             mockCreate,
   update:             mockUpdate,
   updatePassword:     mockUpdatePassword,
+  updateTelefono:     mockUpdateTelefono,
   deactivate:         jest.fn(),
   updateFotoPerfilUrl: jest.fn(),
+}));
+
+// ─── Mocks de OTP y SMS ───────────────────────────────────────────────────────
+const mockSaveOtp     = jest.fn();
+const mockVerifyOtp   = jest.fn();
+const mockSendSmsCode = jest.fn();
+
+jest.unstable_mockModule("../utils/otpStore.js", () => ({
+  saveOtp:    mockSaveOtp,
+  verifyOtp:  mockVerifyOtp,
+  clearOtp:   jest.fn(),
+  OTP_TTL_MS: 300000,
+  _testStore: new Map(),
+}));
+
+jest.unstable_mockModule("../utils/sms.js", () => ({
+  sendSmsCode: mockSendSmsCode,
 }));
 
 const mockRolesFindById = jest.fn();
@@ -72,6 +91,10 @@ const adminRow = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUpdatePassword.mockResolvedValue(undefined);
+  mockUpdateTelefono.mockResolvedValue(undefined);
+  mockVerifyOtp.mockReturnValue(true);   // por defecto OTP válido
+  mockSaveOtp.mockResolvedValue(undefined);
+  mockSendSmsCode.mockResolvedValue(undefined);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -131,7 +154,7 @@ describe("login — migración de contraseña legacy (plaintext)", () => {
 describe("changePassword", () => {
   test("lanza 403 si el caller intenta cambiar contraseña de otro admin", async () => {
     await expect(
-      Service.changePassword(2, { passwordActual: "old", passwordNueva: "newpass123" }, 1)
+      Service.changePassword(2, { passwordActual: "old", passwordNueva: "newpass123", codigo: "123456" }, 1)
     ).rejects.toMatchObject({ statusCode: 403 });
 
     expect(mockFindById).not.toHaveBeenCalled();
@@ -139,14 +162,27 @@ describe("changePassword", () => {
 
   test("lanza 400 si faltan passwordActual o passwordNueva", async () => {
     await expect(
-      Service.changePassword(1, { passwordActual: "", passwordNueva: "" }, 1)
+      Service.changePassword(1, { passwordActual: "", passwordNueva: "", codigo: "123456" }, 1)
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   test("lanza 400 si passwordNueva tiene menos de 6 caracteres", async () => {
     await expect(
-      Service.changePassword(1, { passwordActual: "actual", passwordNueva: "abc" }, 1)
+      Service.changePassword(1, { passwordActual: "actual", passwordNueva: "abc", codigo: "123456" }, 1)
     ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("lanza 400 MISSING_OTP si no se proporciona código", async () => {
+    await expect(
+      Service.changePassword(1, { passwordActual: "actual", passwordNueva: "newpass123" }, 1)
+    ).rejects.toMatchObject({ statusCode: 400, code: "MISSING_OTP" });
+  });
+
+  test("lanza 400 INVALID_OTP si el código es incorrecto", async () => {
+    mockVerifyOtp.mockReturnValueOnce(false);
+    await expect(
+      Service.changePassword(1, { passwordActual: "actual", passwordNueva: "newpass123", codigo: "000000" }, 1)
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_OTP" });
   });
 
   test("lanza 401 si la contraseña actual es incorrecta", async () => {
@@ -155,7 +191,7 @@ describe("changePassword", () => {
     mockBcryptCompare.mockResolvedValueOnce(false);
 
     await expect(
-      Service.changePassword(1, { passwordActual: "wrongcurrent", passwordNueva: "newpass123" }, 1)
+      Service.changePassword(1, { passwordActual: "wrongcurrent", passwordNueva: "newpass123", codigo: "123456" }, 1)
     ).rejects.toMatchObject({ statusCode: 401 });
 
     expect(mockUpdatePassword).not.toHaveBeenCalled();
@@ -168,21 +204,108 @@ describe("changePassword", () => {
     mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
 
     await expect(
-      Service.changePassword(1, { passwordActual: "correctcurrent", passwordNueva: "newpass123" }, 1)
+      Service.changePassword(1, { passwordActual: "correctcurrent", passwordNueva: "newpass123", codigo: "123456" }, 1)
     ).resolves.toBeUndefined();
 
     expect(mockBcryptHash).toHaveBeenCalledWith("newpass123", expect.any(Number));
     expect(mockUpdatePassword).toHaveBeenCalledWith(1, "$2a$10$newhash");
   });
 
-  test("lanza 404 si el administrador no existe", async () => {
+  test("lanza 404 si el administrador no existe (findById → null)", async () => {
     mockFindById.mockResolvedValueOnce(null);
-    // findByEmail recibe undefined.EMAIL → undefined
-    mockFindByEmail.mockResolvedValueOnce(null);
 
     await expect(
-      Service.changePassword(1, { passwordActual: "current", passwordNueva: "newpass123" }, 1)
+      Service.changePassword(1, { passwordActual: "current", passwordNueva: "newpass123", codigo: "123456" }, 1)
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 404 si findByEmail no encuentra al admin (línea 179)", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockFindByEmail.mockResolvedValueOnce(null); // findByEmail devuelve null
+
+    await expect(
+      Service.changePassword(1, { passwordActual: "current", passwordNueva: "newpass123", codigo: "123456" }, 1)
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// solicitarCodigo
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("solicitarCodigo", () => {
+  test("lanza 403 si el caller intenta solicitar código de otro admin", async () => {
+    await expect(
+      Service.solicitarCodigo(2, 1)
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  test("lanza 404 si el admin no existe", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.solicitarCodigo(1, 1)
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 400 NO_PHONE si el admin no tiene teléfono registrado", async () => {
+    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: null });
+    await expect(
+      Service.solicitarCodigo(1, 1)
+    ).rejects.toMatchObject({ statusCode: 400, code: "NO_PHONE" });
+  });
+
+  test("genera OTP, llama sendSmsCode y retorna mensaje", async () => {
+    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+
+    const result = await Service.solicitarCodigo(1, 1);
+
+    expect(mockSaveOtp).toHaveBeenCalledWith(1, expect.stringMatching(/^\d{6}$/));
+    expect(mockSendSmsCode).toHaveBeenCalledWith("8181234567", expect.stringMatching(/^\d{6}$/));
+    expect(result).toHaveProperty("message");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateTelefono
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateTelefono", () => {
+  test("lanza 403 si el caller intenta actualizar teléfono de otro admin", async () => {
+    await expect(
+      Service.updateTelefono(2, "8181234567", 1)
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  test("lanza 404 si el admin no existe", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.updateTelefono(1, "8181234567", 1)
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 400 INVALID_PHONE si el teléfono no tiene 10 dígitos", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await expect(
+      Service.updateTelefono(1, "12345", 1)
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_PHONE" });
+  });
+
+  test("actualiza teléfono con 10 dígitos limpios", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await Service.updateTelefono(1, "8181234567", 1);
+    expect(mockUpdateTelefono).toHaveBeenCalledWith(1, "8181234567");
+  });
+
+  test("guarda null si se pasa teléfono vacío", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await Service.updateTelefono(1, "", 1);
+    expect(mockUpdateTelefono).toHaveBeenCalledWith(1, null);
+  });
+
+  test("limpia caracteres no numéricos antes de guardar", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    await Service.updateTelefono(1, "818-123-4567", 1);
+    expect(mockUpdateTelefono).toHaveBeenCalledWith(1, "8181234567");
   });
 });
 
