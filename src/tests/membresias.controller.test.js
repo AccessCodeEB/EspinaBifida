@@ -332,6 +332,30 @@ describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
     expect(res.status).toBe(200);
   });
 
+  test("mapPago con campos nulos cubre ramas ?? (líneas 35,40-43)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ...pagoRow,
+        NOMBRE_COMPLETO: null,
+        MONTO:           null,
+        METODO_PAGO:     null,
+        REFERENCIA:      null,
+        OBSERVACIONES:   null,
+      }],
+    });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].nombre).toBe("");
+    expect(res.body[0].monto).toBeNull();
+    expect(res.body[0].metodoPago).toBeNull();
+    expect(res.body[0].referencia).toBeNull();
+    expect(res.body[0].observaciones).toBeNull();
+  });
+
   test("error en getPagosRecientes → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB error"));
 
@@ -340,5 +364,83 @@ describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBeGreaterThanOrEqual(500);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// formatMonto — ramas null y NaN (líneas 5 y 7)
+// mapMembresia — ramas null en diasRestantes, nombre, metodoPago (líneas 13,16,23)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("formatMonto y mapMembresia — ramas null/NaN no cubiertas", () => {
+  test("monto null → formatMonto devuelve null (línea 5)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, MONTO: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].monto).toBeNull();
+  });
+
+  test("monto no numérico → formatMonto devuelve null por NaN (línea 7)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, MONTO: "no-es-numero" }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].monto).toBeNull();
+  });
+
+  test("diasRestantes null → campo diasRestantes devuelve null (línea 13)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, DIAS_RESTANTES: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].diasRestantes).toBeNull();
+  });
+
+  test("nombreCompleto null → nombre devuelve '' en mapMembresia (línea 16)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, NOMBRE_COMPLETO: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].nombre).toBe("");
+  });
+
+  test("metodoPago null en membresía → null en respuesta (línea 23)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, METODO_PAGO: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].metodoPago).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORS environment-aware — ramas de app.js líneas 40-42
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("CORS environment-aware (app.js líneas 40-42)", () => {
+  test("origin en FRONTEND_URL → respuesta normal (línea 41)", async () => {
+    process.env.FRONTEND_URL = "https://example.com";
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .set("Origin", "https://example.com");
+
+    delete process.env.FRONTEND_URL;
+    expect(res.status).toBe(200);
+  });
+
+  test("origin no permitida con FRONTEND_URL → error CORS (línea 42)", async () => {
+    process.env.FRONTEND_URL = "https://example.com";
+
+    const res = await request(app)
+      .get("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .set("Origin", "https://evil.com");
+
+    delete process.env.FRONTEND_URL;
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
