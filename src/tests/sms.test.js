@@ -15,17 +15,19 @@ afterEach(() => {
 // ── Modo desarrollo (sin variables Twilio) ──────────────────────────────────
 
 describe("sendSmsCode — modo desarrollo", () => {
-  test("imprime el código en consola cuando no hay variables Twilio", async () => {
+  test("imprime el código en consola y lo devuelve cuando no hay variables Twilio", async () => {
     const spy = jest.spyOn(console, "log").mockImplementation(() => {});
-    await sendSmsCode("8181234567", "123456");
+    const result = await sendSmsCode("8181234567", "123456");
     expect(spy).toHaveBeenCalledWith(expect.stringContaining("123456"));
+    expect(result).toBe("123456");
     spy.mockRestore();
   });
 
   test("incluye el número de teléfono en el log de desarrollo", async () => {
     const spy = jest.spyOn(console, "log").mockImplementation(() => {});
-    await sendSmsCode("8181234567", "654321");
+    const result = await sendSmsCode("8181234567", "654321");
     expect(spy).toHaveBeenCalledWith(expect.stringContaining("8181234567"));
+    expect(result).toBe("654321");
     spy.mockRestore();
   });
 });
@@ -65,7 +67,7 @@ describe("sendSmsCode — modo Twilio", () => {
     expect(options.headers?.Authorization).toMatch(/^Basic /);
   });
 
-  test("no lanza si Twilio responde con ok:true", async () => {
+  test("devuelve undefined si Twilio responde con ok:true", async () => {
     setupTwilio();
     mockFetch(true);
     await expect(sendSmsCode("+528181234567", "123456")).resolves.toBeUndefined();

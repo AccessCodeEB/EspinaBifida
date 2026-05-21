@@ -1,7 +1,8 @@
 /**
  * Envía un SMS con el código OTP.
- * En producción usa Twilio si TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER están definidos.
- * En desarrollo imprime el código en consola.
+ * - Con Twilio configurado (TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM_NUMBER): envía SMS real.
+ * - Sin Twilio: modo desarrollo — imprime en consola y devuelve el código para mostrarlo en la UI.
+ * @returns {Promise<string|undefined>} El código en modo dev, undefined en producción.
  */
 export async function sendSmsCode(toPhone, code) {
   const sid   = process.env.TWILIO_ACCOUNT_SID;
@@ -29,9 +30,10 @@ export async function sendSmsCode(toPhone, code) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err?.message ?? "Error al enviar SMS por Twilio");
     }
-    return;
+    return undefined;
   }
 
-  // Fallback desarrollo: código visible en consola del servidor
+  // Modo desarrollo: sin Twilio, devuelve el código para mostrarlo en la UI
   console.log(`[sms-dev] Código OTP para ${toPhone}: ${code}`);
+  return code;
 }

@@ -53,7 +53,10 @@ export function changePassword(id: number, body: ChangePasswordBody) {
 }
 
 export function solicitarCodigo(id: number) {
-  return apiClient.post<{ message: string }>(`/administradores/${id}/solicitar-codigo`, {})
+  return apiClient.post<{ message: string; codigoDev?: string }>(
+    `/administradores/${id}/solicitar-codigo`,
+    {}
+  )
 }
 
 export function updateTelefono(id: number, telefono: string | null) {

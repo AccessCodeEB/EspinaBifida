@@ -153,9 +153,12 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
 
   const code = String(Math.floor(100000 + Math.random() * 900000));
   saveOtp(idAdmin, code);
-  await sendSmsCode(adminRow.TELEFONO, code);
+  const devCode = await sendSmsCode(adminRow.TELEFONO, code);
 
-  return { message: "Código enviado al número registrado" };
+  return {
+    message: "Código enviado al número registrado",
+    ...(devCode !== undefined && { codigoDev: devCode }),
+  };
 }
 
 export async function changePassword(idAdmin, { passwordActual, passwordNueva, codigo }, callerIdAdmin) {

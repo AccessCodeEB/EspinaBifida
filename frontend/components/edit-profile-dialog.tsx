@@ -93,6 +93,7 @@ export function EditProfileDialog({
   // ── Estado del formulario de contraseña ────────────────────────────
   const [showPwSection, setShowPwSection] = useState(false)
   const [pwStep,   setPwStep]   = useState<PwStep>("form")
+  const [pwDevMode, setPwDevMode] = useState(false)
   const [pwForm,   setPwForm]   = useState<PwForm>(EMPTY_PW)
   const [pwSaving, setPwSaving] = useState(false)
   const [pwError,  setPwError]  = useState<string | null>(null)
@@ -125,6 +126,7 @@ export function EditProfileDialog({
     setTelefonoOk(false)
     setTelefonoError(null)
     setPwStep("form")
+    setPwDevMode(false)
 
     setLoadingAdmin(true)
     setLoadError(null)
@@ -198,9 +200,16 @@ export function EditProfileDialog({
 
     setPwSaving(true); setPwError(null)
     try {
-      await solicitarCodigo(admin.idAdmin)
+      const res = await solicitarCodigo(admin.idAdmin)
       setPwStep("codigo")
-      toast.success("Código enviado a tu número registrado")
+      if (res.codigoDev) {
+        setPwDevMode(true)
+        setPwForm((p) => ({ ...p, codigo: res.codigoDev! }))
+        toast.info(`Modo desarrollo: código ${res.codigoDev} (sin SMS real)`)
+      } else {
+        setPwDevMode(false)
+        toast.success("Código enviado a tu número registrado")
+      }
     } catch (err: unknown) {
       setPwError(err instanceof Error ? err.message : "Error al enviar el código")
     } finally {
@@ -502,10 +511,17 @@ export function EditProfileDialog({
                 ) : (
                   /* ── Paso 2: ingresar código SMS ── */
                   <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
-                    <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
-                      <MessageSquare className="size-3.5 shrink-0" />
-                      <span>Ingresa el código de 6 dígitos enviado al número <strong>{admin?.telefono}</strong>.</span>
-                    </div>
+                    {pwDevMode ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-[11px] text-orange-700 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-400">
+                        <MessageSquare className="size-3.5 shrink-0" />
+                        <span><strong>Modo desarrollo:</strong> Twilio no configurado — código auto-llenado, no se envió SMS.</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                        <MessageSquare className="size-3.5 shrink-0" />
+                        <span>Ingresa el código de 6 dígitos enviado al número <strong>{admin?.telefono}</strong>.</span>
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Código SMS</label>
                       <Input
