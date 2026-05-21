@@ -697,7 +697,8 @@ describe("GET /inventario — error de DB → next(err)", () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout inventario"));
 
     const res = await request(app)
-      .get("/inventario");
+      .get("/inventario")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -708,7 +709,8 @@ describe("GET /inventario/movimientos — error de DB → next(err)", () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout movimientos"));
 
     const res = await request(app)
-      .get("/inventario/movimientos");
+      .get("/inventario/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });

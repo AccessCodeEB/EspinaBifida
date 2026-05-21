@@ -136,7 +136,8 @@ describe("POST /beneficiarios/:curp/aprobar-pre-registro — approvePreRegistro"
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
-      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`);
+      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/aprobada/i);
@@ -146,7 +147,8 @@ describe("POST /beneficiarios/:curp/aprobar-pre-registro — approvePreRegistro"
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
     const res = await request(app)
-      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`);
+      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
   });
@@ -158,7 +160,8 @@ describe("POST /beneficiarios/:curp/aprobar-pre-registro — approvePreRegistro"
     });
 
     const res = await request(app)
-      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`);
+      .post(`/beneficiarios/${CURP}/aprobar-pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(400);
   });
@@ -176,7 +179,8 @@ describe("DELETE /beneficiarios/:curp/pre-registro — rejectPreRegistro", () =>
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
-      .delete(`/beneficiarios/${CURP}/pre-registro`);
+      .delete(`/beneficiarios/${CURP}/pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/cancelada/i);
@@ -186,7 +190,8 @@ describe("DELETE /beneficiarios/:curp/pre-registro — rejectPreRegistro", () =>
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
     const res = await request(app)
-      .delete(`/beneficiarios/${CURP}/pre-registro`);
+      .delete(`/beneficiarios/${CURP}/pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
   });
@@ -197,7 +202,8 @@ describe("DELETE /beneficiarios/:curp/pre-registro — rejectPreRegistro", () =>
     });
 
     const res = await request(app)
-      .delete(`/beneficiarios/${CURP}/pre-registro`);
+      .delete(`/beneficiarios/${CURP}/pre-registro`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(400);
   });
