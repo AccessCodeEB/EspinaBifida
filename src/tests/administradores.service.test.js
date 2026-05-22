@@ -301,6 +301,14 @@ describe("solicitarRecuperacion", () => {
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
+  test("normaliza el email a minúsculas antes de buscar", async () => {
+    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+
+    await Service.solicitarRecuperacion("ADMIN@TEST.COM");
+
+    expect(mockFindByEmail).toHaveBeenCalledWith("admin@test.com");
+  });
+
   test("lanza 400 NO_PHONE si el admin no tiene teléfono registrado", async () => {
     mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: null });
     await expect(

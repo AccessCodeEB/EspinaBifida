@@ -163,7 +163,7 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
 }
 
 export async function solicitarRecuperacion(email) {
-  const adminRow = await AdminModel.findByEmail(email);
+  const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
   if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
   if (!adminRow.TELEFONO) {
     throw badRequest(
