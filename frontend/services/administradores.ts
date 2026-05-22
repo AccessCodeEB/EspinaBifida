@@ -72,3 +72,21 @@ export function uploadAdminFotoPerfil(idAdmin: number, file: File) {
     fd
   )
 }
+
+export function solicitarRecuperacion(email: string) {
+  return apiClient.post<{ message: string; codigoDev?: string }>(
+    "/administradores/forgot-password",
+    { email }
+  )
+}
+
+export function resetPasswordPublico(
+  email: string,
+  codigo: string,
+  nuevaPassword: string
+) {
+  return apiClient.patch<{ message: string }>(
+    "/administradores/forgot-password/reset",
+    { email, codigo, nuevaPassword }
+  )
+}
