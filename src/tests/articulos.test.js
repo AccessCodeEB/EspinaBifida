@@ -132,7 +132,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
     expect(res.body.message).toMatch(/creado/i);
   });
 
-  test("falla si falta idArticulo → 400", async () => {
+  test("acepta body sin idArticulo → 201 (trigger Oracle asigna NEXTVAL)", async () => {
     const { idArticulo, ...sinId } = articuloBase;
 
     const res = await request(app)
@@ -140,7 +140,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
       .set("Authorization", `Bearer ${tokenAdmin}`)
       .send(sinId);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 
   test("falla si manejaInventario es inválido → 400", async () => {

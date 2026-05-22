@@ -88,8 +88,11 @@ describe('normalizeData — null/undefined → null (ramas de cada validator)', 
     expect(data.stockMinimo).toBeNull();
   });
 
-  it('create sin idArticulo en data lanza 400', () => {
-    expect(() => Service.create({})).toThrow(/idArticulo/);
+  it('create sin idArticulo en data → idArticulo queda null (trigger Oracle asigna NEXTVAL)', async () => {
+    mockCreate.mockResolvedValueOnce({});
+    await Service.create({});
+    const [data] = mockCreate.mock.calls[0];
+    expect(data.idArticulo).toBeNull();
   });
 });
 
@@ -126,15 +129,19 @@ describe('deleteById', () => {
 // ── normalizeData default parameter (L4) ──────────────────────────────────────
 
 describe('create — normalizeData(data = {}) default param (L4)', () => {
-  it('create con undefined → normalizeData usa {} default → lanza por idArticulo null', () => {
-    expect(() => Service.create(undefined)).toThrow(/idArticulo/);
+  it('create con undefined → normalizeData usa {} default → idArticulo queda null', async () => {
+    mockCreate.mockResolvedValueOnce({});
+    await Service.create(undefined);
+    const [data] = mockCreate.mock.calls[0];
+    expect(data.idArticulo).toBeNull();
   });
 });
 
 describe('normalizeData — idArticulo undefined (L11: val===undefined branch)', () => {
-  it('crea con idArticulo: undefined → lanza por idArticulo obligatorio', () => {
-    // { idArticulo: undefined } → 'idArticulo' in data = true → validator(undefined)
-    // → val === null = false → val === undefined = true → return null → throw
-    expect(() => Service.create({ idArticulo: undefined })).toThrow(/idArticulo/);
+  it('crea con idArticulo: undefined → normalizeData retorna null (trigger Oracle asigna NEXTVAL)', async () => {
+    mockCreate.mockResolvedValueOnce({});
+    await Service.create({ idArticulo: undefined });
+    const [data] = mockCreate.mock.calls[0];
+    expect(data.idArticulo).toBeNull();
   });
 });
