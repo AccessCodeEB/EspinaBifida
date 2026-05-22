@@ -19,6 +19,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos frontend completados | 10 / 10 |
 | Migraciones de BD | 8 / 8 |
 | Archivos de prueba (Jest + Supertest) | 39 |
+| Pruebas E2E (Playwright + QASE) | 41 tests en 13 archivos |
 
 ---
 
@@ -92,7 +93,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | **Documentación de la API** | No existe Swagger/OpenAPI ni README detallado por módulo |
-| **Pruebas E2E** | No hay pruebas end-to-end (Playwright); los flujos críticos solo se validan con integration tests |
+| ~~**Pruebas E2E**~~ | ✅ **Completado** — 41 tests Playwright + QASE (IDs 1–43): API (auth, beneficiarios, membresías, servicios, inventario, reportes, pre-registro, artículos, citas, roles, seguridad) + UI (formulario público, UAT). `npm run test:e2e` |
 | **Validación de entradas con esquemas** | Las rutas no usan Joi/Zod; datos mal formados pueden llegar a la BD |
 
 ### Prioridad media
@@ -120,7 +121,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|---|---|
 | **Semana 1** | 19 — 23 May | Refactoring + Rate limiting + Seguridad | ✅ Completado |
 | **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) | ✅ Completado |
-| **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E básicas | ⏳ Pendiente |
+| **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E básicas | ✅ E2E completado (41 tests Playwright + QASE) |
 | **Semana 4** | 09 — 13 Jun | CI/CD en GitHub Actions + revisión final con socio formador | ⏳ Pendiente |
 
 > Las entregas de progreso se generan cada **martes y jueves**.
