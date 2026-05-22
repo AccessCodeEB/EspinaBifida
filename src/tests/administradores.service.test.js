@@ -290,6 +290,66 @@ describe("solicitarCodigo", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// solicitarRecuperacion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("solicitarRecuperacion", () => {
+  test("lanza 404 si no existe admin con ese email", async () => {
+    mockFindByEmail.mockResolvedValueOnce(null);
+    await expect(
+      Service.solicitarRecuperacion("noexiste@test.com")
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 400 NO_PHONE si el admin no tiene teléfono registrado", async () => {
+    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: null });
+    await expect(
+      Service.solicitarRecuperacion("admin@test.com")
+    ).rejects.toMatchObject({ statusCode: 400, code: "NO_PHONE" });
+  });
+
+  test("genera OTP, llama sendSmsCode y retorna mensaje", async () => {
+    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+
+    const result = await Service.solicitarRecuperacion("admin@test.com");
+
+    expect(mockSaveOtp).toHaveBeenCalledWith(
+      adminRow.ID_ADMIN,
+      expect.stringMatching(/^\d{6}$/)
+    );
+    expect(mockSendSmsCode).toHaveBeenCalledWith(
+      "8181234567",
+      expect.stringMatching(/^\d{6}$/)
+    );
+    expect(result).toHaveProperty("message");
+  });
+
+  test("incluye codigoDev en desarrollo cuando sendSmsCode lo devuelve", async () => {
+    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+    mockSendSmsCode.mockResolvedValueOnce("111222");
+
+    const result = await Service.solicitarRecuperacion("admin@test.com");
+
+    expect(result).toHaveProperty("codigoDev", "111222");
+  });
+
+  test("no incluye codigoDev en producción", async () => {
+    const orig = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+      mockSendSmsCode.mockResolvedValueOnce("111222");
+
+      const result = await Service.solicitarRecuperacion("admin@test.com");
+
+      expect(result).not.toHaveProperty("codigoDev");
+    } finally {
+      process.env.NODE_ENV = orig;
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // updateTelefono
 // ═══════════════════════════════════════════════════════════════════════════════
 

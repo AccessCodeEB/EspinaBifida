@@ -162,6 +162,26 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
   };
 }
 
+export async function solicitarRecuperacion(email) {
+  const adminRow = await AdminModel.findByEmail(email);
+  if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
+  if (!adminRow.TELEFONO) {
+    throw badRequest(
+      "Tu cuenta no tiene un número de teléfono registrado. Contacta al administrador del sistema.",
+      "NO_PHONE"
+    );
+  }
+
+  const code = String(randomInt(100000, 1000000));
+  saveOtp(adminRow.ID_ADMIN, code);
+  const devCode = await sendSmsCode(adminRow.TELEFONO, code);
+
+  return {
+    message: "Código de recuperación enviado al número registrado",
+    ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
+  };
+}
+
 export async function changePassword(idAdmin, { passwordActual, passwordNueva, codigo }, callerIdAdmin) {
   if (callerIdAdmin !== idAdmin) {
     throw new HttpError(403, "Solo puedes cambiar tu propia contraseña");
