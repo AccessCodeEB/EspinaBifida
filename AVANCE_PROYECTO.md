@@ -15,10 +15,10 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (statements) | **100%** |
 | Cobertura de pruebas (funciones) | **100%** |
 | Cobertura de pruebas (ramas) | **100%** |
-| Módulos backend completados | 8 / 8 |
-| Módulos frontend completados | 10 / 10 |
-| Migraciones de BD | 8 / 8 |
-| Archivos de prueba (Jest + Supertest) | 39 |
+| Módulos backend completados | 9 / 9 |
+| Módulos frontend completados | 11 / 11 |
+| Migraciones de BD | 9 / 9 |
+| Archivos de prueba (Jest + Supertest) | 41 |
 | Pruebas E2E (Playwright + QASE) | 41 tests en 13 archivos |
 
 ---
@@ -37,7 +37,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
-| **Migraciones BD** | 8 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Notificaciones** | Alertas automáticas de stock bajo y membresías próximas/vencidas, job nocturno cron, panel en dashboard | 100% |
+| **Migraciones BD** | 9 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -54,6 +55,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
 | **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
+| **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas |
 
 ### Seguridad (completado 2026-05-21 al 2026-05-22)
 
