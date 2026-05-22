@@ -23,7 +23,7 @@ jest.unstable_mockModule("../models/administradores.model.js", () => ({
 // ─── Mocks de OTP y SMS ───────────────────────────────────────────────────────
 const mockSaveOtp     = jest.fn();
 const mockVerifyOtp   = jest.fn();
-const mockSendSmsCode = jest.fn();
+const mockSendEmailCode = jest.fn();
 
 jest.unstable_mockModule("../utils/otpStore.js", () => ({
   saveOtp:    mockSaveOtp,
@@ -33,8 +33,8 @@ jest.unstable_mockModule("../utils/otpStore.js", () => ({
   _testStore: new Map(),
 }));
 
-jest.unstable_mockModule("../utils/sms.js", () => ({
-  sendSmsCode: mockSendSmsCode,
+jest.unstable_mockModule("../utils/email.js", () => ({
+  sendEmailCode: mockSendEmailCode,
 }));
 
 const mockRolesFindById = jest.fn();
@@ -94,7 +94,7 @@ beforeEach(() => {
   mockUpdateTelefono.mockResolvedValue(undefined);
   mockVerifyOtp.mockReturnValue(true);   // por defecto OTP válido
   mockSaveOtp.mockResolvedValue(undefined);
-  mockSendSmsCode.mockResolvedValue(undefined);
+  mockSendEmailCode.mockResolvedValue(undefined);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -247,38 +247,31 @@ describe("solicitarCodigo", () => {
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  test("lanza 400 NO_PHONE si el admin no tiene teléfono registrado", async () => {
-    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: null });
-    await expect(
-      Service.solicitarCodigo(1, 1)
-    ).rejects.toMatchObject({ statusCode: 400, code: "NO_PHONE" });
-  });
-
-  test("genera OTP, llama sendSmsCode y retorna mensaje", async () => {
-    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+  test("genera OTP, llama sendEmailCode con el email del admin y retorna mensaje", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
 
     const result = await Service.solicitarCodigo(1, 1);
 
     expect(mockSaveOtp).toHaveBeenCalledWith(1, expect.stringMatching(/^\d{6}$/));
-    expect(mockSendSmsCode).toHaveBeenCalledWith("8181234567", expect.stringMatching(/^\d{6}$/));
+    expect(mockSendEmailCode).toHaveBeenCalledWith("admin@test.com", expect.stringMatching(/^\d{6}$/));
     expect(result).toHaveProperty("message");
   });
 
-  test("incluye codigoDev en desarrollo cuando sendSmsCode devuelve el código", async () => {
-    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
-    mockSendSmsCode.mockResolvedValueOnce("654321");
+  test("incluye codigoDev en desarrollo cuando sendEmailCode devuelve el código", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockSendEmailCode.mockResolvedValueOnce("654321");
 
     const result = await Service.solicitarCodigo(1, 1);
 
     expect(result).toHaveProperty("codigoDev", "654321");
   });
 
-  test("no incluye codigoDev en producción aunque sendSmsCode lo devuelva", async () => {
+  test("no incluye codigoDev en producción aunque sendEmailCode lo devuelva", async () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
     try {
-      mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
-      mockSendSmsCode.mockResolvedValueOnce("654321");
+      mockFindById.mockResolvedValueOnce(adminRow);
+      mockSendEmailCode.mockResolvedValueOnce("654321");
 
       const result = await Service.solicitarCodigo(1, 1);
 
@@ -302,22 +295,15 @@ describe("solicitarRecuperacion", () => {
   });
 
   test("normaliza el email a minúsculas antes de buscar", async () => {
-    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
 
     await Service.solicitarRecuperacion("ADMIN@TEST.COM");
 
     expect(mockFindByEmail).toHaveBeenCalledWith("admin@test.com");
   });
 
-  test("lanza 400 NO_PHONE si el admin no tiene teléfono registrado", async () => {
-    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: null });
-    await expect(
-      Service.solicitarRecuperacion("admin@test.com")
-    ).rejects.toMatchObject({ statusCode: 400, code: "NO_PHONE" });
-  });
-
-  test("genera OTP, llama sendSmsCode y retorna mensaje", async () => {
-    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+  test("genera OTP, llama sendEmailCode con el email del admin y retorna mensaje", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
 
     const result = await Service.solicitarRecuperacion("admin@test.com");
 
@@ -325,16 +311,16 @@ describe("solicitarRecuperacion", () => {
       adminRow.ID_ADMIN,
       expect.stringMatching(/^\d{6}$/)
     );
-    expect(mockSendSmsCode).toHaveBeenCalledWith(
-      "8181234567",
+    expect(mockSendEmailCode).toHaveBeenCalledWith(
+      "admin@test.com",
       expect.stringMatching(/^\d{6}$/)
     );
     expect(result).toHaveProperty("message");
   });
 
-  test("incluye codigoDev en desarrollo cuando sendSmsCode lo devuelve", async () => {
-    mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
-    mockSendSmsCode.mockResolvedValueOnce("111222");
+  test("incluye codigoDev en desarrollo cuando sendEmailCode lo devuelve", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockSendEmailCode.mockResolvedValueOnce("111222");
 
     const result = await Service.solicitarRecuperacion("admin@test.com");
 
@@ -345,8 +331,8 @@ describe("solicitarRecuperacion", () => {
     const orig = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
     try {
-      mockFindByEmail.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
-      mockSendSmsCode.mockResolvedValueOnce("111222");
+      mockFindByEmail.mockResolvedValueOnce(adminRow);
+      mockSendEmailCode.mockResolvedValueOnce("111222");
 
       const result = await Service.solicitarRecuperacion("admin@test.com");
 

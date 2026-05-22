@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MessageSquare, Mail, KeyRound, Loader2, CheckCircle2 } from "lucide-react"
+import { Mail, KeyRound, Loader2, CheckCircle2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -53,18 +53,14 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
       if (res.codigoDev) {
         setDevMode(true)
         setCodigo(res.codigoDev)
-        toast.info(`Modo desarrollo: código ${res.codigoDev} (sin SMS real)`)
+        toast.info(`Modo desarrollo: código ${res.codigoDev} (sin correo real)`)
       } else {
-        toast.success("Código enviado a tu número registrado")
+        toast.success("Código enviado a tu correo electrónico")
       }
       setStep("codigo")
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al enviar el código"
-      if (msg.includes("NO_PHONE") || msg.toLowerCase().includes("teléfono")) {
-        setError("Tu cuenta no tiene un número de teléfono registrado. Contacta al administrador del sistema.")
-      } else {
-        setError(msg)
-      }
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -72,7 +68,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault()
-    if (!codigo.trim())    { setError("Ingresa el código SMS"); return }
+    if (!codigo.trim())    { setError("Ingresa el código de verificación"); return }
     if (!nuevaPass.trim()) { setError("Ingresa la nueva contraseña"); return }
     setLoading(true); setError(null)
     try {
@@ -80,11 +76,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
       setStep("done")
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al restablecer la contraseña"
-      if (msg.includes("INVALID_OTP") || msg.toLowerCase().includes("inválido")) {
-        setError("Código incorrecto o expirado. Solicita uno nuevo.")
-      } else {
-        setError(msg)
-      }
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -97,7 +89,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
           <DialogTitle>Recuperar contraseña</DialogTitle>
           <DialogDescription>
             {step === "email"
-              ? "Ingresa tu correo y te enviaremos un código SMS."
+              ? "Ingresa tu correo y te enviaremos un código de verificación."
               : step === "codigo"
               ? "Ingresa el código recibido y tu nueva contraseña."
               : "Tu contraseña fue actualizada correctamente."}
@@ -129,7 +121,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-              Enviar código SMS
+              Enviar código por correo
             </Button>
           </form>
         )}
@@ -138,19 +130,19 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
           <form onSubmit={handleResetPassword} className="space-y-4">
             {devMode ? (
               <div className="flex items-center gap-2 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-[11px] text-orange-700 dark:border-orange-700 dark:bg-orange-950/30 dark:text-orange-400">
-                <MessageSquare className="size-3.5 shrink-0" />
-                <span><strong>Modo desarrollo:</strong> Twilio no configurado — código auto-llenado.</span>
+                <Mail className="size-3.5 shrink-0" />
+                <span><strong>Modo desarrollo:</strong> SMTP no configurado — código auto-llenado.</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
-                <MessageSquare className="size-3.5 shrink-0" />
-                <span>Código de 6 dígitos enviado al número registrado de <strong>{email}</strong>.</span>
+                <Mail className="size-3.5 shrink-0" />
+                <span>Código de 6 dígitos enviado a <strong>{email}</strong>.</span>
               </div>
             )}
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Código SMS
+                Código de verificación
               </label>
               <Input
                 type="text"

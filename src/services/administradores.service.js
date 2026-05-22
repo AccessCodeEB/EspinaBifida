@@ -8,7 +8,7 @@ import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
 import { randomInt } from "crypto";
 import { saveOtp, verifyOtp } from "../utils/otpStore.js";
-import { sendSmsCode } from "../utils/sms.js";
+import { sendEmailCode } from "../utils/email.js";
 
 const PHONE_REGEX = /^\d{10}$/;
 
@@ -145,19 +145,13 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
 
   const adminRow = await AdminModel.findById(idAdmin);
   if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
-  if (!adminRow.TELEFONO) {
-    throw badRequest(
-      "No tienes un número de teléfono registrado. Agrégalo primero en tu perfil.",
-      "NO_PHONE"
-    );
-  }
 
   const code = String(randomInt(100000, 1000000));
   saveOtp(idAdmin, code);
-  const devCode = await sendSmsCode(adminRow.TELEFONO, code);
+  const devCode = await sendEmailCode(adminRow.EMAIL, code);
 
   return {
-    message: "Código enviado al número registrado",
+    message: "Código enviado a tu correo electrónico",
     ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
   };
 }
@@ -165,19 +159,13 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
 export async function solicitarRecuperacion(email) {
   const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
   if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
-  if (!adminRow.TELEFONO) {
-    throw badRequest(
-      "Tu cuenta no tiene un número de teléfono registrado. Contacta al administrador del sistema.",
-      "NO_PHONE"
-    );
-  }
 
   const code = String(randomInt(100000, 1000000));
   saveOtp(adminRow.ID_ADMIN, code);
-  const devCode = await sendSmsCode(adminRow.TELEFONO, code);
+  const devCode = await sendEmailCode(adminRow.EMAIL, code);
 
   return {
-    message: "Código de recuperación enviado al número registrado",
+    message: "Código de recuperación enviado a tu correo electrónico",
     ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
   };
 }
@@ -186,9 +174,9 @@ export async function resetPasswordPublico(email, codigo, nuevaPassword) {
   const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
   if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
 
-  if (!codigo) throw badRequest("Se requiere el código SMS de recuperación", "MISSING_OTP");
+  if (!codigo) throw badRequest("Se requiere el código de recuperación enviado a tu correo", "MISSING_OTP");
   if (!verifyOtp(adminRow.ID_ADMIN, String(codigo))) {
-    throw badRequest("Código SMS inválido o expirado", "INVALID_OTP");
+    throw badRequest("Código inválido o expirado", "INVALID_OTP");
   }
 
   validarPassword(nuevaPassword);
@@ -208,9 +196,9 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva, c
   }
   validarPassword(passwordNueva);
 
-  if (!codigo) throw badRequest("Se requiere el código SMS enviado a tu teléfono", "MISSING_OTP");
+  if (!codigo) throw badRequest("Se requiere el código enviado a tu correo electrónico", "MISSING_OTP");
   if (!verifyOtp(idAdmin, String(codigo))) {
-    throw badRequest("Código SMS inválido o expirado", "INVALID_OTP");
+    throw badRequest("Código inválido o expirado", "INVALID_OTP");
   }
 
   const adminRow = await AdminModel.findById(idAdmin);
