@@ -190,7 +190,7 @@ export function DashboardSection() {
           .filter((i) => {
             const qty = Number(i.cantidad ?? 0)
             const min = Number(i.minimo ?? INVENTARIO_BAJO_UMBRAL)
-            return qty <= min
+            return qty > 0 && qty <= min
           })
           .sort((a, b) => Number(b.cantidad ?? 0) - Number(a.cantidad ?? 0))
         const agotados = items.filter((i) => Number(i.cantidad ?? 0) <= 0)
