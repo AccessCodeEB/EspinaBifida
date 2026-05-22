@@ -1,5 +1,7 @@
 # Rate Limiting Implementation Plan
 
+> **STATUS: EJECUTADO** — Implementado 2026-05-18. Middleware `src/middleware/rateLimiter.js`, tests `src/tests/rateLimiter.test.js`, y aplicación en `src/app.js` completos. 7/7 tests pasando.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add `express-rate-limit` middleware to protect login, public pre-registration, and all authenticated endpoints from abuse.
