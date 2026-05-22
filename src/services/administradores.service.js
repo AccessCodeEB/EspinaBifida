@@ -6,6 +6,7 @@ import * as RolesModel from "../models/roles.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
+import { randomInt } from "crypto";
 import { saveOtp, verifyOtp } from "../utils/otpStore.js";
 import { sendSmsCode } from "../utils/sms.js";
 
@@ -151,7 +152,7 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
     );
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(randomInt(100000, 1000000));
   saveOtp(idAdmin, code);
   const devCode = await sendSmsCode(adminRow.TELEFONO, code);
 
