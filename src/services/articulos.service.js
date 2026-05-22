@@ -67,12 +67,15 @@ export const getById = (id) =>
 
 export const create = (data) => {
   const normalized = normalizeData(data);
-
-  if (normalized.idArticulo === null || normalized.idArticulo === undefined) {
-    throw badRequest("idArticulo es obligatorio");
-  }
-
-  return ArticulosModel.create(normalized);
+  // Asegurar que todos los binds tienen valor (null si no viene en body)
+  // para que el trigger TRG_ARTICULOS_BI asigne SEQ_ARTICULOS.NEXTVAL cuando idArticulo=null
+  const bindings = {
+    idArticulo: null, descripcion: null, unidad: null,
+    cuotaRecuperacion: null, inventarioActual: null,
+    manejaInventario: null, idCategoria: null, stockMinimo: null,
+    ...normalized,
+  };
+  return ArticulosModel.create(bindings);
 };
 
 export const update = (id, data) =>

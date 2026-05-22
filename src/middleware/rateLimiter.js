@@ -1,6 +1,6 @@
 import { rateLimit } from 'express-rate-limit';
 
-const isTest = () => process.env.NODE_ENV === 'test';
+const isTest = () => process.env.NODE_ENV !== 'production';
 
 const loginLimiterOptions = {
   windowMs: 15 * 60 * 1000,

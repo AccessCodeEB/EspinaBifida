@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
-const TEST_CURP = 'E2EX000000MXXXXX00';
+const TEST_CURP = 'NAML040718HZSVRBA1';
 
 test(qase(37, 'RT-015: GET /citas retorna citas con paginación'), async ({ apiContext }) => {
   const res = await apiContext.get('/citas?page=1&limit=10');

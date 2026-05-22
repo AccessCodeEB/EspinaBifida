@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
-const TEST_CURP = 'E2EX000000MXXXXX00';
+const TEST_CURP = 'NAML040718HZSVRBA1';
 
 test(qase(6, 'Asignar servicio a beneficiario activo'), async ({ apiContext }) => {
   const catRes = await apiContext.get('/servicios-catalogo');

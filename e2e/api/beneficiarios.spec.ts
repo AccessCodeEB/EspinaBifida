@@ -2,7 +2,8 @@ import { test, expect } from '../fixtures/auth';
 import { cleanupBeneficiarios } from '../helpers/cleanup';
 import { qase } from 'playwright-qase-reporter';
 
-const TEST_CURP = 'E2EX000000MXXXXX00';
+// PLAW000101HXXXXXX0 cumple regex: ^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$
+const TEST_CURP = 'PLAW000101HXXXXXX0';
 
 const beneficiarioBase = {
   curp: TEST_CURP,

@@ -21,7 +21,7 @@ export async function cleanupBeneficiarios(ctx?: APIRequestContext): Promise<voi
   const body = await res.json();
   const beneficiarios: Array<{ curp: string }> = body.data ?? body ?? [];
   for (const b of beneficiarios) {
-    if (b.curp?.startsWith('E2EX')) {
+    if (b.curp?.startsWith('PLAW')) {
       await c.delete(`/beneficiarios/${b.curp}`);
     }
   }
@@ -36,7 +36,7 @@ export async function cleanupPreregistros(ctx?: APIRequestContext): Promise<void
   const registros: Array<{ folio: string; curp: string }> = body.data ?? body ?? [];
   for (const r of registros) {
     const curp = r.curp ?? r.folio;
-    if (curp?.startsWith('E2EX')) {
+    if (curp?.startsWith('PLAW')) {
       await c.delete(`/beneficiarios/${curp}/pre-registro`).catch(() => {});
     }
   }
