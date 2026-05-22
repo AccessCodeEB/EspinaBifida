@@ -8,7 +8,9 @@ import { runMigration005 } from "./migrations/005_configuracion_especialistas.js
 import { runMigration006 } from "./migrations/006_articulos_stock_minimo.js";
 import { runMigration007 } from "./migrations/007_articulos_activo.js";
 import { runMigration008 } from "./migrations/008_administradores_telefono.js";
+import { runMigration009 } from "./migrations/009_notificaciones.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
+import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
 const REQUIRED_ENV = [
   "DB_USER",
@@ -36,7 +38,9 @@ createPool()
     await runMigration006();
     await runMigration007();
     await runMigration008();
+    await runMigration009();
     initScheduler();
+    initNotificacionesScheduler();
     const server = app.listen(Number(PORT), () =>
       console.log(`Server running on port ${PORT}`)
     );
