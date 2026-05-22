@@ -40,9 +40,7 @@ export function errorHandler(err, req, res, _next) {
   }
 
   if (statusCode >= 500) {
-    const safeMethod = String(req.method).replace(/[\r\n]/g, "");
-    const safeUrl    = String(req.originalUrl).replace(/[\r\n]/g, "");
-    console.error(`[${new Date().toISOString()}] ${safeMethod} ${safeUrl}`, err);
+    console.error(`[${new Date().toISOString()}] Internal server error`, err);
     /* istanbul ignore else */
     if (isDevelopment) {
       message = err?.message ? String(err.message) : message;
