@@ -42,9 +42,12 @@ test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiC
   });
   expect([200, 201]).toContain(res.status());
 
-  const artResPost = await apiContext.get(`/inventario/${idArticulo}`);
+  // GET /inventario no acepta /:id, obtener la lista y filtrar
+  const artResPost = await apiContext.get('/inventario');
   const artBodyPost = await artResPost.json();
-  const stockDespues = (artBodyPost.data ?? artBodyPost).inventarioActual
-    ?? (artBodyPost.data ?? artBodyPost).inventario_actual ?? 0;
+  const articuloPost = (artBodyPost.data ?? artBodyPost).find(
+    (a: { idArticulo: number }) => a.idArticulo === idArticulo
+  );
+  const stockDespues = articuloPost?.inventarioActual ?? articuloPost?.inventario_actual ?? 0;
   expect(stockDespues).toBe(stockAntes + 5);
 });

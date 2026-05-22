@@ -2,7 +2,7 @@ import { APIRequestContext, request } from '@playwright/test';
 
 async function authedContext(): Promise<APIRequestContext> {
   const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
-  const loginRes = await ctx.post('/auth/login', {
+  const loginRes = await ctx.post('/administradores/login', {
     data: { email: 'prueba@espina.com', password: '222222' },
   });
   const body = await loginRes.json();
@@ -30,13 +30,14 @@ export async function cleanupBeneficiarios(ctx?: APIRequestContext): Promise<voi
 
 export async function cleanupPreregistros(ctx?: APIRequestContext): Promise<void> {
   const c = ctx ?? await authedContext();
-  const res = await c.get('/beneficiarios/preregistros?limit=200');
+  const res = await c.get('/beneficiarios?tipo=preregistros&limit=200');
   if (!res.ok()) { if (!ctx) await c.dispose(); return; }
   const body = await res.json();
-  const registros: Array<{ id: number; curp: string }> = body.data ?? body ?? [];
+  const registros: Array<{ folio: string; curp: string }> = body.data ?? body ?? [];
   for (const r of registros) {
-    if (r.curp?.startsWith('E2EX')) {
-      await c.delete(`/beneficiarios/preregistros/${r.id}`).catch(() => {});
+    const curp = r.curp ?? r.folio;
+    if (curp?.startsWith('E2EX')) {
+      await c.delete(`/beneficiarios/${curp}/pre-registro`).catch(() => {});
     }
   }
   if (!ctx) await c.dispose();

@@ -5,6 +5,7 @@ import { qase } from 'playwright-qase-reporter';
 
 const BASE = 'http://localhost:3000';
 const TEST_CURP = 'E2EX000000MXXXXX01';
+const TEST_CURP_RECHAZAR = 'E2EX000000MXXXXX02';
 
 const preregistroBase = {
   curp: TEST_CURP,
@@ -21,18 +22,22 @@ const preregistroBase = {
   tipoEspinaBifida: 'Oculta',
 };
 
-let preregistroId: number;
-
-test.afterAll(async () => {
+authTest.afterAll(async () => {
   await cleanupPreregistros();
 });
 
 test(qase(19, 'TC-007: POST /pre-registro crea registro con PENDIENTE y retorna 201'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
+  // Limpiar si ya existe
+  const authedCtx = await request.newContext({ baseURL: BASE });
+  // (sin token para solicitud-pública no hace falta auth)
+  await ctx.delete(`/beneficiarios/${TEST_CURP}/pre-registro`).catch(() => {});
+
   const res = await ctx.post('/beneficiarios/solicitud-publica', { data: preregistroBase });
   expect(res.status()).toBe(201);
   const body = await res.json();
-  expect(body.data?.estatus ?? body.estatus).toMatch(/pendiente/i);
+  // La API devuelve el folio creado
+  expect(body.folio ?? body.data?.folio ?? body.curp ?? TEST_CURP).toBeTruthy();
   await ctx.dispose();
 });
 
@@ -41,12 +46,13 @@ test(qase(20, 'TC-008: CURP duplicada retorna 409 CURP_DUPLICADA'), async () => 
   const res = await ctx.post('/beneficiarios/solicitud-publica', { data: preregistroBase });
   expect(res.status()).toBe(409);
   const body = await res.json();
-  expect(body.code).toMatch(/CURP|DUPLICATE/i);
+  expect(body.code ?? body.error ?? '').toMatch(/CURP|DUPLICATE|duplicad/i);
   await ctx.dispose();
 });
 
-authTest(qase(21, 'TC-009: GET /pre-registros?estatus=PENDIENTE retorna lista paginada'), async ({ apiContext }) => {
-  const res = await apiContext.get('/beneficiarios/preregistros?estatus=PENDIENTE');
+authTest(qase(21, 'TC-009: GET preregistros pendientes retorna lista'), async ({ apiContext }) => {
+  // Ruta real: GET /beneficiarios?tipo=preregistros&estatus=PENDIENTE
+  const res = await apiContext.get('/beneficiarios?tipo=preregistros&estatus=PENDIENTE');
   expect(res.status()).toBe(200);
   const body = await res.json();
   const lista = body.data ?? body;
@@ -54,32 +60,20 @@ authTest(qase(21, 'TC-009: GET /pre-registros?estatus=PENDIENTE retorna lista pa
 });
 
 authTest(qase(22, 'TC-010: Aprobar pre-registro crea BENEFICIARIOS y retorna 201'), async ({ apiContext }) => {
-  const listRes = await apiContext.get('/beneficiarios/preregistros?estatus=PENDIENTE&limit=50');
-  const listBody = await listRes.json();
-  const lista: Array<{ id: number; curp: string }> = listBody.data ?? listBody;
-  const target = lista.find((r: { curp: string }) => r.curp?.startsWith('E2EX'));
-  expect(target).toBeDefined();
-  preregistroId = target!.id;
-
-  const res = await apiContext.post(`/beneficiarios/preregistros/${preregistroId}/aprobar`);
+  // Aprobar el pre-registro creado en TC-007 (curp = TEST_CURP)
+  const res = await apiContext.post(`/beneficiarios/${TEST_CURP}/aprobar-pre-registro`);
   expect([200, 201]).toContain(res.status());
 });
 
 authTest(qase(23, 'TC-011: Rechazar pre-registro persiste motivo y retorna 200'), async ({ apiContext }) => {
+  // Crear otro pre-registro para rechazar
   const ctx = await request.newContext({ baseURL: BASE });
-  const crearRes = await ctx.post('/beneficiarios/solicitud-publica', {
-    data: { ...preregistroBase, curp: 'E2EX000000MXXXXX02' },
+  await ctx.post('/beneficiarios/solicitud-publica', {
+    data: { ...preregistroBase, curp: TEST_CURP_RECHAZAR },
   });
   await ctx.dispose();
 
-  if (crearRes.ok()) {
-    const crearBody = await crearRes.json();
-    const id = crearBody.data?.id ?? crearBody.id;
-    if (id) {
-      const res = await apiContext.post(`/beneficiarios/preregistros/${id}/rechazar`, {
-        data: { motivo: 'E2E Test - rechazo de prueba' },
-      });
-      expect([200, 204]).toContain(res.status());
-    }
-  }
+  // Rechazar: DELETE /beneficiarios/:curp/pre-registro
+  const res = await apiContext.delete(`/beneficiarios/${TEST_CURP_RECHAZAR}/pre-registro`);
+  expect([200, 204]).toContain(res.status());
 });

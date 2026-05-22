@@ -8,7 +8,7 @@ type AuthFixtures = {
 export const test = base.extend<{}, AuthFixtures>({
   token: [async ({}, use) => {
     const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
-    const res = await ctx.post('/auth/login', {
+    const res = await ctx.post('/administradores/login', {
       data: { email: 'prueba@espina.com', password: '222222' },
     });
     if (!res.ok()) throw new Error(`Login falló: ${res.status()} ${await res.text()}`);

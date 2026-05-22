@@ -23,12 +23,12 @@ test(qase(25, 'TC-013: 5 intentos fallidos bloquean IP con 429'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
 
   for (let i = 0; i < 5; i++) {
-    await ctx.post('/auth/login', {
+    await ctx.post('/administradores/login', {
       data: { email: 'prueba@espina.com', password: 'wrong_password_e2e' },
     });
   }
 
-  const res = await ctx.post('/auth/login', {
+  const res = await ctx.post('/administradores/login', {
     data: { email: 'prueba@espina.com', password: 'wrong_password_e2e' },
   });
   expect(res.status()).toBe(429);

@@ -5,7 +5,7 @@ const BASE = 'http://localhost:3000';
 
 test(qase(33, 'RT-001: Login con credenciales válidas retorna 200 con JWT'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
-  const res = await ctx.post('/auth/login', {
+  const res = await ctx.post('/administradores/login', {
     data: { email: 'prueba@espina.com', password: '222222' },
   });
   expect(res.status()).toBe(200);
@@ -18,7 +18,7 @@ test(qase(33, 'RT-001: Login con credenciales válidas retorna 200 con JWT'), as
 
 test(qase(34, 'RT-002: Login con credenciales inválidas retorna 401'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
-  const res = await ctx.post('/auth/login', {
+  const res = await ctx.post('/administradores/login', {
     data: { email: 'prueba@espina.com', password: 'wrongpassword' },
   });
   expect(res.status()).toBe(401);

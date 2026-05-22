@@ -5,36 +5,36 @@ import { qase } from 'playwright-qase-reporter';
 const PERIODO = 'desde=2026-01-01&hasta=2026-12-31';
 
 authTest(qase(13, 'TC-001: GET /reportes/periodo?tipo=beneficiarios responde 200'), async ({ apiContext }) => {
-  const res = await apiContext.get(`/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
+  const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
   expect(res.status()).toBe(200);
   const ct = res.headers()['content-type'] ?? '';
   expect(ct).toMatch(/pdf|xlsx|octet-stream|json/i);
 });
 
 authTest(qase(14, 'TC-002: Reporte de membresías retorna 200'), async ({ apiContext }) => {
-  const res = await apiContext.get(`/reportes/periodo?tipo=membresias&${PERIODO}`);
+  const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=membresias&${PERIODO}`);
   expect(res.status()).toBe(200);
 });
 
 authTest(qase(15, 'TC-003: Reporte de servicios retorna 200'), async ({ apiContext }) => {
-  const res = await apiContext.get(`/reportes/periodo?tipo=servicios&${PERIODO}`);
+  const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=servicios&${PERIODO}`);
   expect(res.status()).toBe(200);
 });
 
 authTest(qase(16, 'TC-004: Reporte de inventario retorna 200'), async ({ apiContext }) => {
-  const res = await apiContext.get(`/reportes/periodo?tipo=inventario&${PERIODO}`);
+  const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=inventario&${PERIODO}`);
   expect(res.status()).toBe(200);
 });
 
 test(qase(17, 'TC-005: Sin token retorna 401'), async () => {
   const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
-  const res401 = await ctx.get(`/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
+  const res401 = await ctx.get(`/api/v1/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
   expect(res401.status()).toBe(401);
   await ctx.dispose();
 });
 
 authTest(qase(40, 'RT-018: GET /reportes/periodo?tipo=estadisticas genera PDF'), async ({ apiContext }) => {
-  const res = await apiContext.get(`/reportes/periodo?tipo=estadisticas&${PERIODO}`);
+  const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=estadisticas&${PERIODO}`);
   expect(res.status()).toBe(200);
 });
 
