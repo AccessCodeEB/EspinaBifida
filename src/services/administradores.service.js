@@ -182,6 +182,23 @@ export async function solicitarRecuperacion(email) {
   };
 }
 
+export async function resetPasswordPublico(email, codigo, nuevaPassword) {
+  const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
+  if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
+
+  if (!codigo) throw badRequest("Se requiere el código SMS de recuperación", "MISSING_OTP");
+  if (!verifyOtp(adminRow.ID_ADMIN, String(codigo))) {
+    throw badRequest("Código SMS inválido o expirado", "INVALID_OTP");
+  }
+
+  validarPassword(nuevaPassword);
+
+  const nuevoHash = await bcrypt.hash(nuevaPassword, SALT_ROUNDS);
+  await AdminModel.updatePassword(adminRow.ID_ADMIN, nuevoHash);
+
+  return { message: "Contraseña restablecida exitosamente" };
+}
+
 export async function changePassword(idAdmin, { passwordActual, passwordNueva, codigo }, callerIdAdmin) {
   if (callerIdAdmin !== idAdmin) {
     throw new HttpError(403, "Solo puedes cambiar tu propia contraseña");

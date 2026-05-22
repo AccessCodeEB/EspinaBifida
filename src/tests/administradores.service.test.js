@@ -358,6 +358,70 @@ describe("solicitarRecuperacion", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// resetPasswordPublico
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("resetPasswordPublico", () => {
+  test("lanza 404 si no existe admin con ese email", async () => {
+    mockFindByEmail.mockResolvedValueOnce(null);
+    await expect(
+      Service.resetPasswordPublico("noexiste@test.com", "123456", "NuevaPass1")
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza 400 MISSING_OTP si el código es falsy", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    await expect(
+      Service.resetPasswordPublico("admin@test.com", "", "NuevaPass1")
+    ).rejects.toMatchObject({ statusCode: 400, code: "MISSING_OTP" });
+  });
+
+  test("lanza 400 INVALID_OTP si el código no es válido", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockVerifyOtp.mockReturnValueOnce(false);
+    await expect(
+      Service.resetPasswordPublico("admin@test.com", "000000", "NuevaPass1")
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_OTP" });
+  });
+
+  test("lanza 400 si la nueva contraseña tiene menos de 6 caracteres", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockVerifyOtp.mockReturnValueOnce(true);
+    await expect(
+      Service.resetPasswordPublico("admin@test.com", "123456", "abc")
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("actualiza contraseña y retorna mensaje cuando todo es válido", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockVerifyOtp.mockReturnValueOnce(true);
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    mockUpdatePassword.mockResolvedValueOnce(undefined);
+
+    const result = await Service.resetPasswordPublico(
+      "admin@test.com",
+      "123456",
+      "NuevaPass1"
+    );
+
+    expect(mockBcryptHash).toHaveBeenCalledWith("NuevaPass1", expect.any(Number));
+    expect(mockUpdatePassword).toHaveBeenCalledWith(adminRow.ID_ADMIN, "$2a$10$newhash");
+    expect(result).toHaveProperty("message");
+  });
+
+  test("normaliza el email a minúsculas antes de buscar", async () => {
+    mockFindByEmail.mockResolvedValueOnce(adminRow);
+    mockVerifyOtp.mockReturnValueOnce(true);
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    mockUpdatePassword.mockResolvedValueOnce(undefined);
+
+    await Service.resetPasswordPublico("ADMIN@TEST.COM", "123456", "NuevaPass1");
+
+    expect(mockFindByEmail).toHaveBeenCalledWith("admin@test.com");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // updateTelefono
 // ═══════════════════════════════════════════════════════════════════════════════
 
