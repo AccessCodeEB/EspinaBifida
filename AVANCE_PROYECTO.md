@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-22 (Jueves)
+**Actualización:** 2026-05-22 (Jueves) — Semana 2
 **Próxima entrega:** 2026-05-29 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -34,7 +34,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Citas** | CRUD completo, filtros por fecha/estatus | 100% |
 | **Inventario** | Artículos, movimientos (entradas/salidas), alertas de stock mínimo, filtro activo/inactivo | 100% |
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
-| **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, roles, foto de perfil, teléfono editable | 100% |
+| **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
 | **Migraciones BD** | 8 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting | 100% |
@@ -52,7 +52,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Reportes** | ✅ Completo |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
-| **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña y teléfono editable |
+| **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
 
 ### Seguridad (completado 2026-05-21 al 2026-05-22)
 
@@ -61,11 +61,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Rate limiting con `express-rate-limit`: `loginLimiter` (5/15 min), `publicLimiter` (10/h), `authLimiter` (120/min), `otpLimiter` (5/15 min por idAdmin)
 - OTP para cambio de contraseña generado con `crypto.randomInt` (seguro criptográficamente)
 - `codigoDev` (código SMS en modo dev) excluido de la respuesta en `NODE_ENV=production`
+- Flujo "¿Olvidé mi contraseña?": `POST /forgot-password` + `PATCH /forgot-password/reset` + `ForgotPasswordDialog` en frontend
 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 39 archivos de prueba, 100% cobertura en statements, branches, functions y lines
+- 40 archivos de prueba, 100% cobertura en statements, branches, functions y lines
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
@@ -92,7 +93,6 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | **Documentación de la API** | No existe Swagger/OpenAPI ni README detallado por módulo |
 | **Pruebas E2E** | No hay pruebas end-to-end (Playwright); los flujos críticos solo se validan con integration tests |
-| **Flujo de recuperación de contraseña** | No existe endpoint ni pantalla de "olvidé mi contraseña" |
 | **Validación de entradas con esquemas** | Las rutas no usan Joi/Zod; datos mal formados pueden llegar a la BD |
 
 ### Prioridad media
@@ -119,7 +119,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Semana | Fechas | Objetivo | Estado |
 |---|---|---|---|
 | **Semana 1** | 19 — 23 May | Refactoring + Rate limiting + Seguridad | ✅ Completado |
-| **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) | 🔄 Próximo |
+| **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) | ✅ Completado |
 | **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E básicas | ⏳ Pendiente |
 | **Semana 4** | 09 — 13 Jun | CI/CD en GitHub Actions + revisión final con socio formador | ⏳ Pendiente |
 
