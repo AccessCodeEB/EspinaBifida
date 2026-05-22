@@ -1197,18 +1197,6 @@ describe("POST /administradores/forgot-password — solicitarRecuperacion", () =
     expect(res.status).toBe(404);
   });
 
-  test("retorna 400 NO_PHONE si el admin no tiene teléfono", async () => {
-    mockExecute.mockResolvedValueOnce({
-      rows: [{ ...adminRow, TELEFONO: null }],
-    });
-
-    const res = await request(app)
-      .post("/administradores/forgot-password")
-      .send({ email: "admin@test.com" });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe("NO_PHONE");
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -40,7 +40,9 @@ export function errorHandler(err, req, res, _next) {
   }
 
   if (statusCode >= 500) {
-    console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
+    const safeMethod = String(req.method).replace(/[\r\n]/g, "");
+    const safeUrl    = String(req.originalUrl).replace(/[\r\n]/g, "");
+    console.error(`[${new Date().toISOString()}] ${safeMethod} ${safeUrl}`, err);
     /* istanbul ignore else */
     if (isDevelopment) {
       message = err?.message ? String(err.message) : message;
