@@ -9,6 +9,10 @@ const router = Router();
 // Pública — no requiere token
 router.post("/login", AdminController.login);
 
+// Públicas — recuperación de contraseña (sin token)
+router.post("/forgot-password",        AdminController.solicitarRecuperacion);
+router.patch("/forgot-password/reset", AdminController.resetPasswordPublico);
+
 // Protegidas — requieren token válido
 router.get("/",                     verifyToken, checkRole(1),    AdminController.getAll);
 router.post(

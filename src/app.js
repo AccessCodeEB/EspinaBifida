@@ -54,6 +54,8 @@ app.post('/beneficiarios/solicitud-publica', publicLimiter);
 app.post('/api/v1/beneficiarios/solicitud-publica', publicLimiter);
 app.post('/administradores/:idAdmin/solicitar-codigo', otpLimiter);
 app.post('/api/v1/administradores/:idAdmin/solicitar-codigo', otpLimiter);
+app.post('/administradores/forgot-password', otpLimiter);
+app.post('/api/v1/administradores/forgot-password', otpLimiter);
 app.use(authLimiter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

@@ -1168,3 +1168,86 @@ describe("PATCH /administradores/:idAdmin/telefono — updateTelefono", () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /administradores/forgot-password — solicitarRecuperacion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /administradores/forgot-password — solicitarRecuperacion", () => {
+  test("retorna 200 con mensaje cuando el email existe y tiene teléfono", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, TELEFONO: "8181234567" }],
+    });
+
+    const res = await request(app)
+      .post("/administradores/forgot-password")
+      .send({ email: "admin@test.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("retorna 404 si el email no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post("/administradores/forgot-password")
+      .send({ email: "noexiste@test.com" });
+
+    expect(res.status).toBe(404);
+  });
+
+  test("retorna 400 NO_PHONE si el admin no tiene teléfono", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, TELEFONO: null }],
+    });
+
+    const res = await request(app)
+      .post("/administradores/forgot-password")
+      .send({ email: "admin@test.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("NO_PHONE");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH /administradores/forgot-password/reset — resetPasswordPublico
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PATCH /administradores/forgot-password/reset — resetPasswordPublico", () => {
+  test("retorna 200 cuando el código y la contraseña son válidos", async () => {
+    saveOtp(adminRow.ID_ADMIN, "654321");
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "admin@test.com", codigo: "654321", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("retorna 400 INVALID_OTP si el código es incorrecto", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "admin@test.com", codigo: "000000", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_OTP");
+  });
+
+  test("retorna 404 si el email no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "nadie@test.com", codigo: "123456", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(404);
+  });
+});

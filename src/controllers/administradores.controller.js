@@ -126,3 +126,22 @@ export async function uploadFotoPerfil(req, res, next) {
     next(err);
   }
 }
+
+export async function solicitarRecuperacion(req, res, next) {
+  try {
+    const result = await AdminService.solicitarRecuperacion(req.body.email);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPasswordPublico(req, res, next) {
+  try {
+    const { email, codigo, nuevaPassword } = req.body;
+    const result = await AdminService.resetPasswordPublico(email, codigo, nuevaPassword);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
