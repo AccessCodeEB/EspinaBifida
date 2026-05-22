@@ -107,11 +107,12 @@ describe('create — rama idServicio inválido', () => {
   });
 });
 
-// ── createWithInventarioTransaction — ramas de error (líneas 177, 213-214) ───
+// ── createWithInventarioTransaction — ramas de error ─────────────────────────
 
 describe('createWithInventarioTransaction — ramas de error', () => {
-  it('lanza Error y hace rollback cuando la secuencia retorna 0', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 0 }] });
+  it('lanza error y hace rollback cuando SP_REGISTRAR_SERVICIO retorna id_out=0', async () => {
+    // SP_REGISTRAR_SERVICIO — id_out=0 indica fallo en trigger de secuencia
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 0 } });
 
     await expect(ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -123,8 +124,7 @@ describe('createWithInventarioTransaction — ramas de error', () => {
   });
 
   it('hace rollback cuando applyMovimiento falla', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 99 }] }); // SEQ NEXTVAL
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 99 } }); // SP_REGISTRAR_SERVICIO
     mockApplyMovimiento.mockRejectedValueOnce(new Error('Stock insuficiente'));
 
     await expect(ServiciosModel.createWithInventarioTransaction(
@@ -137,9 +137,9 @@ describe('createWithInventarioTransaction — ramas de error', () => {
   });
 
   it('commit y retorna idServicio cuando todo sale bien', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 77 }] }); // SEQ NEXTVAL
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 77 } }); // SP_REGISTRAR_SERVICIO
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 10 });
+    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 50, montoPagado: 25 },
@@ -238,15 +238,14 @@ describe('create — idServicio ?? 0 (L106)', () => {
   });
 });
 
-// ── createWithInventarioTransaction — normalizeConsumoMotivo false (L138) ─────
+// ── createWithInventarioTransaction — normalizeConsumoMotivo ──────────────────
 
-describe('createWithInventarioTransaction — normalizeConsumoMotivo sin motivo (L138)', () => {
-  it('consumo sin motivo → usa default "Consumo por servicio N" (L139)', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 55 }] }); // SEQ
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
+  it('consumo sin motivo → usa default "Consumo por servicio N"', async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 55 } }); // SP_REGISTRAR_SERVICIO
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 5 });
+    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
 
-    // consumo sin motivo → normalizeConsumoMotivo usa rama false → default
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
       [{ idProducto: 1, cantidad: 1 /* sin motivo */ }]
@@ -257,10 +256,10 @@ describe('createWithInventarioTransaction — normalizeConsumoMotivo sin motivo 
     expect(data.motivo).toMatch(/Consumo por servicio/);
   });
 
-  it('consumo con motivo → usa el motivo proporcionado (L138 true branch)', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 66 }] }); // SEQ
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+  it('consumo con motivo → usa el motivo proporcionado', async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 66 } }); // SP_REGISTRAR_SERVICIO
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 8 });
+    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -272,8 +271,8 @@ describe('createWithInventarioTransaction — normalizeConsumoMotivo sin motivo 
     expect(data.motivo).toBe('Comodato #12');
   });
 
-  it('createWithInventarioTransaction — NEXT_ID null → lanza (L149)', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: null }] });
+  it('SP retorna id_out null → lanza error', async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: null } }); // SP_REGISTRAR_SERVICIO
 
     await expect(ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 }, []
