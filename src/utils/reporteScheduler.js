@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import path from 'path';
-import fs   from 'fs/promises';
+import path from 'node:path';
+import fs   from 'node:fs/promises';
 import * as ReportesService from '../services/reportes.service.js';
 import * as ReportesModel   from '../models/reportes.model.js';
 

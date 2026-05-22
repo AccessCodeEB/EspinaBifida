@@ -76,7 +76,7 @@ export async function getResumenFinanciero(mes) {
       mesAnterior:      mesAnteriorStr,
       totalActual,
       totalAnterior,
-      porcentajeCambio: parseFloat(diff.toFixed(1)),
+      porcentajeCambio: Number.parseFloat(diff.toFixed(1)),
       cantidadPagos:    Number(actual?.CANTIDAD ?? 0),
       desglosePorMetodo: {
         efectivo:      Number(actual?.EFECTIVO      ?? 0),

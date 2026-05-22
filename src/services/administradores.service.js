@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as AdminModel from "../models/administradores.model.js";
@@ -6,7 +6,7 @@ import * as RolesModel from "../models/roles.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
-import { randomInt } from "crypto";
+import { randomInt } from "node:crypto";
 import { saveOtp, verifyOtp } from "../utils/otpStore.js";
 import { sendEmailCode } from "../utils/email.js";
 

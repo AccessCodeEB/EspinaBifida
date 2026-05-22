@@ -4,13 +4,13 @@ import { toCamel } from "../utils/dbTransform.js";
 function formatMonto(valor) {
   if (valor == null) return null;
   const n = Number(valor);
-  return Number.isNaN(n) ? null : parseFloat(n.toFixed(2));
+  return Number.isNaN(n) ? null : Number.parseFloat(n.toFixed(2));
 }
 
 function mapMembresia(row) {
   const r = toCamel(row);
   const estatus = r.estatusMembresia ?? "Vencida";
-  const diasRestantes = r.diasRestantes != null ? Math.floor(Number(r.diasRestantes)) : null;
+  const diasRestantes = r.diasRestantes == null ? null : Math.floor(Number(r.diasRestantes));
   return {
     folio:            r.curp,
     nombre:           r.nombreCompleto ?? "",

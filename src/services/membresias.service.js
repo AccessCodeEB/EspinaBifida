@@ -1,5 +1,5 @@
 import * as MembresiasModel from "../models/membresias.model.js";
-import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
+import { badRequest, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
 const MONTO_DEFAULT = 500;
@@ -87,30 +87,7 @@ export async function validarMembresiaActivaPorCurp(curpParam) {
   };
 }
 
-export async function registrarMembresia(data) {
-  const curp = data?.curp ? String(data.curp).trim().toUpperCase() : "";
-  if (!curp) {
-    throw badRequest("curp es obligatorio");
-  }
-
-  const hoy         = toDateOnlyUTC(new Date());
-  const hoyStr      = formatISODateUTC(hoy);
-
-  // Número de credencial: auto-generado si no se provee
-  const numeroCredencial = data?.numero_credencial
-    ? String(data.numero_credencial).trim()
-    : `CRED-${curp.slice(0, 4)}-${hoyStr.replace(/-/g, "").slice(0, 8)}`;
-
-  // Fecha de emisión: hoy por defecto
-  const fechaEmisionStr = data?.fecha_emision
-    ? String(data.fecha_emision).trim()
-    : hoyStr;
-
-  const beneficiario = await MembresiasModel.findBeneficiarioByCurp(curp);
-  if (!beneficiario) {
-    throw notFound("Beneficiario no encontrado");
-  }
-
+function parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr) {
   const fechaEmision = parseISODate(fechaEmisionStr);
   /* istanbul ignore next 3 */
   if (!fechaEmision) {
@@ -127,13 +104,6 @@ export async function registrarMembresia(data) {
     throw badRequest("fecha_vigencia_inicio debe tener formato YYYY-MM-DD");
   }
 
-  // Meses: cuántos meses se pagan (mínimo 1, máximo 12)
-  /* istanbul ignore next */
-  const meses = Math.max(1, Math.min(12, Math.round(Number(data?.meses ?? 1)) || 1));
-
-  // Vigencia: N meses desde la fecha de inicio
-  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, meses);
-
   const fechaUltimoPago = data?.fecha_ultimo_pago
     ? parseISODate(String(data.fecha_ultimo_pago).trim())
     : hoy;
@@ -147,19 +117,60 @@ export async function registrarMembresia(data) {
     throw badRequest("fecha_ultimo_pago no puede ser mayor a la fecha actual");
   }
 
-  // Monto — usa valor enviado o predeterminado × meses
-  const monto = data?.monto != null ? Number(data.monto) : MONTO_DEFAULT * meses;
+  return { fechaEmision, fechaVigenciaInicio, fechaUltimoPago };
+}
+
+function validarMontoYMetodo(data, meses) {
+  const monto = data?.monto == null ? MONTO_DEFAULT * meses : Number(data.monto);
   if (Number.isNaN(monto) || monto < 0) {
     throw badRequest("monto debe ser un número positivo");
   }
 
   const metodoPago = data?.metodo_pago ?? data?.metodoPago ?? null;
-  const referencia = data?.referencia ?? null;
-
   const validMetodos = ["efectivo", "transferencia", "tarjeta", null, undefined];
   if (!validMetodos.includes(metodoPago)) {
     throw badRequest("metodo_pago inválido. Use: efectivo, transferencia, tarjeta");
   }
+
+  return { monto, metodoPago };
+}
+
+export async function registrarMembresia(data) {
+  const curp = data?.curp ? String(data.curp).trim().toUpperCase() : "";
+  if (!curp) {
+    throw badRequest("curp es obligatorio");
+  }
+
+  const hoy    = toDateOnlyUTC(new Date());
+  const hoyStr = formatISODateUTC(hoy);
+
+  // Número de credencial: auto-generado si no se provee
+  const numeroCredencial = data?.numero_credencial
+    ? String(data.numero_credencial).trim()
+    : `CRED-${curp.slice(0, 4)}-${hoyStr.replaceAll("-", "").slice(0, 8)}`;
+
+  // Fecha de emisión: hoy por defecto
+  const fechaEmisionStr = data?.fecha_emision
+    ? String(data.fecha_emision).trim()
+    : hoyStr;
+
+  const beneficiario = await MembresiasModel.findBeneficiarioByCurp(curp);
+  if (!beneficiario) {
+    throw notFound("Beneficiario no encontrado");
+  }
+
+  const { fechaEmision, fechaVigenciaInicio, fechaUltimoPago } =
+    parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr);
+
+  // Meses: cuántos meses se pagan (mínimo 1, máximo 12)
+  /* istanbul ignore next */
+  const meses = Math.max(1, Math.min(12, Math.round(Number(data?.meses ?? 1)) || 1));
+
+  // Vigencia: N meses desde la fecha de inicio
+  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, meses);
+
+  const { monto, metodoPago } = validarMontoYMetodo(data, meses);
+  const referencia = data?.referencia ?? null;
 
   return await MembresiasModel.create({
     curp,

@@ -30,7 +30,7 @@ jest.unstable_mockModule("../models/reportes.model.js", () => ({
 const mockMkdir     = jest.fn();
 const mockWriteFile = jest.fn();
 
-jest.unstable_mockModule("fs/promises", () => ({
+jest.unstable_mockModule("node:fs/promises", () => ({
   default: { mkdir: mockMkdir, writeFile: mockWriteFile },
   mkdir:   mockMkdir,
   writeFile: mockWriteFile,

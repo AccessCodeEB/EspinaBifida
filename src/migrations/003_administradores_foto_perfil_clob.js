@@ -33,11 +33,11 @@ export async function runMigration003() {
 
     console.log("[migration-003] Convirtiendo ADMINISTRADORES.FOTO_PERFIL_URL a CLOB (4 pasos)...");
 
-    if (!cols["FOTO_PERFIL_CLOB"]) {
+    if (cols["FOTO_PERFIL_CLOB"]) {
+      console.log("[migration-003]   1/4 Columna CLOB temporal ya existe, continuando.");
+    } else {
       await connection.execute(`ALTER TABLE ADMINISTRADORES ADD FOTO_PERFIL_CLOB CLOB`);
       console.log("[migration-003]   1/4 Columna CLOB temporal creada.");
-    } else {
-      console.log("[migration-003]   1/4 Columna CLOB temporal ya existe, continuando.");
     }
 
     if (cols["FOTO_PERFIL_URL"]) {

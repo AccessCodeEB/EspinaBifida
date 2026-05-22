@@ -39,11 +39,11 @@ export async function runMigration001() {
     console.log("[migration-001] Convirtiendo FOTO_PERFIL_URL a CLOB (4 pasos)...");
 
     // Paso 1: agregar columna temporal si no existe ya
-    if (!cols["FOTO_PERFIL_CLOB"]) {
+    if (cols["FOTO_PERFIL_CLOB"]) {
+      console.log("[migration-001]   1/4 Columna CLOB temporal ya existe, continuando.");
+    } else {
       await connection.execute(`ALTER TABLE BENEFICIARIOS ADD FOTO_PERFIL_CLOB CLOB`);
       console.log("[migration-001]   1/4 Columna CLOB temporal creada.");
-    } else {
-      console.log("[migration-001]   1/4 Columna CLOB temporal ya existe, continuando.");
     }
 
     // Paso 2: copiar datos (solo si FOTO_PERFIL_URL aún existe)

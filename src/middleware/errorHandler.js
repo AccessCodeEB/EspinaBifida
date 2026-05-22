@@ -47,7 +47,7 @@ export function errorHandler(err, req, res, _next) {
     if (isDevelopment) {
       message = err?.message ? String(err.message) : message;
       details = {
-        ...(details ?? {}),
+        ...details,
         debug: {
           name: err?.name ?? "Error",
           message: err?.message ?? null,

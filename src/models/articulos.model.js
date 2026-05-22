@@ -60,7 +60,10 @@ export const create = (data) =>
 
 export async function update(id, data) {
   return withConnection(async conn => {
-    const { idArticulo: _idArticulo, ...updateData } = data;
+    // Exclude idArticulo from the update payload; only the rest fields are used.
+    const updateData = Object.fromEntries(
+      Object.entries(data).filter(([k]) => k !== "idArticulo")
+    );
     const dbColumnMap = {
       descripcion: "DESCRIPCION", unidad: "UNIDAD",
       cuotaRecuperacion: "CUOTA_RECUPERACION", inventarioActual: "INVENTARIO_ACTUAL",

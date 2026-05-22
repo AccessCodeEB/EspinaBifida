@@ -160,55 +160,52 @@ export async function update(idServicio, data) {
   });
 }
 
-export async function getDetailed(filters) {
-  const normalized = {
+function normalizeFilters(filters) {
+  return {
     curp: filters.curp ? String(filters.curp).trim().toUpperCase() : null,
     idTipoServicio:
-      filters.idTipoServicio !== undefined ? parseNumber(filters.idTipoServicio, "idTipoServicio") : null,
+      filters.idTipoServicio === undefined ? null : parseNumber(filters.idTipoServicio, "idTipoServicio"),
     fechaDesde: parseISODate(filters.fechaDesde, "fechaDesde")?.toISOString().split("T")[0] ?? null,
     fechaHasta: parseISODate(filters.fechaHasta, "fechaHasta")?.toISOString().split("T")[0] ?? null,
-    costoMin: filters.costoMin !== undefined ? parseNumber(filters.costoMin, "costoMin") : null,
-    costoMax: filters.costoMax !== undefined ? parseNumber(filters.costoMax, "costoMax") : null,
+    costoMin: filters.costoMin === undefined ? null : parseNumber(filters.costoMin, "costoMin"),
+    costoMax: filters.costoMax === undefined ? null : parseNumber(filters.costoMax, "costoMax"),
     montoPagadoMin:
-      filters.montoPagadoMin !== undefined
-        ? parseNumber(filters.montoPagadoMin, "montoPagadoMin")
-        : null,
+      filters.montoPagadoMin === undefined
+        ? null
+        : parseNumber(filters.montoPagadoMin, "montoPagadoMin"),
     montoPagadoMax:
-      filters.montoPagadoMax !== undefined
-        ? parseNumber(filters.montoPagadoMax, "montoPagadoMax")
-        : null,
-    page: filters.page !== undefined ? parseNumber(filters.page, "page") : 1,
-    limit: filters.limit !== undefined ? parseNumber(filters.limit, "limit") : 10,
+      filters.montoPagadoMax === undefined
+        ? null
+        : parseNumber(filters.montoPagadoMax, "montoPagadoMax"),
+    page: filters.page === undefined ? 1 : parseNumber(filters.page, "page"),
+    limit: filters.limit === undefined ? 10 : parseNumber(filters.limit, "limit"),
   };
+}
 
+function validateFilters(normalized) {
   if (normalized.fechaDesde && normalized.fechaHasta && normalized.fechaDesde > normalized.fechaHasta) {
     throw badRequest("fechaDesde no puede ser mayor que fechaHasta");
   }
-
   if (normalized.costoMin !== null && normalized.costoMin < 0) {
     throw badRequest("costoMin no puede ser negativo");
   }
-
   if (normalized.costoMax !== null && normalized.costoMax < 0) {
     throw badRequest("costoMax no puede ser negativo");
   }
-
-  if (
-    normalized.costoMin !== null &&
-    normalized.costoMax !== null &&
-    normalized.costoMin > normalized.costoMax
-  ) {
+  if (normalized.costoMin !== null && normalized.costoMax !== null && normalized.costoMin > normalized.costoMax) {
     throw badRequest("costoMin no puede ser mayor que costoMax");
   }
-
   if (normalized.page < 1 || !Number.isInteger(normalized.page)) {
     throw badRequest("page debe ser entero positivo");
   }
-
   if (normalized.limit < 1 || !Number.isInteger(normalized.limit) || normalized.limit > 100) {
     throw badRequest("limit debe ser entero positivo y menor o igual a 100");
   }
+}
 
+export async function getDetailed(filters) {
+  const normalized = normalizeFilters(filters);
+  validateFilters(normalized);
   return ServiciosModel.findDetailed(normalized);
 }
 

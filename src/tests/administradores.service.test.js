@@ -60,7 +60,7 @@ jest.unstable_mockModule("../utils/profileFiles.js", () => ({
   unlinkOldProfileIfSafe:  jest.fn(),
 }));
 
-jest.unstable_mockModule("fs", () => ({
+jest.unstable_mockModule("node:fs", () => ({
   default: {
     readFileSync: jest.fn(() => Buffer.from("fake-bytes")),
     unlinkSync: jest.fn(),

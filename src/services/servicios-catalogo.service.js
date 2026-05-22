@@ -14,7 +14,7 @@ export async function getServiciosCatalogo() {
       idTipoServicio: r.ID_TIPO_SERVICIO,
       nombre:         r.NOMBRE,
       descripcion:    r.DESCRIPCION ?? null,
-      montoSugerido:  r.MONTO_SUGERIDO != null ? Number(r.MONTO_SUGERIDO) : null,
+      montoSugerido:  r.MONTO_SUGERIDO == null ? null : Number(r.MONTO_SUGERIDO),
     }));
   });
 }

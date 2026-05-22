@@ -13,7 +13,7 @@ function mapServicio(row) {
   if (r.fecha) {
     /* istanbul ignore next */
     const d = r.fecha instanceof Date ? r.fecha : new Date(r.fecha);
-    fechaStr = isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
+    fechaStr = Number.isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
   }
   return {
     id:        r.idServicio,

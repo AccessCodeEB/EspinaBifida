@@ -36,8 +36,10 @@ export async function runMigration008() {
 /* istanbul ignore next -- standalone runner */
 if (import.meta.url === `file://${process.argv[1]}`) {
   /* istanbul ignore next */
-  runMigration008().catch((err) => {
+  try {
+    await runMigration008();
+  } catch (err) {
     console.error("[migration-008] ❌", err);
     process.exit(1);
-  });
+  }
 }
