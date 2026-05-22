@@ -6,7 +6,7 @@ import path from "path";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
 import { REPO_ROOT } from "./repoRoot.js";
-import { loginLimiter, publicLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { loginLimiter, publicLimiter, authLimiter, otpLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config({ path: path.join(REPO_ROOT, ".env.defaults") });
 // Sin override: respeta variables ya definidas (p. ej. JWT_SECRET en CI o en tests).
@@ -52,6 +52,8 @@ app.post('/administradores/login', loginLimiter);
 app.post('/api/v1/administradores/login', loginLimiter);
 app.post('/beneficiarios/solicitud-publica', publicLimiter);
 app.post('/api/v1/beneficiarios/solicitud-publica', publicLimiter);
+app.post('/administradores/:idAdmin/solicitar-codigo', otpLimiter);
+app.post('/api/v1/administradores/:idAdmin/solicitar-codigo', otpLimiter);
 app.use(authLimiter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

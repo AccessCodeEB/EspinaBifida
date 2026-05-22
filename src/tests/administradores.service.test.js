@@ -263,6 +263,30 @@ describe("solicitarCodigo", () => {
     expect(mockSendSmsCode).toHaveBeenCalledWith("8181234567", expect.stringMatching(/^\d{6}$/));
     expect(result).toHaveProperty("message");
   });
+
+  test("incluye codigoDev en desarrollo cuando sendSmsCode devuelve el código", async () => {
+    mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+    mockSendSmsCode.mockResolvedValueOnce("654321");
+
+    const result = await Service.solicitarCodigo(1, 1);
+
+    expect(result).toHaveProperty("codigoDev", "654321");
+  });
+
+  test("no incluye codigoDev en producción aunque sendSmsCode lo devuelva", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      mockFindById.mockResolvedValueOnce({ ...adminRow, TELEFONO: "8181234567" });
+      mockSendSmsCode.mockResolvedValueOnce("654321");
+
+      const result = await Service.solicitarCodigo(1, 1);
+
+      expect(result).not.toHaveProperty("codigoDev");
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

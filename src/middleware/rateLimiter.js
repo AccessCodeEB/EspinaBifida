@@ -48,3 +48,23 @@ publicLimiter.options = publicLimiterOptions;
 
 export const authLimiter = rateLimit(authLimiterOptions);
 authLimiter.options = authLimiterOptions;
+
+const otpLimiterOptions = {
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isTest,
+  // Usa idAdmin como clave cuando está disponible; cae a IP como fallback.
+  // validate.keyGeneratorIpFallback: false suprime la advertencia de IPv6 ya que
+  // el caso primario es por idAdmin (string numérico), no por IP.
+  keyGenerator: (req) => String(req.params?.idAdmin ?? req.ip),
+  validate: { keyGeneratorIpFallback: false },
+  message: {
+    error: 'Too Many Requests',
+    message: 'Demasiadas solicitudes de código OTP. Intente de nuevo en 15 minutos.',
+  },
+};
+
+export const otpLimiter = rateLimit(otpLimiterOptions);
+otpLimiter.options = otpLimiterOptions;

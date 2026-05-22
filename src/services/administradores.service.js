@@ -158,7 +158,7 @@ export async function solicitarCodigo(idAdmin, callerIdAdmin) {
 
   return {
     message: "Código enviado al número registrado",
-    ...(devCode !== undefined && { codigoDev: devCode }),
+    ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
   };
 }
 
