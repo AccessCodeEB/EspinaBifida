@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isCI = process.env.CI === 'true';
+
 export default defineConfig({
   testDir: '.',
   timeout: 30_000,
@@ -7,17 +9,23 @@ export default defineConfig({
   workers: 1,
   reporter: [
     ['list'],
-    [
-      'playwright-qase-reporter',
-      {
-        mode: 'testops',
-        testops: {
-          api: { token: process.env.QASE_TOKEN ?? '26b06f45f7c19dd065f121bde43cb5d62838e16c0abccf5bdd06d392d3ad9708' },
-          project: 'EBF',
-          run: { complete: true },
-        },
-      },
-    ],
+    // QASE reporter skipped in CI — QASE_MODE=off causes qase() to return undefined
+    // in v2.x, breaking every test(qase(...), fn) call at definition time.
+    ...(!isCI
+      ? ([
+          [
+            'playwright-qase-reporter',
+            {
+              mode: 'testops',
+              testops: {
+                api: { token: process.env.QASE_TOKEN ?? '26b06f45f7c19dd065f121bde43cb5d62838e16c0abccf5bdd06d392d3ad9708' },
+                project: 'EBF',
+                run: { complete: true },
+              },
+            },
+          ],
+        ] as const)
+      : []),
   ],
   use: {
     baseURL: 'http://localhost:3001',

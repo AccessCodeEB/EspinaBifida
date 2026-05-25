@@ -56,8 +56,6 @@ jobs:
       ORACLE_CLIENT_PATH: /opt/oracle/instantclient_21_12
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
       NODE_ENV: test
-      # Desactiva el reporter de QASE en CI (evita crear runs automáticos)
-      QASE_MODE: off
 
     steps:
       - uses: actions/checkout@v4
@@ -109,9 +107,9 @@ jobs:
       - name: Start frontend
         run: npm --prefix frontend run start -- -p 3001 &
 
-      # Esperar a que ambos servidores acepten conexiones antes de correr Playwright
+      # Esperar a que el backend esté listo (HTTP /health) y el frontend acepte conexiones
       - name: Wait for backend and frontend
-        run: npx wait-on tcp:localhost:3000 tcp:localhost:3001 --timeout 120000
+        run: npx wait-on http://localhost:3000/health tcp:localhost:3001 --timeout 120000
 
       - name: Run E2E tests
         run: npm run test:e2e

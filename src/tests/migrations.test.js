@@ -1229,3 +1229,76 @@ describe("runMigration008 — falla al obtener conexión", () => {
     expect(mockClose).not.toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration009 — Crea tabla NOTIFICACIONES, secuencia y trigger
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration009 } = await import("../migrations/009_notificaciones.js");
+
+describe("runMigration009 — tabla NOTIFICACIONES ya existe", () => {
+  test("omite el DDL, hace commit y cierra la conexión", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    await runMigration009();
+
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    const calls = mockExecute.mock.calls.map((c) => c[0]?.trim ? c[0].trim() : c[0]);
+    expect(calls.some((s) => /CREATE TABLE/.test(s))).toBe(false);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration009 — tabla NOTIFICACIONES no existe (estado inicial)", () => {
+  test("crea tabla, secuencia y trigger, luego hace commit y cierra conexión", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // tabla no existe
+    mockExecute.mockResolvedValueOnce({});                      // CREATE TABLE
+    mockExecute.mockResolvedValueOnce({});                      // CREATE SEQUENCE
+    mockExecute.mockResolvedValueOnce({});                      // CREATE TRIGGER
+
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    await runMigration009();
+
+    expect(mockExecute).toHaveBeenCalledTimes(4);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    const calls = mockExecute.mock.calls.map((c) => c[0]?.trim ? c[0].trim() : c[0]);
+    expect(calls[1]).toMatch(/CREATE TABLE NOTIFICACIONES/i);
+    expect(calls[2]).toMatch(/CREATE SEQUENCE SEQ_NOTIFICACIONES/i);
+    expect(calls[3]).toMatch(/CREATE OR REPLACE TRIGGER TRG_NOTIFICACIONES_BI/i);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration009 — error durante SELECT inicial", () => {
+  test("cierra la conexión y relanza el error", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00942: table or view does not exist"));
+
+    await expect(runMigration009()).rejects.toThrow("ORA-00942");
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration009 — error durante CREATE TABLE", () => {
+  test("cierra la conexión y relanza el error", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00955: name already used"));
+
+    await expect(runMigration009()).rejects.toThrow("ORA-00955");
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("runMigration009 — falla al obtener conexión", () => {
+  test("lanza el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    await expect(runMigration009()).rejects.toThrow("ORA-12541");
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+});
