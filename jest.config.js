@@ -1,8 +1,8 @@
 export default {
   testEnvironment: "node",
 
-  // Excluir worktrees de Claude Code y cobertura generada
-  testPathIgnorePatterns: ["/node_modules/", "/.claude/worktrees/", "/coverage/"],
+  // Excluir Playwright E2E, worktrees de Claude Code y cobertura generada
+  testPathIgnorePatterns: ["/node_modules/", "/.claude/worktrees/", "/coverage/", "/e2e/"],
 
   // Archivos fuente sobre los que se mide cobertura
   collectCoverageFrom: [
