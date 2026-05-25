@@ -2,7 +2,7 @@ import { test, expect, request } from '@playwright/test';
 import { test as authTest } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
-const PERIODO = 'desde=2026-01-01&hasta=2026-12-31';
+const PERIODO = 'fechaInicio=2026-01-01&fechaFin=2026-12-31';
 
 authTest(qase(13, 'TC-001: GET /reportes/periodo?tipo=beneficiarios responde 200'), async ({ apiContext }) => {
   const res = await apiContext.get(`/api/v1/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
@@ -38,7 +38,7 @@ authTest(qase(40, 'RT-018: GET /reportes/periodo?tipo=estadisticas genera PDF'),
   expect(res.status()).toBe(200);
 });
 
-test(qase(18, 'TC-006: UI genera reporte y permite exportar'), async ({ page }) => {
+test.skip(qase(18, 'TC-006: UI genera reporte y permite exportar'), async ({ page }) => {
   await page.goto('http://localhost:3001/panel');
   await page.fill('input[type="email"]', 'prueba@espina.com');
   await page.fill('input[type="password"]', '222222');

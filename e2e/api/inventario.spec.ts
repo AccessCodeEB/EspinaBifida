@@ -11,7 +11,7 @@ test(qase(8, 'Rechazar inventario negativo'), async ({ apiContext }) => {
   const res = await apiContext.post('/inventario/movimientos', {
     data: {
       idArticulo,
-      tipoMovimiento: 'SALIDA',
+      tipo: 'SALIDA',
       cantidad: -10,
       motivo: 'E2E Test - cantidad negativa',
     },
@@ -27,11 +27,11 @@ test(qase(9, 'Descontar inventario al usar insumo'), async ({ apiContext }) => {
   const stockAntes = articulo?.inventarioActual ?? articulo?.inventario_actual ?? 10;
 
   await apiContext.post('/inventario/movimientos', {
-    data: { idArticulo, tipoMovimiento: 'ENTRADA', cantidad: 10, motivo: 'E2E setup' },
+    data: { idArticulo, tipo: 'ENTRADA', cantidad: 10, motivo: 'E2E setup' },
   });
 
   const res = await apiContext.post('/inventario/movimientos', {
-    data: { idArticulo, tipoMovimiento: 'SALIDA', cantidad: 1, motivo: 'E2E Test - descuento' },
+    data: { idArticulo, tipo: 'SALIDA', cantidad: 1, motivo: 'E2E Test - descuento' },
   });
   expect([200, 201]).toContain(res.status());
 

@@ -51,10 +51,14 @@ export const create = (data) =>
          ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
          INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO
        ) VALUES (
-         :idArticulo, :descripcion, :unidad, :cuotaRecuperacion,
+         SEQ_ARTICULOS.NEXTVAL, :descripcion, :unidad, :cuotaRecuperacion,
          :inventarioActual, :manejaInventario, :idCategoria, :stockMinimo
        )`,
-      data, { autoCommit: true }
+      { descripcion: data.descripcion, unidad: data.unidad,
+        cuotaRecuperacion: data.cuotaRecuperacion, inventarioActual: data.inventarioActual,
+        manejaInventario: data.manejaInventario, idCategoria: data.idCategoria,
+        stockMinimo: data.stockMinimo },
+      { autoCommit: true }
     )
   );
 

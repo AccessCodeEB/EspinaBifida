@@ -5,8 +5,8 @@ import { qase } from 'playwright-qase-reporter';
 
 const BASE = 'http://localhost:3000';
 // CURPs válidas: ^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$
-const TEST_CURP = 'PLAW000101HXXXXXX1';
-const TEST_CURP_RECHAZAR = 'PLAW000101HXXXXXX2';
+const TEST_CURP = 'PLAW000201HXXXXXX1';
+const TEST_CURP_RECHAZAR = 'PLAW000201HXXXXXX2';
 
 const preregistroBase = {
   curp: TEST_CURP,
@@ -14,7 +14,7 @@ const preregistroBase = {
   apellidoPaterno: 'Test',
   apellidoMaterno: 'Playwright',
   fechaNacimiento: '2000-06-15',
-  genero: 'Femenino',
+  genero: 'F',
   ciudad: 'Monterrey',
   municipio: 'Monterrey',
   estado: 'Nuevo León',
@@ -25,6 +25,11 @@ const preregistroBase = {
   // Token de prueba Cloudflare — el backend usa secret de prueba que acepta cualquier token
   turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
 };
+
+// Use base test.beforeAll so it runs before ALL tests in this file (including public-endpoint `test` tests)
+test.beforeAll(async () => {
+  await cleanupPreregistros();
+});
 
 authTest.afterAll(async () => {
   await cleanupPreregistros();
@@ -57,6 +62,11 @@ authTest(qase(21, 'TC-009: GET preregistros pendientes retorna lista'), async ({
 });
 
 authTest(qase(22, 'TC-010: Aprobar pre-registro crea BENEFICIARIOS y retorna 201'), async ({ apiContext }) => {
+  // Ensure the preregistro exists (TC-007 may have run it, but hooks ordering can vary)
+  const ctx = await request.newContext({ baseURL: BASE });
+  await ctx.post('/beneficiarios/solicitud-publica', { data: preregistroBase }).catch(() => {});
+  await ctx.dispose();
+
   const res = await apiContext.post(`/beneficiarios/${TEST_CURP}/aprobar-pre-registro`);
   expect([200, 201]).toContain(res.status());
 });

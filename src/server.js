@@ -9,6 +9,7 @@ import { runMigration006 } from "./migrations/006_articulos_stock_minimo.js";
 import { runMigration007 } from "./migrations/007_articulos_activo.js";
 import { runMigration008 } from "./migrations/008_administradores_telefono.js";
 import { runMigration009 } from "./migrations/009_notificaciones.js";
+import { runMigration010 } from "./migrations/010_fix_sequences.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
@@ -39,6 +40,7 @@ createPool()
     await runMigration007();
     await runMigration008();
     await runMigration009();
+    await runMigration010();
     initScheduler();
     initNotificacionesScheduler();
     const server = app.listen(Number(PORT), () =>

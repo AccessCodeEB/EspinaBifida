@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
-const TEST_CURP = 'NAML040718HZSVRBA1';
+const TEST_CURP = 'AUSD050124MDFGNYA8';
 
 test(qase(6, 'Asignar servicio a beneficiario activo'), async ({ apiContext }) => {
   const catRes = await apiContext.get('/servicios-catalogo');
@@ -35,7 +35,7 @@ test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiC
   const res = await apiContext.post('/inventario/movimientos', {
     data: {
       idArticulo,
-      tipoMovimiento: 'ENTRADA',
+      tipo: 'ENTRADA',
       cantidad: 5,
       motivo: 'E2E Test - entrada de prueba',
     },
