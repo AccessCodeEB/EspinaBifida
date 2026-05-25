@@ -61,6 +61,14 @@ describe('getPendientes', () => {
     await getPendientes({}, res, jest.fn());
     expect(res.json).toHaveBeenCalledWith({ data: [{ idNotificacion: 2 }] });
   });
+
+  it('llama next en error', async () => {
+    const err = new Error('db fail');
+    mockGetPendientes.mockRejectedValueOnce(err);
+    const next = jest.fn();
+    await getPendientes({}, makeRes(), next);
+    expect(next).toHaveBeenCalledWith(err);
+  });
 });
 
 // ── getCount ──────────────────────────────────────────────────────────────────
@@ -71,6 +79,14 @@ describe('getCount', () => {
     const res = makeRes();
     await getCount({}, res, jest.fn());
     expect(res.json).toHaveBeenCalledWith({ total: 3 });
+  });
+
+  it('llama next en error', async () => {
+    const err = new Error('db fail');
+    mockGetCount.mockRejectedValueOnce(err);
+    const next = jest.fn();
+    await getCount({}, makeRes(), next);
+    expect(next).toHaveBeenCalledWith(err);
   });
 });
 
@@ -105,5 +121,13 @@ describe('runJob', () => {
       message: 'Job ejecutado',
       data: { stockBajo: 2, proximas: 1, vencidas: 0 },
     });
+  });
+
+  it('llama next en error', async () => {
+    const err = new Error('job fail');
+    mockRunJob.mockRejectedValueOnce(err);
+    const next = jest.fn();
+    await runJob({}, makeRes(), next);
+    expect(next).toHaveBeenCalledWith(err);
   });
 });
