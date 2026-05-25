@@ -17,7 +17,8 @@ const {
   findPendientes,
   countPendientes,
   markAsRead,
-  upsertStockBajo,
+  markAllAsRead,
+  syncStockBajoConsolidado,
   upsertMembresia,
 } = await import("../models/notificaciones.model.js");
 
@@ -119,22 +120,34 @@ describe("markAsRead", () => {
   });
 });
 
-// ── upsertStockBajo ──────────────────────────────────────────────────────────
+// ── syncStockBajoConsolidado ─────────────────────────────────────────────────
 
-describe("upsertStockBajo", () => {
-  it("inserta cuando no existe notificación pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // CHECK
-    mockExecute.mockResolvedValueOnce({});                       // INSERT
-    await upsertStockBajo(1, "Stock bajo: Silla");
+describe("syncStockBajoConsolidado", () => {
+  it("limpia pendientes e inserta una notificación consolidada cuando hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({}); // UPDATE (clear)
+    mockExecute.mockResolvedValueOnce({}); // INSERT
+    await syncStockBajoConsolidado("3 artículos con stock bajo: Silla (1 uds), Mesa (0 uds).");
     expect(mockExecute).toHaveBeenCalledTimes(2);
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
-  it("no inserta cuando ya existe una notificación pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] }); // CHECK
-    await upsertStockBajo(1, "Stock bajo: Silla");
+  it("solo limpia pendientes cuando mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({}); // UPDATE (clear)
+    await syncStockBajoConsolidado(null);
     expect(mockExecute).toHaveBeenCalledTimes(1);
-    expect(mockCommit).not.toHaveBeenCalled();
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── markAllAsRead ─────────────────────────────────────────────────────────────
+
+describe("markAllAsRead", () => {
+  it("marca todas las notificaciones pendientes como leídas", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await markAllAsRead();
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("ESTATUS = 'PENDIENTE'"));
   });
 });
 
