@@ -92,9 +92,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      # Arrancar el backend en segundo plano (puerto 3000)
+      # Arrancar el backend en segundo plano (puerto 3000).
+      # Redirigir stdout/stderr a un archivo para poder diagnosticar fallos.
       - name: Start backend
-        run: node src/server.js &
+        run: node src/server.js > /tmp/server.log 2>&1 &
 
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
@@ -109,10 +110,28 @@ jobs:
       - name: Start frontend
         run: npm --prefix frontend run start -- -p 3001 &
 
+      # Diagnóstico de arranque: verificar que el proceso node está corriendo y
+      # que el wallet fue extraído correctamente.
+      - name: Diagnose startup state
+        if: always()
+        run: |
+          echo "=== Node processes ==="
+          ps aux | grep node || echo "(no node process)"
+          echo "=== Wallet contents ==="
+          ls -la wallet/ 2>/dev/null || echo "wallet/ no existe"
+          ls -la wallet/wallet/ 2>/dev/null || echo "wallet/wallet/ no existe"
+          echo "=== sqlnet.ora ==="
+          cat wallet/sqlnet.ora 2>/dev/null || cat wallet/wallet/sqlnet.ora 2>/dev/null || echo "sqlnet.ora no encontrado"
+          echo "=== Backend log (últimas 50 líneas) ==="
+          tail -50 /tmp/server.log 2>/dev/null || echo "/tmp/server.log no existe"
+          echo "=== /health quick check ==="
+          curl -sf http://localhost:3000/health || echo "/health no responde aún"
+
       # Esperar a que el backend esté listo y Oracle haya inicializado el pool (/ready),
-      # y a que el frontend acepte conexiones TCP (puerto 3001)
+      # y a que el frontend acepte conexiones TCP (puerto 3001).
+      # Timeout ampliado a 5 min para tolerar arranque lento de Oracle Autonomous DB.
       - name: Wait for backend and frontend
-        run: npx wait-on http-get://localhost:3000/ready tcp:localhost:3001 --timeout 120000
+        run: npx wait-on http-get://localhost:3000/ready tcp:localhost:3001 --timeout 300000
 
       - name: Run E2E tests
         run: npm run test:e2e
@@ -124,3 +143,12 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-server-log
+          path: /tmp/server.log
+          retention-days: 7
+          if-no-files-found: ignore
