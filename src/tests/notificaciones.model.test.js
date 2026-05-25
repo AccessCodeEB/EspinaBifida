@@ -24,6 +24,7 @@ const {
   upsertMembresia,
   insertPreregistroNuevo,
   insertBeneficiarioBaja,
+  insertReporteGenerado,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -232,5 +233,23 @@ describe("upsertMembresia", () => {
     await upsertMembresia("ABCD000000XXXXXX00", "MEMBRESIA_PROXIMA", "mensaje");
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockCommit).not.toHaveBeenCalled();
+  });
+});
+
+// ── insertReporteGenerado ─────────────────────────────────────────────────────
+
+describe("insertReporteGenerado", () => {
+  it.each([
+    ["MENSUAL",   "mensual"],
+    ["SEMESTRAL", "semestral"],
+    ["ANUAL",     "anual"],
+  ])("inserta notificación REPORTE_GENERADO para tipo %s", async (tipo, label) => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertReporteGenerado(tipo, "2025-01-01", "2025-01-31");
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("REPORTE_GENERADO"),
+      expect.objectContaining({ msg: expect.stringContaining(label) })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

@@ -153,6 +153,18 @@ export const syncStockBajoConsolidado = (mensaje) =>
     await conn.commit();
   });
 
+export const insertReporteGenerado = (tipo, fechaInicio, fechaFin) =>
+  withConnection(async conn => {
+    const label = tipo === 'MENSUAL' ? 'mensual' : tipo === 'SEMESTRAL' ? 'semestral' : 'anual';
+    const msg = `Reporte ${label} generado automáticamente (${fechaInicio} – ${fechaFin}).`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('REPORTE_GENERADO', 'REPORTE', :msg)`,
+      { msg }
+    );
+    await conn.commit();
+  });
+
 export const insertBeneficiarioBaja = (curp, nombre) =>
   withConnection(async conn => {
     const msg = `Beneficiario ${nombre} (CURP: ${curp}) fue dado de baja del sistema.`;

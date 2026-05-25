@@ -1,8 +1,9 @@
 import cron from 'node-cron';
 import path from 'node:path';
 import fs   from 'node:fs/promises';
-import * as ReportesService from '../services/reportes.service.js';
-import * as ReportesModel   from '../models/reportes.model.js';
+import * as ReportesService      from '../services/reportes.service.js';
+import * as ReportesModel        from '../models/reportes.model.js';
+import * as NotificacionesModel  from '../models/notificaciones.model.js';
 
 // Cron expressions (disparan en el primer día del periodo siguiente):
 //   Mensual:    '0 6 1 * *'    → 1er día de cada mes, 6am
@@ -58,6 +59,7 @@ async function generarAutomatico(tipo) {
     await fs.writeFile(path.join(STORAGE, rutaXlsx), xlsx);
 
     await ReportesModel.guardarRegistro({ tipo, fechaInicio, fechaFin, rutaPdf, rutaXlsx });
+    NotificacionesModel.insertReporteGenerado(tipo, fechaInicio, fechaFin).catch(() => {});
     console.log(`[scheduler] Reporte ${tipo} generado: ${fechaInicio} → ${fechaFin}`);
   } catch (err) {
     // No lanzar — el scheduler nunca debe crashear el proceso
