@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-22 (Jueves) — Semana 2
+**Actualización:** 2026-05-24 (Sábado) — post Semana 2
 **Próxima entrega:** 2026-05-29 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -17,9 +17,11 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (ramas) | **100%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 9 / 9 |
-| Archivos de prueba (Jest + Supertest) | 41 |
-| Pruebas E2E (Playwright + QASE) | 41 tests en 13 archivos |
+| Migraciones de BD | 10 / 10 |
+| Archivos de prueba (Jest + Supertest) | 42 |
+| Pruebas E2E Playwright — API (QASE IDs 1–40) | 38 tests en 11 archivos |
+| Pruebas E2E Playwright — UI (QASE IDs 24,30–32,41–43) | 8 tests en 2 archivos (1 skipped: rate limit solo prod) |
+| Total tests E2E | **46 tests**, **7 skipped** esperados |
 
 ---
 
@@ -38,7 +40,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
 | **Notificaciones** | Alertas automáticas de stock bajo y membresías próximas/vencidas, job nocturno cron, panel en dashboard | 100% |
-| **Migraciones BD** | 9 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Migraciones BD** | 10 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -117,6 +119,93 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ---
 
+## Estrategia y cobertura de pruebas
+
+### Capa 1 — Pruebas unitarias e integración (Jest + Supertest)
+
+**42 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
+
+| Módulo | Archivos de prueba |
+|---|---|
+| Beneficiarios | `beneficiarios.model.test.js`, `beneficiarios.service.test.js`, `beneficiarios.controller.test.js`, `beneficiarios.public.test.js` |
+| Administradores | `administradores.model.test.js`, `administradores.service.test.js` |
+| Membresías | `membresias.model.test.js`, `membresias.service.test.js`, `membresias.controller.test.js` |
+| Servicios | `servicios.model.test.js`, `servicios.service.test.js`, `servicios.controller.test.js` |
+| Artículos / Inventario | `articulos.model.test.js`, `articulos.service.test.js`, `articulos.test.js`, `inventario.model.test.js`, `inventario.service.test.js`, `inventario.test.js`, `inventario.criteria.test.js` |
+| Reportes | `reportes.model.test.js`, `reportes.service.test.js`, `reportes.controller.test.js`, `reportes.unit.test.js` |
+| Notificaciones | `notificaciones.service.test.js`, `notificaciones.controller.test.js` |
+| Seguridad / Auth | `rateLimiter.test.js`, `otpStore.test.js`, `verifyTurnstile.test.js`, `sms.test.js` |
+| Infraestructura | `db.test.js`, `dbTransform.test.js`, `health.test.js`, `migrations.test.js`, `email.test.js`, `uploadProfilePhoto.test.js`, `profile-photos-fallback.test.js` |
+| Flujos integrados | `flujo-beneficiario-membresia-servicio.test.js`, `configuracion.routes.test.js`, `controllers-misc.test.js`, `core-coverage.test.js` |
+| Schedulers | `reporteScheduler.test.js` |
+| Validadores | `validators.test.js` |
+
+**Cobertura alcanzada:** 100% en statements, branches, functions y lines (verificado con `npm run test:coverage`).
+
+### Capa 2 — Pruebas E2E (Playwright + QASE reporter)
+
+**13 archivos spec** en `e2e/`, ejecutados con `npm run test:e2e`. Integrados con QASE para trazabilidad de casos de prueba.
+
+#### Tests de API (`e2e/api/`) — 38 tests
+
+| Archivo | QASE IDs | Qué cubre |
+|---|---|---|
+| `auth.spec.ts` | 1, 2, 3 | Login exitoso, token JWT, credenciales inválidas |
+| `beneficiarios.spec.ts` | 4, 5, 6, 7, 8 | CRUD beneficiario, búsqueda, CURP duplicada |
+| `membresias.spec.ts` | 9, 10, 11 | Alta membresía, validación vigencia, expiración |
+| `servicios.spec.ts` | 12, 13 | Registro servicio con membresía activa/inactiva |
+| `inventario.spec.ts` | 14, 15 | Movimientos de stock, alertas mínimo |
+| `reportes.spec.ts` | 16, 17, 18, 33, 34, 35, 36 | Generación PDF/XLSX, descarga, parámetros |
+| `preregistro.spec.ts` | 19, 20, 21, 22, 23 | POST pre-registro, duplicado 409, aprobar, rechazar |
+| `articulos.spec.ts` | 25 | CRUD artículos, stock tracking |
+| `citas.spec.ts` | 26, 27 | CRUD citas, filtros por fecha |
+| `roles.spec.ts` | 28 | Listado de roles |
+| `seguridad.spec.ts` | 29, 37, 38, 39, 40 | RBAC, rutas protegidas, acceso sin token |
+
+#### Tests de UI (`e2e/ui/`) — 8 tests
+
+| Archivo | QASE IDs | Qué cubre |
+|---|---|---|
+| `formulario-publico.spec.ts` | 24, 30, 31, 32 | Formulario público: estados INEGI (≥32), municipios dinámicos, autocalculación CURP, envío y folio |
+| `uat.spec.ts` | 41, 42, 43* | Flujo completo pre-registro → aprobación → beneficiario; descarga PDF membresías; bloqueo rate-limit* |
+
+*UAT-003 (ID 43) marcado `test.skip` — rate limiting desactivado en modo dev, activo solo en producción.
+
+#### Fixtures y helpers E2E
+
+| Archivo | Propósito |
+|---|---|
+| `e2e/fixtures/auth.ts` | `authTest` con `apiContext` autenticado (Bearer token) reutilizable |
+| `e2e/helpers/cleanup.ts` | Limpieza pre-test: elimina beneficiarios de prueba (PENDIENTE y aprobados, con forceDelete pattern) |
+| `e2e/playwright.config.ts` | Proyectos `api` y `ui`, timeout 30s, reporter QASE + lista |
+
+#### Decisiones de diseño en tests
+
+- **CURP de prueba**: CURPs sintéticas con formato válido (`^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$`) que no corresponden a personas reales
+- **Cloudflare Turnstile**: site key `1x00000000000000000000AA` en dev, que siempre pasa (Cloudflare testing key)
+- **Radix Select**: todos los dropdowns usan pattern `locator('#id').click()` → `getByRole('option')` (no `<select>` nativo)
+- **forceDelete pattern**: cleanup de beneficiarios aprobados: `PATCH estatus=Inactivo` → `PUT notas='[SOLICITUD_PUBLICA_PRE_REG]'` → `DELETE /pre-registro`
+- **Rate limiting**: `isTest` en `rateLimiter.js` desactiva los límites en `NODE_ENV=test`; UAT-003 salta en dev/test
+
+### Comandos de prueba
+
+```bash
+# Unitarias + integración (con cobertura)
+npm test
+npm run test:coverage
+
+# E2E completo
+npm run test:e2e
+
+# Solo API
+npx playwright test --config=e2e/playwright.config.ts --project=api
+
+# Solo UI
+npx playwright test --config=e2e/playwright.config.ts --project=ui
+```
+
+---
+
 ## Cronograma (hacia entrega ~2026-06-08)
 
 | Semana | Fechas | Objetivo | Estado |
@@ -132,7 +221,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ## Vulnerabilidades conocidas (Dependabot)
 
-GitHub reporta 5 vulnerabilidades en dependencias (4 high, 1 moderate).
+GitHub reporta 6 vulnerabilidades en dependencias (4 high, 2 moderate).
 Ver: https://github.com/AccessCodeEB/EspinaBifida/security/dependabot
 
 ---
