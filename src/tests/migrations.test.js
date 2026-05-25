@@ -1231,6 +1231,128 @@ describe("runMigration008 — falla al obtener conexión", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// runMigration010 — Avanza secuencias Oracle por encima del MAX PK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration010 } = await import("../migrations/010_fix_sequences.js");
+
+// Helpers
+function mockSeqOk(n = 5) {
+  for (let i = 0; i < n; i++) {
+    mockExecute.mockResolvedValueOnce({ rows: [{ MAX_ID: 0 }] });
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURR: 100 }] });
+  }
+}
+
+describe("runMigration010 — todas las secuencias ya por encima del MAX PK", () => {
+  test("no ejecuta ALTER, hace commit por cada secuencia y cierra conexión", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    mockSeqOk(5);
+    await runMigration010();
+    expect(mockExecute).toHaveBeenCalledTimes(10);
+    expect(mockCommit).toHaveBeenCalledTimes(5);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — primera secuencia necesita avanzar (currVal <= maxId)", () => {
+  test("ejecuta 3 ALTER + commit para la primera, 2 execute + commit para el resto", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    // Seq 1: maxId=100, currVal=50 → needs advancing
+    mockExecute.mockResolvedValueOnce({ rows: [{ MAX_ID: 100 }] });
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURR: 50 }] });
+    mockExecute.mockResolvedValueOnce({}); // ALTER INCREMENT BY N
+    mockExecute.mockResolvedValueOnce({}); // SELECT NEXTVAL
+    mockExecute.mockResolvedValueOnce({}); // ALTER INCREMENT BY 1
+    // Seqs 2-5: OK
+    mockSeqOk(4);
+    await runMigration010();
+    expect(mockExecute).toHaveBeenCalledTimes(13);
+    expect(mockCommit).toHaveBeenCalledTimes(5);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — formato posicional [0] en filas (rama ?? rows[0][0])", () => {
+  test("interpreta MAX_ID y CURR desde el índice posicional", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    // Seq 1: positional, maxId=100, currVal=50 → advance
+    mockExecute.mockResolvedValueOnce({ rows: [[100]] });
+    mockExecute.mockResolvedValueOnce({ rows: [[50]] });
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    // Seqs 2-5: positional, OK
+    for (let i = 0; i < 4; i++) {
+      mockExecute.mockResolvedValueOnce({ rows: [[0]] });
+      mockExecute.mockResolvedValueOnce({ rows: [[100]] });
+    }
+    await runMigration010();
+    expect(mockExecute).toHaveBeenCalledTimes(13);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — fila vacía → rama ?? 0", () => {
+  test("usa 0 como fallback cuando rows[0] no tiene MAX_ID ni índice [0]", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    // Seq 1: empty object rows → maxId=0, currVal=0, 0<=0 → advance (diff=10)
+    mockExecute.mockResolvedValueOnce({ rows: [{}] }); // MAX_ID=undef, [0]=undef → 0
+    mockExecute.mockResolvedValueOnce({ rows: [{}] }); // CURR=undef, [0]=undef → 0
+    mockExecute.mockResolvedValueOnce({}); // ALTER
+    mockExecute.mockResolvedValueOnce({}); // NEXTVAL
+    mockExecute.mockResolvedValueOnce({}); // ALTER back to 1
+    // Seqs 2-5: OK
+    mockSeqOk(4);
+    await runMigration010();
+    expect(mockExecute).toHaveBeenCalledTimes(13);
+    expect(mockCommit).toHaveBeenCalledTimes(5);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — ORA-02289 (sequence does not exist) — silenciado", () => {
+  test("no emite warning para ORA-02289 ni ORA-01403", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    for (let i = 0; i < 5; i++) {
+      mockExecute.mockRejectedValueOnce(new Error("ORA-02289: sequence does not exist"));
+    }
+    await runMigration010();
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — error genérico → console.warn", () => {
+  test("emite warning para errores distintos a ORA-02289/ORA-01403", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const logSpy  = jest.spyOn(console, "log").mockImplementation(() => {});
+    // Seq 1: generic error → warn
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges"));
+    // Seqs 2-5: OK
+    mockSeqOk(4);
+    await runMigration010();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[migration-010]"));
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration010 — falla al obtener conexión", () => {
+  test("lanza el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(new Error("ORA-12541: TNS:no listener"));
+    await expect(runMigration010()).rejects.toThrow("ORA-12541");
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // runMigration009 — Crea tabla NOTIFICACIONES, secuencia y trigger
 // ═══════════════════════════════════════════════════════════════════════════════
 
