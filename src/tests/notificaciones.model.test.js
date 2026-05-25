@@ -20,6 +20,7 @@ const {
   markAllAsRead,
   syncStockBajoConsolidado,
   upsertMembresia,
+  insertPreregistroNuevo,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -148,6 +149,21 @@ describe("markAllAsRead", () => {
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockCommit).toHaveBeenCalledTimes(1);
     expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("ESTATUS = 'PENDIENTE'"));
+  });
+});
+
+// ── insertPreregistroNuevo ───────────────────────────────────────────────────
+
+describe("insertPreregistroNuevo", () => {
+  it("inserta una notificación PREREGISTRO_NUEVO con la CURP y nombre", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertPreregistroNuevo("ABCD900101HXYZRL01", "Juan García");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("PREREGISTRO_NUEVO"),
+      expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });
 

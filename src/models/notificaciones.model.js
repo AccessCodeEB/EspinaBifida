@@ -123,6 +123,17 @@ export const syncStockBajoConsolidado = (mensaje) =>
     await conn.commit();
   });
 
+export const insertPreregistroNuevo = (curp, nombre) =>
+  withConnection(async conn => {
+    const msg = `Nuevo pre-registro de ${nombre} (CURP: ${curp}). Pendiente de revisión.`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, CURP, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('PREREGISTRO_NUEVO', :curp, 'BENEFICIARIO', :msg)`,
+      { curp, msg }
+    );
+    await conn.commit();
+  });
+
 /**
  * Crea notificación de membresía solo si no existe una PENDIENTE del mismo tipo para esa CURP.
  * Idempotente por (TIPO, CURP, ESTATUS='PENDIENTE').

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bell, Package, CreditCard, AlertTriangle, CheckCheck, Loader2, RefreshCw } from "lucide-react"
+import { Bell, Package, CreditCard, AlertTriangle, CheckCheck, Loader2, RefreshCw, ClipboardList } from "lucide-react"
 import {
   type Notificacion,
   type TipoNotificacion,
@@ -12,9 +12,10 @@ import {
 } from "@/services/notificaciones"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string }> = {
-  STOCK_BAJO:         { label: "Stock bajo",          icon: Package,      color: "text-orange-500" },
-  MEMBRESIA_PROXIMA:  { label: "Membresía próxima",   icon: CreditCard,   color: "text-yellow-500" },
-  MEMBRESIA_VENCIDA:  { label: "Membresía vencida",   icon: AlertTriangle, color: "text-red-500"   },
+  STOCK_BAJO:         { label: "Stock bajo",          icon: Package,       color: "text-orange-500" },
+  MEMBRESIA_PROXIMA:  { label: "Membresía próxima",   icon: CreditCard,    color: "text-yellow-500" },
+  MEMBRESIA_VENCIDA:  { label: "Membresía vencida",   icon: AlertTriangle, color: "text-red-500"    },
+  PREREGISTRO_NUEVO:  { label: "Pre-registro nuevo",  icon: ClipboardList, color: "text-blue-500"   },
 }
 
 function fmtFecha(iso: string) {

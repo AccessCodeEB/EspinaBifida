@@ -46,6 +46,11 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
   create:                    jest.fn(),
 }));
 
+const mockInsertPreregistroNuevo = jest.fn().mockResolvedValue(undefined);
+jest.unstable_mockModule("../models/notificaciones.model.js", () => ({
+  insertPreregistroNuevo: mockInsertPreregistroNuevo,
+}));
+
 // Importaciones después de los mocks (ESM)
 const Service = await import("../services/beneficiarios.service.js");
 
@@ -348,6 +353,19 @@ describe("createPublicSolicitud", () => {
         estatus: "Inactivo",
         notas: "[SOLICITUD_PUBLICA_PRE_REG]\nTexto familia",
       })
+    );
+  });
+
+  test("dispara notificación PREREGISTRO_NUEVO al crear la solicitud", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+    mockInsertPreregistroNuevo.mockResolvedValue(undefined);
+
+    await Service.createPublicSolicitud({ ...basePublicSolicitud, genero: "M" });
+
+    expect(mockInsertPreregistroNuevo).toHaveBeenCalledWith(
+      basePublicSolicitud.curp,
+      expect.stringContaining(basePublicSolicitud.nombres)
     );
   });
 
