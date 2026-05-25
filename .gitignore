@@ -44,6 +44,8 @@ jest.config.js.tmp
 
 # 🔐 Oracle Wallet (SENSITIVE)
 wallet/
+wallet.tar.gz
+wallet.b64
 
 claude.md
 .claude/
