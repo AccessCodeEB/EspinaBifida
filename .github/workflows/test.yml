@@ -105,6 +105,7 @@ jobs:
         run: npm run build --prefix frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
 
       # Arrancar el frontend en segundo plano (puerto 3001)
       - name: Start frontend
