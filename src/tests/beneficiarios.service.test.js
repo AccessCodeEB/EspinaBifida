@@ -47,8 +47,10 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
 }));
 
 const mockInsertPreregistroNuevo = jest.fn().mockResolvedValue(undefined);
+const mockInsertBeneficiarioBaja  = jest.fn().mockResolvedValue(undefined);
 jest.unstable_mockModule("../models/notificaciones.model.js", () => ({
   insertPreregistroNuevo: mockInsertPreregistroNuevo,
+  insertBeneficiarioBaja:  mockInsertBeneficiarioBaja,
 }));
 
 // Importaciones después de los mocks (ESM)
@@ -261,7 +263,7 @@ describe("update", () => {
 
 describe("deactivate", () => {
   test("da de baja y cancela membresías activas del beneficiario", async () => {
-    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
     mockDeactivate.mockResolvedValue(1);
     mockCancelarPorCurp.mockResolvedValue(undefined);
 
@@ -269,6 +271,20 @@ describe("deactivate", () => {
 
     expect(mockDeactivate).toHaveBeenCalledWith(CURP_VALIDA);
     expect(mockCancelarPorCurp).toHaveBeenCalledWith(CURP_VALIDA);
+  });
+
+  test("dispara notificación BENEFICIARIO_BAJA tras dar de baja", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
+    mockDeactivate.mockResolvedValue(1);
+    mockCancelarPorCurp.mockResolvedValue(undefined);
+    mockInsertBeneficiarioBaja.mockResolvedValue(undefined);
+
+    await Service.deactivate(CURP_VALIDA);
+
+    expect(mockInsertBeneficiarioBaja).toHaveBeenCalledWith(
+      CURP_VALIDA,
+      expect.stringContaining("Juan")
+    );
   });
 
   test("cancelarPorCurp siempre se llama, incluso si beneficiario ya estaba Inactivo", async () => {

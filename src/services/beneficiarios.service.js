@@ -368,6 +368,9 @@ export async function deactivate(curp) {
 
   await BeneficiarioModel.deactivate(id);
   await MembresiasModel.cancelarPorCurp(id);
+
+  const nombre = `${existente.NOMBRES ?? existente.nombres ?? ""} ${existente.APELLIDO_PATERNO ?? existente.apellidoPaterno ?? ""}`.trim();
+  NotificacionesModel.insertBeneficiarioBaja(id, nombre).catch(() => {});
 }
 
 /**

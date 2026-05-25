@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api-client"
 
-export type TipoNotificacion = "STOCK_BAJO" | "MEMBRESIA_PROXIMA" | "MEMBRESIA_VENCIDA" | "PREREGISTRO_NUEVO"
+export type TipoNotificacion = "STOCK_BAJO" | "MEMBRESIA_PROXIMA" | "MEMBRESIA_VENCIDA" | "PREREGISTRO_NUEVO" | "BENEFICIARIO_BAJA"
 export type EstatusNotificacion = "PENDIENTE" | "LEIDA"
 
 export interface Notificacion {

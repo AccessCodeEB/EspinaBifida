@@ -123,6 +123,17 @@ export const syncStockBajoConsolidado = (mensaje) =>
     await conn.commit();
   });
 
+export const insertBeneficiarioBaja = (curp, nombre) =>
+  withConnection(async conn => {
+    const msg = `Beneficiario ${nombre} (CURP: ${curp}) fue dado de baja del sistema.`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, CURP, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('BENEFICIARIO_BAJA', :curp, 'BENEFICIARIO', :msg)`,
+      { curp, msg }
+    );
+    await conn.commit();
+  });
+
 export const insertPreregistroNuevo = (curp, nombre) =>
   withConnection(async conn => {
     const msg = `Nuevo pre-registro de ${nombre} (CURP: ${curp}). Pendiente de revisión.`;

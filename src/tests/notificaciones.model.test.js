@@ -21,6 +21,7 @@ const {
   syncStockBajoConsolidado,
   upsertMembresia,
   insertPreregistroNuevo,
+  insertBeneficiarioBaja,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -161,6 +162,21 @@ describe("insertPreregistroNuevo", () => {
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.stringContaining("PREREGISTRO_NUEVO"),
+      expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── insertBeneficiarioBaja ───────────────────────────────────────────────────
+
+describe("insertBeneficiarioBaja", () => {
+  it("inserta una notificación BENEFICIARIO_BAJA con la CURP y nombre", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertBeneficiarioBaja("ABCD900101HXYZRL01", "Juan García");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("BENEFICIARIO_BAJA"),
       expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
     );
     expect(mockCommit).toHaveBeenCalledTimes(1);
