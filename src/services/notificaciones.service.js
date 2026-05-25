@@ -25,6 +25,25 @@ async function checkStockBajo() {
   return rows.length;
 }
 
+async function checkCitasHoy() {
+  const rows = await Model.findCitasHoyProgramadas();
+  if (rows.length === 0) {
+    await Model.syncCitasHoyConsolidado(null);
+    return 0;
+  }
+  let msg;
+  if (rows.length === 1) {
+    const r = rows[0];
+    msg = `Cita de hoy a las ${r.HORA} para ${r.NOMBRE} con ${r.ESPECIALISTA} sin confirmar.`;
+  } else {
+    const lista = rows.map(r => `${r.NOMBRE} (${r.HORA})`).join(", ");
+    msg = `${rows.length} citas de hoy sin confirmar: ${lista}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  await Model.syncCitasHoyConsolidado(msg);
+  return rows.length;
+}
+
 async function checkMembresiasProximas() {
   const rows = await Model.findMembresiasProximas();
   for (const row of rows) {
@@ -46,11 +65,12 @@ async function checkMembresiasVencidas() {
 }
 
 export async function runJob() {
-  const [stockBajo, proximas, vencidas] = await Promise.all([
+  const [stockBajo, proximas, vencidas, citasHoy] = await Promise.all([
     checkStockBajo(),
     checkMembresiasProximas(),
     checkMembresiasVencidas(),
+    checkCitasHoy(),
   ]);
-  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}`);
-  return { stockBajo, proximas, vencidas };
+  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}`);
+  return { stockBajo, proximas, vencidas, citasHoy };
 }

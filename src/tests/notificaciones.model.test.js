@@ -13,12 +13,14 @@ const {
   findArticulosConStockBajo,
   findMembresiasProximas,
   findMembresiasVencidas,
+  findCitasHoyProgramadas,
   findAll,
   findPendientes,
   countPendientes,
   markAsRead,
   markAllAsRead,
   syncStockBajoConsolidado,
+  syncCitasHoyConsolidado,
   upsertMembresia,
   insertPreregistroNuevo,
   insertBeneficiarioBaja,
@@ -179,6 +181,37 @@ describe("insertBeneficiarioBaja", () => {
       expect.stringContaining("BENEFICIARIO_BAJA"),
       expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
     );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── findCitasHoyProgramadas ──────────────────────────────────────────────────
+
+describe("findCitasHoyProgramadas", () => {
+  it("retorna filas de la query", async () => {
+    const fila = { ID_CITA: 1, ESPECIALISTA: "Dr. X", NOMBRE: "Juan García", HORA: "10:00" };
+    mockExecute.mockResolvedValueOnce({ rows: [fila] });
+    const result = await findCitasHoyProgramadas();
+    expect(result).toEqual([fila]);
+    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("PROGRAMADA"));
+  });
+});
+
+// ── syncCitasHoyConsolidado ──────────────────────────────────────────────────
+
+describe("syncCitasHoyConsolidado", () => {
+  it("limpia pendientes e inserta notificación cuando hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({}); // UPDATE
+    mockExecute.mockResolvedValueOnce({}); // INSERT
+    await syncCitasHoyConsolidado("2 citas de hoy sin confirmar.");
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("solo limpia pendientes cuando mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await syncCitasHoyConsolidado(null);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

@@ -13,6 +13,36 @@ export const findArticulosConStockBajo = () =>
     ).then(r => r.rows)
   );
 
+export const findCitasHoyProgramadas = () =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT c.ID_CITA, c.ESPECIALISTA,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS NOMBRE,
+              TO_CHAR(c.FECHA, 'HH24:MI') AS HORA
+       FROM CITAS c
+       JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+       WHERE TRUNC(c.FECHA) = TRUNC(SYSDATE)
+         AND c.ESTATUS = 'PROGRAMADA'
+       ORDER BY c.FECHA`
+    ).then(r => r.rows)
+  );
+
+export const syncCitasHoyConsolidado = (mensaje) =>
+  withConnection(async conn => {
+    await conn.execute(
+      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE TIPO = 'CITA_HOY' AND ESTATUS = 'PENDIENTE'`
+    );
+    if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('CITA_HOY', 'CITA', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
+
 export const findMembresiasProximas = () =>
   withConnection(conn =>
     conn.execute(
