@@ -8,6 +8,7 @@ router.get(  "/",              verifyToken,              Ctrl.getAll);
 router.get(  "/pendientes",    verifyToken,              Ctrl.getPendientes);
 router.get(  "/count",         verifyToken,              Ctrl.getCount);
 router.patch("/:id/leer",      verifyToken,              Ctrl.marcarLeida);
+router.patch("/leer-todas",    verifyToken,              Ctrl.marcarTodasLeidas);
 router.post( "/run-job",       verifyToken, checkRole(1), Ctrl.runJob);
 
 export default router;
