@@ -109,9 +109,10 @@ jobs:
       - name: Start frontend
         run: npm --prefix frontend run start -- -p 3001 &
 
-      # Esperar a que el backend esté listo (HTTP /health) y el frontend acepte conexiones
+      # Esperar a que el backend esté listo y Oracle haya inicializado el pool (/ready),
+      # y a que el frontend acepte conexiones TCP (puerto 3001)
       - name: Wait for backend and frontend
-        run: npx wait-on http://localhost:3000/health tcp:localhost:3001 --timeout 120000
+        run: npx wait-on http-get://localhost:3000/ready tcp:localhost:3001 --timeout 120000
 
       - name: Run E2E tests
         run: npm run test:e2e
