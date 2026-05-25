@@ -17,7 +17,8 @@
     "import:articulos:fixneg": "node scripts/import-articulos-from-xls.js articulos.xls --fix-negative-inventory --apply",
     "sync:profile-photos": "node scripts/sync-profile-photos.js",
     "postinstall": "npx puppeteer browsers install chrome",
-    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "seed:inventario": "node src/seeds/seed-inventario.js"
   },
   "repository": {
     "type": "git",
