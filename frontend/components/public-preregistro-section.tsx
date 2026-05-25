@@ -143,6 +143,7 @@ export function PublicPreregistroSection({
   const [turnstileToken, setTurnstileToken] = useState("")
   const turnstileRef = useRef<TurnstileInstance | null>(null)
   const curpEditadoManualmente = useRef(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     if (curpEditadoManualmente.current) return
@@ -218,6 +219,7 @@ export function PublicPreregistroSection({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
     const v = validateAltaSolicitudPublica(form)
     const captchaErrs: Record<string, string> = {}
     if (!turnstileSiteKey) {
@@ -238,6 +240,7 @@ export function PublicPreregistroSection({
       return
     }
     setErrors({})
+    submittingRef.current = true
     setSaving(true)
     try {
       const payload = { ...buildAltaCreatePayload(form), turnstileToken: turnstileToken.trim() }
@@ -260,6 +263,7 @@ export function PublicPreregistroSection({
       setTurnstileToken("")
       turnstileRef.current?.reset()
     } finally {
+      submittingRef.current = false
       setSaving(false)
     }
   }

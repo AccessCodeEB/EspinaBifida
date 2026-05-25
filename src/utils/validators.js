@@ -1,9 +1,9 @@
 import { badRequest } from "./httpErrors.js";
 
 export const CURP_REGEX  = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/;
-// [^\s@.]+ excluye el punto de cada segmento del dominio, eliminando la ambigüedad
-// que causaría backtracking catastrófico (ReDoS) en inputs sin punto en el dominio.
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+// Cuantificadores acotados ({1,N}) eliminan backtracking catastrófico (ReDoS).
+// RFC 5321: local-part ≤ 64 chars, domain label ≤ 63 chars.
+export const EMAIL_REGEX = /^[^\s@]{1,64}@[^\s@.]{1,63}(\.[^\s@.]{1,63}){1,10}$/;
 export const TEL_REGEX   = /^\d{10}$/;
 export const CP_REGEX    = /^\d{5}$/;
 

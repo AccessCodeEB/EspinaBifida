@@ -9,7 +9,7 @@ const loginLimiterOptions = {
   legacyHeaders: false,
   skip: isTest,
   message: {
-    error: 'Too Many Requests',
+    error: 'Demasiadas solicitudes',
     message: 'Demasiados intentos de inicio de sesión. Intente de nuevo en 15 minutos.',
   },
 };
@@ -21,7 +21,7 @@ const publicLimiterOptions = {
   legacyHeaders: false,
   skip: isTest,
   message: {
-    error: 'Too Many Requests',
+    error: 'Demasiadas solicitudes',
     message: 'Demasiadas solicitudes de pre-registro. Intente de nuevo en 1 hora.',
   },
 };
@@ -33,7 +33,7 @@ const authLimiterOptions = {
   legacyHeaders: false,
   skip: isTest,
   message: {
-    error: 'Too Many Requests',
+    error: 'Demasiadas solicitudes',
     message: 'Demasiadas peticiones. Intente de nuevo en 1 minuto.',
   },
 };
@@ -61,7 +61,7 @@ const otpLimiterOptions = {
   keyGenerator: (req) => String(req.params?.idAdmin ?? req.ip),
   validate: { keyGeneratorIpFallback: false },
   message: {
-    error: 'Too Many Requests',
+    error: 'Demasiadas solicitudes',
     message: 'Demasiadas solicitudes de código OTP. Intente de nuevo en 15 minutos.',
   },
 };

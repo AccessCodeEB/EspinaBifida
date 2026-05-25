@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
-import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
+import { badRequest, notFound, conflict, mapOracleError } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { CURP_REGEX, EMAIL_REGEX, TEL_REGEX, CP_REGEX, sanitizeString } from "../utils/validators.js";
 
@@ -317,7 +317,13 @@ export async function approvePreRegistro(curp) {
   }
   const raw = existente.NOTAS ?? existente.notas;
   const limpio = limpiarMarcadorNotasPublicas(raw);
-  await BeneficiarioModel.updateEstatusAndNotas(id, "Activo", limpio || null);
+  try {
+    await BeneficiarioModel.updateEstatusAndNotas(id, "Activo", limpio || null);
+  } catch (err) {
+    const mapped = mapOracleError(err);
+    if (mapped) throw conflict(`La CURP ${id} ya existe como beneficiario activo`, "CURP_DUPLICADA");
+    throw err;
+  }
 }
 
 export async function rejectPreRegistro(curp) {
