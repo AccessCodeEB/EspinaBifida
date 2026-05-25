@@ -8,6 +8,7 @@ import {
   getPendientes,
   getCount,
   marcarLeida,
+  marcarTodasLeidas,
 } from "@/services/notificaciones"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string }> = {
@@ -89,8 +90,12 @@ export function NotificacionesPanel() {
   }
 
   const handleMarcarTodas = async () => {
-    for (const n of items) {
-      await handleMarcarLeida(n.idNotificacion)
+    try {
+      await marcarTodasLeidas()
+      setItems([])
+      setCount(0)
+    } catch {
+      // silencioso
     }
   }
 

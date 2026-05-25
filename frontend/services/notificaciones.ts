@@ -31,6 +31,10 @@ export function marcarLeida(id: number) {
   return apiClient.patch<{ message: string }>(`/notificaciones/${id}/leer`, {})
 }
 
+export function marcarTodasLeidas() {
+  return apiClient.patch<{ message: string }>("/notificaciones/leer-todas", {})
+}
+
 export function runJob() {
   return apiClient.post<{ message: string; data: Record<string, number> }>("/notificaciones/run-job", {})
 }
