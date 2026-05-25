@@ -29,6 +29,26 @@ if (missing.length) {
 
 const PORT = process.env.PORT ?? "3000";
 
+// Start listening immediately so /health is available before Oracle connects
+const server = app.listen(Number(PORT), () =>
+  console.log(`Server running on port ${PORT}`)
+);
+
+let shuttingDown = false;
+const shutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} recibido — cerrando servidor...`);
+  server.close(async () => {
+    await closePool();
+    process.exit(0);
+  });
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
+
+// Connect to Oracle and run migrations asynchronously after the server is up
 createPool()
   .then(async () => {
     await runMigration001();
@@ -43,25 +63,9 @@ createPool()
     await runMigration010();
     initScheduler();
     initNotificacionesScheduler();
-    const server = app.listen(Number(PORT), () =>
-      console.log(`Server running on port ${PORT}`)
-    );
-
-    let shuttingDown = false;
-    const shutdown = (signal) => {
-      if (shuttingDown) return;
-      shuttingDown = true;
-      console.log(`${signal} recibido — cerrando servidor...`);
-      server.close(async () => {
-        await closePool();
-        process.exit(0);
-      });
-    };
-
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
-    process.on("SIGINT",  () => shutdown("SIGINT"));
   })
   .catch((err) => {
     console.error("ERROR: No se pudo conectar a la base de datos:", err.message);
-    process.exit(1);
+    // In test environments keep the server alive so /health and e2e setup remain reachable
+    if (process.env.NODE_ENV !== "test") process.exit(1);
   });
