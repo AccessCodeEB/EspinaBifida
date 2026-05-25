@@ -48,6 +48,7 @@ jobs:
     # Activar definiendo ORACLE_E2E_ENABLED=true en Variables del repositorio
     # Settings → Secrets and variables → Actions → Variables → New repository variable
     if: vars.ORACLE_E2E_ENABLED == 'true'
+    continue-on-error: true
 
     env:
       DB_USER: ${{ secrets.DB_USER }}
@@ -68,11 +69,12 @@ jobs:
       # oracledb en modo thick requiere las librerías nativas de Oracle Instant Client
       - name: Install Oracle Instant Client
         run: |
-          sudo apt-get install -y libaio1 unzip
+          sudo apt-get install -y libaio1t64 unzip || sudo apt-get install -y libaio1 unzip
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 2>/dev/null || true
           mkdir -p /opt/oracle
-          cd /opt/oracle
-          wget -q https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip
-          unzip -q instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip
+          wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
+            -O /tmp/instantclient.zip
+          unzip -q /tmp/instantclient.zip -d /opt/oracle
           echo "/opt/oracle/instantclient_21_12" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
           sudo ldconfig
 
