@@ -92,24 +92,34 @@ export const markAsRead = (id) =>
     await conn.commit();
   });
 
-/**
- * Crea notificación STOCK_BAJO solo si no existe una PENDIENTE para ese artículo.
- * Idempotente por (TIPO, REFERENCIA_ID, ESTATUS='PENDIENTE').
- */
-export const upsertStockBajo = (idArticulo, mensaje) =>
+export const markAllAsRead = () =>
   withConnection(async conn => {
-    const { rows } = await conn.execute(
-      `SELECT COUNT(*) AS CNT FROM NOTIFICACIONES
-       WHERE TIPO = 'STOCK_BAJO' AND REFERENCIA_ID = :id AND ESTATUS = 'PENDIENTE'`,
-      { id: idArticulo }
-    );
-    if (Number(rows[0].CNT) > 0) return; // ya existe, no duplicar
-
     await conn.execute(
-      `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_ID, REFERENCIA_TIPO, MENSAJE)
-       VALUES ('STOCK_BAJO', :id, 'ARTICULO', :msg)`,
-      { id: idArticulo, msg: mensaje }
+      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE ESTATUS = 'PENDIENTE'`
     );
+    await conn.commit();
+  });
+
+/**
+ * Sincroniza la notificación consolidada de stock bajo.
+ * Marca todas las STOCK_BAJO PENDIENTE como leídas (incluye las antiguas por artículo),
+ * luego inserta una sola notificación consolidada si se provee mensaje.
+ * Pasar mensaje=null solo limpia las existentes (cuando no hay artículos con stock bajo).
+ */
+export const syncStockBajoConsolidado = (mensaje) =>
+  withConnection(async conn => {
+    await conn.execute(
+      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'`
+    );
+    if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('STOCK_BAJO', 'ARTICULO', :msg)`,
+        { msg: mensaje }
+      );
+    }
     await conn.commit();
   });
 

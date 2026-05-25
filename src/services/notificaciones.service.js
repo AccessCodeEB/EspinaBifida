@@ -1,16 +1,27 @@
 import * as Model from "../models/notificaciones.model.js";
 
-export const getAll       = (limit) => Model.findAll(limit);
-export const getPendientes = ()     => Model.findPendientes();
-export const getCount      = ()     => Model.countPendientes();
-export const marcarLeida   = (id)   => Model.markAsRead(id);
+export const getAll          = (limit) => Model.findAll(limit);
+export const getPendientes   = ()      => Model.findPendientes();
+export const getCount        = ()      => Model.countPendientes();
+export const marcarLeida     = (id)    => Model.markAsRead(id);
+export const marcarTodasLeidas = ()    => Model.markAllAsRead();
 
 async function checkStockBajo() {
   const rows = await Model.findArticulosConStockBajo();
-  for (const row of rows) {
-    const msg = `Stock bajo: "${row.DESCRIPCION}" tiene ${row.INVENTARIO_ACTUAL} unidades (mínimo ${row.STOCK_MINIMO}).`;
-    await Model.upsertStockBajo(row.ID_ARTICULO, msg);
+  if (rows.length === 0) {
+    await Model.syncStockBajoConsolidado(null);
+    return 0;
   }
+  let msg;
+  if (rows.length === 1) {
+    const r = rows[0];
+    msg = `Stock bajo: "${r.DESCRIPCION}" tiene ${r.INVENTARIO_ACTUAL} unidades (mínimo ${r.STOCK_MINIMO}).`;
+  } else {
+    const lista = rows.map(r => `${r.DESCRIPCION} (${r.INVENTARIO_ACTUAL} uds)`).join(", ");
+    msg = `${rows.length} artículos con stock bajo: ${lista}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  await Model.syncStockBajoConsolidado(msg);
   return rows.length;
 }
 
