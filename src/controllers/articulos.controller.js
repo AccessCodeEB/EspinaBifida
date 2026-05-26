@@ -21,8 +21,8 @@ export async function getById(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    await ArticulosService.create(req.body);
-    res.status(201).json({ message: "Articulo creado exitosamente" });
+    const idArticulo = await ArticulosService.create(req.body);
+    res.status(201).json({ message: "Articulo creado exitosamente", data: { idArticulo } });
   } catch (err) {
     next(err);
   }

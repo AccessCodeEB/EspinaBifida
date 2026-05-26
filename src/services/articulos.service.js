@@ -1,5 +1,6 @@
 import * as ArticulosModel from "../models/articulos.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
+import { checkStockBajo } from "./notificaciones.service.js";
 
 function normalizeData(data = {}) {
   // Solo normalizar los campos que efectivamente vienen en el request
@@ -78,8 +79,12 @@ export const create = (data) => {
   return ArticulosModel.create(bindings);
 };
 
-export const update = (id, data) =>
-  ArticulosModel.update(id, normalizeData(data));
+export async function update(id, data) {
+  const result = await ArticulosModel.update(id, normalizeData(data));
+  // Actualiza notificación de stock en segundo plano (no bloquea la respuesta)
+  checkStockBajo().catch(() => {});
+  return result;
+}
 
 export async function deleteById(id) {
   const articulo = await ArticulosModel.findById(id);
