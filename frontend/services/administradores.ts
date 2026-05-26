@@ -52,8 +52,27 @@ export interface ChangePasswordBody {
   codigo:         string
 }
 
+export function getAllAdmins() {
+  return apiClient.get<Admin[]>("/administradores")
+}
+
 export function getAdmin(id: number) {
   return apiClient.get<Admin>(`/administradores/${id}`)
+}
+
+export interface CreateAdminBody {
+  idRol:          number
+  nombreCompleto: string
+  email:          string
+  password:       string
+}
+
+export function createAdmin(body: CreateAdminBody) {
+  return apiClient.post<{ message: string }>("/administradores", body)
+}
+
+export function deactivateAdmin(id: number) {
+  return apiClient.delete<{ message: string }>(`/administradores/${id}`)
 }
 
 export function updateAdmin(id: number, body: UpdateAdminBody) {

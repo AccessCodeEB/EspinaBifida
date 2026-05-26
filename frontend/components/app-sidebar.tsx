@@ -19,39 +19,10 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  UserCog,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
-const navGroups = [
-  {
-    label: null,
-    items: [
-      { title: "Dashboard",     icon: LayoutDashboard, id: "dashboard"     },
-    ],
-  },
-  {
-    label: "Gestión",
-    items: [
-      { title: "Beneficiarios", icon: Users,            id: "beneficiarios" },
-      { title: "Membresías",    icon: CreditCard,       id: "membresias"    },
-      { title: "Preregistro",   icon: UserPlus,         id: "preregistro"   },
-    ],
-  },
-  {
-    label: "Operaciones",
-    items: [
-      { title: "Servicios",     icon: ClipboardList,    id: "servicios"     },
-      { title: "Inventario",    icon: Package,          id: "inventario"    },
-      { title: "Citas",         icon: CalendarDays,     id: "citas"         },
-    ],
-  },
-  {
-    label: "Análisis",
-    items: [
-      { title: "Reportes",      icon: FileBarChart,     id: "reportes"      },
-    ],
-  },
-]
 
 interface AppSidebarProps {
   activeSection: string
@@ -82,6 +53,43 @@ export function AppSidebar({
   const [hovered, setHovered]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
+
+  const navGroups = [
+    {
+      label: null,
+      items: [
+        { title: "Dashboard",     icon: LayoutDashboard, id: "dashboard"     },
+      ],
+    },
+    {
+      label: "Gestión",
+      items: [
+        { title: "Beneficiarios", icon: Users,            id: "beneficiarios" },
+        { title: "Membresías",    icon: CreditCard,       id: "membresias"    },
+        { title: "Preregistro",   icon: UserPlus,         id: "preregistro"   },
+      ],
+    },
+    {
+      label: "Operaciones",
+      items: [
+        { title: "Servicios",     icon: ClipboardList,    id: "servicios"     },
+        { title: "Inventario",    icon: Package,          id: "inventario"    },
+        { title: "Citas",         icon: CalendarDays,     id: "citas"         },
+      ],
+    },
+    {
+      label: "Análisis",
+      items: [
+        { title: "Reportes",      icon: FileBarChart,     id: "reportes"      },
+      ],
+    },
+    {
+      label: "Sistema",
+      items: [
+        { title: "Administradores", icon: UserCog, id: "administradores" },
+      ],
+    },
+  ]
 
   // La sidebar muestra texto si: está expandida (collapsed=false) O si está en
   // modo mini pero el ratón la está recorriendo (hovered=true)
