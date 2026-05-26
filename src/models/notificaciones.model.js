@@ -4,14 +4,25 @@ import { notFound } from "../utils/httpErrors.js";
 // ── Queries de detección (usadas por el job) ──────────────────────────────────
 
 export const findArticulosConStockBajo = () =>
-  withConnection(conn =>
-    conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
-       FROM ARTICULOS
-       WHERE MANEJA_INVENTARIO = 'S'
-         AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
-    ).then(r => r.rows)
-  );
+  withConnection(async conn => {
+    try {
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND NVL(ACTIVO, 'S') = 'S'
+           AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
+      )).rows;
+    } catch (err) {
+      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
+      )).rows;
+    }
+  });
 
 export const findCitasHoyProgramadas = () =>
   withConnection(conn =>
@@ -139,11 +150,30 @@ export const markAllAsRead = () =>
  */
 export const syncStockBajoConsolidado = (mensaje) =>
   withConnection(async conn => {
-    await conn.execute(
-      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
-       WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'`
+    // ¿Ya existe una notificación PENDIENTE de stock bajo?
+    const { rows } = await conn.execute(
+      `SELECT ID_NOTIFICACION FROM NOTIFICACIONES
+       WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'
+       FETCH FIRST 1 ROWS ONLY`
     );
-    if (mensaje) {
+
+    if (rows.length > 0) {
+      if (mensaje) {
+        // Actualiza la existente en lugar de crear un duplicado
+        await conn.execute(
+          `UPDATE NOTIFICACIONES
+           SET MENSAJE = :msg, FECHA_CREACION = SYSDATE
+           WHERE ID_NOTIFICACION = :id`,
+          { msg: mensaje, id: rows[0].ID_NOTIFICACION }
+        );
+      } else {
+        // Ya no hay stock bajo: cierra la notificación
+        await conn.execute(
+          `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+           WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'`
+        );
+      }
+    } else if (mensaje) {
       await conn.execute(
         `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
          VALUES ('STOCK_BAJO', 'ARTICULO', :msg)`,

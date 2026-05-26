@@ -56,13 +56,22 @@ export async function createMovimientoConTransaccion(data) {
 }
 
 export const findInventarioActual = () =>
-  withConnection(conn =>
-    conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
-              CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
-       FROM ARTICULOS ORDER BY DESCRIPCION`
-    ).then(r => r?.rows ?? [])
-  );
+  withConnection(async conn => {
+    try {
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
+                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
+         FROM ARTICULOS WHERE NVL(ACTIVO, 'S') = 'S' ORDER BY DESCRIPCION`
+      ))?.rows ?? [];
+    } catch (err) {
+      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
+                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
+         FROM ARTICULOS ORDER BY DESCRIPCION`
+      ))?.rows ?? [];
+    }
+  });
 
 export const findMovimientos = () =>
   withConnection(conn =>
