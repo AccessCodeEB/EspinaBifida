@@ -14,7 +14,7 @@ export default {
 
   coverageDirectory: "coverage",
 
-  coverageReporters: ["text", "lcov", "html"],
+  coverageReporters: ["text", "lcov", "html", "json-summary"],
 
   // Falla el run si no se alcanzan los umbrales
   coverageThreshold: {
