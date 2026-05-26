@@ -25,6 +25,9 @@ interface ServiciosTableProps {
 
   searchTerm: string
   setSearchTerm: (v: string) => void
+  tipoServicioFiltro: string
+  setTipoServicioFiltro: (v: string) => void
+  tiposServicioDistintos: string[]
   fechaInicioFiltro: string
   setFechaInicioFiltro: (v: string) => void
   fechaFinFiltro: string
@@ -59,6 +62,9 @@ export function ServiciosTable({
   end,
   searchTerm,
   setSearchTerm,
+  tipoServicioFiltro,
+  setTipoServicioFiltro,
+  tiposServicioDistintos,
   fechaInicioFiltro,
   setFechaInicioFiltro,
   fechaFinFiltro,
@@ -147,6 +153,19 @@ export function ServiciosTable({
 
           <select
             className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs text-foreground outline-none focus:border-[#0f4c81]"
+            value={tipoServicioFiltro}
+            onChange={(e) => setTipoServicioFiltro(e.target.value)}
+          >
+            <option value="">Todos los servicios</option>
+            {tiposServicioDistintos.map((tipo) => (
+              <option key={tipo} value={tipo}>{tipo}</option>
+            ))}
+          </select>
+
+          <div className="h-5 w-px bg-border/60" />
+
+          <select
+            className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs text-foreground outline-none focus:border-[#0f4c81]"
             onChange={(e) => onSortPreset(e.target.value as "recent" | "highest" | "nameAZ" | "pendingFirst")}
             defaultValue=""
           >
@@ -158,7 +177,7 @@ export function ServiciosTable({
           </select>
 
           <button
-            onClick={() => { setFechaInicioFiltro(""); setFechaFinFiltro(""); setSearchTerm("") }}
+            onClick={() => { setFechaInicioFiltro(""); setFechaFinFiltro(""); setSearchTerm(""); setTipoServicioFiltro("") }}
             className="ml-auto rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Limpiar
