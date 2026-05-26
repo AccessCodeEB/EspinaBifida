@@ -520,7 +520,7 @@ export function PublicSiteHome() {
         </section>
 
         {/* ── Servicios ────────────────────────────────────────── */}
-        <section id="servicios" className="scroll-mt-20 px-6 py-20 lg:px-12">
+        <section id="servicios" className="scroll-mt-20 bg-[#f8faff] px-6 py-20 lg:px-12 dark:bg-slate-900/40">
           <div className="mx-auto max-w-7xl">
 
             <RevealOnView>
