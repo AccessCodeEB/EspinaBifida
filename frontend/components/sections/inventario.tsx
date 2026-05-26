@@ -245,11 +245,21 @@ export function InventarioSection() {
     if (!deleteArticuloId) { setArticuloError("Selecciona un artículo."); return }
     setSavingArticulo(true); setArticuloError(null)
     try {
-      await eliminarArticulo(deleteArticuloId); await refreshInventario(); setShowEliminarDialog(false)
+      await eliminarArticulo(deleteArticuloId)
       toast.success("Artículo eliminado del inventario")
+      await refreshInventario()
+      setShowEliminarDialog(false)
     } catch (err: unknown) {
-      setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
-      toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+      // 404 means the article was already deleted externally — sync the UI
+      const status = (err as { status?: number })?.status
+      if (status === 404) {
+        await refreshInventario()
+        setShowEliminarDialog(false)
+        toast.info("El artículo ya había sido eliminado del sistema")
+      } else {
+        setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+        toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+      }
     } finally { setSavingArticulo(false) }
   }
 
