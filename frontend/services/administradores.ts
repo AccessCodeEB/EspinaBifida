@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client"
 
 export interface LoginResponse {
   token: string
+  refreshToken: string
   admin: {
     idAdmin:        number
     idRol:          number
@@ -14,6 +15,17 @@ export interface LoginResponse {
 
 export function loginAdmin(email: string, password: string) {
   return apiClient.post<LoginResponse>("/administradores/login", { email, password })
+}
+
+export function refreshAccessToken(refreshToken: string) {
+  return apiClient.post<{ token: string; refreshToken: string }>(
+    "/administradores/refresh",
+    { refreshToken }
+  )
+}
+
+export function logoutAdmin(refreshToken: string) {
+  return apiClient.post<void>("/administradores/logout", { refreshToken })
 }
 
 export interface Admin {

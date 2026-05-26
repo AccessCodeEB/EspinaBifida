@@ -1,4 +1,5 @@
 import { jest } from "@jest/globals";
+import { createHash } from "node:crypto";
 
 // ─── Mocks del modelo ─────────────────────────────────────────────────────────
 const mockFindById        = jest.fn();
@@ -54,6 +55,21 @@ jest.unstable_mockModule("bcryptjs", () => ({
   hash:    mockBcryptHash,
 }));
 
+// ─── Mock del modelo de refresh tokens ───────────────────────────────────────
+const mockRtInsert       = jest.fn().mockResolvedValue(undefined);
+const mockRtFindByHash   = jest.fn();
+const mockRtRevoke       = jest.fn().mockResolvedValue(undefined);
+const mockRtRevokeAll    = jest.fn().mockResolvedValue(undefined);
+
+jest.unstable_mockModule("../models/refreshTokens.model.js", () => ({
+  insert:          mockRtInsert,
+  findByHash:      mockRtFindByHash,
+  revoke:          mockRtRevoke,
+  revokeAllForAdmin: mockRtRevokeAll,
+  cleanExpired:    jest.fn().mockResolvedValue(undefined),
+  hashToken:       (raw) => createHash("sha256").update(raw).digest("hex"),
+}));
+
 // ─── Mocks de utilidades de archivos (evitar acceso a disco) ─────────────────
 jest.unstable_mockModule("../utils/profileFiles.js", () => ({
   publicPathForStoredFile: jest.fn((f) => `/uploads/profiles/${f}`),
@@ -95,6 +111,9 @@ beforeEach(() => {
   mockVerifyOtp.mockReturnValue(true);   // por defecto OTP válido
   mockSaveOtp.mockResolvedValue(undefined);
   mockSendEmailCode.mockResolvedValue(undefined);
+  mockRtInsert.mockResolvedValue(undefined);
+  mockRtRevoke.mockResolvedValue(undefined);
+  mockRtRevokeAll.mockResolvedValue(undefined);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -667,5 +686,78 @@ describe("login — rama bcrypt estándar", () => {
     });
     // bcrypt.compare no debe llamarse con hash vacío
     expect(mockBcryptCompare).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// refresh — rotación de refresh token
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("refresh", () => {
+  const FUTURE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const PAST_DATE   = new Date(Date.now() - 1000);
+
+  test("token válido → retorna nuevo par { token, refreshToken }", async () => {
+    mockRtFindByHash.mockResolvedValueOnce({
+      ID_TOKEN: 1, ID_ADMIN: 1, EXPIRES_AT: FUTURE_DATE, REVOCADO: 0,
+    });
+    mockRtRevoke.mockResolvedValueOnce(undefined);
+    mockFindById.mockResolvedValueOnce(adminRow);
+
+    const result = await Service.refresh("raw-valid-token");
+
+    expect(result).toHaveProperty("token");
+    expect(result).toHaveProperty("refreshToken");
+    expect(mockRtRevoke).toHaveBeenCalledTimes(1);
+    expect(mockRtInsert).toHaveBeenCalledTimes(1);
+  });
+
+  test("sin refresh token → 401", async () => {
+    await expect(Service.refresh(null)).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test("token no encontrado en DB → 401", async () => {
+    mockRtFindByHash.mockResolvedValueOnce(null);
+    await expect(Service.refresh("unknown-token")).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test("token revocado → 401", async () => {
+    mockRtFindByHash.mockResolvedValueOnce({
+      ID_TOKEN: 2, ID_ADMIN: 1, EXPIRES_AT: FUTURE_DATE, REVOCADO: 1,
+    });
+    await expect(Service.refresh("revoked-token")).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test("token expirado → 401", async () => {
+    mockRtFindByHash.mockResolvedValueOnce({
+      ID_TOKEN: 3, ID_ADMIN: 1, EXPIRES_AT: PAST_DATE, REVOCADO: 0,
+    });
+    await expect(Service.refresh("expired-token")).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  test("admin inactivo → 401", async () => {
+    mockRtFindByHash.mockResolvedValueOnce({
+      ID_TOKEN: 4, ID_ADMIN: 1, EXPIRES_AT: FUTURE_DATE, REVOCADO: 0,
+    });
+    mockRtRevoke.mockResolvedValueOnce(undefined);
+    mockFindById.mockResolvedValueOnce({ ...adminRow, ACTIVO: 0 });
+
+    await expect(Service.refresh("token-inactive-admin")).rejects.toMatchObject({ statusCode: 401 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// revokeRefreshToken
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("revokeRefreshToken", () => {
+  test("token proporcionado → llama a revoke del modelo", async () => {
+    await Service.revokeRefreshToken("some-raw-token");
+    expect(mockRtRevoke).toHaveBeenCalledTimes(1);
+  });
+
+  test("sin token (null) → no lanza ni llama a revoke", async () => {
+    await Service.revokeRefreshToken(null);
+    expect(mockRtRevoke).not.toHaveBeenCalled();
   });
 });

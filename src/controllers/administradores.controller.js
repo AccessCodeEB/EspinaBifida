@@ -29,6 +29,26 @@ export async function login(req, res, next) {
   }
 }
 
+export async function refresh(req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    const result = await AdminService.refresh(refreshToken);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function logout(req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    await AdminService.revokeRefreshToken(refreshToken);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getAll(req, res, next) {
   try {
     const rows = await AdminService.getAll();

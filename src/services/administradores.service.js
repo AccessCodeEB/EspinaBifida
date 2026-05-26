@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomBytes, randomInt } from "node:crypto";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
+import * as RefreshModel from "../models/refreshTokens.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
-import { randomInt } from "node:crypto";
 import { saveOtp, verifyOtp } from "../utils/otpStore.js";
 import { sendEmailCode } from "../utils/email.js";
 
@@ -24,8 +25,19 @@ function generarToken(admin) {
       nombreRol:      admin.NOMBRE_ROL,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN ?? "8h" }
+    { expiresIn: process.env.JWT_EXPIRES_IN ?? "1h" }
   );
+}
+
+const REFRESH_TTL_DAYS = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? "7");
+
+async function emitirRefreshToken(idAdmin) {
+  const raw = randomBytes(40).toString("hex");
+  const hash = RefreshModel.hashToken(raw);
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
+  await RefreshModel.insert(idAdmin, hash, expiresAt);
+  return raw;
 }
 
 function validarEmail(email) {
@@ -74,9 +86,11 @@ export async function login(email, password) {
   if (!passwordValida) throw unauthorized("Credenciales inválidas");
 
   const token = generarToken(admin);
+  const refreshToken = await emitirRefreshToken(admin.ID_ADMIN);
 
   return {
     token,
+    refreshToken,
     admin: {
       idAdmin:        admin.ID_ADMIN,
       idRol:          admin.ID_ROL,
@@ -86,6 +100,33 @@ export async function login(email, password) {
       fotoPerfilUrl:  admin.FOTO_PERFIL_URL ?? null,
     },
   };
+}
+
+export async function refresh(rawRefreshToken) {
+  if (!rawRefreshToken) throw unauthorized("Refresh token requerido");
+
+  const hash = RefreshModel.hashToken(rawRefreshToken);
+  const row = await RefreshModel.findByHash(hash);
+
+  if (!row || row.REVOCADO === 1) throw unauthorized("Refresh token inválido o revocado");
+  if (new Date(row.EXPIRES_AT) < new Date()) throw unauthorized("Refresh token expirado");
+
+  // Rotación: revocar el token usado antes de emitir el nuevo par
+  await RefreshModel.revoke(hash);
+
+  const admin = await AdminModel.findById(row.ID_ADMIN);
+  if (!admin || admin.ACTIVO === 0) throw unauthorized("Cuenta inactiva");
+
+  const token = generarToken(admin);
+  const newRefreshToken = await emitirRefreshToken(admin.ID_ADMIN);
+
+  return { token, refreshToken: newRefreshToken };
+}
+
+export async function revokeRefreshToken(rawRefreshToken) {
+  if (!rawRefreshToken) return;
+  const hash = RefreshModel.hashToken(rawRefreshToken);
+  await RefreshModel.revoke(hash);
 }
 
 export const getAll = () => AdminModel.findAll();

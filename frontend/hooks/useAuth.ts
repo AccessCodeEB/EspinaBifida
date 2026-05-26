@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { tokenStorage } from "@/lib/token"
-import { getAdmin, loginAdmin, type LoginResponse } from "@/services/administradores"
+import { getAdmin, loginAdmin, logoutAdmin, type LoginResponse } from "@/services/administradores"
 
 /** Tiempo tras quitar la pantalla de login (commit) antes de mostrar el toast */
 const TOAST_AFTER_LOGIN_CLOSE_MS = 1000
@@ -43,7 +43,7 @@ export function useAuth() {
         const now     = Math.floor(Date.now() / 1000)
 
         if (payload.exp && payload.exp < now) {
-          // Token expirado — limpiar
+          // Token expirado — limpiar (el api-client intentará refresh en la primera llamada)
           tokenStorage.clear()
         } else {
           // Token vigente — restaurar sesión
@@ -102,10 +102,11 @@ export function useAuth() {
     return () => window.clearTimeout(id)
   }, [isAuthenticated])
 
-  /** Login: llama al endpoint existente POST /administradores/login */
+  /** Login: llama al endpoint POST /administradores/login y persiste ambos tokens */
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     const res: LoginResponse = await loginAdmin(email.trim().toLowerCase(), password)
     tokenStorage.set(res.token)
+    if (res.refreshToken) tokenStorage.setRefresh(res.refreshToken)
     pendingLoginToastRef.current = true
     setSession({
       idAdmin:        res.admin.idAdmin,
@@ -120,12 +121,14 @@ export function useAuth() {
     setIsAuth(true)
   }, [])
 
-  /** Logout: limpia token y sesión */
+  /** Logout: revoca el refresh token en el servidor y limpia la sesión local */
   const logout = useCallback(() => {
     pendingLoginToastRef.current = false
-    tokenStorage.clear()
+    const refreshToken = tokenStorage.getRefresh()
+    tokenStorage.clearAll()
     setSession(null)
     setIsAuth(false)
+    if (refreshToken) void logoutAdmin(refreshToken).catch(() => { /* silencioso */ })
   }, [])
 
   /**

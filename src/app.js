@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import path from "node:path";
 
@@ -30,6 +31,8 @@ import catalogoRoutes           from "./routes/servicios-catalogo.routes.js";
 import notificacionesRoutes    from "./routes/notificaciones.routes.js";
 
 const app = express();
+
+app.use(helmet());
 
 // CORS: environment-aware.
 // Si FRONTEND_URL está definida, solo se permite ese origen y localhost:3001 (dev).

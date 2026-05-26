@@ -7,6 +7,48 @@
 import { resolveApiFetchUrl } from "@/lib/api-base"
 import { tokenStorage } from "@/lib/token"
 
+let isRefreshing = false
+let refreshQueue: Array<(token: string | null) => void> = []
+
+async function tryRefreshToken(): Promise<string | null> {
+  const refreshToken = tokenStorage.getRefresh()
+  if (!refreshToken) return null
+
+  if (isRefreshing) {
+    return new Promise((resolve) => { refreshQueue.push(resolve) })
+  }
+
+  isRefreshing = true
+  try {
+    const url = resolveApiFetchUrl("/administradores/refresh")
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    })
+    if (!res.ok) {
+      tokenStorage.clearAll()
+      refreshQueue.forEach((cb) => cb(null))
+      refreshQueue = []
+      return null
+    }
+    const data = (await res.json()) as { token: string; refreshToken: string }
+    tokenStorage.set(data.token)
+    tokenStorage.setRefresh(data.refreshToken)
+    refreshQueue.forEach((cb) => cb(data.token))
+    refreshQueue = []
+    return data.token
+  } catch {
+    tokenStorage.clearAll()
+    refreshQueue.forEach((cb) => cb(null))
+    refreshQueue = []
+    return null
+  } finally {
+    isRefreshing = false
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -18,14 +60,8 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const url = resolveApiFetchUrl(path)
-  const token = tokenStorage.get()
-
-  const res = await fetch(url, {
+async function doFetch(url: string, options: RequestInit, token: string | null) {
+  return fetch(url, {
     ...options,
     credentials: "include",
     headers: {
@@ -34,7 +70,9 @@ async function request<T>(
       ...options.headers,
     },
   })
+}
 
+async function parseResponse<T>(res: Response): Promise<T> {
   const text = await res.text().catch(() => "")
 
   if (!res.ok) {
@@ -45,19 +83,12 @@ async function request<T>(
       if (typeof parsed?.message === "string") message = parsed.message
       else if (typeof parsed?.error === "string") message = parsed.error
       if (typeof parsed?.code === "string") code = parsed.code
-    } catch {
-      /* usar texto crudo */
-    }
-    // Errores internos del servidor: mostrar mensaje amigable en lugar de detalles técnicos
-    if (res.status >= 500) {
-      message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
-    }
+    } catch { /* usar texto crudo */ }
+    if (res.status >= 500) message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
     throw new ApiError(res.status, message, code)
   }
 
-  // 204 No Content — no intentar parsear JSON
   if (res.status === 204) return undefined as T
-
   const trimmed = text.trim()
   if (trimmed === "") return undefined as T
 
@@ -65,13 +96,31 @@ async function request<T>(
     return JSON.parse(trimmed) as T
   } catch {
     const htmlHint = trimmed.startsWith("<")
-      ? " El servidor respondió HTML en lugar de JSON. Comprueba NEXT_PUBLIC_API_URL (debe ser el backend, p. ej. http://localhost:3000)."
+      ? " El servidor respondió HTML en lugar de JSON. Comprueba NEXT_PUBLIC_API_URL."
       : ""
-    throw new ApiError(
-      502,
-      `Respuesta no JSON desde ${url}.${htmlHint}`
-    )
+    throw new ApiError(502, `Respuesta no JSON desde ${res.url}.${htmlHint}`)
   }
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = resolveApiFetchUrl(path)
+  const token = tokenStorage.get()
+
+  const res = await doFetch(url, options, token)
+
+  // Interceptor 401: intenta refrescar el access token una sola vez
+  if (res.status === 401 && !path.includes("/refresh") && !path.includes("/login")) {
+    const newToken = await tryRefreshToken()
+    if (newToken) {
+      const retryRes = await doFetch(url, options, newToken)
+      return parseResponse<T>(retryRes)
+    }
+  }
+
+  return parseResponse<T>(res)
 }
 
 async function requestFormData<T>(path: string, form: FormData, init: RequestInit = {}): Promise<T> {

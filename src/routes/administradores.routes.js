@@ -7,7 +7,9 @@ import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
 const router = Router();
 
 // Pública — no requiere token
-router.post("/login", AdminController.login);
+router.post("/login",   AdminController.login);
+router.post("/refresh", AdminController.refresh);
+router.post("/logout",  AdminController.logout);
 
 // Públicas — recuperación de contraseña (sin token)
 router.post("/forgot-password",        AdminController.solicitarRecuperacion);
