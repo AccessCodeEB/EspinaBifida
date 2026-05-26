@@ -32,13 +32,33 @@ beforeEach(() => resetMocks());
 // ── findArticulosConStockBajo ─────────────────────────────────────────────────
 
 describe("findArticulosConStockBajo", () => {
-  it("retorna filas de artículos con stock bajo", async () => {
+  it("primary query includes ACTIVO filter and returns rows", async () => {
     const rows = [{ ID_ARTICULO: 1, DESCRIPCION: "Silla", INVENTARIO_ACTUAL: 2, STOCK_MINIMO: 5 }];
     mockExecute.mockResolvedValueOnce({ rows });
     const result = await findArticulosConStockBajo();
     expect(result).toEqual(rows);
     expect(mockExecute).toHaveBeenCalledTimes(1);
+    const [sql] = mockExecute.mock.calls[0];
+    expect(sql).toMatch(/NVL\(ACTIVO/i);
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("fallback when ORA-00904 (ACTIVO column missing) — returns rows without ACTIVO filter", async () => {
+    const ora904 = Object.assign(new Error("ORA-00904"), { errorNum: 904 });
+    const fallbackRows = [{ ID_ARTICULO: 2, DESCRIPCION: "Crutch", INVENTARIO_ACTUAL: 0, STOCK_MINIMO: 3 }];
+    mockExecute.mockRejectedValueOnce(ora904).mockResolvedValueOnce({ rows: fallbackRows });
+    const result = await findArticulosConStockBajo();
+    expect(result).toEqual(fallbackRows);
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    const [fallbackSql] = mockExecute.mock.calls[1];
+    expect(fallbackSql).not.toMatch(/NVL\(ACTIVO/i);
+  });
+
+  it("re-throws non-ORA-00904 error", async () => {
+    const dbErr = Object.assign(new Error("ORA-00942: table not found"), { errorNum: 942 });
+    mockExecute.mockRejectedValueOnce(dbErr);
+    await expect(findArticulosConStockBajo()).rejects.toThrow("ORA-00942");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -128,16 +148,32 @@ describe("markAsRead", () => {
 // ── syncStockBajoConsolidado ─────────────────────────────────────────────────
 
 describe("syncStockBajoConsolidado", () => {
-  it("limpia pendientes e inserta una notificación consolidada cuando hay mensaje", async () => {
-    mockExecute.mockResolvedValueOnce({}); // UPDATE (clear)
-    mockExecute.mockResolvedValueOnce({}); // INSERT
-    await syncStockBajoConsolidado("3 artículos con stock bajo: Silla (1 uds), Mesa (0 uds).");
+  it("inserta nueva notificación cuando no hay pendiente y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin pendiente
+    mockExecute.mockResolvedValueOnce({});           // INSERT
+    await syncStockBajoConsolidado("3 artículos con stock bajo.");
     expect(mockExecute).toHaveBeenCalledTimes(2);
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
-  it("solo limpia pendientes cuando mensaje es null", async () => {
-    mockExecute.mockResolvedValueOnce({}); // UPDATE (clear)
+  it("actualiza la existente en lugar de insertar duplicado cuando ya hay pendiente", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 5 }] }); // SELECT — hay pendiente
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE mensaje
+    await syncStockBajoConsolidado("Silla (1 uds).");
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("cierra la pendiente existente cuando mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 5 }] }); // SELECT — hay pendiente
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE a LEIDA
+    await syncStockBajoConsolidado(null);
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("no hace nada cuando no hay pendiente y mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin pendiente
     await syncStockBajoConsolidado(null);
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockCommit).toHaveBeenCalledTimes(1);

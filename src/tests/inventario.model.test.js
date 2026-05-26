@@ -42,7 +42,7 @@ beforeEach(() => {
   });
 });
 
-// ─── findInventarioActual — r?.rows ?? [] (L64) ───────────────────────────────
+// ─── findInventarioActual — filtro ACTIVO + fallback ORA-00904 ────────────────
 
 describe("findInventarioActual", () => {
   it("retorna filas cuando execute devuelve rows", async () => {
@@ -54,7 +54,7 @@ describe("findInventarioActual", () => {
     expect(result).toEqual(rows);
   });
 
-  it("retorna [] cuando execute devuelve null (L64 ?? [])", async () => {
+  it("retorna [] cuando execute devuelve null (r?.rows ?? [])", async () => {
     mockExecute.mockResolvedValueOnce(null);
 
     const result = await findInventarioActual();
@@ -62,12 +62,42 @@ describe("findInventarioActual", () => {
     expect(result).toEqual([]);
   });
 
-  it("retorna [] cuando rows es undefined (L64 r?.rows ?? [])", async () => {
+  it("retorna [] cuando rows es undefined (r?.rows ?? [])", async () => {
     mockExecute.mockResolvedValueOnce({});
 
     const result = await findInventarioActual();
 
     expect(result).toEqual([]);
+  });
+
+  it("fallback cuando columna ACTIVO no existe (ORA-00904) — retorna filas sin filtro", async () => {
+    const ora904 = Object.assign(new Error("ORA-00904: ACTIVO invalid identifier"), { errorNum: 904 });
+    const rows = [{ ID_ARTICULO: 2, DESCRIPCION: "Mesa" }];
+    mockExecute
+      .mockRejectedValueOnce(ora904)
+      .mockResolvedValueOnce({ rows });
+
+    const result = await findInventarioActual();
+
+    expect(result).toEqual(rows);
+  });
+
+  it("fallback ORA-00904 retorna [] cuando el fallback devuelve sin rows", async () => {
+    const ora904 = Object.assign(new Error("ORA-00904: ACTIVO invalid identifier"), { errorNum: 904 });
+    mockExecute
+      .mockRejectedValueOnce(ora904)
+      .mockResolvedValueOnce({});
+
+    const result = await findInventarioActual();
+
+    expect(result).toEqual([]);
+  });
+
+  it("relanza errores que no son ORA-00904", async () => {
+    const otherErr = Object.assign(new Error("ORA-00942: table or view does not exist"), { errorNum: 942 });
+    mockExecute.mockRejectedValueOnce(otherErr);
+
+    await expect(findInventarioActual()).rejects.toThrow("ORA-00942");
   });
 });
 
