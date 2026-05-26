@@ -1,5 +1,6 @@
 "use client"
 
+import { createPortal } from "react-dom"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Bell, Package, CreditCard, AlertTriangle, CheckCheck, Loader2, RefreshCw, ClipboardList, UserX, CalendarClock, FileText } from "lucide-react"
 import {
@@ -33,7 +34,10 @@ export function NotificacionesPanel() {
   const [items, setItems]                   = useState<Notificacion[]>([])
   const [loadingItems, setLoadingItems]     = useState(false)
   const [markingId, setMarkingId]           = useState<number | null>(null)
-  const panelRef                            = useRef<HTMLDivElement>(null)
+  const [dropdownPos, setDropdownPos]       = useState<{ top: number; right: number } | null>(null)
+  const wrapperRef                          = useRef<HTMLDivElement>(null)
+  const buttonRef                           = useRef<HTMLButtonElement>(null)
+  const dropdownRef                         = useRef<HTMLDivElement>(null)
 
   const fetchCount = useCallback(async () => {
     try {
@@ -63,18 +67,27 @@ export function NotificacionesPanel() {
     return () => clearInterval(t)
   }, [fetchCount])
 
-  // Al abrir el panel, carga los items
+  // Al abrir: calcular posición del dropdown y cargar items
   useEffect(() => {
-    if (open) fetchItems()
+    if (!open) return
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    fetchItems()
   }, [open, fetchItems])
 
-  // Cerrar con click fuera
+  // Cerrar con click fuera (wrapper + dropdown portal)
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      const inWrapper  = wrapperRef.current?.contains(target)
+      const inDropdown = dropdownRef.current?.contains(target)
+      if (!inWrapper && !inDropdown) setOpen(false)
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
@@ -103,25 +116,13 @@ export function NotificacionesPanel() {
     }
   }
 
-  return (
-    <div ref={panelRef} className="relative">
-      {/* Botón campana */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        title="Notificaciones"
-      >
-        <Bell className="size-[18px]" />
-        {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white leading-none">
-            {count > 99 ? "99+" : count}
-          </span>
-        )}
-      </button>
-
-      {/* Panel desplegable */}
-      {open && (
-        <div className="absolute right-0 top-11 z-50 w-80 rounded-xl border border-border bg-popover shadow-lg">
+  const dropdown = open && dropdownPos
+    ? createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed z-[9999] w-80 rounded-xl border border-border bg-popover shadow-lg"
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <span className="text-sm font-semibold text-foreground">Notificaciones</span>
@@ -198,8 +199,29 @@ export function NotificacionesPanel() {
               </p>
             </div>
           )}
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      {/* Botón campana */}
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen(v => !v)}
+        className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        title="Notificaciones"
+      >
+        <Bell className="size-[18px]" />
+        {count > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white leading-none">
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </button>
+
+      {dropdown}
     </div>
   )
 }
