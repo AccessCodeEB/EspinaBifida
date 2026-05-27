@@ -73,14 +73,16 @@ export const findInventarioActual = () =>
     }
   });
 
-export const findMovimientos = () =>
+export const findMovimientos = (days = null) =>
   withConnection(conn =>
     conn.execute(
       `SELECT M.ID_MOVIMIENTO, M.ID_ARTICULO, A.DESCRIPCION,
               M.TIPO_MOVIMIENTO, M.CANTIDAD, M.MOTIVO, M.FECHA, M.STOCK_RESULTANTE
        FROM MOVIMIENTOS_INVENTARIO M
        JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
-       ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
+       ${days ? "WHERE M.FECHA >= SYSDATE - :days" : ""}
+       ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`,
+      days ? { days } : {}
     ).then(r => r?.rows ?? [])
   );
 
