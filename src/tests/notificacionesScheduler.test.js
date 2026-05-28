@@ -44,4 +44,19 @@ describe("initNotificacionesScheduler", () => {
     );
     errorSpy.mockRestore();
   });
+
+  it("el setImmediate inicial ejecuta runJob al arrancar", async () => {
+    mockRunJob.mockResolvedValueOnce({ stockBajo: 0, proximas: 0, vencidas: 0 });
+    initNotificacionesScheduler();
+    await new Promise(resolve => setImmediate(resolve));
+    expect(mockRunJob).toHaveBeenCalled();
+  });
+
+  it("el setImmediate inicial captura errores sin lanzar", async () => {
+    mockRunJob.mockRejectedValueOnce(new Error("init error"));
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    initNotificacionesScheduler();
+    await new Promise(resolve => setImmediate(resolve));
+    errorSpy.mockRestore();
+  });
 });
