@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-24 (Sábado) — post Semana 2
+**Actualización:** 2026-05-28 (Miércoles) — post Semana 3
 **Próxima entrega:** 2026-05-29 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -19,9 +19,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 10 / 10 |
 | Archivos de prueba (Jest + Supertest) | 42 |
-| Pruebas E2E Playwright — API (QASE IDs 1–40) | 38 tests en 11 archivos |
+| Pruebas E2E Playwright — API | 48 tests en 13 archivos |
 | Pruebas E2E Playwright — UI (QASE IDs 24,30–32,41–43) | 8 tests en 2 archivos (1 skipped: rate limit solo prod) |
-| Total tests E2E | **46 tests**, **7 skipped** esperados |
+| Total tests E2E | **56 tests**, **7 skipped** esperados |
 
 ---
 
@@ -86,7 +86,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
-| **CI/CD GitHub Actions** | `.github/workflows` existe pero vacío — no hay pipeline automático en PRs | Media |
+| ~~**CI/CD GitHub Actions**~~ | ✅ Completado | — |
 
 ---
 
@@ -105,7 +105,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Tarea | Descripción |
 |---|---|
-| **Auditoría de operaciones sensibles** | No se registra quién ejecutó cada operación crítica. Operaciones afectadas y responsable del código: baja lógica de beneficiario (`victorvalero6`), cambio de estatus (`victorvalero6`), aprobar pre-registro (`victorvalero6`), rechazar pre-registro (`victorvalero6`), eliminación permanente (`LeNav23`), desactivar administrador (`LeNav23`). |
+| ~~**Auditoría de operaciones sensibles**~~ | ✅ **Completado** — tabla `AUDITORIA_OPERACIONES` (migration-012), modelo `auditoria.model.js`, fire-and-forget en 6 operaciones sensibles: `CAMBIO_ESTATUS`, `BAJA_LOGICA`, `ELIMINACION_PERMANENTE`, `APROBAR_PRE_REGISTRO`, `RECHAZAR_PRE_REGISTRO`, `DESACTIVAR_ADMIN`. Tests unitarios en `auditoria.model.test.js`. |
 | **Manejo de errores de BD** | Fallos parciales en operaciones multi-paso pueden dejar estado inconsistente |
 | **Optimización de imágenes** | Las fotos de perfil no usan `<Image>` de Next.js ni lazy loading |
 
@@ -123,7 +123,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ### Capa 1 — Pruebas unitarias e integración (Jest + Supertest)
 
-**42 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
+**43 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
 
 | Módulo | Archivos de prueba |
 |---|---|
@@ -139,6 +139,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Flujos integrados | `flujo-beneficiario-membresia-servicio.test.js`, `configuracion.routes.test.js`, `controllers-misc.test.js`, `core-coverage.test.js` |
 | Schedulers | `reporteScheduler.test.js` |
 | Validadores | `validators.test.js` |
+| Auditoría | `auditoria.model.test.js` |
 
 **Cobertura alcanzada:** 100% en statements, branches, functions y lines (verificado con `npm run test:coverage`).
 
