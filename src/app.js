@@ -39,12 +39,12 @@ app.use(helmet());
 
 // CORS: environment-aware.
 // Si FRONTEND_URL está definida, solo se permite ese origen y localhost:3001 (dev).
-// Si no está definida, se permite todo (fallback de desarrollo).
+// Si no está definida, se permite cualquier origen (fallback de desarrollo).
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true); // curl, SSR, mobile apps
     const frontendUrl = process.env.FRONTEND_URL;
-    if (!frontendUrl) return callback(null, true); // dev: permitir todo
+    if (!frontendUrl) return callback(null, true); // dev: permitir cualquier origen
     const allowed = [frontendUrl, "http://localhost:3001"];
     if (allowed.includes(origin)) return callback(null, true);
     return callback(new Error("CORS: origen no permitido"));
