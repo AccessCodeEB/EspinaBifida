@@ -8,6 +8,8 @@ import {
   postSyncEstados,
 } from "../controllers/membresias.controller.js";
 import { verifyToken } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { crearMembresiaSchema } from "../validators/membresias.schema.js";
 
 const router = express.Router();
 
@@ -62,7 +64,7 @@ router.use(verifyToken);
  *             schema:
  *               $ref: '#/components/schemas/Error401'
  */
-router.get("/", getAll);
+router.get("/",                   getAll);
 
 /**
  * @openapi
@@ -150,7 +152,7 @@ router.get("/", getAll);
  *             schema:
  *               $ref: '#/components/schemas/Error409'
  */
-router.post("/", createMembresia);
+router.post("/",                  validate(crearMembresiaSchema), createMembresia);
 
 /**
  * @openapi
@@ -203,7 +205,7 @@ router.post("/", createMembresia);
  *             schema:
  *               $ref: '#/components/schemas/Error403'
  */
-router.post("/sync-estados", postSyncEstados);
+router.post("/sync-estados",      postSyncEstados);
 
 /**
  * @openapi
@@ -247,7 +249,7 @@ router.post("/sync-estados", postSyncEstados);
  *             schema:
  *               $ref: '#/components/schemas/Error401'
  */
-router.get("/pagos/recientes", getPagosRecientes);
+router.get("/pagos/recientes",    getPagosRecientes);
 
 /**
  * @openapi
@@ -311,7 +313,7 @@ router.get("/pagos/recientes", getPagosRecientes);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.get("/:curp/activa", validarMembresiaActiva);
+router.get("/:curp/activa",       validarMembresiaActiva);
 
 /**
  * @openapi
@@ -362,6 +364,6 @@ router.get("/:curp/activa", validarMembresiaActiva);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.get("/:curp", getMembresiaStatus);
+router.get("/:curp",              getMembresiaStatus);
 
 export default router;

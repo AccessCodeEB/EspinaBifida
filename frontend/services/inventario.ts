@@ -10,13 +10,14 @@ export interface ArticuloInventario {
 }
 
 export interface MovimientoInventario {
-  id: number
+  idMovimiento: number
   idArticulo: string | number
   descripcion: string
   tipo: "ENTRADA" | "SALIDA"
   cantidad: number
-  motivo: string
+  motivo: string | null
   fecha: string
+  stockResultante: number
 }
 
 export interface MovimientoPayload {
@@ -79,8 +80,9 @@ export async function getInventario() {
 }
 
 /** GET /inventario/movimientos */
-export function getMovimientos() {
-  return apiClient.get<MovimientoInventario[]>("/inventario/movimientos")
+export function getMovimientos(dias?: number) {
+  const qs = dias ? `?dias=${dias}` : ""
+  return apiClient.get<MovimientoInventario[]>(`/inventario/movimientos${qs}`)
 }
 
 /** POST /inventario/movimientos */

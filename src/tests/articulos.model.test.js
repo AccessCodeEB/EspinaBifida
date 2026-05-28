@@ -8,7 +8,7 @@ import {
 
 jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
-const { findAll, findById, update, deleteById } = await import(
+const { findAll, findById, create, update, deleteById } = await import(
   "../models/articulos.model.js"
 );
 
@@ -114,6 +114,34 @@ describe("findById", () => {
 
     await expect(findById(1)).rejects.toThrow("ORA-01031");
     expect(mockExecute).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── create ─────────────────────────────────────────────────────────────────
+
+describe("create", () => {
+  const data = {
+    descripcion: "Silla", unidad: "PZA.", cuotaRecuperacion: 0,
+    inventarioActual: 0, manejaInventario: "S", idCategoria: 1, stockMinimo: 5,
+  };
+
+  it("returns scalar ID when outBinds.newId is an array (RETURNING INTO normal form)", async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { newId: [999] } });
+
+    const result = await create(data);
+
+    expect(result).toBe(999);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    const [sql] = mockExecute.mock.calls[0];
+    expect(sql).toMatch(/RETURNING ID_ARTICULO INTO :newId/i);
+  });
+
+  it("returns scalar ID when outBinds.newId is already a number (non-array branch)", async () => {
+    mockExecute.mockResolvedValueOnce({ outBinds: { newId: 888 } });
+
+    const result = await create(data);
+
+    expect(result).toBe(888);
   });
 });
 

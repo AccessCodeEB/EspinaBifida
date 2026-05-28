@@ -3,6 +3,18 @@ import * as AdminController from "../controllers/administradores.controller.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
 import { uploadProfilePhoto } from "../middleware/uploadProfilePhoto.js";
 import { adminSelfOrSuper } from "../middleware/adminSelfOrSuper.js";
+import { validate } from "../middleware/validate.js";
+import {
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  crearAdminSchema,
+  actualizarAdminSchema,
+  cambiarPasswordSchema,
+  recuperarPasswordSchema,
+  resetPasswordSchema,
+  actualizarTelefonoSchema,
+} from "../validators/administradores.schema.js";
 
 const router = Router();
 
@@ -68,7 +80,9 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Error401'
  */
-router.post("/login", AdminController.login);
+router.post("/login",   validate(loginSchema),   AdminController.login);
+router.post("/refresh", validate(refreshSchema), AdminController.refresh);
+router.post("/logout",  validate(logoutSchema),  AdminController.logout);
 
 // Públicas — recuperación de contraseña (sin token)
 
@@ -122,7 +136,7 @@ router.post("/login", AdminController.login);
  *             schema:
  *               $ref: '#/components/schemas/Error429'
  */
-router.post("/forgot-password", AdminController.solicitarRecuperacion);
+router.post("/forgot-password",        validate(recuperarPasswordSchema), AdminController.solicitarRecuperacion);
 
 /**
  * @swagger
@@ -181,7 +195,7 @@ router.post("/forgot-password", AdminController.solicitarRecuperacion);
  *             schema:
  *               $ref: '#/components/schemas/Error429'
  */
-router.patch("/forgot-password/reset", AdminController.resetPasswordPublico);
+router.patch("/forgot-password/reset", validate(resetPasswordSchema),     AdminController.resetPasswordPublico);
 
 // Protegidas — requieren token válido
 
@@ -349,7 +363,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.get("/:idAdmin", verifyToken, AdminController.getById);
+router.get("/:idAdmin",             verifyToken,                  AdminController.getById);
 
 /**
  * @swagger
@@ -417,7 +431,7 @@ router.get("/:idAdmin", verifyToken, AdminController.getById);
  *             schema:
  *               $ref: '#/components/schemas/Error409'
  */
-router.post("/", verifyToken, checkRole(1), AdminController.create);
+router.post("/",                    verifyToken, checkRole(1),    validate(crearAdminSchema), AdminController.create);
 
 /**
  * @swagger
@@ -491,7 +505,7 @@ router.post("/", verifyToken, checkRole(1), AdminController.create);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.put("/:idAdmin", verifyToken, checkRole(1), AdminController.update);
+router.put("/:idAdmin",             verifyToken, checkRole(1),    validate(actualizarAdminSchema), AdminController.update);
 
 /**
  * @swagger
@@ -555,7 +569,7 @@ router.put("/:idAdmin", verifyToken, checkRole(1), AdminController.update);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.patch("/:idAdmin/password", verifyToken, AdminController.changePassword);
+router.patch("/:idAdmin/password",        verifyToken,                  validate(cambiarPasswordSchema), AdminController.changePassword);
 
 /**
  * @swagger
@@ -610,7 +624,7 @@ router.patch("/:idAdmin/password", verifyToken, AdminController.changePassword);
  *             schema:
  *               $ref: '#/components/schemas/Error429'
  */
-router.post("/:idAdmin/solicitar-codigo", verifyToken, AdminController.solicitarCodigo);
+router.post("/:idAdmin/solicitar-codigo", verifyToken,                  AdminController.solicitarCodigo);
 
 /**
  * @swagger
@@ -675,7 +689,7 @@ router.post("/:idAdmin/solicitar-codigo", verifyToken, AdminController.solicitar
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.patch("/:idAdmin/telefono", verifyToken, adminSelfOrSuper, AdminController.updateTelefono);
+router.patch("/:idAdmin/telefono",        verifyToken, adminSelfOrSuper, validate(actualizarTelefonoSchema), AdminController.updateTelefono);
 
 /**
  * @swagger
@@ -723,6 +737,6 @@ router.patch("/:idAdmin/telefono", verifyToken, adminSelfOrSuper, AdminControlle
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.delete("/:idAdmin", verifyToken, checkRole(1), AdminController.deactivate);
+router.delete("/:idAdmin",               verifyToken, checkRole(1),    AdminController.deactivate);
 
 export default router;

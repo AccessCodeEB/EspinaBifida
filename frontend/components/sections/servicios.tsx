@@ -136,6 +136,7 @@ export function ServiciosSection() {
   // ── Table UI ──
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedMonth, setSelectedMonth] = useState(() => monthKey(new Date()))
+  const [tipoServicioFiltro, setTipoServicioFiltro] = useState("")
   const [fechaInicioFiltro, setFechaInicioFiltro] = useState("")
   const [fechaFinFiltro, setFechaFinFiltro] = useState("")
   const [sortField, setSortField] = useState<SortField>("folio")
@@ -188,7 +189,7 @@ export function ServiciosSection() {
 
   useEffect(() => {
     setPage(1)
-  }, [selectedMonth, fechaInicioFiltro, fechaFinFiltro, searchTerm, sortField, sortDirection])
+  }, [selectedMonth, tipoServicioFiltro, fechaInicioFiltro, fechaFinFiltro, searchTerm, sortField, sortDirection])
 
   // ── Derived data ──
   const hoy = new Date().toISOString().split("T")[0]
@@ -281,16 +282,25 @@ export function ServiciosSection() {
     })
   }, [serviciosConFecha, selectedMonth])
 
+  const tiposServicioDistintos = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of serviciosConFecha) {
+      if (s.servicio) set.add(s.servicio)
+    }
+    return Array.from(set).sort()
+  }, [serviciosConFecha])
+
   const filtered = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
     return serviciosConFecha.filter((s) => {
       if (s.mesClave !== selectedMonth) return false
+      if (tipoServicioFiltro && s.servicio !== tipoServicioFiltro) return false
       if (fechaInicioFiltro && s.fechaDate && s.fechaDate < new Date(`${fechaInicioFiltro}T00:00:00`)) return false
       if (fechaFinFiltro && s.fechaDate && s.fechaDate > new Date(`${fechaFinFiltro}T23:59:59`)) return false
       if (!search) return true
       return s.nombre.toLowerCase().includes(search) || s.folio.toLowerCase().includes(search) || s.servicio.toLowerCase().includes(search)
     })
-  }, [serviciosConFecha, selectedMonth, fechaInicioFiltro, fechaFinFiltro, searchTerm])
+  }, [serviciosConFecha, selectedMonth, tipoServicioFiltro, fechaInicioFiltro, fechaFinFiltro, searchTerm])
 
   const collator = useMemo(() => new Intl.Collator("es-MX", { numeric: true, sensitivity: "base" }), [])
 
@@ -577,6 +587,9 @@ export function ServiciosSection() {
         end={end}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        tipoServicioFiltro={tipoServicioFiltro}
+        setTipoServicioFiltro={setTipoServicioFiltro}
+        tiposServicioDistintos={tiposServicioDistintos}
         fechaInicioFiltro={fechaInicioFiltro}
         setFechaInicioFiltro={setFechaInicioFiltro}
         fechaFinFiltro={fechaFinFiltro}

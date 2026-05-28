@@ -15,18 +15,39 @@ export async function createPool() {
 
   const walletRoot = path.join(process.cwd(), "wallet");
   const nestedWallet = path.join(walletRoot, "wallet");
-  process.env.TNS_ADMIN = fs.existsSync(path.join(nestedWallet, "tnsnames.ora"))
+  const walletDir = fs.existsSync(path.join(nestedWallet, "tnsnames.ora"))
     ? nestedWallet
     : walletRoot;
+
+  process.env.TNS_ADMIN = walletDir;
+
+  // Oracle Instant Client no resuelve '?/network/admin' (no hay $ORACLE_HOME).
+  // Actualizamos sqlnet.ora para que DIRECTORY apunte al directorio real del wallet.
+  const sqlnetPath = path.join(walletDir, "sqlnet.ora");
+  if (fs.existsSync(sqlnetPath)) {
+    const original = fs.readFileSync(sqlnetPath, "utf8");
+    // Normalizar a forward slashes para Oracle (funciona en Windows y Linux)
+    const walletDirNorm = walletDir.replace(/\\/g, "/");
+    const fixed = original.replace(/DIRECTORY="[^"]*"/g, `DIRECTORY="${walletDirNorm}"`);
+    if (fixed !== original) {
+      fs.writeFileSync(sqlnetPath, fixed, "utf8");
+      console.log(`[db] sqlnet.ora actualizado: DIRECTORY="${walletDirNorm}"`);
+    }
+  }
+
   oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
 
+  // poolMin:0 → el pool se crea sin conexiones inmediatas; la conectividad real
+  // se verifica de forma lazy (primer getConnection()). Esto evita que createPool()
+  // falle si Oracle tarda en responder al inicio del servidor.
   _pool = await oracledb.createPool({
     user:          process.env.DB_USER,
     password:      process.env.DB_PASSWORD,
     connectString: process.env.DB_CONNECTION_STRING,
-    poolMin:       2,
+    poolMin:       0,
     poolMax:       10,
     poolIncrement: 1,
+    poolTimeout:   60,
   });
 }
 

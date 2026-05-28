@@ -2,6 +2,13 @@ import { Router } from "express";
 import * as BeneficiarioController from "../controllers/beneficiarios.controller.js";
 import { uploadProfilePhoto } from "../middleware/uploadProfilePhoto.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import {
+  crearBeneficiarioSchema,
+  actualizarBeneficiarioSchema,
+  actualizarEstatusSchema,
+  solicitudPublicaSchema,
+} from "../validators/beneficiarios.schema.js";
 
 const router = Router();
 
@@ -98,7 +105,7 @@ const router = Router();
  *               $ref: '#/components/schemas/Error400'
  */
 // Ruta pública: formulario de pre-registro externo (sin autenticación)
-router.post("/solicitud-publica",   BeneficiarioController.createPublicSolicitud);
+router.post("/solicitud-publica", validate(solicitudPublicaSchema), BeneficiarioController.createPublicSolicitud);
 
 /**
  * @openapi
@@ -414,7 +421,7 @@ router.get("/:curp",               verifyToken, BeneficiarioController.getById);
  *             schema:
  *               $ref: '#/components/schemas/Error409'
  */
-router.post("/",                   verifyToken, BeneficiarioController.create);
+router.post("/",                   verifyToken, validate(crearBeneficiarioSchema), BeneficiarioController.create);
 
 /**
  * @openapi
@@ -504,7 +511,7 @@ router.post("/",                   verifyToken, BeneficiarioController.create);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.put("/:curp",               verifyToken, BeneficiarioController.update);
+router.put("/:curp",               verifyToken, validate(actualizarBeneficiarioSchema), BeneficiarioController.update);
 
 /**
  * @openapi
@@ -574,7 +581,7 @@ router.put("/:curp",               verifyToken, BeneficiarioController.update);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.patch("/:curp/estatus",     verifyToken, BeneficiarioController.updateEstatus);
+router.patch("/:curp/estatus",     verifyToken, validate(actualizarEstatusSchema), BeneficiarioController.updateEstatus);
 
 /**
  * @openapi

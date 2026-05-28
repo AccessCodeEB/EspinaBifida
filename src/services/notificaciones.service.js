@@ -1,16 +1,55 @@
 import * as Model from "../models/notificaciones.model.js";
 
-export const getAll       = (limit) => Model.findAll(limit);
-export const getPendientes = ()     => Model.findPendientes();
-export const getCount      = ()     => Model.countPendientes();
-export const marcarLeida   = (id)   => Model.markAsRead(id);
+export const getAll          = (limit) => Model.findAll(limit);
+export const getPendientes   = ()      => Model.findPendientes();
+export const getCount        = ()      => Model.countPendientes();
+export const marcarLeida     = (id)    => Model.markAsRead(id);
+export const marcarTodasLeidas = ()    => Model.markAllAsRead();
 
-async function checkStockBajo() {
+// Trunca nombres largos para mensajes legibles
+const trimNombre = (s, max = 35) =>
+  s && s.length > max ? s.slice(0, max - 1) + "…" : (s ?? "");
+
+export async function checkStockBajo() {
   const rows = await Model.findArticulosConStockBajo();
-  for (const row of rows) {
-    const msg = `Stock bajo: "${row.DESCRIPCION}" tiene ${row.INVENTARIO_ACTUAL} unidades (mínimo ${row.STOCK_MINIMO}).`;
-    await Model.upsertStockBajo(row.ID_ARTICULO, msg);
+  if (rows.length === 0) {
+    await Model.syncStockBajoConsolidado(null);
+    return 0;
   }
+  let msg;
+  if (rows.length === 1) {
+    const r = rows[0];
+    const uds = Number(r.INVENTARIO_ACTUAL);
+    msg = `Stock bajo: "${trimNombre(r.DESCRIPCION)}" — ${uds} ${uds === 1 ? "unidad" : "unidades"} disponibles (mínimo ${r.STOCK_MINIMO}).`;
+  } else {
+    const lista = rows
+      .slice(0, 5)
+      .map(r => `${trimNombre(r.DESCRIPCION, 25)} (${r.INVENTARIO_ACTUAL})`)
+      .join(", ");
+    const extra = rows.length > 5 ? ` y ${rows.length - 5} más` : "";
+    msg = `${rows.length} artículos con stock bajo: ${lista}${extra}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  await Model.syncStockBajoConsolidado(msg);
+  return rows.length;
+}
+
+async function checkCitasHoy() {
+  const rows = await Model.findCitasHoyProgramadas();
+  if (rows.length === 0) {
+    await Model.syncCitasHoyConsolidado(null);
+    return 0;
+  }
+  let msg;
+  if (rows.length === 1) {
+    const r = rows[0];
+    msg = `Cita de hoy a las ${r.HORA} para ${r.NOMBRE} con ${r.ESPECIALISTA} sin confirmar.`;
+  } else {
+    const lista = rows.map(r => `${r.NOMBRE} (${r.HORA})`).join(", ");
+    msg = `${rows.length} citas de hoy sin confirmar: ${lista}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  await Model.syncCitasHoyConsolidado(msg);
   return rows.length;
 }
 
@@ -35,11 +74,12 @@ async function checkMembresiasVencidas() {
 }
 
 export async function runJob() {
-  const [stockBajo, proximas, vencidas] = await Promise.all([
+  const [stockBajo, proximas, vencidas, citasHoy] = await Promise.all([
     checkStockBajo(),
     checkMembresiasProximas(),
     checkMembresiasVencidas(),
+    checkCitasHoy(),
   ]);
-  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}`);
-  return { stockBajo, proximas, vencidas };
+  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}`);
+  return { stockBajo, proximas, vencidas, citasHoy };
 }

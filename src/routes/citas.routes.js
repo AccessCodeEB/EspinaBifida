@@ -6,6 +6,8 @@ import {
   updateCita,
   deleteCita,
 } from "../controllers/citas.controller.js";
+import { validate } from "../middleware/validate.js";
+import { crearCitaSchema, actualizarCitaSchema } from "../validators/citas.schema.js";
 
 const router = express.Router();
 
@@ -166,7 +168,7 @@ router.get("/:id", getCitaById);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.post("/", createCita);
+router.post("/", validate(crearCitaSchema), createCita);
 
 /**
  * @openapi
@@ -240,7 +242,7 @@ router.post("/", createCita);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.put("/:id", updateCita);
+router.put("/:id", validate(actualizarCitaSchema), updateCita);
 
 /**
  * @openapi
@@ -293,7 +295,7 @@ router.put("/:id", updateCita);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.patch("/:id", updateCita); // alias: partial update (e.g. only estatus)
+router.patch("/:id", validate(actualizarCitaSchema), updateCita); // alias: partial update (e.g. only estatus)
 
 /**
  * @openapi

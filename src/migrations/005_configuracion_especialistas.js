@@ -111,8 +111,8 @@ export async function runMigration005() {
       ];
       for (const { clave, valor, desc } of configs) {
         await conn.execute(
-          `INSERT INTO CONFIGURACION (CLAVE, VALOR, DESCRIPCION) VALUES (:clave, :valor, :desc)`,
-          { clave, valor, desc },
+          `INSERT INTO CONFIGURACION (CLAVE, VALOR, DESCRIPCION) VALUES (:clave, :valor, :descripcion)`,
+          { clave, valor, descripcion: desc },
           { autoCommit: true }
         );
       }

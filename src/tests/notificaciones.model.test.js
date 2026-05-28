@@ -13,12 +13,18 @@ const {
   findArticulosConStockBajo,
   findMembresiasProximas,
   findMembresiasVencidas,
+  findCitasHoyProgramadas,
   findAll,
   findPendientes,
   countPendientes,
   markAsRead,
-  upsertStockBajo,
+  markAllAsRead,
+  syncStockBajoConsolidado,
+  syncCitasHoyConsolidado,
   upsertMembresia,
+  insertPreregistroNuevo,
+  insertBeneficiarioBaja,
+  insertReporteGenerado,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -26,13 +32,33 @@ beforeEach(() => resetMocks());
 // ── findArticulosConStockBajo ─────────────────────────────────────────────────
 
 describe("findArticulosConStockBajo", () => {
-  it("retorna filas de artículos con stock bajo", async () => {
+  it("primary query includes ACTIVO filter and returns rows", async () => {
     const rows = [{ ID_ARTICULO: 1, DESCRIPCION: "Silla", INVENTARIO_ACTUAL: 2, STOCK_MINIMO: 5 }];
     mockExecute.mockResolvedValueOnce({ rows });
     const result = await findArticulosConStockBajo();
     expect(result).toEqual(rows);
     expect(mockExecute).toHaveBeenCalledTimes(1);
+    const [sql] = mockExecute.mock.calls[0];
+    expect(sql).toMatch(/NVL\(ACTIVO/i);
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("fallback when ORA-00904 (ACTIVO column missing) — returns rows without ACTIVO filter", async () => {
+    const ora904 = Object.assign(new Error("ORA-00904"), { errorNum: 904 });
+    const fallbackRows = [{ ID_ARTICULO: 2, DESCRIPCION: "Crutch", INVENTARIO_ACTUAL: 0, STOCK_MINIMO: 3 }];
+    mockExecute.mockRejectedValueOnce(ora904).mockResolvedValueOnce({ rows: fallbackRows });
+    const result = await findArticulosConStockBajo();
+    expect(result).toEqual(fallbackRows);
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    const [fallbackSql] = mockExecute.mock.calls[1];
+    expect(fallbackSql).not.toMatch(/NVL\(ACTIVO/i);
+  });
+
+  it("re-throws non-ORA-00904 error", async () => {
+    const dbErr = Object.assign(new Error("ORA-00942: table not found"), { errorNum: 942 });
+    mockExecute.mockRejectedValueOnce(dbErr);
+    await expect(findArticulosConStockBajo()).rejects.toThrow("ORA-00942");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -119,22 +145,111 @@ describe("markAsRead", () => {
   });
 });
 
-// ── upsertStockBajo ──────────────────────────────────────────────────────────
+// ── syncStockBajoConsolidado ─────────────────────────────────────────────────
 
-describe("upsertStockBajo", () => {
-  it("inserta cuando no existe notificación pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // CHECK
-    mockExecute.mockResolvedValueOnce({});                       // INSERT
-    await upsertStockBajo(1, "Stock bajo: Silla");
+describe("syncStockBajoConsolidado", () => {
+  it("inserta nueva notificación cuando no hay pendiente y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin pendiente
+    mockExecute.mockResolvedValueOnce({});           // INSERT
+    await syncStockBajoConsolidado("3 artículos con stock bajo.");
     expect(mockExecute).toHaveBeenCalledTimes(2);
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
-  it("no inserta cuando ya existe una notificación pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] }); // CHECK
-    await upsertStockBajo(1, "Stock bajo: Silla");
+  it("actualiza la existente en lugar de insertar duplicado cuando ya hay pendiente", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 5 }] }); // SELECT — hay pendiente
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE mensaje
+    await syncStockBajoConsolidado("Silla (1 uds).");
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("cierra la pendiente existente cuando mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 5 }] }); // SELECT — hay pendiente
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE a LEIDA
+    await syncStockBajoConsolidado(null);
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("no hace nada cuando no hay pendiente y mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin pendiente
+    await syncStockBajoConsolidado(null);
     expect(mockExecute).toHaveBeenCalledTimes(1);
-    expect(mockCommit).not.toHaveBeenCalled();
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── markAllAsRead ─────────────────────────────────────────────────────────────
+
+describe("markAllAsRead", () => {
+  it("marca todas las notificaciones pendientes como leídas", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await markAllAsRead();
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("ESTATUS = 'PENDIENTE'"));
+  });
+});
+
+// ── insertPreregistroNuevo ───────────────────────────────────────────────────
+
+describe("insertPreregistroNuevo", () => {
+  it("inserta una notificación PREREGISTRO_NUEVO con la CURP y nombre", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertPreregistroNuevo("ABCD900101HXYZRL01", "Juan García");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("PREREGISTRO_NUEVO"),
+      expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── insertBeneficiarioBaja ───────────────────────────────────────────────────
+
+describe("insertBeneficiarioBaja", () => {
+  it("inserta una notificación BENEFICIARIO_BAJA con la CURP y nombre", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertBeneficiarioBaja("ABCD900101HXYZRL01", "Juan García");
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("BENEFICIARIO_BAJA"),
+      expect.objectContaining({ curp: "ABCD900101HXYZRL01" })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── findCitasHoyProgramadas ──────────────────────────────────────────────────
+
+describe("findCitasHoyProgramadas", () => {
+  it("retorna filas de la query", async () => {
+    const fila = { ID_CITA: 1, ESPECIALISTA: "Dr. X", NOMBRE: "Juan García", HORA: "10:00" };
+    mockExecute.mockResolvedValueOnce({ rows: [fila] });
+    const result = await findCitasHoyProgramadas();
+    expect(result).toEqual([fila]);
+    expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining("PROGRAMADA"));
+  });
+});
+
+// ── syncCitasHoyConsolidado ──────────────────────────────────────────────────
+
+describe("syncCitasHoyConsolidado", () => {
+  it("limpia pendientes e inserta notificación cuando hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({}); // UPDATE
+    mockExecute.mockResolvedValueOnce({}); // INSERT
+    await syncCitasHoyConsolidado("2 citas de hoy sin confirmar.");
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("solo limpia pendientes cuando mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    await syncCitasHoyConsolidado(null);
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -154,5 +269,23 @@ describe("upsertMembresia", () => {
     await upsertMembresia("ABCD000000XXXXXX00", "MEMBRESIA_PROXIMA", "mensaje");
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockCommit).not.toHaveBeenCalled();
+  });
+});
+
+// ── insertReporteGenerado ─────────────────────────────────────────────────────
+
+describe("insertReporteGenerado", () => {
+  it.each([
+    ["MENSUAL",   "mensual"],
+    ["SEMESTRAL", "semestral"],
+    ["ANUAL",     "anual"],
+  ])("inserta notificación REPORTE_GENERADO para tipo %s", async (tipo, label) => {
+    mockExecute.mockResolvedValueOnce({});
+    await insertReporteGenerado(tipo, "2025-01-01", "2025-01-31");
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("REPORTE_GENERADO"),
+      expect.objectContaining({ msg: expect.stringContaining(label) })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

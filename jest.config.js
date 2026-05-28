@@ -7,14 +7,17 @@ export default {
   // Archivos fuente sobre los que se mide cobertura
   collectCoverageFrom: [
     "src/**/*.js",
-    "!src/server.js",      // entrypoint — no tiene lógica testeable
-    "!src/config/db.js",   // infraestructura Oracle — siempre mockeada
-    "!src/tests/**",       // los tests mismos no se miden
+    "!src/server.js",        // entrypoint — no tiene lógica testeable
+    "!src/config/db.js",     // infraestructura Oracle — siempre mockeada
+    "!src/tests/**",         // los tests mismos no se miden
+    "!src/migrations/**",    // migraciones DDL — requieren Oracle real, no son lógica de negocio
+    "!src/seeds/**",         // scripts de seed — solo para desarrollo
+    "!src/scripts/**",       // scripts utilitarios — no son parte del API
   ],
 
   coverageDirectory: "coverage",
 
-  coverageReporters: ["text", "lcov", "html"],
+  coverageReporters: ["text", "lcov", "html", "json-summary"],
 
   // Falla el run si no se alcanzan los umbrales
   coverageThreshold: {

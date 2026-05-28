@@ -8,6 +8,7 @@ import {
   HeartPulse, Target, Eye, HandHeart, CheckCircle2,
   Stethoscope, Heart, Phone, Mail, MapPin,
   CreditCard, ExternalLink, Quote,
+  FlaskConical, Pill, Armchair, Activity, Brain, Users, Apple,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -85,6 +86,49 @@ const ESPINA_TYPES = [
   },
 ]
 
+const SERVICIOS = [
+  {
+    icon: Stethoscope,
+    title: "Consulta médica",
+    desc: "Atención médica especializada para diagnóstico, seguimiento y manejo de la espina bífida y sus complicaciones.",
+  },
+  {
+    icon: FlaskConical,
+    title: "Estudios de laboratorio",
+    desc: "Análisis clínicos y estudios de diagnóstico necesarios para el seguimiento médico de cada beneficiario.",
+  },
+  {
+    icon: Pill,
+    title: "Medicamentos",
+    desc: "Gestión y suministro de medicamentos esenciales para el tratamiento y control de la condición.",
+  },
+  {
+    icon: Armchair,
+    title: "Comodato de equipo",
+    desc: "Préstamo de sillas de ruedas, andaderas y equipo ortopédico para mejorar la movilidad y calidad de vida.",
+  },
+  {
+    icon: Activity,
+    title: "Fisioterapia",
+    desc: "Sesiones terapéuticas para mantener y mejorar la función motora, la fuerza muscular y la independencia.",
+  },
+  {
+    icon: Brain,
+    title: "Psicología",
+    desc: "Apoyo emocional y psicológico para beneficiarios y familias, promoviendo el bienestar mental.",
+  },
+  {
+    icon: Users,
+    title: "Trabajo social",
+    desc: "Orientación y gestión de apoyos institucionales, vinculación con programas de asistencia y recursos comunitarios.",
+  },
+  {
+    icon: Apple,
+    title: "Nutrición",
+    desc: "Asesoría nutricional personalizada para favorecer el desarrollo y la salud integral de cada beneficiario.",
+  },
+]
+
 const DONORS = [
   "Laboratorios Dr. Moreira", "Christus Muguerza", "Uro-Pelvic Experts", "Médicolira",
   "Digraf", "Energex", "Fundación Maiz Velarde", "Fundación R. A. y J.A. Chapa González",
@@ -142,6 +186,7 @@ export function PublicSiteHome() {
             <button onClick={() => scrollTo("espina-bifida")}      className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Espina Bífida</button>
             <button onClick={() => scrollTo("seccion-registro")}   className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Registro</button>
             <button onClick={() => scrollTo("proceso")}            className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Proceso</button>
+            <button onClick={() => scrollTo("servicios")}          className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Servicios</button>
             <button onClick={() => scrollTo("apoyanos")}           className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Apóyanos</button>
             <button onClick={() => scrollTo("contacto")}           className="transition-colors hover:text-[#0f4c81] dark:hover:text-blue-400">Contacto</button>
           </nav>
@@ -472,6 +517,44 @@ export function PublicSiteHome() {
               </div>
             </div>
           </RevealOnView>
+        </section>
+
+        {/* ── Servicios ────────────────────────────────────────── */}
+        <section id="servicios" className="scroll-mt-20 bg-[#f8faff] px-6 py-20 lg:px-12 dark:bg-slate-900/40">
+          <div className="mx-auto max-w-7xl">
+
+            <RevealOnView>
+              <div className="mb-14">
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#0f4c81] dark:text-blue-400">
+                  Lo que ofrecemos
+                </p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                  Nuestros <span className="text-[#0f4c81] dark:text-blue-400">servicios</span>
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400">
+                  Brindamos atención integral con un equipo multidisciplinario comprometido. Cada servicio está diseñado para acompañar al beneficiario y a su familia en cada etapa.
+                </p>
+              </div>
+            </RevealOnView>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {SERVICIOS.map(({ icon: Icon, title, desc }, i) => (
+                <RevealOnView key={title} delay={i * 70} className="h-full">
+                  <div className="flex h-full flex-col rounded-xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                    <div
+                      className="mb-4 flex size-11 items-center justify-center rounded-xl"
+                      style={{ backgroundColor: `${NAVY}18` }}
+                    >
+                      <Icon className="size-5" style={{ color: NAVY }} />
+                    </div>
+                    <h3 className="mb-2 text-base font-bold text-slate-900 dark:text-white">{title}</h3>
+                    <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{desc}</p>
+                  </div>
+                </RevealOnView>
+              ))}
+            </div>
+
+          </div>
         </section>
 
         {/* ── Apóyanos ─────────────────────────────────────────── */}

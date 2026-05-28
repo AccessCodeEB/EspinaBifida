@@ -1,5 +1,6 @@
 import * as InventarioModel from "../models/inventario.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
+import { checkStockBajo } from "./notificaciones.service.js";
 
 function normalizeMovimientoData(data = {}) {
   const rawIdProducto = data.idProducto ?? data.idArticulo;
@@ -63,7 +64,10 @@ function mapMovimientoRow(row) {
 
 export async function createMovimiento(data) {
   const normalized = normalizeMovimientoData(data);
-  return InventarioModel.createMovimientoConTransaccion(normalized);
+  const result = await InventarioModel.createMovimientoConTransaccion(normalized);
+  // Actualiza notificación de stock en segundo plano tras cada movimiento
+  checkStockBajo().catch(() => {});
+  return result;
 }
 
 export async function getInventarioActual() {
@@ -71,8 +75,8 @@ export async function getInventarioActual() {
   return rows.map(mapInventarioRow);
 }
 
-export async function getMovimientos() {
-  const rows = await InventarioModel.findMovimientos();
+export async function getMovimientos(days = null) {
+  const rows = await InventarioModel.findMovimientos(days);
   return rows.map(mapMovimientoRow);
 }
 

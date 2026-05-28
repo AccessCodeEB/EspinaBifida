@@ -121,7 +121,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   });
 
   test("crea artículo correctamente (201)", async () => {
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1, outBinds: { newId: [101] } });
 
     const res = await request(app)
       .post("/api/v1/articulos")
@@ -130,9 +130,11 @@ describe("POST /api/v1/articulos — crear artículo", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.message).toMatch(/creado/i);
+    expect(res.body.data.idArticulo).toBe(101);
   });
 
   test("acepta body sin idArticulo → 201 (trigger Oracle asigna NEXTVAL)", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1, outBinds: { newId: [202] } });
     const { idArticulo, ...sinId } = articuloBase;
 
     const res = await request(app)
@@ -180,7 +182,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   });
 
   test("acepta manejaInventario 'N' (201)", async () => {
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1, outBinds: { newId: [101] } });
 
     const res = await request(app)
       .post("/api/v1/articulos")
@@ -191,7 +193,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   });
 
   test("acepta cuotaRecuperacion = 0", async () => {
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1, outBinds: { newId: [101] } });
 
     const res = await request(app)
       .post("/api/v1/articulos")
@@ -232,7 +234,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
   });
 
   test("acepta stockMinimo = 0 (borde válido)", async () => {
-    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1, outBinds: { newId: [101] } });
 
     const res = await request(app)
       .post("/api/v1/articulos")

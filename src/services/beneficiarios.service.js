@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
+import * as NotificacionesModel from "../models/notificaciones.model.js";
 import { badRequest, notFound, conflict, mapOracleError } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { CURP_REGEX, EMAIL_REGEX, TEL_REGEX, CP_REGEX, sanitizeString } from "../utils/validators.js";
@@ -303,7 +304,10 @@ export async function createPublicSolicitud(data) {
     throw conflict(`Ya existe un beneficiario con la CURP ${data.curp}`, "DUPLICATE_CURP");
   }
 
-  return BeneficiarioModel.create({ ...data, estatus: "Inactivo" });
+  const result = await BeneficiarioModel.create({ ...data, estatus: "Inactivo" });
+  const nombre = `${data.nombres ?? ""} ${data.apellidoPaterno ?? ""}`.trim();
+  NotificacionesModel.insertPreregistroNuevo(data.curp, nombre).catch(() => {});
+  return result;
 }
 
 export async function approvePreRegistro(curp) {
@@ -364,6 +368,9 @@ export async function deactivate(curp) {
 
   await BeneficiarioModel.deactivate(id);
   await MembresiasModel.cancelarPorCurp(id);
+
+  const nombre = `${existente.NOMBRES ?? existente.nombres ?? ""} ${existente.APELLIDO_PATERNO ?? existente.apellidoPaterno ?? ""}`.trim();
+  NotificacionesModel.insertBeneficiarioBaja(id, nombre).catch(() => {});
 }
 
 /**

@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import path from "node:path";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 
+import { getConnection } from "./config/db.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -32,6 +34,8 @@ import catalogoRoutes           from "./routes/servicios-catalogo.routes.js";
 import notificacionesRoutes    from "./routes/notificaciones.routes.js";
 
 const app = express();
+
+app.use(helmet());
 
 // CORS: environment-aware.
 // Si FRONTEND_URL está definida, solo se permite ese origen y localhost:3001 (dev).
@@ -69,6 +73,18 @@ app.post('/api/v1/administradores/forgot-password', otpLimiter);
 app.use(authLimiter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+// /ready — verifica que el pool de Oracle esté inicializado
+// Usado por wait-on en CI para esperar que la DB esté lista antes de correr los tests E2E
+app.get("/ready", async (_req, res) => {
+  try {
+    const conn = await getConnection();
+    await conn.close();
+    res.json({ status: "ready" });
+  } catch {
+    res.status(503).json({ status: "starting" });
+  }
+});
 
 app.use("/beneficiarios",  beneficiariosRoutes);
 app.use("/api/v1/beneficiarios", beneficiariosV1Routes);

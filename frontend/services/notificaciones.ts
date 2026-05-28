@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api-client"
 
-export type TipoNotificacion = "STOCK_BAJO" | "MEMBRESIA_PROXIMA" | "MEMBRESIA_VENCIDA"
+export type TipoNotificacion = "STOCK_BAJO" | "MEMBRESIA_PROXIMA" | "MEMBRESIA_VENCIDA" | "PREREGISTRO_NUEVO" | "BENEFICIARIO_BAJA" | "CITA_HOY" | "REPORTE_GENERADO"
 export type EstatusNotificacion = "PENDIENTE" | "LEIDA"
 
 export interface Notificacion {
@@ -29,6 +29,10 @@ export function getCount() {
 
 export function marcarLeida(id: number) {
   return apiClient.patch<{ message: string }>(`/notificaciones/${id}/leer`, {})
+}
+
+export function marcarTodasLeidas() {
+  return apiClient.patch<{ message: string }>("/notificaciones/leer-todas", {})
 }
 
 export function runJob() {

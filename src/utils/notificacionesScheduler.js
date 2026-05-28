@@ -11,5 +11,15 @@ export function initNotificacionesScheduler() {
       console.error("[notificaciones-scheduler] Error en job:", err);
     }
   });
+
+  // Ejecuta el job al arrancar el servidor para tener notificaciones actualizadas de inmediato
+  setImmediate(async () => {
+    try {
+      await runJob();
+    } catch (err) {
+      console.error("[notificaciones-scheduler] Error en run inicial:", err);
+    }
+  });
+
   console.log("[notificaciones-scheduler] Activado (0 2 * * *)");
 }

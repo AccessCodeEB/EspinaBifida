@@ -20,7 +20,8 @@ export async function getInventario(req, res, next) {
 
 export async function getMovimientos(req, res, next) {
   try {
-    const rows = await InventarioService.getMovimientos();
+    const dias = req.query.dias ? Number(req.query.dias) : null;
+    const rows = await InventarioService.getMovimientos(dias && !isNaN(dias) ? dias : null);
     res.json(rows);
   } catch (err) {
     next(err);

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import * as ServiciosController from "../controllers/servicios.controller.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { crearServicioSchema, actualizarServicioSchema } from "../validators/servicios.schema.js";
 
 const router = Router();
 
@@ -166,7 +168,8 @@ router.get("/", ServiciosController.getAll);
  *             schema:
  *               $ref: '#/components/schemas/Error500'
  */
-router.post("/", verifyToken, checkRole(1, 2), ServiciosController.create);
+// POST /servicios - Crear nuevo servicio (con validación de membresía activa)
+router.post("/", verifyToken, checkRole(1, 2), validate(crearServicioSchema), ServiciosController.create);
 
 /**
  * @openapi
@@ -419,7 +422,8 @@ router.get("/:curp", verifyToken, ServiciosController.getByCurp);
  *             schema:
  *               $ref: '#/components/schemas/Error500'
  */
-router.put("/:idServicio", verifyToken, checkRole(1, 2), ServiciosController.update);
+// PUT /servicios/:idServicio - Actualizar servicio (monto pagado, notas)
+router.put("/:idServicio", verifyToken, checkRole(1, 2), validate(actualizarServicioSchema), ServiciosController.update);
 
 /**
  * @openapi

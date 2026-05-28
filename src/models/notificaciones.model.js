@@ -4,14 +4,55 @@ import { notFound } from "../utils/httpErrors.js";
 // ── Queries de detección (usadas por el job) ──────────────────────────────────
 
 export const findArticulosConStockBajo = () =>
+  withConnection(async conn => {
+    try {
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND NVL(ACTIVO, 'S') = 'S'
+           AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
+      )).rows;
+    } catch (err) {
+      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
+      )).rows;
+    }
+  });
+
+export const findCitasHoyProgramadas = () =>
   withConnection(conn =>
     conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
-       FROM ARTICULOS
-       WHERE MANEJA_INVENTARIO = 'S'
-         AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
+      `SELECT c.ID_CITA, c.ESPECIALISTA,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS NOMBRE,
+              TO_CHAR(c.FECHA, 'HH24:MI') AS HORA
+       FROM CITAS c
+       JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+       WHERE TRUNC(c.FECHA) = TRUNC(SYSDATE)
+         AND c.ESTATUS = 'PROGRAMADA'
+       ORDER BY c.FECHA`
     ).then(r => r.rows)
   );
+
+export const syncCitasHoyConsolidado = (mensaje) =>
+  withConnection(async conn => {
+    await conn.execute(
+      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE TIPO = 'CITA_HOY' AND ESTATUS = 'PENDIENTE'`
+    );
+    if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('CITA_HOY', 'CITA', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
 
 export const findMembresiasProximas = () =>
   withConnection(conn =>
@@ -92,23 +133,86 @@ export const markAsRead = (id) =>
     await conn.commit();
   });
 
-/**
- * Crea notificación STOCK_BAJO solo si no existe una PENDIENTE para ese artículo.
- * Idempotente por (TIPO, REFERENCIA_ID, ESTATUS='PENDIENTE').
- */
-export const upsertStockBajo = (idArticulo, mensaje) =>
+export const markAllAsRead = () =>
   withConnection(async conn => {
-    const { rows } = await conn.execute(
-      `SELECT COUNT(*) AS CNT FROM NOTIFICACIONES
-       WHERE TIPO = 'STOCK_BAJO' AND REFERENCIA_ID = :id AND ESTATUS = 'PENDIENTE'`,
-      { id: idArticulo }
-    );
-    if (Number(rows[0].CNT) > 0) return; // ya existe, no duplicar
-
     await conn.execute(
-      `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_ID, REFERENCIA_TIPO, MENSAJE)
-       VALUES ('STOCK_BAJO', :id, 'ARTICULO', :msg)`,
-      { id: idArticulo, msg: mensaje }
+      `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE ESTATUS = 'PENDIENTE'`
+    );
+    await conn.commit();
+  });
+
+/**
+ * Sincroniza la notificación consolidada de stock bajo.
+ * Marca todas las STOCK_BAJO PENDIENTE como leídas (incluye las antiguas por artículo),
+ * luego inserta una sola notificación consolidada si se provee mensaje.
+ * Pasar mensaje=null solo limpia las existentes (cuando no hay artículos con stock bajo).
+ */
+export const syncStockBajoConsolidado = (mensaje) =>
+  withConnection(async conn => {
+    // ¿Ya existe una notificación PENDIENTE de stock bajo?
+    const { rows } = await conn.execute(
+      `SELECT ID_NOTIFICACION FROM NOTIFICACIONES
+       WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'
+       FETCH FIRST 1 ROWS ONLY`
+    );
+
+    if (rows.length > 0) {
+      if (mensaje) {
+        // Actualiza la existente en lugar de crear un duplicado
+        await conn.execute(
+          `UPDATE NOTIFICACIONES
+           SET MENSAJE = :msg, FECHA_CREACION = SYSDATE
+           WHERE ID_NOTIFICACION = :id`,
+          { msg: mensaje, id: rows[0].ID_NOTIFICACION }
+        );
+      } else {
+        // Ya no hay stock bajo: cierra la notificación
+        await conn.execute(
+          `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+           WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'`
+        );
+      }
+    } else if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('STOCK_BAJO', 'ARTICULO', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
+
+export const insertReporteGenerado = (tipo, fechaInicio, fechaFin) =>
+  withConnection(async conn => {
+    const label = tipo === 'MENSUAL' ? 'mensual' : tipo === 'SEMESTRAL' ? 'semestral' : 'anual';
+    const msg = `Reporte ${label} generado automáticamente (${fechaInicio} – ${fechaFin}).`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('REPORTE_GENERADO', 'REPORTE', :msg)`,
+      { msg }
+    );
+    await conn.commit();
+  });
+
+export const insertBeneficiarioBaja = (curp, nombre) =>
+  withConnection(async conn => {
+    const msg = `Beneficiario ${nombre} (CURP: ${curp}) fue dado de baja del sistema.`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, CURP, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('BENEFICIARIO_BAJA', :curp, 'BENEFICIARIO', :msg)`,
+      { curp, msg }
+    );
+    await conn.commit();
+  });
+
+export const insertPreregistroNuevo = (curp, nombre) =>
+  withConnection(async conn => {
+    const msg = `Nuevo pre-registro de ${nombre} (CURP: ${curp}). Pendiente de revisión.`;
+    await conn.execute(
+      `INSERT INTO NOTIFICACIONES (TIPO, CURP, REFERENCIA_TIPO, MENSAJE)
+       VALUES ('PREREGISTRO_NUEVO', :curp, 'BENEFICIARIO', :msg)`,
+      { curp, msg }
     );
     await conn.commit();
   });

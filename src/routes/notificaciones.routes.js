@@ -155,6 +155,7 @@ router.get(  "/count",         verifyToken,              Ctrl.getCount);
  *               $ref: '#/components/schemas/Error404'
  */
 router.patch("/:id/leer",      verifyToken,              Ctrl.marcarLeida);
+router.patch("/leer-todas",    verifyToken,              Ctrl.marcarTodasLeidas);
 
 /**
  * @openapi

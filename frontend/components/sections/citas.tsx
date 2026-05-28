@@ -13,6 +13,7 @@ import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
+import { cn } from "@/lib/utils"
 
 // 30-min time slots 08:00 – 20:00
 const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
@@ -21,6 +22,22 @@ const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
 }).filter(t => {
   const [h] = t.split(":").map(Number); return h < 20
 })
+
+function startOfDayLocal(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+function parseSlotLocal(fecha: string, hora: string): Date {
+  const [y, mo, day] = fecha.split("-").map(Number)
+  const [h, mi] = hora.split(":").map(Number)
+  return new Date(y, mo - 1, day, h, mi, 0, 0)
+}
+
+/** true si el inicio del slot ya pasó (hora local del navegador). */
+function isSlotInPast(fecha: string, hora: string, now = new Date()): boolean {
+  return parseSlotLocal(fecha, hora).getTime() <= now.getTime()
+}
+
 const ESPECIALISTAS = [
   "Dr. Roberto Méndez - Neurología",
   "Dra. Patricia Solís - Rehabilitación",
@@ -138,26 +155,36 @@ export function CitasSection() {
     setSmartSuggestion(null)
     setSaveError(null)
 
-    // Paso B: Búsqueda iterativa
-    const startDate = form.fecha ? new Date(form.fecha + "T12:00:00") : new Date()
-    const SLOTS: string[] = []
-    for (let h = 8; h < 20; h++) {
-      SLOTS.push(`${String(h).padStart(2, "0")}:00`)
-      SLOTS.push(`${String(h).padStart(2, "0")}:30`)
-    }
+    // Paso B: Búsqueda iterativa — solo desde hoy y horarios futuros (hora local)
+    const now = new Date()
+    const todayStart = startOfDayLocal(now)
+    let anchor = form.fecha
+      ? startOfDayLocal(new Date(form.fecha + "T12:00:00"))
+      : todayStart
+    if (anchor < todayStart) anchor = todayStart
 
     let found = false
     for (let dayOffset = 0; dayOffset < 7 && !found; dayOffset++) {
-      const d = new Date(startDate)
-      d.setDate(startDate.getDate() + dayOffset)
-      const fechaStr = d.toISOString().split("T")[0]
+      const d = new Date(anchor)
+      d.setDate(anchor.getDate() + dayOffset)
+      const fechaStr = [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0"),
+      ].join("-")
 
-      for (const hora of SLOTS) {
+      for (const hora of TIME_SLOTS) {
+        if (isSlotInPast(fechaStr, hora, now)) continue
         const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
         if (!error) {
           // Paso C: Hallazgo — aplicar al formulario
           setForm(f => ({ ...f, fecha: fechaStr, hora }))
-          const label = dayOffset === 0 ? "hoy" : dayOffset === 1 ? "mañana" : `en ${dayOffset} días`
+          const daysAhead = Math.round(
+            (startOfDayLocal(parseSlotLocal(fechaStr, "08:00")).getTime() - todayStart.getTime()) /
+              86400000,
+          )
+          const label =
+            daysAhead === 0 ? "hoy" : daysAhead === 1 ? "mañana" : `en ${daysAhead} días`
           setSmartSuggestion(`✨ Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
           toast.success("¡Horario ideal encontrado y aplicado!", { description: `${fechaStr} · ${hora}` })
           found = true
@@ -182,6 +209,10 @@ export function CitasSection() {
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
+    if (isSlotInPast(form.fecha, form.hora)) {
+      setSaveError("No puedes agendar una cita en un horario que ya pasó.")
+      return
+    }
     const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp)
     if (slotError) { setSaveError(slotError); return }
     setSaving(true); setSaveError(null)
@@ -380,24 +411,40 @@ export function CitasSection() {
                       handleSuggestSmartSlot()
                     }}
                     disabled={isFindingSlot}
-                    className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold transition-all duration-300 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(14,165,233,0.15)] disabled:opacity-60"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(15,76,129,0.5) 0%, rgba(13,148,136,0.3) 100%)",
-                      backdropFilter: "blur(8px)",
-                      filter: isUnlocked ? "none" : "saturate(0) brightness(0.6)",
-                      cursor: isUnlocked ? "pointer" : "default",
-                    }}
+                    className={cn(
+                      "group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-2.5 text-sm font-semibold backdrop-blur-sm transition-all duration-300 disabled:opacity-60",
+                      isUnlocked
+                        ? "cursor-pointer border border-sky-500/25 bg-gradient-to-br from-[#0f4c81]/12 via-sky-500/10 to-teal-500/15 hover:border-sky-500/45 hover:shadow-[0_0_16px_rgba(14,165,233,0.12)] dark:border-white/10 dark:from-[#0f4c81]/50 dark:via-[#0f4c81]/35 dark:to-teal-600/30 dark:hover:border-sky-500/50 dark:hover:shadow-[0_0_20px_rgba(14,165,233,0.15)]"
+                        : "cursor-default border border-border bg-muted/50 text-muted-foreground dark:border-white/10 dark:bg-gradient-to-br dark:from-[#0f4c81]/50 dark:via-[#0f4c81]/30 dark:to-teal-600/30 dark:saturate-0 dark:brightness-[0.6] dark:text-muted-foreground",
+                    )}
                   >
-                    <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 to-teal-500/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 to-teal-500/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:from-sky-500/10 dark:to-teal-500/10" />
                     {isFindingSlot ? (
                       <>
-                        <span className="size-3.5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
-                        <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Buscando horario ideal...</span>
+                        <span className="size-3.5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent dark:border-sky-400" />
+                        <span className="bg-gradient-to-r from-sky-600 to-teal-600 bg-clip-text text-transparent dark:from-sky-400 dark:to-teal-400">
+                          Buscando horario ideal...
+                        </span>
                       </>
                     ) : (
                       <>
-                        <Sparkles className="size-3.5 text-sky-400" />
-                        <span className="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">Sugerir mejor horario</span>
+                        <Sparkles
+                          className={cn(
+                            "size-3.5",
+                            isUnlocked
+                              ? "text-sky-600 dark:text-sky-400"
+                              : "text-muted-foreground",
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            isUnlocked
+                              ? "bg-gradient-to-r from-sky-600 to-teal-600 bg-clip-text text-transparent dark:from-sky-400 dark:to-teal-400"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          Sugerir mejor horario
+                        </span>
                       </>
                     )}
                   </button>
@@ -426,7 +473,7 @@ export function CitasSection() {
 
               {/* Resultado de la sugerencia IA */}
               {smartSuggestion && (
-                <div className="flex items-center gap-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs font-medium text-teal-400">
+                <div className="flex items-center gap-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs font-medium text-teal-700 dark:text-teal-400">
                   <Sparkles className="size-3.5 shrink-0" />
                   {smartSuggestion}
                 </div>
@@ -452,9 +499,12 @@ export function CitasSection() {
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
               Cancelar
             </button>
-            <button type="button" onClick={handleGuardar} disabled={saving || !!saveError}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: NAVY }}>
+            <button
+              type="button"
+              onClick={handleGuardar}
+              disabled={saving || !!saveError}
+              className="rounded-lg bg-[#0f4c81] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-primary"
+            >
               {saving ? "Guardando..." : "Guardar cita"}
             </button>
           </div>

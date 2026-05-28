@@ -22,9 +22,14 @@ const mockGuardarRegistro = jest.fn();
 
 jest.unstable_mockModule("../models/reportes.model.js", () => ({
   guardarRegistro: mockGuardarRegistro,
-  // otros métodos que el módulo pueda necesitar
   findAll:   jest.fn(),
   findById:  jest.fn(),
+}));
+
+const mockInsertReporteGenerado = jest.fn().mockResolvedValue(undefined);
+
+jest.unstable_mockModule("../models/notificaciones.model.js", () => ({
+  insertReporteGenerado: mockInsertReporteGenerado,
 }));
 
 const mockMkdir     = jest.fn();
@@ -231,5 +236,42 @@ describe("generarAutomatico — callback ANUAL exitoso", () => {
     await callback();
 
     expect(mockGuardarRegistro.mock.calls[0][0]).toMatchObject({ tipo: "ANUAL" });
+  });
+});
+
+describe("generarAutomatico — notificación REPORTE_GENERADO", () => {
+  test("llama insertReporteGenerado tras guardar registro exitosamente", async () => {
+    process.env.REPORT_MENSUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockResolvedValueOnce(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+    mockGuardarRegistro.mockResolvedValueOnce({});
+
+    initScheduler();
+    const callback = mockSchedule.mock.calls[0][1];
+    await callback();
+
+    expect(mockInsertReporteGenerado).toHaveBeenCalledWith(
+      "MENSUAL",
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    );
+  });
+
+  test("no lanza si insertReporteGenerado falla", async () => {
+    process.env.REPORT_MENSUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockResolvedValueOnce(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+    mockGuardarRegistro.mockResolvedValueOnce({});
+    mockInsertReporteGenerado.mockRejectedValueOnce(new Error("DB error"));
+
+    initScheduler();
+    const callback = mockSchedule.mock.calls[0][1];
+    await expect(callback()).resolves.toBeUndefined();
   });
 });
