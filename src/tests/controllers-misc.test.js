@@ -249,7 +249,7 @@ describe("GET /api/v1/administradores — CRUD", () => {
     const res = await request(app)
       .post("/api/v1/administradores")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send({ idRol: 1, nombreCompleto: "Nuevo Admin", email: "nuevo@test.com", password: "pass123" });
+      .send({ idRol: 1, nombreCompleto: "Nuevo Admin", email: "nuevo@test.com", password: "pass12345" });
 
     expect(res.status).toBe(201);
   });
@@ -352,8 +352,9 @@ describe("POST /api/v1/citas — crear cita", () => {
       .post("/api/v1/citas")
       .send({
         curp:            CURP_VALIDA,
+        especialista:    "Dr. Test",
         idTipoServicio:  1,
-        fecha:           "2026-07-01 09:00:00",
+        fecha:           "2026-07-01",
         estatus:         "PROGRAMADA",
       });
 
@@ -771,7 +772,7 @@ describe("POST /api/v1/administradores — error de DB → next(err) en create",
     const res = await request(app)
       .post("/api/v1/administradores")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send({ idRol: 1, nombreCompleto: "Test", email: "test@test.com", password: "pass123" });
+      .send({ idRol: 1, nombreCompleto: "Test", email: "test@test.com", password: "pass12345" });
 
     expect(res.status).toBe(500);
   });

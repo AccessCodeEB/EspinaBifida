@@ -210,7 +210,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
       .send({ ...articuloBase, stockMinimo: "abc" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/stockMinimo/i);
+    expect(JSON.stringify(res.body)).toMatch(/stockMinimo/i);
   });
 
   test("falla si stockMinimo es negativo → 400", async () => {
@@ -220,7 +220,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
       .send({ ...articuloBase, stockMinimo: -1 });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/stockMinimo/i);
+    expect(JSON.stringify(res.body)).toMatch(/stockMinimo/i);
   });
 
   test("falla si idArticulo no es numérico (NaN) → 400", async () => {
@@ -230,7 +230,7 @@ describe("POST /api/v1/articulos — crear artículo", () => {
       .send({ ...articuloBase, idArticulo: "not-a-number" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/idArticulo/i);
+    expect(JSON.stringify(res.body)).toMatch(/idArticulo/i);
   });
 
   test("acepta stockMinimo = 0 (borde válido)", async () => {

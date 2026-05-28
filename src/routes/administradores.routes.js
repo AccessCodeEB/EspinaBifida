@@ -529,13 +529,13 @@ router.put("/:idAdmin",             verifyToken, checkRole(1),    validate(actua
  *         application/json:
  *           schema:
  *             type: object
- *             required: [passwordActual, nuevaPassword]
+ *             required: [passwordActual, passwordNueva]
  *             properties:
  *               passwordActual:
  *                 type: string
  *                 format: password
  *                 example: "P@ssw0rdActual!"
- *               nuevaPassword:
+ *               passwordNueva:
  *                 type: string
  *                 format: password
  *                 example: "NuevaP@ss123!"

@@ -57,7 +57,7 @@ describe("Criterios de aceptación - inventario", () => {
         idTipoServicio: 1,
         costo: 100,
         montoPagado: 0,
-        consumos: [{ idProducto: 1, cantidad: 3 }],
+        consumos: [{ idArticulo: 1, cantidad: 3 }],
       });
 
     expect(res.status).toBe(201);
