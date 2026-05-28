@@ -45,7 +45,7 @@ describe("GET /membresias — getAll", () => {
   test("retorna lista mapeada correctamente (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [membresiaRow] });
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -60,7 +60,7 @@ describe("GET /membresias — getAll", () => {
       rows: [{ ...membresiaRow, ESTATUS_MEMBRESIA: "Vencida" }],
     });
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body[0].estatus).toBe("Vencida");
@@ -72,7 +72,7 @@ describe("GET /membresias — getAll", () => {
       rows: [{ ...membresiaRow, ESTATUS_MEMBRESIA: null }],
     });
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].estatus).toBe("Vencida");
   });
@@ -82,7 +82,7 @@ describe("GET /membresias — getAll", () => {
       rows: [{ ...membresiaRow, FECHA_ULTIMO_PAGO: null }],
     });
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].ultimoPago).toBe("2026-01-01");
   });
@@ -90,7 +90,7 @@ describe("GET /membresias — getAll", () => {
   test("lista vacía retorna arreglo vacío (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -110,6 +110,7 @@ describe("POST /membresias — createMembresia", () => {
 
     const res = await request(app)
       .post("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({
         curp:              CURP,
         numero_credencial: "CRED-002",
@@ -126,6 +127,7 @@ describe("POST /membresias — createMembresia", () => {
 
     const res = await request(app)
       .post("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ curp: CURP, numero_credencial: "X", fecha_emision: "2026-01-01" });
 
     expect(res.status).toBe(404);
@@ -134,6 +136,7 @@ describe("POST /membresias — createMembresia", () => {
   test("devuelve 400 si falta curp", async () => {
     const res = await request(app)
       .post("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ numero_credencial: "X", fecha_emision: "2026-01-01" });
 
     expect(res.status).toBe(400);
@@ -161,7 +164,7 @@ describe("GET /membresias/:curp — getMembresiaStatus", () => {
       }],
     });
 
-    const res = await request(app).get(`/membresias/${CURP}`);
+    const res = await request(app).get(`/membresias/${CURP}`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("activa");
@@ -174,7 +177,7 @@ describe("GET /membresias/:curp — getMembresiaStatus", () => {
     // setBeneficiarioInactivo
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).get(`/membresias/${CURP}`);
+    const res = await request(app).get(`/membresias/${CURP}`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.existe).toBe(false);
@@ -194,7 +197,7 @@ describe("Catch blocks de membresias.controller", () => {
   test("getAll → error de DB → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
-    const res = await request(app).get("/membresias");
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -202,7 +205,7 @@ describe("Catch blocks de membresias.controller", () => {
   test("getMembresiaStatus → error de DB → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
-    const res = await request(app).get(`/membresias/${CURP}`);
+    const res = await request(app).get(`/membresias/${CURP}`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -210,7 +213,7 @@ describe("Catch blocks de membresias.controller", () => {
   test("validarMembresiaActiva → error de DB → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
-    const res = await request(app).get(`/membresias/${CURP}/activa`);
+    const res = await request(app).get(`/membresias/${CURP}/activa`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -233,7 +236,7 @@ describe("GET /membresias/:curp/activa — validarMembresiaActiva", () => {
       }],
     });
 
-    const res = await request(app).get(`/membresias/${CURP}/activa`);
+    const res = await request(app).get(`/membresias/${CURP}/activa`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.activa).toBe(true);
@@ -246,7 +249,7 @@ describe("GET /membresias/:curp/activa — validarMembresiaActiva", () => {
     // setBeneficiarioInactivo
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).get(`/membresias/${CURP}/activa`);
+    const res = await request(app).get(`/membresias/${CURP}/activa`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.activa).toBe(false);
@@ -329,6 +332,30 @@ describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
     expect(res.status).toBe(200);
   });
 
+  test("mapPago con campos nulos cubre ramas ?? (líneas 35,40-43)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ...pagoRow,
+        NOMBRE_COMPLETO: null,
+        MONTO:           null,
+        METODO_PAGO:     null,
+        REFERENCIA:      null,
+        OBSERVACIONES:   null,
+      }],
+    });
+
+    const res = await request(app)
+      .get("/membresias/pagos/recientes")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].nombre).toBe("");
+    expect(res.body[0].monto).toBeNull();
+    expect(res.body[0].metodoPago).toBeNull();
+    expect(res.body[0].referencia).toBeNull();
+    expect(res.body[0].observaciones).toBeNull();
+  });
+
   test("error en getPagosRecientes → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB error"));
 
@@ -341,95 +368,79 @@ describe("GET /membresias/pagos/recientes — getPagosRecientes", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Ramas null coalescing — formatMonto + mapMembresia (GET /membresias)
+// formatMonto — ramas null y NaN (líneas 5 y 7)
+// mapMembresia — ramas null en diasRestantes, nombre, metodoPago (líneas 13,16,23)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("GET /membresias — ramas null de mapMembresia y formatMonto", () => {
-  test("MONTO null → formatMonto retorna null; DIAS_RESTANTES null → diasRestantes null", async () => {
+describe("formatMonto y mapMembresia — ramas null/NaN no cubiertas", () => {
+  test("monto null → formatMonto devuelve null (línea 5)", async () => {
     mockExecute.mockResolvedValueOnce({
-      rows: [{
-        ...membresiaRow,
-        MONTO:          null,
-        DIAS_RESTANTES: null,
-        METODO_PAGO:    null,
-        REFERENCIA:     null,
-      }],
+      rows: [{ ...membresiaRow, MONTO: null }],
     });
-
-    const res = await request(app).get("/membresias");
-
-    expect(res.status).toBe(200);
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.body[0].monto).toBeNull();
+  });
+
+  test("monto no numérico → formatMonto devuelve null por NaN (línea 7)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, MONTO: "no-es-numero" }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].monto).toBeNull();
+  });
+
+  test("diasRestantes null → campo diasRestantes devuelve null (línea 13)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, DIAS_RESTANTES: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.body[0].diasRestantes).toBeNull();
-    expect(res.body[0].metodoPago).toBeNull();
-    expect(res.body[0].referencia).toBeNull();
   });
 
-  test("MONTO 'abc' → formatMonto rama NaN → null; DIAS_RESTANTES '45.7' → Math.floor → 45", async () => {
-    mockExecute.mockResolvedValueOnce({
-      rows: [{
-        ...membresiaRow,
-        MONTO:          "abc",
-        DIAS_RESTANTES: "45.7",
-      }],
-    });
-
-    const res = await request(app).get("/membresias");
-
-    expect(res.status).toBe(200);
-    expect(res.body[0].monto).toBeNull();
-    expect(res.body[0].diasRestantes).toBe(45);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Ramas null coalescing — mapPago (GET /membresias/pagos/recientes)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-describe("GET /membresias/pagos/recientes — ramas null de mapPago", () => {
-  test("METODO_PAGO, REFERENCIA y OBSERVACIONES nulos → retornan null en respuesta", async () => {
-    mockExecute.mockResolvedValueOnce({
-      rows: [{
-        ...pagoRow,
-        METODO_PAGO:  null,
-        REFERENCIA:   null,
-        OBSERVACIONES: null,
-      }],
-    });
-
-    const res = await request(app)
-      .get("/membresias/pagos/recientes")
-      .set("Authorization", `Bearer ${tokenAdmin}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body[0].metodoPago).toBeNull();
-    expect(res.body[0].referencia).toBeNull();
-    expect(res.body[0].observaciones).toBeNull();
-  });
-
-  test("NOMBRE_COMPLETO null en mapPago → nombre = '' (L35 ?? branch)", async () => {
-    mockExecute.mockResolvedValueOnce({
-      rows: [{ ...pagoRow, NOMBRE_COMPLETO: null }],
-    });
-
-    const res = await request(app)
-      .get("/membresias/pagos/recientes")
-      .set("Authorization", `Bearer ${tokenAdmin}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body[0].nombre).toBe("");
-  });
-});
-
-describe("GET /membresias — NOMBRE_COMPLETO null en mapMembresia (L16 ?? branch)", () => {
-  test("NOMBRE_COMPLETO null → nombre = ''", async () => {
+  test("nombreCompleto null → nombre devuelve '' en mapMembresia (línea 16)", async () => {
     mockExecute.mockResolvedValueOnce({
       rows: [{ ...membresiaRow, NOMBRE_COMPLETO: null }],
     });
-
-    const res = await request(app).get("/membresias");
-
-    expect(res.status).toBe(200);
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
     expect(res.body[0].nombre).toBe("");
+  });
+
+  test("metodoPago null en membresía → null en respuesta (línea 23)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...membresiaRow, METODO_PAGO: null }],
+    });
+    const res = await request(app).get("/membresias").set("Authorization", `Bearer ${tokenAdmin}`);
+    expect(res.body[0].metodoPago).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORS environment-aware — ramas de app.js líneas 40-42
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("CORS environment-aware (app.js líneas 40-42)", () => {
+  test("origin en FRONTEND_URL → respuesta normal (línea 41)", async () => {
+    process.env.FRONTEND_URL = "https://example.com";
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .set("Origin", "https://example.com");
+
+    delete process.env.FRONTEND_URL;
+    expect(res.status).toBe(200);
+  });
+
+  test("origin no permitida con FRONTEND_URL → error CORS (línea 42)", async () => {
+    process.env.FRONTEND_URL = "https://example.com";
+
+    const res = await request(app)
+      .get("/membresias")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .set("Origin", "https://evil.com");
+
+    delete process.env.FRONTEND_URL;
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });

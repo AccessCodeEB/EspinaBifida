@@ -15,6 +15,7 @@ function mapAdminPublic(row) {
     fechaCreacion:  a.fechaCreacion,
     nombreRol:      a.nombreRol,
     fotoPerfilUrl:  a.fotoPerfilUrl ?? null,
+    telefono:       a.telefono ?? null,
   };
 }
 
@@ -23,6 +24,26 @@ export async function login(req, res, next) {
     const { email, password } = req.body;
     const resultado = await AdminService.login(email, password);
     res.json(resultado);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function refresh(req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    const result = await AdminService.refresh(refreshToken);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function logout(req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    await AdminService.revokeRefreshToken(refreshToken);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }
@@ -86,6 +107,31 @@ export async function deactivate(req, res, next) {
   }
 }
 
+export async function solicitarCodigo(req, res, next) {
+  try {
+    const result = await AdminService.solicitarCodigo(
+      Number(req.params.idAdmin),
+      req.user.idAdmin
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateTelefono(req, res, next) {
+  try {
+    await AdminService.updateTelefono(
+      Number(req.params.idAdmin),
+      req.body.telefono ?? null,
+      req.user.idAdmin
+    );
+    res.json({ message: "Teléfono actualizado exitosamente" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function uploadFotoPerfil(req, res, next) {
   try {
     if (!req.file) throw badRequest("Envía una imagen en el campo foto", "MISSING_FILE");
@@ -96,6 +142,25 @@ export async function uploadFotoPerfil(req, res, next) {
       req.user
     );
     res.json({ message: "Foto de perfil actualizada", fotoPerfilUrl });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function solicitarRecuperacion(req, res, next) {
+  try {
+    const result = await AdminService.solicitarRecuperacion(req.body.email);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPasswordPublico(req, res, next) {
+  try {
+    const { email, codigo, nuevaPassword } = req.body;
+    const result = await AdminService.resetPasswordPublico(email, codigo, nuevaPassword);
+    res.json(result);
   } catch (err) {
     next(err);
   }

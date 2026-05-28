@@ -34,8 +34,10 @@ export async function runMigration007() {
 /* istanbul ignore next -- standalone runner, not imported by tests */
 if (import.meta.url === `file://${process.argv[1]}`) {
   /* istanbul ignore next */
-  runMigration007().catch((err) => {
+  try {
+    await runMigration007();
+  } catch (err) {
     console.error("[migration-007] ❌ Error ejecutando migración:", err);
     process.exit(1);
-  });
+  }
 }

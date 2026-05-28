@@ -1,5 +1,7 @@
 # Reportes: 5 Tipos Adicionales — Implementation Plan
 
+> **STATUS: EJECUTADO** — Completado ~2026-05-14. Endpoints PDF/XLSX por tipo, generación automática por cron, cobertura 96.9%, frontend de descarga completo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implementar los 5 tipos de reporte faltantes (Beneficiarios, Membresías, Servicios, Inventario, Citas) end-to-end: query Oracle → PDF/XLSX → frontend descargable.

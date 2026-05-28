@@ -1,4 +1,4 @@
-import { loginLimiter, publicLimiter, authLimiter } from '../middleware/rateLimiter.js';
+import { loginLimiter, publicLimiter, authLimiter, otpLimiter } from '../middleware/rateLimiter.js';
 
 describe('rateLimiter configs', () => {
   test('loginLimiter has max=5 and windowMs=15 minutes', () => {
@@ -25,6 +25,7 @@ describe('rateLimiter configs', () => {
     expect(loginLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
     expect(publicLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
     expect(authLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
+    expect(otpLimiter.options.skip(fakeReq, fakeRes)).toBe(true);
   });
 
   test('all limiters do NOT skip in production environment', () => {
@@ -36,9 +37,26 @@ describe('rateLimiter configs', () => {
       expect(loginLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
       expect(publicLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
       expect(authLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
+      expect(otpLimiter.options.skip(fakeReq, fakeRes)).toBe(false);
     } finally {
       process.env.NODE_ENV = originalEnv;
     }
+  });
+
+  test('otpLimiter has max=5 and windowMs=15 minutes', () => {
+    expect(otpLimiter.options).toBeDefined();
+    expect(otpLimiter.options.max).toBe(5);
+    expect(otpLimiter.options.windowMs).toBe(15 * 60 * 1000);
+  });
+
+  test('otpLimiter usa idAdmin del param como clave cuando está disponible', () => {
+    const req = { params: { idAdmin: '42' }, ip: '127.0.0.1' };
+    expect(otpLimiter.options.keyGenerator(req)).toBe('42');
+  });
+
+  test('otpLimiter cae a ip cuando idAdmin no está en params', () => {
+    const req = { params: {}, ip: '10.0.0.1' };
+    expect(otpLimiter.options.keyGenerator(req)).toBe('10.0.0.1');
   });
 });
 

@@ -1,12 +1,14 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
-import path from "path";
+import path from "node:path";
 
+import { getConnection } from "./config/db.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
 import { REPO_ROOT } from "./repoRoot.js";
-import { loginLimiter, publicLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { loginLimiter, publicLimiter, authLimiter, otpLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config({ path: path.join(REPO_ROOT, ".env.defaults") });
 // Sin override: respeta variables ya definidas (p. ej. JWT_SECRET en CI o en tests).
@@ -25,14 +27,24 @@ import rolesRoutes            from "./routes/roles.routes.js";
 import reportesRoutes         from "./routes/reportes.routes.js";
 import configuracionRoutes    from "./routes/configuracion.routes.js";
 import especialistasRoutes    from "./routes/especialistas.routes.js";
-import catalogoRoutes         from "./routes/servicios-catalogo.routes.js";
+import catalogoRoutes           from "./routes/servicios-catalogo.routes.js";
+import notificacionesRoutes    from "./routes/notificaciones.routes.js";
 
 const app = express();
 
+app.use(helmet());
+
+// CORS: environment-aware.
+// Si FRONTEND_URL está definida, solo se permite ese origen y localhost:3001 (dev).
+// Si no está definida, se permite todo (fallback de desarrollo).
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    return callback(null, true);
+    if (!origin) return callback(null, true); // curl, SSR, mobile apps
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) return callback(null, true); // dev: permitir todo
+    const allowed = [frontendUrl, "http://localhost:3001"];
+    if (allowed.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS: origen no permitido"));
   },
   credentials: true,
 }));
@@ -45,9 +57,25 @@ app.post('/administradores/login', loginLimiter);
 app.post('/api/v1/administradores/login', loginLimiter);
 app.post('/beneficiarios/solicitud-publica', publicLimiter);
 app.post('/api/v1/beneficiarios/solicitud-publica', publicLimiter);
+app.post('/administradores/:idAdmin/solicitar-codigo', otpLimiter);
+app.post('/api/v1/administradores/:idAdmin/solicitar-codigo', otpLimiter);
+app.post('/administradores/forgot-password', otpLimiter);
+app.post('/api/v1/administradores/forgot-password', otpLimiter);
 app.use(authLimiter);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+// /ready — verifica que el pool de Oracle esté inicializado
+// Usado por wait-on en CI para esperar que la DB esté lista antes de correr los tests E2E
+app.get("/ready", async (_req, res) => {
+  try {
+    const conn = await getConnection();
+    await conn.close();
+    res.json({ status: "ready" });
+  } catch {
+    res.status(503).json({ status: "starting" });
+  }
+});
 
 app.use("/beneficiarios",  beneficiariosRoutes);
 app.use("/api/v1/beneficiarios", beneficiariosV1Routes);
@@ -68,7 +96,9 @@ app.use("/api/v1/roles", rolesRoutes);
 app.use("/api/v1/reportes", reportesRoutes);
 app.use("/configuracion",   configuracionRoutes);
 app.use("/especialistas",   especialistasRoutes);
-app.use("/servicios-catalogo", catalogoRoutes);
+app.use("/servicios-catalogo",   catalogoRoutes);
+app.use("/notificaciones",       notificacionesRoutes);
+app.use("/api/v1/notificaciones", notificacionesRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

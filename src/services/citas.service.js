@@ -1,7 +1,7 @@
 import * as citasModel from "../models/citas.model.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 
-const ESTATUS_VALIDOS = ["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"];
+const ESTATUS_VALIDOS = new Set(["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"]);
 
 export const getAllCitas = async () => {
   return await citasModel.findAll();
@@ -24,7 +24,7 @@ export const createCita = async (data) => {
     throw badRequest("CURP, idTipoServicio y fecha son obligatorios");
   }
 
-  if (estatus && !ESTATUS_VALIDOS.includes(estatus.toUpperCase())) {
+  if (estatus && !ESTATUS_VALIDOS.has(estatus.toUpperCase())) {
     throw badRequest("Estatus no válido");
   }
 
@@ -63,7 +63,7 @@ export const updateCita = async (id, data) => {
     ? data.estatus.toUpperCase()
     : String(cita.ESTATUS ?? "PROGRAMADA").toUpperCase();
 
-  if (!ESTATUS_VALIDOS.includes(estatus)) {
+  if (!ESTATUS_VALIDOS.has(estatus)) {
     throw badRequest("Estatus no válido");
   }
 

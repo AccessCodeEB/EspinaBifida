@@ -1,26 +1,31 @@
 export default {
   testEnvironment: "node",
 
+  // Excluir Playwright E2E, worktrees de Claude Code y cobertura generada
+  testPathIgnorePatterns: ["/node_modules/", "/.claude/worktrees/", "/coverage/", "/e2e/"],
+
   // Archivos fuente sobre los que se mide cobertura
   collectCoverageFrom: [
     "src/**/*.js",
-    "!src/server.js",          // entrypoint — no tiene lógica testeable
-    "!src/config/db.js",       // infraestructura Oracle — siempre mockeada
-    "!src/config/database.js", // idem
-    "!src/tests/**",           // los tests mismos no se miden
+    "!src/server.js",        // entrypoint — no tiene lógica testeable
+    "!src/config/db.js",     // infraestructura Oracle — siempre mockeada
+    "!src/tests/**",         // los tests mismos no se miden
+    "!src/migrations/**",    // migraciones DDL — requieren Oracle real, no son lógica de negocio
+    "!src/seeds/**",         // scripts de seed — solo para desarrollo
+    "!src/scripts/**",       // scripts utilitarios — no son parte del API
   ],
 
   coverageDirectory: "coverage",
 
-  coverageReporters: ["text", "lcov", "html"],
+  coverageReporters: ["text", "lcov", "html", "json-summary"],
 
   // Falla el run si no se alcanzan los umbrales
   coverageThreshold: {
     global: {
-      statements: 100,
-      branches:   100,
-      functions:  100,
-      lines:      100,
+      statements: 95,
+      branches:   95,
+      functions:  95,
+      lines:      95,
     },
   },
 

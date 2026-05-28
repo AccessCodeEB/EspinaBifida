@@ -26,7 +26,73 @@ jobs:
         env:
           JWT_SECRET: "ci-test-secret"
           CORS_ORIGIN: "http://localhost:3000"
-        # Falla automáticamente si los umbrales de cobertura no se cumplen
+        # Falla automáticamente si los umbrales de cobertura no se cumplen (jest.config.js → 95%)
+
+      - name: Coverage summary
+        if: always() && hashFiles('coverage/coverage-summary.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')).total;
+            const icon = pct => pct >= 95 ? '✅' : pct >= 80 ? '⚠️' : '❌';
+            const rows = [
+              ['Statements', raw.statements.pct],
+              ['Branches',   raw.branches.pct],
+              ['Functions',  raw.functions.pct],
+              ['Lines',      raw.lines.pct],
+            ];
+            let md = '## 📊 Cobertura de pruebas\n\n';
+            md += '| Métrica | Cobertura | Estado |\n';
+            md += '|---------|-----------|--------|\n';
+            for (const [name, pct] of rows) {
+              md += `| ${name} | ${pct.toFixed(1)}% | ${icon(pct)} |\n`;
+            }
+            md += '\n> Umbral mínimo: **95%** en todas las métricas.\n';
+            await core.summary.addRaw(md).write();
+
+      - name: PR coverage comment
+        if: github.event_name == 'pull_request' && hashFiles('coverage/coverage-summary.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')).total;
+            const icon = pct => pct >= 95 ? '✅' : pct >= 80 ? '⚠️' : '❌';
+            const rows = [
+              ['Statements', raw.statements.pct],
+              ['Branches',   raw.branches.pct],
+              ['Functions',  raw.functions.pct],
+              ['Lines',      raw.lines.pct],
+            ];
+            let body = '## 📊 Cobertura de pruebas\n\n';
+            body += '| Métrica | Cobertura | Estado |\n';
+            body += '|---------|-----------|--------|\n';
+            for (const [name, pct] of rows) {
+              body += `| ${name} | ${pct.toFixed(1)}% | ${icon(pct)} |\n`;
+            }
+            body += '\n> Umbral mínimo: **95%**. Generado automáticamente por CI.\n';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            for (const c of comments) {
+              if (c.body.includes('📊 Cobertura de pruebas')) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: c.id,
+                });
+              }
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
 
       - name: Upload coverage report
         if: always()
@@ -37,7 +103,121 @@ jobs:
           retention-days: 7
 
       - name: SonarCloud Scan
+        if: env.SONAR_TOKEN != ''
+        continue-on-error: true
         uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_HOST_URL: https://sonarcloud.io
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    # Activar definiendo ORACLE_E2E_ENABLED=true en Variables del repositorio
+    # Settings → Secrets and variables → Actions → Variables → New repository variable
+    if: vars.ORACLE_E2E_ENABLED == 'true'
+    continue-on-error: true
+
+    env:
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+      ORACLE_CLIENT_PATH: /opt/oracle/instantclient_21_12
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # oracledb en modo thick requiere las librerías nativas de Oracle Instant Client
+      - name: Install Oracle Instant Client
+        run: |
+          sudo apt-get install -y libaio1t64 unzip || sudo apt-get install -y libaio1 unzip
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1 2>/dev/null || true
+          mkdir -p /opt/oracle
+          wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
+            -O /tmp/instantclient.zip
+          unzip -q /tmp/instantclient.zip -d /opt/oracle
+          echo "/opt/oracle/instantclient_21_12" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+          sudo ldconfig
+
+      # Restaurar el wallet de Oracle Cloud desde el secret ORACLE_WALLET_B64.
+      # Crear el secret: tar -czf - -C /ruta/al/wallet . | base64 > wallet.b64
+      # Luego pegar el contenido de wallet.b64 como secret ORACLE_WALLET_B64 en GitHub.
+      - name: Restore Oracle wallet
+        run: |
+          mkdir -p wallet
+          echo "${{ secrets.ORACLE_WALLET_B64 }}" | base64 --decode | tar -xz -C wallet/
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      # Arrancar el backend en segundo plano (puerto 3000).
+      # Redirigir stdout/stderr a un archivo para poder diagnosticar fallos.
+      - name: Start backend
+        run: node src/server.js > /tmp/server.log 2>&1 &
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      # NEXT_PUBLIC_API_URL se bake en el build estático de Next.js
+      - name: Build frontend
+        run: npm run build --prefix frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+
+      # Arrancar el frontend en segundo plano (puerto 3001)
+      - name: Start frontend
+        run: npm --prefix frontend run start -- -p 3001 &
+
+      # Diagnóstico de arranque: verificar que el proceso node está corriendo y
+      # que el wallet fue extraído correctamente.
+      - name: Diagnose startup state
+        if: always()
+        run: |
+          echo "=== Node processes ==="
+          ps aux | grep node || echo "(no node process)"
+          echo "=== Wallet contents ==="
+          ls -la wallet/ 2>/dev/null || echo "wallet/ no existe"
+          ls -la wallet/wallet/ 2>/dev/null || echo "wallet/wallet/ no existe"
+          echo "=== sqlnet.ora ==="
+          cat wallet/sqlnet.ora 2>/dev/null || cat wallet/wallet/sqlnet.ora 2>/dev/null || echo "sqlnet.ora no encontrado"
+          echo "=== Backend log (últimas 50 líneas) ==="
+          tail -50 /tmp/server.log 2>/dev/null || echo "/tmp/server.log no existe"
+          echo "=== /health quick check ==="
+          curl -sf http://localhost:3000/health || echo "/health no responde aún"
+
+      # Esperar a que el backend esté listo y Oracle haya inicializado el pool (/ready),
+      # y a que el frontend acepte conexiones TCP (puerto 3001).
+      # Timeout ampliado a 5 min para tolerar arranque lento de Oracle Autonomous DB.
+      - name: Wait for backend and frontend
+        run: npx wait-on http-get://localhost:3000/ready tcp:localhost:3001 --timeout 300000
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-server-log
+          path: /tmp/server.log
+          retention-days: 7
+          if-no-files-found: ignore

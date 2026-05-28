@@ -61,7 +61,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
   test("mapea fila completa incluyendo usaValvula='S' y tiposSangre", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [beneficiarioRow] });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -74,7 +74,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, USA_VALVULA: 1, TIPOS_SANGRE: null }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body[0].usaValvula).toBe(true);
@@ -85,7 +85,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, USA_VALVULA: "N" }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].usaValvula).toBe(false);
   });
@@ -95,7 +95,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, CIUDAD: null, ESTADO: null }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].ciudad).toBe("");
     expect(res.body[0].estado).toBe("");
@@ -106,7 +106,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, ESTATUS: null }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].estatus).toBe("Activo");
   });
@@ -116,7 +116,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, MEMBRESIA_ESTATUS: null }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].membresiaEstatus).toBe("Sin membresia");
   });
@@ -126,7 +126,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, FOTO_PERFIL_URL: null }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].fotoPerfilUrl).toBeNull();
   });
@@ -136,7 +136,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, TIPOS_SANGRE: null, TIPO_SANGRE: "A+" }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].tipoSangre).toBe("A+");
   });
@@ -146,7 +146,7 @@ describe("GET /beneficiarios — getAll con datos", () => {
       rows: [{ ...beneficiarioRow, DIAS_RESTANTES: 45.7 }],
     });
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.body[0].diasRestantes).toBe(45);
   });
@@ -161,7 +161,7 @@ describe("GET /beneficiarios/:curp — getById", () => {
     // getById → SELECT * WHERE CURP
     mockExecute.mockResolvedValueOnce({ rows: [beneficiarioRow] });
 
-    const res = await request(app).get(`/beneficiarios/${CURP}`);
+    const res = await request(app).get(`/beneficiarios/${CURP}`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.curp).toBe(CURP);
@@ -171,7 +171,7 @@ describe("GET /beneficiarios/:curp — getById", () => {
   test("retorna 404 si no existe", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get(`/beneficiarios/${CURP}`);
+    const res = await request(app).get(`/beneficiarios/${CURP}`).set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
   });
@@ -190,6 +190,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
 
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Inactivo" });
 
     expect(res.status).toBe(200);
@@ -202,6 +203,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
 
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Activo" });
 
     expect(res.status).toBe(200);
@@ -213,6 +215,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
 
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Inactivo" });
 
     expect(res.status).toBe(200);
@@ -224,6 +227,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
 
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Activo" });
 
     expect(res.status).toBe(200);
@@ -233,6 +237,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
   test("devuelve 400 si estatus es 'Baja' (solo Activo/Inactivo permitidos)", async () => {
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Baja" });
 
     expect(res.status).toBe(400);
@@ -241,6 +246,7 @@ describe("PATCH /beneficiarios/:curp/estatus — updateEstatus", () => {
   test("devuelve 400 si estatus es inválido", async () => {
     const res = await request(app)
       .patch(`/beneficiarios/${CURP}/estatus`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "Fantasma" });
 
     expect(res.status).toBe(400);
@@ -312,7 +318,8 @@ describe("DELETE /beneficiarios/:curp/foto-perfil — deleteFotoPerfil", () => {
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
-      .delete(`/beneficiarios/${CURP}/foto-perfil`);
+      .delete(`/beneficiarios/${CURP}/foto-perfil`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.fotoPerfilUrl).toBeNull();
@@ -327,7 +334,7 @@ describe("Catch blocks de beneficiarios.controller", () => {
   test("getAll → error de DB → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
-    const res = await request(app).get("/beneficiarios");
+    const res = await request(app).get("/beneficiarios").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -346,7 +353,8 @@ describe("Catch blocks de beneficiarios.controller", () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
     const res = await request(app)
-      .delete(`/beneficiarios/${CURP}/foto-perfil`);
+      .delete(`/beneficiarios/${CURP}/foto-perfil`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -359,7 +367,8 @@ describe("Catch blocks de beneficiarios.controller", () => {
 describe("POST /beneficiarios/:curp/foto-perfil — uploadFotoPerfil sin archivo", () => {
   test("devuelve 400 si no se envía archivo (req.file = undefined)", async () => {
     const res = await request(app)
-      .post(`/beneficiarios/${CURP}/foto-perfil`);
+      .post(`/beneficiarios/${CURP}/foto-perfil`)
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(400);
   });
@@ -383,6 +392,7 @@ describe("POST /beneficiarios/:curp/foto-perfil — uploadFotoPerfil éxito", ()
 
     const res = await request(app)
       .post(`/beneficiarios/${CURP}/foto-perfil`)
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .attach("foto", smallJpeg, { filename: "avatar.jpg", contentType: "image/jpeg" });
 
     expect(res.status).toBe(200);

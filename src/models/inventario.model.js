@@ -56,22 +56,33 @@ export async function createMovimientoConTransaccion(data) {
 }
 
 export const findInventarioActual = () =>
-  withConnection(conn =>
-    conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
-              CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
-       FROM ARTICULOS ORDER BY DESCRIPCION`
-    ).then(r => r?.rows ?? [])
-  );
+  withConnection(async conn => {
+    try {
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
+                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
+         FROM ARTICULOS WHERE NVL(ACTIVO, 'S') = 'S' ORDER BY DESCRIPCION`
+      ))?.rows ?? [];
+    } catch (err) {
+      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
+                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
+         FROM ARTICULOS ORDER BY DESCRIPCION`
+      ))?.rows ?? [];
+    }
+  });
 
-export const findMovimientos = () =>
+export const findMovimientos = (days = null) =>
   withConnection(conn =>
     conn.execute(
       `SELECT M.ID_MOVIMIENTO, M.ID_ARTICULO, A.DESCRIPCION,
               M.TIPO_MOVIMIENTO, M.CANTIDAD, M.MOTIVO, M.FECHA, M.STOCK_RESULTANTE
        FROM MOVIMIENTOS_INVENTARIO M
        JOIN ARTICULOS A ON A.ID_ARTICULO = M.ID_ARTICULO
-       ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`
+       ${days ? "WHERE M.FECHA >= SYSDATE - :days" : ""}
+       ORDER BY M.FECHA DESC, M.ID_MOVIMIENTO DESC`,
+      days ? { days } : {}
     ).then(r => r?.rows ?? [])
   );
 

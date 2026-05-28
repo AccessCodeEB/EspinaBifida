@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { REPO_ROOT } from "../repoRoot.js";
 
 const PROFILES_DIR = path.join(REPO_ROOT, "uploads", "profiles");

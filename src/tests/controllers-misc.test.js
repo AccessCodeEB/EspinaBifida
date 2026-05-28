@@ -24,6 +24,7 @@ jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 const { default: app }     = await import("../app.js");
 process.env.JWT_SECRET = TEST_SECRET; // dotenv override: restituir secreto de prueba
 const { default: request } = await import("supertest");
+const { saveOtp }          = await import("../utils/otpStore.js");
 import jwt from "jsonwebtoken";
 
 const tokenAdmin  = jwt.sign({ idAdmin: 1, idRol: 1 }, TEST_SECRET);
@@ -697,7 +698,8 @@ describe("GET /inventario — error de DB → next(err)", () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout inventario"));
 
     const res = await request(app)
-      .get("/inventario");
+      .get("/inventario")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -708,7 +710,8 @@ describe("GET /inventario/movimientos — error de DB → next(err)", () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout movimientos"));
 
     const res = await request(app)
-      .get("/inventario/movimientos");
+      .get("/inventario/movimientos")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -1059,9 +1062,12 @@ describe("POST /api/v1/administradores/:idAdmin/foto-perfil — uploadFotoPerfil
 
 describe("PATCH /api/v1/administradores/:idAdmin/password — changePassword éxito", () => {
   test("cambia la contraseña exitosamente (200)", async () => {
-    // findById(1) → retorna admin con EMAIL
+    // Pre-seed OTP para el admin 1
+    saveOtp(1, "654321");
+
+    // findById(1) → retorna admin con EMAIL y TELEFONO
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ...adminRow, EMAIL: "admin@test.com" }],
+      rows: [{ ...adminRow, EMAIL: "admin@test.com", TELEFONO: "8181234567" }],
     });
     // findByEmail → retorna admin con PASSWORD_HASH
     mockExecute.mockResolvedValueOnce({
@@ -1075,9 +1081,161 @@ describe("PATCH /api/v1/administradores/:idAdmin/password — changePassword éx
     const res = await request(app)
       .patch("/api/v1/administradores/1/password")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send({ passwordActual: "pass123", passwordNueva: "newpass456" });
+      .send({ passwordActual: "pass123", passwordNueva: "newpass456", codigo: "654321" });
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/contraseña/i);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /administradores/:id/solicitar-codigo — solicitarCodigo
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /administradores/:idAdmin/solicitar-codigo — solicitarCodigo", () => {
+  test("retorna 200 con mensaje cuando el admin tiene teléfono", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, TELEFONO: "8181234567" }],
+    });
+
+    const res = await request(app)
+      .post("/administradores/1/solicitar-codigo")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("retorna 403 si el caller intenta solicitar código de otro admin", async () => {
+    const res = await request(app)
+      .post("/administradores/2/solicitar-codigo")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  test("retorna 500 si el service lanza un error", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB error"));
+
+    const res = await request(app)
+      .post("/administradores/1/solicitar-codigo")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH /administradores/:id/telefono — updateTelefono
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PATCH /administradores/:idAdmin/telefono — updateTelefono", () => {
+  test("retorna 200 al actualizar teléfono correctamente", async () => {
+    // findById → admin existe
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    // updateTelefono → éxito
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch("/administradores/1/telefono")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ telefono: "8181234567" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/tel[eé]fono/i);
+  });
+
+  test("acepta body sin campo telefono → lo trata como null (rama ?? null)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch("/administradores/1/telefono")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({});
+
+    expect(res.status).toBe(200);
+  });
+
+  test("retorna 500 si el service lanza un error", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB error"));
+
+    const res = await request(app)
+      .patch("/administradores/1/telefono")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ telefono: "8181234567" });
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /administradores/forgot-password — solicitarRecuperacion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /administradores/forgot-password — solicitarRecuperacion", () => {
+  test("retorna 200 con mensaje cuando el email existe y tiene teléfono", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...adminRow, TELEFONO: "8181234567" }],
+    });
+
+    const res = await request(app)
+      .post("/administradores/forgot-password")
+      .send({ email: "admin@test.com" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("retorna 404 si el email no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post("/administradores/forgot-password")
+      .send({ email: "noexiste@test.com" });
+
+    expect(res.status).toBe(404);
+  });
+
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH /administradores/forgot-password/reset — resetPasswordPublico
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PATCH /administradores/forgot-password/reset — resetPasswordPublico", () => {
+  test("retorna 200 cuando el código y la contraseña son válidos", async () => {
+    saveOtp(adminRow.ID_ADMIN, "654321");
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "admin@test.com", codigo: "654321", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("message");
+  });
+
+  test("retorna 400 INVALID_OTP si el código es incorrecto", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "admin@test.com", codigo: "000000", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_OTP");
+  });
+
+  test("retorna 404 si el email no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch("/administradores/forgot-password/reset")
+      .send({ email: "nadie@test.com", codigo: "123456", nuevaPassword: "NuevaPass1" });
+
+    expect(res.status).toBe(404);
   });
 });

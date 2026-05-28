@@ -1,5 +1,7 @@
 # Pre-registro: Dropdowns Estado/Ciudad + Autocompletado CURP — Implementation Plan
 
+> **STATUS: EJECUTADO** — Completado 2026-05-18. `data/mx-estados-municipios.ts`, `lib/curp-generator.ts`, y dropdowns en cascada en formulario público implementados.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reemplazar los campos de texto libre `estado`/`ciudad` con dropdowns en cascada del catálogo INEGI, agregar campo `genero`, y autocompletar las primeras 16 posiciones del CURP a partir de los datos del formulario.

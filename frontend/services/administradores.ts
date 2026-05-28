@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client"
 
 export interface LoginResponse {
   token: string
+  refreshToken: string
   admin: {
     idAdmin:        number
     idRol:          number
@@ -16,6 +17,17 @@ export function loginAdmin(email: string, password: string) {
   return apiClient.post<LoginResponse>("/administradores/login", { email, password })
 }
 
+export function refreshAccessToken(refreshToken: string) {
+  return apiClient.post<{ token: string; refreshToken: string }>(
+    "/administradores/refresh",
+    { refreshToken }
+  )
+}
+
+export function logoutAdmin(refreshToken: string) {
+  return apiClient.post<void>("/administradores/logout", { refreshToken })
+}
+
 export interface Admin {
   idAdmin:        number
   idRol:          number
@@ -25,6 +37,7 @@ export interface Admin {
   fechaCreacion:  string
   nombreRol:      string
   fotoPerfilUrl?: string | null
+  telefono?:      string | null
 }
 
 export interface UpdateAdminBody {
@@ -36,10 +49,30 @@ export interface UpdateAdminBody {
 export interface ChangePasswordBody {
   passwordActual: string
   passwordNueva:  string
+  codigo:         string
+}
+
+export function getAllAdmins() {
+  return apiClient.get<Admin[]>("/administradores")
 }
 
 export function getAdmin(id: number) {
   return apiClient.get<Admin>(`/administradores/${id}`)
+}
+
+export interface CreateAdminBody {
+  idRol:          number
+  nombreCompleto: string
+  email:          string
+  password:       string
+}
+
+export function createAdmin(body: CreateAdminBody) {
+  return apiClient.post<{ message: string }>("/administradores", body)
+}
+
+export function deactivateAdmin(id: number) {
+  return apiClient.delete<{ message: string }>(`/administradores/${id}`)
 }
 
 export function updateAdmin(id: number, body: UpdateAdminBody) {
@@ -48,6 +81,17 @@ export function updateAdmin(id: number, body: UpdateAdminBody) {
 
 export function changePassword(id: number, body: ChangePasswordBody) {
   return apiClient.patch<{ message: string }>(`/administradores/${id}/password`, body)
+}
+
+export function solicitarCodigo(id: number) {
+  return apiClient.post<{ message: string; codigoDev?: string }>(
+    `/administradores/${id}/solicitar-codigo`,
+    {}
+  )
+}
+
+export function updateTelefono(id: number, telefono: string | null) {
+  return apiClient.patch<{ message: string }>(`/administradores/${id}/telefono`, { telefono })
 }
 
 /** POST multipart /administradores/:id/foto-perfil — campo de archivo: `foto` */
@@ -60,11 +104,20 @@ export function uploadAdminFotoPerfil(idAdmin: number, file: File) {
   )
 }
 
-/**
- * Prepared for future email verification flow.
- * When implemented the backend will send a one-time code to the admin's email.
- * Backend endpoint to add: POST /administradores/:id/request-password-code
- */
-export function requestPasswordCode(_id: number): Promise<{ message: string }> {
-  return Promise.reject(new Error("NOT_IMPLEMENTED"))
+export function solicitarRecuperacion(email: string) {
+  return apiClient.post<{ message: string; codigoDev?: string }>(
+    "/administradores/forgot-password",
+    { email }
+  )
+}
+
+export function resetPasswordPublico(
+  email: string,
+  codigo: string,
+  nuevaPassword: string
+) {
+  return apiClient.patch<{ message: string }>(
+    "/administradores/forgot-password/reset",
+    { email, codigo, nuevaPassword }
+  )
 }

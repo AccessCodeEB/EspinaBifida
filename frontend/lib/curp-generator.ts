@@ -75,6 +75,14 @@ function firstInternalConsonant(s: string): string {
   return "X"
 }
 
+/** Elimina partículas (de, del, la, las…) de un apellido normalizado y retorna el resto. */
+function stripParticlesFromApellido(normalized: string): string {
+  const parts = normalized.split(/\s+/).filter(Boolean)
+  const filtered = parts.filter((p) => !PARTICULAS.has(p))
+  // Si todas las palabras son partículas, usa el valor original sin filtrar
+  return (filtered.length > 0 ? filtered : parts).join(" ")
+}
+
 function effectiveName(normalizedNombres: string): string {
   const parts = normalizedNombres.split(/\s+/).filter(Boolean)
   if (parts.length === 0) return ""
@@ -101,8 +109,8 @@ export function generateCurpPrefix(input: CurpGeneratorInput): string {
     return ""
   }
 
-  const pat = normalize(apellidoPaterno)
-  const mat = normalize(apellidoMaterno)
+  const pat = stripParticlesFromApellido(normalize(apellidoPaterno))
+  const mat = stripParticlesFromApellido(normalize(apellidoMaterno))
   const nom = normalize(nombres)
   const primerNombre = effectiveName(nom)
 

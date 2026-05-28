@@ -1,5 +1,6 @@
 import * as ArticulosModel from "../models/articulos.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
+import { checkStockBajo } from "./notificaciones.service.js";
 
 function normalizeData(data = {}) {
   // Solo normalizar los campos que efectivamente vienen en el request
@@ -67,16 +68,23 @@ export const getById = (id) =>
 
 export const create = (data) => {
   const normalized = normalizeData(data);
-
-  if (normalized.idArticulo === null || normalized.idArticulo === undefined) {
-    throw badRequest("idArticulo es obligatorio");
-  }
-
-  return ArticulosModel.create(normalized);
+  // Asegurar que todos los binds tienen valor (null si no viene en body)
+  // para que el trigger TRG_ARTICULOS_BI asigne SEQ_ARTICULOS.NEXTVAL cuando idArticulo=null
+  const bindings = {
+    idArticulo: null, descripcion: null, unidad: null,
+    cuotaRecuperacion: null, inventarioActual: null,
+    manejaInventario: null, idCategoria: null, stockMinimo: null,
+    ...normalized,
+  };
+  return ArticulosModel.create(bindings);
 };
 
-export const update = (id, data) =>
-  ArticulosModel.update(id, normalizeData(data));
+export async function update(id, data) {
+  const result = await ArticulosModel.update(id, normalizeData(data));
+  // Actualiza notificación de stock en segundo plano (no bloquea la respuesta)
+  checkStockBajo().catch(() => {});
+  return result;
+}
 
 export async function deleteById(id) {
   const articulo = await ArticulosModel.findById(id);

@@ -44,7 +44,16 @@ jest.config.js.tmp
 
 # 🔐 Oracle Wallet (SENSITIVE)
 wallet/
+wallet.tar.gz
+wallet.b64
 
 claude.md
 .claude/
 .gstack/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

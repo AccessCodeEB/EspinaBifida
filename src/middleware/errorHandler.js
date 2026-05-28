@@ -40,12 +40,12 @@ export function errorHandler(err, req, res, _next) {
   }
 
   if (statusCode >= 500) {
-    console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
+    console.error(`[${new Date().toISOString()}] Internal server error`, err);
     /* istanbul ignore else */
     if (isDevelopment) {
       message = err?.message ? String(err.message) : message;
       details = {
-        ...(details ?? {}),
+        ...details,
         debug: {
           name: err?.name ?? "Error",
           message: err?.message ?? null,

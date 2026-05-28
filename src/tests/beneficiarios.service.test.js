@@ -46,6 +46,13 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
   create:                    jest.fn(),
 }));
 
+const mockInsertPreregistroNuevo = jest.fn().mockResolvedValue(undefined);
+const mockInsertBeneficiarioBaja  = jest.fn().mockResolvedValue(undefined);
+jest.unstable_mockModule("../models/notificaciones.model.js", () => ({
+  insertPreregistroNuevo: mockInsertPreregistroNuevo,
+  insertBeneficiarioBaja:  mockInsertBeneficiarioBaja,
+}));
+
 // Importaciones después de los mocks (ESM)
 const Service = await import("../services/beneficiarios.service.js");
 
@@ -256,7 +263,7 @@ describe("update", () => {
 
 describe("deactivate", () => {
   test("da de baja y cancela membresías activas del beneficiario", async () => {
-    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
     mockDeactivate.mockResolvedValue(1);
     mockCancelarPorCurp.mockResolvedValue(undefined);
 
@@ -264,6 +271,20 @@ describe("deactivate", () => {
 
     expect(mockDeactivate).toHaveBeenCalledWith(CURP_VALIDA);
     expect(mockCancelarPorCurp).toHaveBeenCalledWith(CURP_VALIDA);
+  });
+
+  test("dispara notificación BENEFICIARIO_BAJA tras dar de baja", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
+    mockDeactivate.mockResolvedValue(1);
+    mockCancelarPorCurp.mockResolvedValue(undefined);
+    mockInsertBeneficiarioBaja.mockResolvedValue(undefined);
+
+    await Service.deactivate(CURP_VALIDA);
+
+    expect(mockInsertBeneficiarioBaja).toHaveBeenCalledWith(
+      CURP_VALIDA,
+      expect.stringContaining("Juan")
+    );
   });
 
   test("cancelarPorCurp siempre se llama, incluso si beneficiario ya estaba Inactivo", async () => {
@@ -348,6 +369,19 @@ describe("createPublicSolicitud", () => {
         estatus: "Inactivo",
         notas: "[SOLICITUD_PUBLICA_PRE_REG]\nTexto familia",
       })
+    );
+  });
+
+  test("dispara notificación PREREGISTRO_NUEVO al crear la solicitud", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+    mockInsertPreregistroNuevo.mockResolvedValue(undefined);
+
+    await Service.createPublicSolicitud({ ...basePublicSolicitud, genero: "M" });
+
+    expect(mockInsertPreregistroNuevo).toHaveBeenCalledWith(
+      basePublicSolicitud.curp,
+      expect.stringContaining(basePublicSolicitud.nombres)
     );
   });
 

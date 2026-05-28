@@ -1,3 +1,4 @@
+import oracledb from "oracledb";
 import { withConnection } from "../config/db.js";
 
 function isInvalidIdentifierError(err) {
@@ -45,22 +46,36 @@ export const findById = (id) =>
   });
 
 export const create = (data) =>
-  withConnection(conn =>
-    conn.execute(
+  withConnection(async conn => {
+    const result = await conn.execute(
       `INSERT INTO ARTICULOS (
          ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
          INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO
        ) VALUES (
-         :idArticulo, :descripcion, :unidad, :cuotaRecuperacion,
+         SEQ_ARTICULOS.NEXTVAL, :descripcion, :unidad, :cuotaRecuperacion,
          :inventarioActual, :manejaInventario, :idCategoria, :stockMinimo
-       )`,
-      data, { autoCommit: true }
-    )
-  );
+       ) RETURNING ID_ARTICULO INTO :newId`,
+      {
+        descripcion: data.descripcion, unidad: data.unidad,
+        cuotaRecuperacion: data.cuotaRecuperacion, inventarioActual: data.inventarioActual,
+        manejaInventario: data.manejaInventario, idCategoria: data.idCategoria,
+        stockMinimo: data.stockMinimo,
+        newId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      },
+      { autoCommit: true }
+    );
+    // DML RETURNING always gives an array; extract the single generated ID
+    return Array.isArray(result.outBinds.newId)
+      ? result.outBinds.newId[0]
+      : result.outBinds.newId;
+  });
 
 export async function update(id, data) {
   return withConnection(async conn => {
-    const { idArticulo: _idArticulo, ...updateData } = data;
+    // Exclude idArticulo from the update payload; only the rest fields are used.
+    const updateData = Object.fromEntries(
+      Object.entries(data).filter(([k]) => k !== "idArticulo")
+    );
     const dbColumnMap = {
       descripcion: "DESCRIPCION", unidad: "UNIDAD",
       cuotaRecuperacion: "CUOTA_RECUPERACION", inventarioActual: "INVENTARIO_ACTUAL",

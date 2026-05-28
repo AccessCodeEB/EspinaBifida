@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import path from "node:path";
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
 import * as MembresiasModel from "../models/membresias.model.js";
-import { badRequest, notFound, conflict } from "../utils/httpErrors.js";
+import * as NotificacionesModel from "../models/notificaciones.model.js";
+import { badRequest, notFound, conflict, mapOracleError } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { CURP_REGEX, EMAIL_REGEX, TEL_REGEX, CP_REGEX, sanitizeString } from "../utils/validators.js";
 
@@ -67,11 +67,11 @@ function sanitizar(data) {
   for (const campo of campos) {
     if (data[campo]) data[campo] = sanitizeString(String(data[campo]));
   }
-  if (Object.prototype.hasOwnProperty.call(data, "tipoSangre")) {
+  if (Object.hasOwn(data, "tipoSangre")) {
     const t = String(data.tipoSangre ?? "").trim();
     data.tipoSangre = t === "" ? null : t;
   }
-  if (Object.prototype.hasOwnProperty.call(data, "tipo")) {
+  if (Object.hasOwn(data, "tipo")) {
     const t = String(data.tipo ?? "").trim();
     data.tipo = t === "" ? null : t;
   }
@@ -165,10 +165,7 @@ function validarCurpRuta(curp) {
   throw badRequest("CURP con formato inválido", "INVALID_CURP");
 }
 
-function validarFormatos(data) {
-  if (data.correoElectronico && !EMAIL_REGEX.test(data.correoElectronico)) {
-    throw badRequest("Formato de correo electrónico inválido", "INVALID_EMAIL");
-  }
+function validarTelefonos(data) {
   if (data.telefonoCelular && !TEL_REGEX.test(data.telefonoCelular)) {
     throw badRequest("TELEFONO_CELULAR debe contener exactamente 10 dígitos", "INVALID_PHONE");
   }
@@ -178,6 +175,30 @@ function validarFormatos(data) {
   if (data.telefonoEmergencia && !TEL_REGEX.test(data.telefonoEmergencia)) {
     throw badRequest("TELEFONO_EMERGENCIA debe contener exactamente 10 dígitos", "INVALID_PHONE");
   }
+}
+
+function validarFechaNacimiento(fechaNacimiento) {
+  const fecha = new Date(fechaNacimiento);
+  const hoy   = new Date(new Date().toISOString().slice(0, 10));
+  const hace120 = new Date(hoy);
+  hace120.setFullYear(hoy.getFullYear() - 120);
+
+  if (Number.isNaN(fecha.getTime())) {
+    throw badRequest("Formato de FECHA_NACIMIENTO inválido (use YYYY-MM-DD)", "INVALID_DATE_FORMAT");
+  }
+  if (fecha > hoy) {
+    throw badRequest("FECHA_NACIMIENTO no puede ser una fecha futura", "DATE_IN_FUTURE");
+  }
+  if (fecha < hace120) {
+    throw badRequest("FECHA_NACIMIENTO no puede ser hace más de 120 años", "DATE_TOO_OLD");
+  }
+}
+
+function validarFormatos(data) {
+  if (data.correoElectronico && !EMAIL_REGEX.test(data.correoElectronico)) {
+    throw badRequest("Formato de correo electrónico inválido", "INVALID_EMAIL");
+  }
+  validarTelefonos(data);
   if (data.cp && !CP_REGEX.test(data.cp)) {
     throw badRequest("CP debe contener exactamente 5 dígitos", "INVALID_CP");
   }
@@ -194,20 +215,7 @@ function validarFormatos(data) {
     throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
   }
   if (data.fechaNacimiento) {
-    const fecha = new Date(data.fechaNacimiento);
-    const hoy   = new Date(new Date().toISOString().slice(0, 10));
-    const hace120 = new Date(hoy);
-    hace120.setFullYear(hoy.getFullYear() - 120);
-
-    if (isNaN(fecha.getTime())) {
-      throw badRequest("Formato de FECHA_NACIMIENTO inválido (use YYYY-MM-DD)", "INVALID_DATE_FORMAT");
-    }
-    if (fecha > hoy) {
-      throw badRequest("FECHA_NACIMIENTO no puede ser una fecha futura", "DATE_IN_FUTURE");
-    }
-    if (fecha < hace120) {
-      throw badRequest("FECHA_NACIMIENTO no puede ser hace más de 120 años", "DATE_TOO_OLD");
-    }
+    validarFechaNacimiento(data.fechaNacimiento);
   }
 }
 
@@ -296,7 +304,10 @@ export async function createPublicSolicitud(data) {
     throw conflict(`Ya existe un beneficiario con la CURP ${data.curp}`, "DUPLICATE_CURP");
   }
 
-  return BeneficiarioModel.create({ ...data, estatus: "Inactivo" });
+  const result = await BeneficiarioModel.create({ ...data, estatus: "Inactivo" });
+  const nombre = `${data.nombres ?? ""} ${data.apellidoPaterno ?? ""}`.trim();
+  NotificacionesModel.insertPreregistroNuevo(data.curp, nombre).catch(() => {});
+  return result;
 }
 
 export async function approvePreRegistro(curp) {
@@ -310,7 +321,13 @@ export async function approvePreRegistro(curp) {
   }
   const raw = existente.NOTAS ?? existente.notas;
   const limpio = limpiarMarcadorNotasPublicas(raw);
-  await BeneficiarioModel.updateEstatusAndNotas(id, "Activo", limpio || null);
+  try {
+    await BeneficiarioModel.updateEstatusAndNotas(id, "Activo", limpio || null);
+  } catch (err) {
+    const mapped = mapOracleError(err);
+    if (mapped) throw conflict(`La CURP ${id} ya existe como beneficiario activo`, "CURP_DUPLICADA");
+    throw err;
+  }
 }
 
 export async function rejectPreRegistro(curp) {
@@ -351,6 +368,9 @@ export async function deactivate(curp) {
 
   await BeneficiarioModel.deactivate(id);
   await MembresiasModel.cancelarPorCurp(id);
+
+  const nombre = `${existente.NOMBRES ?? existente.nombres ?? ""} ${existente.APELLIDO_PATERNO ?? existente.apellidoPaterno ?? ""}`.trim();
+  NotificacionesModel.insertBeneficiarioBaja(id, nombre).catch(() => {});
 }
 
 /**

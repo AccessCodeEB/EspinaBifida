@@ -1,6 +1,6 @@
 // Escapa caracteres HTML para evitar que valores de BD rompan el layout del PDF.
 function esc(str) {
-  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 function formatFecha(d) {

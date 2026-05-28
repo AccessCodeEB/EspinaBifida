@@ -1,3 +1,4 @@
+import oracledb from "oracledb";
 import { getConnection, withConnection } from "../config/db.js";
 import { applyMovimientoConConexion } from "./inventario.model.js";
 import { internal } from "../utils/httpErrors.js";
@@ -142,46 +143,45 @@ function normalizeConsumoMotivo(consumo, idServicio) {
 export async function createWithInventarioTransaction(data, consumos) {
   const conn = await getConnection();
   try {
-    const idResult = await conn.execute(
-      `SELECT SEQ_SERVICIOS.NEXTVAL AS NEXT_ID FROM DUAL`
+    const result = await conn.execute(
+      `BEGIN
+         SP_REGISTRAR_SERVICIO(:curp, :tipo, :costo, :monto, :notas,
+                               :refId, :refTipo, :art, :cant, :id_out);
+       END;`,
+      {
+        curp:    data.curp,
+        tipo:    data.idTipoServicio,
+        costo:   data.costo,
+        monto:   data.montoPagado,
+        notas:   data.notas    ?? null,
+        refId:   data.referenciaId   ?? null,
+        refTipo: data.referenciaTipo ?? null,
+        art:     { val: null, type: oracledb.NUMBER },
+        cant:    { val: null, type: oracledb.NUMBER },
+        id_out:  { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      }
     );
 
-    const idServicio = Number(idResult.rows?.[0]?.NEXT_ID ?? 0);
+    const idServicio = Number(result.outBinds?.id_out ?? 0);
     if (!Number.isInteger(idServicio) || idServicio <= 0) {
       throw internal("No se pudo generar ID_SERVICIO");
     }
 
-    await conn.execute(
-      `INSERT INTO SERVICIOS (
-         ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO, MONTO_PAGADO,
-         REFERENCIA_ID, REFERENCIA_TIPO, NOTAS
-       ) VALUES (
-         :idServicio, :curp, :idTipoServicio, SYSDATE, :costo, :montoPagado,
-         :referenciaId, :referenciaTipo, :notas
-       )`,
-      {
-        idServicio,
-        curp: data.curp,
-        idTipoServicio: data.idTipoServicio,
-        costo: data.costo,
-        montoPagado: data.montoPagado,
-        referenciaId: data.referenciaId,
-        referenciaTipo: data.referenciaTipo,
-        notas: data.notas,
-      }
-    );
-
     for (const consumo of consumos) {
       await applyMovimientoConConexion(conn, {
         idArticulo: consumo.idProducto,
-        tipo: "SALIDA",
-        cantidad: consumo.cantidad,
-        motivo: normalizeConsumoMotivo(consumo, idServicio),
+        tipo:       "SALIDA",
+        cantidad:   consumo.cantidad,
+        motivo:     normalizeConsumoMotivo(consumo, idServicio),
       });
+      await conn.execute(
+        `INSERT INTO SERVICIO_ARTICULOS (ID_SERVICIO, ID_ARTICULO, CANTIDAD)
+         VALUES (:idServicio, :idArticulo, :cantidad)`,
+        { idServicio, idArticulo: consumo.idProducto, cantidad: consumo.cantidad }
+      );
     }
 
     await conn.commit();
-
     return { idServicio };
   } catch (err) {
     await conn.rollback();

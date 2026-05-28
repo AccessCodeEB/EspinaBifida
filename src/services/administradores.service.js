@@ -1,11 +1,17 @@
-import fs from "fs";
+import fs from "node:fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomBytes, randomInt } from "node:crypto";
 import * as AdminModel from "../models/administradores.model.js";
 import * as RolesModel from "../models/roles.model.js";
+import * as RefreshModel from "../models/refreshTokens.model.js";
 import { notFound, badRequest, conflict, HttpError, forbidden, unauthorized } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";
 import { EMAIL_REGEX } from "../utils/validators.js";
+import { saveOtp, verifyOtp } from "../utils/otpStore.js";
+import { sendEmailCode } from "../utils/email.js";
+
+const PHONE_REGEX = /^\d{10}$/;
 
 const SALT_ROUNDS = 10;
 
@@ -19,8 +25,19 @@ function generarToken(admin) {
       nombreRol:      admin.NOMBRE_ROL,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN ?? "8h" }
+    { expiresIn: process.env.JWT_EXPIRES_IN ?? "1h" }
   );
+}
+
+const REFRESH_TTL_DAYS = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? "7");
+
+async function emitirRefreshToken(idAdmin) {
+  const raw = randomBytes(40).toString("hex");
+  const hash = RefreshModel.hashToken(raw);
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TTL_DAYS);
+  await RefreshModel.insert(idAdmin, hash, expiresAt);
+  return raw;
 }
 
 function validarEmail(email) {
@@ -69,9 +86,11 @@ export async function login(email, password) {
   if (!passwordValida) throw unauthorized("Credenciales inválidas");
 
   const token = generarToken(admin);
+  const refreshToken = await emitirRefreshToken(admin.ID_ADMIN);
 
   return {
     token,
+    refreshToken,
     admin: {
       idAdmin:        admin.ID_ADMIN,
       idRol:          admin.ID_ROL,
@@ -81,6 +100,33 @@ export async function login(email, password) {
       fotoPerfilUrl:  admin.FOTO_PERFIL_URL ?? null,
     },
   };
+}
+
+export async function refresh(rawRefreshToken) {
+  if (!rawRefreshToken) throw unauthorized("Refresh token requerido");
+
+  const hash = RefreshModel.hashToken(rawRefreshToken);
+  const row = await RefreshModel.findByHash(hash);
+
+  if (!row || row.REVOCADO === 1) throw unauthorized("Refresh token inválido o revocado");
+  if (new Date(row.EXPIRES_AT) < new Date()) throw unauthorized("Refresh token expirado");
+
+  // Rotación: revocar el token usado antes de emitir el nuevo par
+  await RefreshModel.revoke(hash);
+
+  const admin = await AdminModel.findById(row.ID_ADMIN);
+  if (!admin || admin.ACTIVO === 0) throw unauthorized("Cuenta inactiva");
+
+  const token = generarToken(admin);
+  const newRefreshToken = await emitirRefreshToken(admin.ID_ADMIN);
+
+  return { token, refreshToken: newRefreshToken };
+}
+
+export async function revokeRefreshToken(rawRefreshToken) {
+  if (!rawRefreshToken) return;
+  const hash = RefreshModel.hashToken(rawRefreshToken);
+  await RefreshModel.revoke(hash);
 }
 
 export const getAll = () => AdminModel.findAll();
@@ -133,7 +179,56 @@ export async function update(idAdmin, { idRol, nombreCompleto, email }) {
   });
 }
 
-export async function changePassword(idAdmin, { passwordActual, passwordNueva }, callerIdAdmin) {
+export async function solicitarCodigo(idAdmin, callerIdAdmin) {
+  if (callerIdAdmin !== idAdmin) {
+    throw new HttpError(403, "Solo puedes solicitar el código para tu propia cuenta");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  const code = String(randomInt(100000, 1000000));
+  saveOtp(idAdmin, code);
+  const devCode = await sendEmailCode(adminRow.EMAIL, code);
+
+  return {
+    message: "Código enviado a tu correo electrónico",
+    ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
+  };
+}
+
+export async function solicitarRecuperacion(email) {
+  const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
+  if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
+
+  const code = String(randomInt(100000, 1000000));
+  saveOtp(adminRow.ID_ADMIN, code);
+  const devCode = await sendEmailCode(adminRow.EMAIL, code);
+
+  return {
+    message: "Código de recuperación enviado a tu correo electrónico",
+    ...(devCode !== undefined && process.env.NODE_ENV !== "production" && { codigoDev: devCode }),
+  };
+}
+
+export async function resetPasswordPublico(email, codigo, nuevaPassword) {
+  const adminRow = await AdminModel.findByEmail(email?.trim().toLowerCase());
+  if (!adminRow) throw notFound(`No existe un administrador con el email ${email}`);
+
+  if (!codigo) throw badRequest("Se requiere el código de recuperación enviado a tu correo", "MISSING_OTP");
+  if (!verifyOtp(adminRow.ID_ADMIN, String(codigo))) {
+    throw badRequest("Código inválido o expirado", "INVALID_OTP");
+  }
+
+  validarPassword(nuevaPassword);
+
+  const nuevoHash = await bcrypt.hash(nuevaPassword, SALT_ROUNDS);
+  await AdminModel.updatePassword(adminRow.ID_ADMIN, nuevoHash);
+
+  return { message: "Contraseña restablecida exitosamente" };
+}
+
+export async function changePassword(idAdmin, { passwordActual, passwordNueva, codigo }, callerIdAdmin) {
   if (callerIdAdmin !== idAdmin) {
     throw new HttpError(403, "Solo puedes cambiar tu propia contraseña");
   }
@@ -142,9 +237,15 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva },
   }
   validarPassword(passwordNueva);
 
-  const admin = await AdminModel.findByEmail(
-    (await AdminModel.findById(idAdmin))?.EMAIL
-  );
+  if (!codigo) throw badRequest("Se requiere el código enviado a tu correo electrónico", "MISSING_OTP");
+  if (!verifyOtp(idAdmin, String(codigo))) {
+    throw badRequest("Código inválido o expirado", "INVALID_OTP");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  const admin = await AdminModel.findByEmail(adminRow.EMAIL);
   if (!admin) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
 
   const valida = await bcrypt.compare(passwordActual, admin.PASSWORD_HASH);
@@ -152,6 +253,25 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva },
 
   const nuevoHash = await bcrypt.hash(passwordNueva, SALT_ROUNDS);
   await AdminModel.updatePassword(idAdmin, nuevoHash);
+}
+
+export async function updateTelefono(idAdmin, telefono, callerIdAdmin) {
+  if (callerIdAdmin !== idAdmin) {
+    throw new HttpError(403, "Solo puedes actualizar tu propio teléfono");
+  }
+
+  const adminRow = await AdminModel.findById(idAdmin);
+  if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);
+
+  if (telefono !== null && telefono !== undefined && telefono !== "") {
+    const cleaned = String(telefono).replace(/\D/g, "");
+    if (!PHONE_REGEX.test(cleaned)) {
+      throw badRequest("El teléfono debe tener exactamente 10 dígitos", "INVALID_PHONE");
+    }
+    await AdminModel.updateTelefono(idAdmin, cleaned);
+  } else {
+    await AdminModel.updateTelefono(idAdmin, null);
+  }
 }
 
 export async function deactivate(idAdmin) {

@@ -2,7 +2,7 @@ import { withConnection } from "../config/db.js";
 
 const SELECT_CON_ROL = `
   SELECT a.ID_ADMIN, a.ID_ROL, a.NOMBRE_COMPLETO, a.EMAIL,
-         a.ACTIVO, a.FECHA_CREACION, a.FOTO_PERFIL_URL, r.NOMBRE_ROL
+         a.ACTIVO, a.FECHA_CREACION, a.FOTO_PERFIL_URL, a.TELEFONO, r.NOMBRE_ROL
   FROM   ADMINISTRADORES a
   JOIN   ROLES r ON r.ID_ROL = a.ID_ROL
 `;
@@ -68,6 +68,15 @@ export const updateFotoPerfilUrl = (idAdmin, fotoPerfilUrl) =>
       `UPDATE ADMINISTRADORES
        SET FOTO_PERFIL_URL = :fotoPerfilUrl WHERE ID_ADMIN = :idAdmin`,
       { idAdmin, fotoPerfilUrl },
+      { autoCommit: true }
+    )
+  );
+
+export const updateTelefono = (idAdmin, telefono) =>
+  withConnection(conn =>
+    conn.execute(
+      `UPDATE ADMINISTRADORES SET TELEFONO = :telefono WHERE ID_ADMIN = :idAdmin`,
+      { telefono: telefono ?? null, idAdmin },
       { autoCommit: true }
     )
   );

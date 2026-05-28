@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import * as ReportesService from '../services/reportes.service.js';
 import * as ReportesModel   from '../models/reportes.model.js';
 import { badRequest, notFound } from '../utils/httpErrors.js';
@@ -7,7 +7,7 @@ import { badRequest, notFound } from '../utils/httpErrors.js';
 const STORAGE = path.resolve(process.env.STORAGE_PATH ?? './storage/reportes');
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const TIPOS_VALIDOS = ['estadisticas', 'beneficiarios', 'membresias', 'servicios', 'inventario', 'citas'];
+const TIPOS_VALIDOS = new Set(['estadisticas', 'beneficiarios', 'membresias', 'servicios', 'inventario', 'citas']);
 
 /**
  * GET /api/v1/reportes/periodo
@@ -26,7 +26,7 @@ export async function getPeriodo(req, res, next) {
       throw badRequest('fechaInicio no puede ser posterior a fechaFin');
     if (!['pdf', 'xlsx'].includes(formato))
       throw badRequest('formato debe ser pdf o xlsx');
-    if (!TIPOS_VALIDOS.includes(tipo))
+    if (!TIPOS_VALIDOS.has(tipo))
       throw badRequest('tipo debe ser: estadisticas, beneficiarios, membresias, servicios, inventario, citas');
 
     const data = await ReportesService.generarReporte(fechaInicio, fechaFin, tipo);

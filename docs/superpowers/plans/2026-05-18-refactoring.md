@@ -1,5 +1,7 @@
 # Refactoring Continuo Implementation Plan
 
+> **STATUS: EJECUTADO** — Completado 2026-05-18. Helper `withConnection`, módulo `validators.js`, eliminación de `AppError` legacy, y división de componentes frontend (`beneficiarios.tsx`, `servicios.tsx`) realizados.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Eliminar código duplicado y separar responsabilidades en el backend (modelos, servicios, manejo de errores) y frontend (componentes grandes), documentando cada cambio en una bitácora.

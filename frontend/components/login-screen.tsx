@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
@@ -17,6 +18,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -244,6 +246,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </button>
             </div>
 
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setForgotOpen(true)}
+                className="text-[12px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
           </form>
 
           {/* Footer */}
@@ -260,6 +272,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
       </div>
 
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
   )
 }

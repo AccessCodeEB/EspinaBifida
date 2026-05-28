@@ -16,9 +16,11 @@ import { InventarioSection } from "@/components/sections/inventario"
 import { CitasSection } from "@/components/sections/citas"
 import { PreregistroSection } from "@/components/sections/preregistro"
 import { ReportesSection } from "@/components/sections/reportes"
+import { AdministradoresSection } from "@/components/sections/administradores"
 import { Switch } from "@/components/ui/switch"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { AiChatPanel, type AiAction } from "@/components/ai-chat-panel"
+import { NotificacionesPanel } from "@/components/notificaciones-panel"
 
 /** Secciones válidas de la SPA del panel */
 const VALID_SECTIONS = new Set([
@@ -30,6 +32,7 @@ const VALID_SECTIONS = new Set([
   "citas",
   "reportes",
   "preregistro",
+  "administradores",
 ])
 
 function SectionContent({
@@ -56,6 +59,7 @@ function SectionContent({
     case "citas": return <CitasSection />
     case "reportes": return <ReportesSection />
     case "preregistro": return <PreregistroSection />
+    case "administradores": return <AdministradoresSection />
     default: return <DashboardSection />
   }
 }
@@ -184,6 +188,7 @@ function PanelHomeContent() {
             <div className="flex-1" />
 
             <div className="flex items-center gap-3">
+              <NotificacionesPanel />
               <div className="hidden flex-col items-end sm:flex">
                 <span className="text-sm font-medium text-foreground leading-tight">{userName}</span>
                 <span className="text-xs text-muted-foreground leading-tight">{userRole}</span>

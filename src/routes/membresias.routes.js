@@ -7,8 +7,11 @@ import {
   getPagosRecientes,
   postSyncEstados,
 } from "../controllers/membresias.controller.js";
+import { verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
+
+router.use(verifyToken);
 
 router.get("/",                   getAll);
 router.post("/",                  createMembresia);

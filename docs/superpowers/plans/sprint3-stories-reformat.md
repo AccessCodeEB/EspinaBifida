@@ -1,5 +1,7 @@
 # Sprint 3 — Descripciones reformateadas al estilo SCRUM-9
 
+> **STATUS: REFERENCIA** — No es un plan de implementación. Contiene las descripciones de issues SCRUM para el SDD y la presentación.
+
 Pega cada bloque en la descripción del issue correspondiente.
 
 ---

@@ -1,5 +1,7 @@
 # Stored Procedures Implementation Plan
 
+> **STATUS: PARCIALMENTE EJECUTADO** — `SP_REGISTRAR_MOVIMIENTO_INVENTARIO` y `SP_REGISTRAR_MEMBRESIA` wired en sus modelos. `SP_REGISTRAR_SERVICIO` pendiente (el modelo de servicios aún usa SQL inline).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add 3 Oracle stored procedures (SP_REGISTRAR_MOVIMIENTO_INVENTARIO, SP_REGISTRAR_MEMBRESIA, SP_REGISTRAR_SERVICIO) and wire the Node.js models to call them instead of inline SQL.

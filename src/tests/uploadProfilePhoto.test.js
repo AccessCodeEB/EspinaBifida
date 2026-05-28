@@ -2,8 +2,7 @@ import path from "node:path";
 import { jest } from "@jest/globals";
 
 // ─── Mocks de módulos del sistema ────────────────────────────────────────────
-// fs se mockea para no tocar disco real (el middleware importa "fs", no "node:fs")
-jest.unstable_mockModule("fs", () => ({
+jest.unstable_mockModule("node:fs", () => ({
   default: {
     existsSync: jest.fn(),
     mkdirSync:  jest.fn(),
@@ -22,7 +21,7 @@ jest.unstable_mockModule("multer", () => {
 });
 
 // Importamos después de establecer los mocks (ESM)
-const fsMock   = (await import("fs")).default;
+const fsMock   = (await import("node:fs")).default;
 const multerMock = (await import("multer")).default;
 await import("../middleware/uploadProfilePhoto.js");
 

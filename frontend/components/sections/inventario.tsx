@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
-  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw,
+  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
   getInventario, registrarMovimiento, crearArticulo, eliminarArticulo, actualizarArticulo,
-  type ArticuloInventario,
+  getMovimientos,
+  type ArticuloInventario, type MovimientoInventario,
 } from "@/services/inventario"
 
 type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
@@ -71,6 +72,12 @@ export function InventarioSection() {
   const [sortField, setSortField]       = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [unidadFilterIndex, setUnidadFilterIndex] = useState<number>(-1)
+  const [stockFilter, setStockFilter] = useState<"bajo" | "sin" | null>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+
+  const [activeTab, setActiveTab] = useState<"articulos" | "historial">("articulos")
+  const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([])
+  const [loadingMovimientos, setLoadingMovimientos] = useState(false)
 
   const loadData = () => {
     setLoading(true)
@@ -84,6 +91,14 @@ export function InventarioSection() {
   
 
   const refreshInventario = async () => { const data = await getInventario(); setInventario(data) }
+
+  const loadMovimientos = () => {
+    setLoadingMovimientos(true)
+    getMovimientos(30)
+      .then(setMovimientos)
+      .catch(() => setMovimientos([]))
+      .finally(() => setLoadingMovimientos(false))
+  }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-sm text-muted-foreground">Cargando inventario...</p></div>
   if (error)   return <div className="flex h-64 items-center justify-center"><p className="text-sm text-destructive">{error}</p></div>
@@ -104,7 +119,12 @@ export function InventarioSection() {
     String(item.clave).toLowerCase().includes(searchTerm.toLowerCase())
   )
   const filteredByUnidad = activeUnidadFilter ? filtered.filter(i => i.unidad === activeUnidadFilter) : filtered
-  const sortedFiltered = [...filteredByUnidad].sort((a, b) => {
+  const filteredByStock = stockFilter === "sin"
+    ? filteredByUnidad.filter(i => i.cantidad === 0)
+    : stockFilter === "bajo"
+    ? filteredByUnidad.filter(i => i.cantidad > 0 && i.cantidad < i.minimo)
+    : filteredByUnidad
+  const sortedFiltered = [...filteredByStock].sort((a, b) => {
     if (!sortField) return 0
     const f = sortDirection === "asc" ? 1 : -1
     if (sortField === "clave") {
@@ -168,7 +188,7 @@ export function InventarioSection() {
       
       // 2. Registrar movimiento si hay cantidad
       if (qty !== 0) {
-        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "Movimiento manual" })
+        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "No se especificó" })
       }
       
       await refreshInventario()
@@ -238,11 +258,21 @@ export function InventarioSection() {
     if (!deleteArticuloId) { setArticuloError("Selecciona un artículo."); return }
     setSavingArticulo(true); setArticuloError(null)
     try {
-      await eliminarArticulo(deleteArticuloId); await refreshInventario(); setShowEliminarDialog(false)
+      await eliminarArticulo(deleteArticuloId)
       toast.success("Artículo eliminado del inventario")
+      await refreshInventario()
+      setShowEliminarDialog(false)
     } catch (err: unknown) {
-      setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
-      toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+      // 404 means the article was already deleted externally — sync the UI
+      const status = (err as { status?: number })?.status
+      if (status === 404) {
+        await refreshInventario()
+        setShowEliminarDialog(false)
+        toast.info("El artículo ya había sido eliminado del sistema")
+      } else {
+        setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+        toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+      }
     } finally { setSavingArticulo(false) }
   }
 
@@ -258,14 +288,40 @@ export function InventarioSection() {
           <h1 className="text-xl font-bold tracking-tight text-foreground">Inventario</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Control de artículos y materiales del almacén</p>
         </div>
-        <button onClick={loadData}
+        <button onClick={() => { loadData(); if (activeTab === "historial") loadMovimientos() }}
           className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
           <RefreshCw className="size-3.5" />Actualizar
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl border border-border/70 bg-muted/40 p-1 w-fit">
+        <button
+          onClick={() => setActiveTab("articulos")}
+          className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
+            activeTab === "articulos"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Package className="size-3.5" />
+          Artículos
+        </button>
+        <button
+          onClick={() => { setActiveTab("historial"); if (!movimientos.length) loadMovimientos() }}
+          className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
+            activeTab === "historial"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Clock className="size-3.5" />
+          Historial (30d)
+        </button>
+      </div>
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      {activeTab === "articulos" && <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {[
           { label: "Total artículos",  value: inventario.length, color: NAVY,      icon: Package },
           { label: "Stock bajo",       value: bajosStock,        color: "#f59e0b", icon: AlertTriangle },
@@ -281,13 +337,10 @@ export function InventarioSection() {
             <span className="text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</span>
           </div>
         ))}
-      </div>
-
-      {/* Entry banner (top-center) */}
-      
+      </div>}
 
       {/* Tabla */}
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+      {activeTab === "articulos" && <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -296,6 +349,8 @@ export function InventarioSection() {
             <p className="text-[11px] text-muted-foreground">
               {sortedFiltered.length} de {inventario.length} artículos
               {activeUnidadFilter && <> · Unidad: <span className="font-medium">{activeUnidadFilter}</span></>}
+              {stockFilter === "bajo" && <> · <span className="font-medium text-amber-600">Stock bajo</span></>}
+              {stockFilter === "sin"  && <> · <span className="font-medium text-red-600">Sin stock</span></>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -310,6 +365,67 @@ export function InventarioSection() {
                 className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
               />
             </div>
+            {/* Filtro de stock */}
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                    stockFilter
+                      ? stockFilter === "sin"
+                        ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
+                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Filter className="size-3.5" />
+                  Filtrar
+                  {stockFilter && (
+                    <span
+                      onClick={e => { e.stopPropagation(); setStockFilter(null) }}
+                      className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10"
+                    >
+                      <X className="size-2.5" />
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-52 p-1.5">
+                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtrar por stock</p>
+                <button
+                  onClick={() => { setStockFilter(null); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    !stockFilter ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Package className="size-3.5" />
+                  Todos los artículos
+                </button>
+                <button
+                  onClick={() => { setStockFilter("bajo"); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    stockFilter === "bajo"
+                      ? "bg-amber-50 font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "text-muted-foreground hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-950/20 dark:hover:text-amber-400"
+                  }`}
+                >
+                  <AlertTriangle className="size-3.5 text-amber-500" />
+                  Stock bajo
+                  <span className="ml-auto tabular-nums font-medium">{bajosStock}</span>
+                </button>
+                <button
+                  onClick={() => { setStockFilter("sin"); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    stockFilter === "sin"
+                      ? "bg-red-50 font-medium text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                      : "text-muted-foreground hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/20 dark:hover:text-red-400"
+                  }`}
+                >
+                  <AlertTriangle className="size-3.5 text-red-500" />
+                  Sin stock
+                  <span className="ml-auto tabular-nums font-medium">{sinStock}</span>
+                </button>
+              </PopoverContent>
+            </Popover>
             {/* Acciones */}
             <button onClick={openAgregarArticulo}
               className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50">
@@ -393,7 +509,92 @@ export function InventarioSection() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
+
+      {/* ── Historial de movimientos ── */}
+      {activeTab === "historial" && (
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Historial de movimientos</p>
+              <p className="text-[11px] text-muted-foreground">Últimos 30 días · {movimientos.length} registros</p>
+            </div>
+            <button
+              onClick={loadMovimientos}
+              disabled={loadingMovimientos}
+              className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3.5 ${loadingMovimientos ? "animate-spin" : ""}`} />
+              Actualizar
+            </button>
+          </div>
+          {loadingMovimientos ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-sm text-muted-foreground">Cargando historial...</p>
+            </div>
+          ) : movimientos.length === 0 ? (
+            <div className="flex h-40 flex-col items-center justify-center gap-2">
+              <Clock className="size-8 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Sin movimientos en los últimos 30 días</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/40 bg-muted/20">
+                    <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Fecha</th>
+                    <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Artículo</th>
+                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Tipo</th>
+                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Cantidad</th>
+                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground hidden md:table-cell">Stock final</th>
+                    <th className="py-2.5 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {movimientos.map((m) => {
+                    const esEntrada = m.tipo === "ENTRADA"
+                    const fecha = (() => {
+                      try {
+                        return new Date(m.fecha).toLocaleDateString("es-MX", {
+                          day: "2-digit", month: "short", year: "numeric",
+                        })
+                      } catch { return m.fecha }
+                    })()
+                    return (
+                      <tr key={m.idMovimiento} className="transition-colors hover:bg-muted/20">
+                        <td className="py-3 pl-5 text-[11px] text-muted-foreground whitespace-nowrap">{fecha}</td>
+                        <td className="py-3 max-w-[14rem]">
+                          <p className="truncate font-medium text-foreground">{m.descripcion}</p>
+                        </td>
+                        <td className="py-3 text-center">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            esEntrada
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                          }`}>
+                            {esEntrada ? "ENTRADA" : "SALIDA"}
+                          </span>
+                        </td>
+                        <td className={`py-3 text-center font-bold tabular-nums ${
+                          esEntrada ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                        }`}>
+                          {esEntrada ? "+" : "−"}{m.cantidad}
+                        </td>
+                        <td className="py-3 text-center text-foreground tabular-nums hidden md:table-cell">
+                          {m.stockResultante}
+                        </td>
+                        <td className="py-3 pr-5 text-muted-foreground max-w-[16rem]">
+                          <p className="truncate">{m.motivo || <span className="italic opacity-50">Sin motivo</span>}</p>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Dialog: Movimiento ── */}
       <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>

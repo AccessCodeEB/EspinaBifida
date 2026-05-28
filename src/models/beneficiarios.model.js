@@ -39,15 +39,35 @@ export const findById = (curp) =>
       .then(r => r.rows[0] ?? null)
   );
 
+function buildBindings(data, curp) {
+  const {
+    nombres, apellidoPaterno, apellidoMaterno, fechaNacimiento, genero,
+    nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
+    telefonoCasa, telefonoCelular, correoElectronico,
+    contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
+    tipoSangre, tipo, usaValvula, notas, estatus,
+  } = data;
+  return {
+    nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
+    apellidoMaterno: apellidoMaterno ?? null, curp,
+    fechaNacimiento: fechaNacimiento ?? null, genero: genero ?? null,
+    nombrePadreMadre: nombrePadreMadre ?? null,
+    calle: calle ?? null, colonia: colonia ?? null, ciudad: ciudad ?? null,
+    municipio: municipio ?? null, estado: estado ?? null, cp: cp ?? null,
+    telefonoCasa: telefonoCasa ?? null, telefonoCelular: telefonoCelular ?? null,
+    correoElectronico: correoElectronico ?? null,
+    contactoEmergencia: contactoEmergencia ?? null,
+    telefonoEmergencia: telefonoEmergencia ?? null,
+    hospitalNacimiento: hospitalNacimiento ?? null,
+    tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
+    usaValvula: usaValvula ?? "N", notas: notas ?? null,
+    estatus: estatus ?? "Activo",
+  };
+}
+
 export async function create(data) {
   return withConnection(conn => {
-    const {
-      nombres, apellidoPaterno, apellidoMaterno, curp, fechaNacimiento, genero,
-      nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
-      telefonoCasa, telefonoCelular, correoElectronico,
-      contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
-      tipoSangre, tipo, usaValvula, notas, estatus,
-    } = data;
+    const { curp } = data;
     return conn.execute(
       `INSERT INTO BENEFICIARIOS (
          NOMBRES, APELLIDO_PATERNO, APELLIDO_MATERNO, CURP,
@@ -64,22 +84,7 @@ export async function create(data) {
          :contactoEmergencia, :telefonoEmergencia, :hospitalNacimiento,
          :tipoSangre, :tipo, :usaValvula, :notas, :estatus
        )`,
-      {
-        nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
-        apellidoMaterno: apellidoMaterno ?? null, curp,
-        fechaNacimiento: fechaNacimiento ?? null, genero: genero ?? null,
-        nombrePadreMadre: nombrePadreMadre ?? null,
-        calle: calle ?? null, colonia: colonia ?? null, ciudad: ciudad ?? null,
-        municipio: municipio ?? null, estado: estado ?? null, cp: cp ?? null,
-        telefonoCasa: telefonoCasa ?? null, telefonoCelular: telefonoCelular ?? null,
-        correoElectronico: correoElectronico ?? null,
-        contactoEmergencia: contactoEmergencia ?? null,
-        telefonoEmergencia: telefonoEmergencia ?? null,
-        hospitalNacimiento: hospitalNacimiento ?? null,
-        tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
-        usaValvula: usaValvula ?? "N", notas: notas ?? null,
-        estatus: estatus ?? "Activo",
-      },
+      buildBindings(data, curp),
       { autoCommit: true }
     );
   });
@@ -87,13 +92,6 @@ export async function create(data) {
 
 export async function update(curp, data) {
   return withConnection(conn => {
-    const {
-      nombres, apellidoPaterno, apellidoMaterno, fechaNacimiento, genero,
-      nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
-      telefonoCasa, telefonoCelular, correoElectronico,
-      contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
-      tipoSangre, tipo, usaValvula, notas, estatus,
-    } = data;
     return conn.execute(
       `UPDATE BENEFICIARIOS SET
          NOMBRES = :nombres, APELLIDO_PATERNO = :apellidoPaterno,
@@ -110,22 +108,7 @@ export async function update(curp, data) {
          TIPOS_SANGRE = :tipoSangre, TIPO = :tipo,
          USA_VALVULA = :usaValvula, NOTAS = :notas, ESTATUS = :estatus
        WHERE CURP = :curp`,
-      {
-        nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
-        apellidoMaterno: apellidoMaterno ?? null, curp,
-        fechaNacimiento: fechaNacimiento ?? null, genero: genero ?? null,
-        nombrePadreMadre: nombrePadreMadre ?? null,
-        calle: calle ?? null, colonia: colonia ?? null, ciudad: ciudad ?? null,
-        municipio: municipio ?? null, estado: estado ?? null, cp: cp ?? null,
-        telefonoCasa: telefonoCasa ?? null, telefonoCelular: telefonoCelular ?? null,
-        correoElectronico: correoElectronico ?? null,
-        contactoEmergencia: contactoEmergencia ?? null,
-        telefonoEmergencia: telefonoEmergencia ?? null,
-        hospitalNacimiento: hospitalNacimiento ?? null,
-        tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
-        usaValvula: usaValvula ?? "N", notas: notas ?? null,
-        estatus: estatus ?? "Activo",
-      },
+      buildBindings(data, curp),
       { autoCommit: true }
     ).then(r => r.rowsAffected ?? 0);
   });

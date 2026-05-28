@@ -47,7 +47,7 @@ const NAVY  = "#0f4c81"
  * `3x…FF` fuerza un desafío interactivo para poder probar el flujo real; `1x…AA` siempre pasa sola.
  * @see https://developers.cloudflare.com/turnstile/reference/testing/
  */
-const TURNSTILE_SITE_KEY_DEV = "3x00000000000000000000FF"
+const TURNSTILE_SITE_KEY_DEV = "1x00000000000000000000AA"
 
 function FieldShell({
   label,
@@ -143,6 +143,7 @@ export function PublicPreregistroSection({
   const [turnstileToken, setTurnstileToken] = useState("")
   const turnstileRef = useRef<TurnstileInstance | null>(null)
   const curpEditadoManualmente = useRef(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     if (curpEditadoManualmente.current) return
@@ -218,6 +219,7 @@ export function PublicPreregistroSection({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
     const v = validateAltaSolicitudPublica(form)
     const captchaErrs: Record<string, string> = {}
     if (!turnstileSiteKey) {
@@ -238,6 +240,7 @@ export function PublicPreregistroSection({
       return
     }
     setErrors({})
+    submittingRef.current = true
     setSaving(true)
     try {
       const payload = { ...buildAltaCreatePayload(form), turnstileToken: turnstileToken.trim() }
@@ -260,6 +263,7 @@ export function PublicPreregistroSection({
       setTurnstileToken("")
       turnstileRef.current?.reset()
     } finally {
+      submittingRef.current = false
       setSaving(false)
     }
   }
