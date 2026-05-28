@@ -1,6 +1,8 @@
 import { Router } from "express";
 import * as ServiciosController from "../controllers/servicios.controller.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { crearServicioSchema, actualizarServicioSchema } from "../validators/servicios.schema.js";
 
 const router = Router();
 
@@ -8,7 +10,7 @@ const router = Router();
 router.get("/", ServiciosController.getAll);
 
 // POST /servicios - Crear nuevo servicio (con validación de membresía activa)
-router.post("/", verifyToken, checkRole(1, 2), ServiciosController.create);
+router.post("/", verifyToken, checkRole(1, 2), validate(crearServicioSchema), ServiciosController.create);
 
 // GET /servicios/detalle/:idServicio - Obtener servicio por ID
 router.get("/detalle/:idServicio", verifyToken, ServiciosController.getById);
@@ -20,7 +22,7 @@ router.get("/detalle", verifyToken, ServiciosController.getDetailed);
 router.get("/:curp", verifyToken, ServiciosController.getByCurp);
 
 // PUT /servicios/:idServicio - Actualizar servicio (monto pagado, notas)
-router.put("/:idServicio", verifyToken, checkRole(1, 2), ServiciosController.update);
+router.put("/:idServicio", verifyToken, checkRole(1, 2), validate(actualizarServicioSchema), ServiciosController.update);
 
 // DELETE /servicios/:idServicio - Eliminar servicio
 router.delete("/:idServicio", verifyToken, checkRole(1, 2), ServiciosController.deleteById);
