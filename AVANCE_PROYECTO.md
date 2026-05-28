@@ -98,14 +98,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | ~~**Documentación de la API**~~ | ✅ **Completado** — Swagger/OpenAPI 3.0 en `/api-docs` (dev). 82 endpoints anotados con JSDoc en 16 archivos de rutas. JWT integrado (botón Authorize). Guard `NODE_ENV !== 'production'`. `npm test` pasa incluyendo `swagger.test.js`. |
 | ~~**Pruebas E2E**~~ | ✅ **Completado** — 41 tests Playwright + QASE (IDs 1–43): API (auth, beneficiarios, membresías, servicios, inventario, reportes, pre-registro, artículos, citas, roles, seguridad) + UI (formulario público, UAT). `npm run test:e2e` |
-| **Validación de entradas con esquemas** | Las rutas no usan Joi/Zod; datos mal formados pueden llegar a la BD |
+| ~~**Validación de entradas con esquemas**~~ | ✅ **Completado** — `validate()` Zod aplicado en todas las rutas POST/PUT/PATCH, incluyendo rutas v1. |
+| ~~**CI/CD en GitHub Actions**~~ | ✅ **Completado** — `test.yml` corre `npm run test:coverage` en cada push/PR a main. Job `e2e` condicional a `ORACLE_E2E_ENABLED=true`. Cobertura posteada automáticamente como comentario en PRs. |
 
 ### Prioridad media
 
 | Tarea | Descripción |
 |---|---|
-| **Auditoría de operaciones sensibles** | No se registra quién hizo qué (baja de beneficiarios, aprobación de pre-registros, etc.) |
-| **CI/CD en GitHub Actions** | Correr tests automáticamente en cada PR |
+| **Auditoría de operaciones sensibles** | No se registra quién ejecutó cada operación crítica. Operaciones afectadas y responsable del código: baja lógica de beneficiario (`victorvalero6`), cambio de estatus (`victorvalero6`), aprobar pre-registro (`victorvalero6`), rechazar pre-registro (`victorvalero6`), eliminación permanente (`LeNav23`), desactivar administrador (`LeNav23`). |
 | **Manejo de errores de BD** | Fallos parciales en operaciones multi-paso pueden dejar estado inconsistente |
 | **Optimización de imágenes** | Las fotos de perfil no usan `<Image>` de Next.js ni lazy loading |
 
