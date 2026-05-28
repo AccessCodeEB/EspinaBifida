@@ -46,7 +46,8 @@
     "puppeteer": "^24.42.0",
     "react-easy-crop": "^5.5.7",
     "ws": "^8.20.1",
-    "xlsx": "0.18.5"
+    "xlsx": "0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
