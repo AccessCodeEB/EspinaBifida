@@ -2,11 +2,14 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "node:path";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { mountProfilePhotosRemoteFallback } from "./middleware/profilePhotosRemoteFallback.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { loginLimiter, publicLimiter, authLimiter, otpLimiter } from './middleware/rateLimiter.js';
+import { swaggerConfig } from './config/swagger.js';
 
 dotenv.config({ path: path.join(REPO_ROOT, ".env.defaults") });
 // Sin override: respeta variables ya definidas (p. ej. JWT_SECRET en CI o en tests).
@@ -47,6 +50,12 @@ app.use(cors({
 app.use(express.json());
 mountProfilePhotosRemoteFallback(app);
 app.use("/uploads", express.static(path.join(REPO_ROOT, "uploads")));
+
+// Swagger UI — solo en desarrollo/staging (nunca en producción)
+if (process.env.NODE_ENV !== 'production') {
+  const swaggerSpec = swaggerJsdoc(swaggerConfig);
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // Rate limiting — specific limiters before their routes, global limiter for all routes
 app.post('/administradores/login', loginLimiter);

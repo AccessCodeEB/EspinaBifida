@@ -96,7 +96,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Tarea | Descripción |
 |---|---|
-| **Documentación de la API** | No existe Swagger/OpenAPI ni README detallado por módulo |
+| ~~**Documentación de la API**~~ | ✅ **Completado** — Swagger/OpenAPI 3.0 en `/api-docs` (dev). 82 endpoints anotados con JSDoc en 16 archivos de rutas. JWT integrado (botón Authorize). Guard `NODE_ENV !== 'production'`. `npm test` pasa incluyendo `swagger.test.js`. |
 | ~~**Pruebas E2E**~~ | ✅ **Completado** — 41 tests Playwright + QASE (IDs 1–43): API (auth, beneficiarios, membresías, servicios, inventario, reportes, pre-registro, artículos, citas, roles, seguridad) + UI (formulario público, UAT). `npm run test:e2e` |
 | **Validación de entradas con esquemas** | Las rutas no usan Joi/Zod; datos mal formados pueden llegar a la BD |
 
