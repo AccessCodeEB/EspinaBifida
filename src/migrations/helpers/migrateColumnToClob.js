@@ -16,10 +16,10 @@ export async function migrateColumnToClob(table, prefix) {
     const result = await connection.execute(
       `SELECT COLUMN_NAME, DATA_TYPE FROM ALL_TAB_COLUMNS
        WHERE OWNER = USER
-         AND TABLE_NAME = :table
+         AND TABLE_NAME = :tbl_name
          AND COLUMN_NAME IN ('FOTO_PERFIL_URL', 'FOTO_PERFIL_CLOB')
        ORDER BY COLUMN_NAME`,
-      { table }
+      { tbl_name: table }
     );
 
     const cols = {};
