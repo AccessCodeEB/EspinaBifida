@@ -7,6 +7,12 @@ import {
   type EstadoOrigenCount,
 } from "@/lib/beneficiarios-origen"
 
+interface SvgMapLocation {
+  id: string
+  name: string
+  path: string
+}
+
 interface MapChartProps {
   stateCounts: EstadoOrigenCount[]
   height?: number
@@ -32,13 +38,13 @@ function buildLookup(counts: EstadoOrigenCount[]) {
 }
 
 function getColorFor(value: number | undefined, max: number) {
-  if (!value || value <= 0) return "#f3f4f6"
+  if (!value || value <= 0) return "#dde4ed"
   const ratio = Math.max(0, Math.min(1, value / max))
   if (ratio > 0.8) return "#0f4c81"
   if (ratio > 0.6) return "#1d6fb8"
-  if (ratio > 0.4) return "#4b8cc8"
-  if (ratio > 0.2) return "#a9c9e6"
-  return "#e6f0f8"
+  if (ratio > 0.4) return "#3b82c4"
+  if (ratio > 0.2) return "#7fb3d8"
+  return "#b8d5ea"
 }
 
 export function MapChart({ stateCounts, height = 360, onHoverState, hoveredState = null }: MapChartProps) {
@@ -66,7 +72,7 @@ export function MapChart({ stateCounts, height = 360, onHoverState, hoveredState
         aria-label="Mapa de México con origen de beneficiarios por estado"
         style={{ transform: "translateY(18px) scale(1.05)", transformOrigin: "center" }}
       >
-        {locations.map((location) => {
+        {locations.map((location: SvgMapLocation) => {
           const estado = normalizeEstadoOrigen(location.name) ?? location.name
           const total = lookup.get(estado)
           const color = getColorFor(total, max)
@@ -77,8 +83,9 @@ export function MapChart({ stateCounts, height = 360, onHoverState, hoveredState
               <path
                 d={location.path}
                 fill={color}
-                stroke="#1f293780"
-                strokeWidth="0.9"
+                stroke="#1f2937"
+                strokeWidth="0.7"
+                strokeOpacity="0.55"
                 vectorEffect="non-scaling-stroke"
                 className="transition-opacity duration-150 hover:opacity-90"
                 onMouseEnter={(event) => {
