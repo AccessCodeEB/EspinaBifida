@@ -185,7 +185,10 @@ export const syncStockBajoConsolidado = (mensaje) =>
 
 export const insertReporteGenerado = (tipo, fechaInicio, fechaFin) =>
   withConnection(async conn => {
-    const label = tipo === 'MENSUAL' ? 'mensual' : tipo === 'SEMESTRAL' ? 'semestral' : 'anual';
+    let label;
+    if (tipo === 'MENSUAL') label = 'mensual';
+    else if (tipo === 'SEMESTRAL') label = 'semestral';
+    else label = 'anual';
     const msg = `Reporte ${label} generado automáticamente (${fechaInicio} – ${fechaFin}).`;
     await conn.execute(
       `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)

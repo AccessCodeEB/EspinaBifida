@@ -90,130 +90,112 @@ async function syncNotificacionesStockBajo(conn) {
   await conn.commit();
 }
 
-async function run() {
-  await createPool();
-  const conn = await getConnection();
+async function resolverCategoria(conn) {
+  const { rows: cats } = await conn.execute(
+    `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
+  );
+  if (cats.length > 0) {
+    console.log(`  Usando categoría existente: ID_CATEGORIA = ${cats[0].ID_CATEGORIA}`);
+    return cats[0].ID_CATEGORIA;
+  }
+  await conn.execute(
+    `INSERT INTO CATEGORIAS_ARTICULO (NOMBRE) VALUES ('General')`,
+    {},
+    { autoCommit: false }
+  );
+  const { rows: newCat } = await conn.execute(
+    `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
+  );
+  console.log(`  Categoría 'General' creada: ID_CATEGORIA = ${newCat[0].ID_CATEGORIA}`);
+  return newCat[0].ID_CATEGORIA;
+}
 
-  try {
-    // ── 1. Obtener artículos existentes ──────────────────────────────
-    const { rows: existentes } = await conn.execute(
-      `SELECT ID_ARTICULO, DESCRIPCION, STOCK_MINIMO, MANEJA_INVENTARIO
-         FROM ARTICULOS WHERE NVL(ACTIVO,'S') = 'S'
-         ORDER BY ID_ARTICULO`
+async function insertarDemos(conn) {
+  console.log("No se encontraron artículos. Insertando datos de demo...\n");
+  const idCat = await resolverCategoria(conn);
+
+  for (const a of DEMO_ARTICULOS) {
+    await conn.execute(
+      `INSERT INTO ARTICULOS (
+         ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
+         INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO, ACTIVO
+       ) VALUES (
+         SEQ_ARTICULOS.NEXTVAL, :desc, :unidad, :cuota,
+         :stock, :manejaInv, :idCat, :stockMin, 'S'
+       )`,
+      { desc: a.descripcion, unidad: a.unidad, cuota: a.cuota, stock: a.stock, manejaInv: a.manejaInv, idCat, stockMin: a.stockMin }
     );
-
-    if (existentes.length === 0) {
-      // ── 2a. No hay artículos → insertar demos ─────────────────────
-      console.log("No se encontraron artículos. Insertando datos de demo...\n");
-
-      // Buscar o crear una categoría genérica
-      const { rows: cats } = await conn.execute(
-        `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
-      );
-      let idCat;
-      if (cats.length > 0) {
-        idCat = cats[0].ID_CATEGORIA;
-        console.log(`  Usando categoría existente: ID_CATEGORIA = ${idCat}`);
-      } else {
-        await conn.execute(
-          `INSERT INTO CATEGORIAS_ARTICULO (NOMBRE) VALUES ('General')`,
-          {},
-          { autoCommit: false }
-        );
-        const { rows: newCat } = await conn.execute(
-          `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
-        );
-        idCat = newCat[0].ID_CATEGORIA;
-        console.log(`  Categoría 'General' creada: ID_CATEGORIA = ${idCat}`);
-      }
-
-      for (const a of DEMO_ARTICULOS) {
-        await conn.execute(
-          `INSERT INTO ARTICULOS (
-             ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
-             INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO, ACTIVO
-           ) VALUES (
-             SEQ_ARTICULOS.NEXTVAL, :desc, :unidad, :cuota,
-             :stock, :manejaInv, :idCat, :stockMin, 'S'
-           )`,
-          {
-            desc:      a.descripcion,
-            unidad:    a.unidad,
-            cuota:     a.cuota,
-            stock:     a.stock,
-            manejaInv: a.manejaInv,
-            idCat,
-            stockMin:  a.stockMin,
-          }
-        );
-        const tag =
-          a.manejaInv === "N"             ? "sin tracking" :
-          a.stock === 0                   ? "SIN STOCK    " :
-          a.stock < a.stockMin            ? "STOCK BAJO   " :
-                                            "stock normal  ";
-        console.log(`  [${tag}] ${a.descripcion} (${a.stock} ${a.unidad})`);
-      }
-
-    } else {
-      // ── 2b. Ya existen artículos → actualizar stocks ───────────────
-      console.log(`Se encontraron ${existentes.length} artículo(s). Actualizando stocks...\n`);
-
-      const { normal, low, sinStock } = stockDistribution(existentes.length);
-
-      for (let i = 0; i < existentes.length; i++) {
-        const art = existentes[i];
-        const minimo = Number(art.STOCK_MINIMO ?? 5);
-
-        let nuevoStock;
-        let label;
-
-        if (i < normal) {
-          // stock normal: mínimo × 3 o al menos 10
-          nuevoStock = Math.max(minimo * 3, 10);
-          label = "stock normal";
-        } else if (i < normal + low) {
-          // stock bajo: entre 1 y (mínimo - 1)
-          nuevoStock = Math.max(1, minimo - 1);
-          label = "STOCK BAJO";
-        } else {
-          // sin stock (solo los últimos `sinStock` artículos)
-          nuevoStock = 0;
-          label = "SIN STOCK";
-        }
-
-        if (art.MANEJA_INVENTARIO !== "S") {
-          // artículos sin tracking de inventario: dejar en 0, no tocar
-          label = "sin tracking — sin cambio";
-          nuevoStock = 0;
-        }
-
-        await conn.execute(
-          `UPDATE ARTICULOS SET INVENTARIO_ACTUAL = :stock WHERE ID_ARTICULO = :id`,
-          { stock: nuevoStock, id: art.ID_ARTICULO }
-        );
-
-        console.log(
-          `  [${label.padEnd(14)}] ID=${String(art.ID_ARTICULO).padEnd(4)} ` +
-          `${art.DESCRIPCION.substring(0, 40).padEnd(42)} → ${nuevoStock}`
-        );
-      }
-    }
-
-    await conn.commit();
-    console.log("\n✅ Seed de inventario completado.");
-
-    // ── 3. Sincronizar notificaciones de stock bajo ────────────────────
-    console.log("\nSincronizando notificaciones de stock bajo...");
-    await syncNotificacionesStockBajo(conn);
-
-  } catch (err) {
-    await conn.rollback();
-    console.error("\n❌ Error al ejecutar el seed:", err.message);
-    process.exit(1);
-  } finally {
-    await conn.close();
-    await closePool();
+    let tag;
+    if (a.manejaInv === "N")       tag = "sin tracking";
+    else if (a.stock === 0)        tag = "SIN STOCK    ";
+    else if (a.stock < a.stockMin) tag = "STOCK BAJO   ";
+    else                           tag = "stock normal  ";
+    console.log(`  [${tag}] ${a.descripcion} (${a.stock} ${a.unidad})`);
   }
 }
 
-run();
+async function actualizarStocks(conn, existentes) {
+  console.log(`Se encontraron ${existentes.length} artículo(s). Actualizando stocks...\n`);
+  const { normal, low } = stockDistribution(existentes.length);
+
+  for (let i = 0; i < existentes.length; i++) {
+    const art = existentes[i];
+    const minimo = Number(art.STOCK_MINIMO ?? 5);
+    let nuevoStock;
+    let label;
+
+    if (art.MANEJA_INVENTARIO !== "S") {
+      label = "sin tracking — sin cambio";
+      nuevoStock = 0;
+    } else if (i < normal) {
+      nuevoStock = Math.max(minimo * 3, 10);
+      label = "stock normal";
+    } else if (i < normal + low) {
+      nuevoStock = Math.max(1, minimo - 1);
+      label = "STOCK BAJO";
+    } else {
+      nuevoStock = 0;
+      label = "SIN STOCK";
+    }
+
+    await conn.execute(
+      `UPDATE ARTICULOS SET INVENTARIO_ACTUAL = :stock WHERE ID_ARTICULO = :id`,
+      { stock: nuevoStock, id: art.ID_ARTICULO }
+    );
+    console.log(
+      `  [${label.padEnd(14)}] ID=${String(art.ID_ARTICULO).padEnd(4)} ` +
+      `${art.DESCRIPCION.substring(0, 40).padEnd(42)} → ${nuevoStock}`
+    );
+  }
+}
+
+await createPool();
+const conn = await getConnection();
+
+try {
+  const { rows: existentes } = await conn.execute(
+    `SELECT ID_ARTICULO, DESCRIPCION, STOCK_MINIMO, MANEJA_INVENTARIO
+       FROM ARTICULOS WHERE NVL(ACTIVO,'S') = 'S'
+       ORDER BY ID_ARTICULO`
+  );
+
+  if (existentes.length === 0) {
+    await insertarDemos(conn);
+  } else {
+    await actualizarStocks(conn, existentes);
+  }
+
+  await conn.commit();
+  console.log("\n✅ Seed de inventario completado.");
+
+  console.log("\nSincronizando notificaciones de stock bajo...");
+  await syncNotificacionesStockBajo(conn);
+
+} catch (err) {
+  await conn.rollback();
+  console.error("\n❌ Error al ejecutar el seed:", err.message);
+  process.exit(1);
+} finally {
+  await conn.close();
+  await closePool();
+}

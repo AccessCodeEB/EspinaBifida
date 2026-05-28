@@ -3,7 +3,7 @@ import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
 // Validar beneficiario activo y crear servicio
-const ESTATUS_BLOQUEADOS = ["Inactivo", "Baja"];
+const ESTATUS_BLOQUEADOS = new Set(["Inactivo", "Baja"]);
 
 function parseNumber(value, fieldName) {
   const parsed = Number(value);
@@ -93,7 +93,7 @@ export async function createConValidacion(data) {
     throw notFound("Beneficiario no encontrado");
   }
 
-  if (ESTATUS_BLOQUEADOS.includes(beneficiario.ESTATUS)) {
+  if (ESTATUS_BLOQUEADOS.has(beneficiario.ESTATUS)) {
     throw conflict(
       `No se puede asignar un servicio a un beneficiario con estatus '${beneficiario.ESTATUS}'`
     );

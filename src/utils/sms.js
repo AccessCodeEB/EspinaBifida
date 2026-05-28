@@ -17,10 +17,11 @@ export async function sendSmsCode(toPhone, code) {
       Body: `Tu código de verificación EspinaBifida es: ${code}. Válido 5 minutos.`,
     });
 
+    const credentials = Buffer.from(`${sid}:${token}`).toString("base64");
     const res = await fetch(url, {
       method:  "POST",
       headers: {
-        Authorization:  `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+        Authorization:  `Basic ${credentials}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: body.toString(),

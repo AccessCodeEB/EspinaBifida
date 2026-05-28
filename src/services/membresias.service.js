@@ -13,7 +13,7 @@ function formatISODateUTC(date) {
 
 /* istanbul ignore next */
 function addMonthsUTC(date, n = 1) {
-  const d = new Date(date.getTime());
+  const d = new Date(date);
   d.setUTCMonth(d.getUTCMonth() + n);
   return d;
 }
