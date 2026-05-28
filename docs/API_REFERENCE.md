@@ -1,5 +1,9 @@
 # API Reference — EspinaBifida Backend
 
+> **Documentación interactiva disponible en `/api-docs` (entorno dev/staging)**
+> Accede a `http://localhost:3000/api-docs` para explorar y probar los 82 endpoints directamente desde el navegador con autenticación JWT integrada (botón Authorize).
+> Credenciales de prueba: `admin@espinabifida.mx` / `Admin123`
+
 Documentación completa de la API REST del sistema EspinaBifida.
 
 ---
