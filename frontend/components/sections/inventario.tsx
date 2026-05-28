@@ -295,13 +295,13 @@ export function InventarioSection() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border/70 bg-muted/40 p-1 w-fit">
+      <div className="flex gap-2">
         <button
           onClick={() => setActiveTab("articulos")}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
             activeTab === "articulos"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
           }`}
         >
           <Package className="size-3.5" />
@@ -309,10 +309,10 @@ export function InventarioSection() {
         </button>
         <button
           onClick={() => { setActiveTab("historial"); if (!movimientos.length) loadMovimientos() }}
-          className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
             activeTab === "historial"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
           }`}
         >
           <Clock className="size-3.5" />
