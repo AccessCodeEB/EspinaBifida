@@ -6,13 +6,20 @@ import { jest } from "@jest/globals";
 import {
   mockExecute,
   mockClose,
+  mockCommit,
+  mockRollback,
   dbModuleMock,
   resetMocks,
 } from "./helpers/mockDb.js";
 
-jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
+const mockGetConnection = jest.fn();
 
-const { create, update, deactivate, hardDelete } = await import(
+jest.unstable_mockModule("../config/db.js", () => ({
+  ...dbModuleMock,
+  getConnection: mockGetConnection,
+}));
+
+const { create, update, deactivate, hardDelete, deactivateConCancelacionMembresias } = await import(
   "../models/beneficiarios.model.js"
 );
 
@@ -21,6 +28,12 @@ const CURP = "GAEJ900101HMNRRL09";
 beforeEach(() => {
   resetMocks();
   mockExecute.mockResolvedValue({ rowsAffected: 1 });
+  mockGetConnection.mockResolvedValue({
+    execute:  mockExecute,
+    commit:   mockCommit,
+    rollback: mockRollback,
+    close:    mockClose,
+  });
 });
 
 // ─── create — ramas ?? null (L68-82) ──────────────────────────────────────────
@@ -117,5 +130,50 @@ describe("hardDelete — rowsAffected ?? 0 (L171)", () => {
     const result = await hardDelete(CURP);
 
     expect(result).toBe(0);
+  });
+});
+
+// ─── deactivateConCancelacionMembresias — transacción atómica ─────────────────
+
+describe("deactivateConCancelacionMembresias", () => {
+  it("ejecuta UPDATE BENEFICIARIOS y UPDATE CREDENCIALES y hace commit", async () => {
+    await deactivateConCancelacionMembresias(CURP);
+
+    expect(mockExecute).toHaveBeenCalledTimes(2);
+    const [sql1] = mockExecute.mock.calls[0];
+    const [sql2] = mockExecute.mock.calls[1];
+    expect(sql1).toContain("UPDATE BENEFICIARIOS");
+    expect(sql2).toContain("UPDATE CREDENCIALES");
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("hace rollback y cierra la conexión si el primer UPDATE falla", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00001"));
+
+    await expect(deactivateConCancelacionMembresias(CURP)).rejects.toThrow("ORA-00001");
+
+    expect(mockCommit).not.toHaveBeenCalled();
+    expect(mockRollback).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("hace rollback y cierra la conexión si el segundo UPDATE falla", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 }); // primer UPDATE ok
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00942")); // segundo falla
+
+    await expect(deactivateConCancelacionMembresias(CURP)).rejects.toThrow("ORA-00942");
+
+    expect(mockCommit).not.toHaveBeenCalled();
+    expect(mockRollback).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("no intenta cerrar si getConnection falla", async () => {
+    mockGetConnection.mockRejectedValueOnce(new Error("pool exhausted"));
+
+    await expect(deactivateConCancelacionMembresias(CURP)).rejects.toThrow("pool exhausted");
+
+    expect(mockClose).not.toHaveBeenCalled();
   });
 });

@@ -366,8 +366,8 @@ export async function deactivate(curp) {
     throw notFound(`No existe un beneficiario con la CURP ${id}`, "BENEFICIARIO_NOT_FOUND");
   }
 
-  await BeneficiarioModel.deactivate(id);
-  await MembresiasModel.cancelarPorCurp(id);
+  // Baja + cancelación de membresías en una sola transacción — si una falla se hace rollback de ambas
+  await BeneficiarioModel.deactivateConCancelacionMembresias(id);
 
   const nombre = `${existente.NOMBRES ?? existente.nombres ?? ""} ${existente.APELLIDO_PATERNO ?? existente.apellidoPaterno ?? ""}`.trim();
   NotificacionesModel.insertBeneficiarioBaja(id, nombre).catch(() => {});

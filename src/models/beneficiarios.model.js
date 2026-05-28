@@ -1,4 +1,4 @@
-import { withConnection } from "../config/db.js";
+import { getConnection, withConnection } from "../config/db.js";
 
 export const findAll = () =>
   withConnection(conn =>
@@ -153,3 +153,32 @@ export const hardDelete = (curp) =>
       { curp }, { autoCommit: true }
     ).then(r => r.rowsAffected ?? 0)
   );
+
+/**
+ * Baja lógica + cancelación de membresías activas en una sola transacción.
+ * Si cualquiera de los dos UPDATEs falla, se hace rollback de ambos.
+ */
+export async function deactivateConCancelacionMembresias(curp) {
+  let conn;
+  try {
+    conn = await getConnection();
+    await conn.execute(
+      `UPDATE BENEFICIARIOS SET ESTATUS = 'Baja' WHERE CURP = :curp`,
+      { curp }
+    );
+    await conn.execute(
+      `UPDATE CREDENCIALES
+       SET FECHA_VIGENCIA_FIN = TRUNC(SYSDATE),
+           OBSERVACIONES = 'Cancelada por baja de beneficiario'
+       WHERE CURP = :curp
+         AND (FECHA_VIGENCIA_FIN IS NULL OR FECHA_VIGENCIA_FIN > TRUNC(SYSDATE))`,
+      { curp }
+    );
+    await conn.commit();
+  } catch (err) {
+    if (conn) await conn.rollback().catch(() => {});
+    throw err;
+  } finally {
+    if (conn) await conn.close().catch(() => {});
+  }
+}
