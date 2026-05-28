@@ -8,6 +8,8 @@ import {
   postSyncEstados,
 } from "../controllers/membresias.controller.js";
 import { verifyToken } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { crearMembresiaSchema } from "../validators/membresias.schema.js";
 
 const router = express.Router();
 
@@ -150,7 +152,7 @@ router.get("/", getAll);
  *             schema:
  *               $ref: '#/components/schemas/Error409'
  */
-router.post("/", createMembresia);
+router.post("/", validate(crearMembresiaSchema), createMembresia);
 
 /**
  * @openapi
