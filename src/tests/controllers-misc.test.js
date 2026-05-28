@@ -21,6 +21,11 @@ jest.unstable_mockModule("bcryptjs", () => ({
 // ─── Mock de conexión Oracle ──────────────────────────────────────────────────
 jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
+// ─── Mock de auditoría (fire-and-forget, no debe interferir con asserts de DB) ─
+jest.unstable_mockModule("../models/auditoria.model.js", () => ({
+  registrar: jest.fn().mockResolvedValue(undefined),
+}));
+
 const { default: app }     = await import("../app.js");
 process.env.JWT_SECRET = TEST_SECRET; // dotenv override: restituir secreto de prueba
 const { default: request } = await import("supertest");

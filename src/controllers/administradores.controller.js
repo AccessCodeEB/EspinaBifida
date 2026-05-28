@@ -1,6 +1,7 @@
 import * as AdminService from "../services/administradores.service.js";
 import { toCamel } from "../utils/dbTransform.js";
 import { badRequest } from "../utils/httpErrors.js";
+import { registrar as registrarAuditoria } from "../models/auditoria.model.js";
 
 function mapAdminPublic(row) {
   /* istanbul ignore next */
@@ -102,6 +103,7 @@ export async function deactivate(req, res, next) {
   try {
     await AdminService.deactivate(Number(req.params.idAdmin));
     res.json({ message: "Administrador desactivado exitosamente" });
+    registrarAuditoria(req.user.idAdmin, "DESACTIVAR_ADMIN", "ADMINISTRADOR", req.params.idAdmin).catch(() => {});
   } catch (err) {
     next(err);
   }

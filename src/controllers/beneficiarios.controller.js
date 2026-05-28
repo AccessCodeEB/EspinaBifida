@@ -2,6 +2,7 @@ import * as BeneficiarioService from "../services/beneficiarios.service.js";
 import { toCamel, safeClobString } from "../utils/dbTransform.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 import { verifyTurnstileToken } from "../utils/verifyTurnstile.js";
+import { registrar as registrarAuditoria } from "../models/auditoria.model.js";
 
 function mapBeneficiario(row) {
   const b = toCamel(row);
@@ -81,6 +82,7 @@ export async function updateEstatus(req, res, next) {
     const { estatus } = req.body;
     await BeneficiarioService.toggleEstatus(req.params.curp, estatus);
     res.json({ message: `Estatus actualizado a '${estatus}'` });
+    registrarAuditoria(req.user.idAdmin, "CAMBIO_ESTATUS", "BENEFICIARIO", req.params.curp, { estatus }).catch(() => {});
   } catch (err) {
     next(err);
   }
@@ -90,6 +92,7 @@ export async function deactivate(req, res, next) {
   try {
     await BeneficiarioService.deactivate(req.params.curp);
     res.json({ message: "Beneficiario desactivado exitosamente" });
+    registrarAuditoria(req.user.idAdmin, "BAJA_LOGICA", "BENEFICIARIO", req.params.curp).catch(() => {});
   } catch (err) {
     next(err);
   }
@@ -99,6 +102,7 @@ export async function hardDelete(req, res, next) {
   try {
     await BeneficiarioService.hardDelete(req.params.curp);
     res.json({ message: "Beneficiario eliminado permanentemente" });
+    registrarAuditoria(req.user.idAdmin, "ELIMINACION_PERMANENTE", "BENEFICIARIO", req.params.curp).catch(() => {});
   } catch (err) {
     next(err);
   }
@@ -136,6 +140,7 @@ export async function approvePreRegistro(req, res, next) {
   try {
     await BeneficiarioService.approvePreRegistro(req.params.curp);
     res.json({ message: "Solicitud aprobada; el beneficiario quedó activo." });
+    registrarAuditoria(req.user.idAdmin, "APROBAR_PRE_REGISTRO", "BENEFICIARIO", req.params.curp).catch(() => {});
   } catch (err) {
     next(err);
   }
@@ -145,6 +150,7 @@ export async function rejectPreRegistro(req, res, next) {
   try {
     await BeneficiarioService.rejectPreRegistro(req.params.curp);
     res.json({ message: "Solicitud cancelada y expediente eliminado." });
+    registrarAuditoria(req.user.idAdmin, "RECHAZAR_PRE_REGISTRO", "BENEFICIARIO", req.params.curp).catch(() => {});
   } catch (err) {
     next(err);
   }
