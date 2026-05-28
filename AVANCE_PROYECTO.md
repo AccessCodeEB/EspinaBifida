@@ -151,7 +151,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
 | `auth.spec.ts` | 1, 2, 3 | Login exitoso, token JWT, credenciales inválidas |
-| `beneficiarios.spec.ts` | 4, 5, 6, 7, 8 | CRUD beneficiario, búsqueda, CURP duplicada |
+| `beneficiarios.spec.ts` | 1, 2, 10, 44, 45, 46, 47, 48 | CRUD beneficiario, CURP inválida/duplicada, GET por CURP, PUT actualizar, PATCH estatus, DELETE baja lógica, DELETE eliminación permanente |
+| `administradores.spec.ts` | 49, 50, 51, 52, 53 | GET lista, GET por ID, PUT actualizar, validación 400, DELETE desactivar |
 | `membresias.spec.ts` | 9, 10, 11 | Alta membresía, validación vigencia, expiración |
 | `servicios.spec.ts` | 12, 13 | Registro servicio con membresía activa/inactiva |
 | `inventario.spec.ts` | 14, 15 | Movimientos de stock, alertas mínimo |
