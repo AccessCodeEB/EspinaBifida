@@ -29,6 +29,7 @@ interface AppSidebarProps {
   onSectionChange: (section: string) => void
   userName?: string
   userRole?: string
+  idRol?: number | null
   isDarkMode?: boolean
   onToggleDarkMode?: (val: boolean) => void
   onEditProfile?: () => void
@@ -40,6 +41,7 @@ export function AppSidebar({
   onSectionChange,
   userName,
   userRole,
+  idRol,
   isDarkMode,
   onToggleDarkMode,
   onEditProfile,
@@ -83,12 +85,12 @@ export function AppSidebar({
         { title: "Reportes",      icon: FileBarChart,     id: "reportes"      },
       ],
     },
-    {
+    ...(idRol === 1 ? [{
       label: "Sistema",
       items: [
         { title: "Administradores", icon: UserCog, id: "administradores" },
       ],
-    },
+    }] : []),
   ]
 
   // La sidebar muestra texto si: está expandida (collapsed=false) O si está en
