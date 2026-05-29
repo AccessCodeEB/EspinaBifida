@@ -21,8 +21,8 @@ export async function registrar(idAdmin, operacion, entidad = null, entidadId = 
         idAdmin,
         operacion,
         entidad,
-        entidadId: entidadId != null ? String(entidadId) : null,
-        detalle:   detalle   != null ? JSON.stringify(detalle) : null,
+        entidadId: entidadId == null ? null : String(entidadId),
+        detalle:   detalle   == null ? null : JSON.stringify(detalle),
       }
     );
     await conn.commit();

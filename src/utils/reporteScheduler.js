@@ -32,7 +32,7 @@ export function calcularPeriodo(tipo, hoy) {
     if (m === 0) return { fechaInicio: `${y - 1}-07-01`, fechaFin: `${y - 1}-12-31` };
     return { fechaInicio: `${y}-01-01`, fechaFin: `${y}-06-30` };
   }
-  // ANUAL: dispara 1-ene → cubre todo el año anterior
+  // ANUAL: dispara 1-ene → cubre el año completo anterior
   return { fechaInicio: `${y - 1}-01-01`, fechaFin: `${y - 1}-12-31` };
 }
 

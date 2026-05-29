@@ -17,6 +17,7 @@ async function loginUI(page: import('@playwright/test').Page) {
 }
 
 test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ page }) => {
+  test.setTimeout(120_000); // flujo completo: cleanup + form + Turnstile + aprobación
   // Cleanup: remove any prior UAT_CURP record (PENDIENTE or approved) so form always creates fresh
   const ctxBase = await request.newContext({ baseURL: API_BASE });
   const loginRes = await ctxBase.post('/administradores/login', {
@@ -102,8 +103,8 @@ test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ pa
   await page.getByRole('option').first().click().catch(() => {});
   await page.waitForTimeout(300);
 
-  // Wait for Turnstile auto-pass (site key 1x00000000000000000000AA)
-  await page.waitForTimeout(4000);
+  // Wait for Turnstile auto-pass (site key 1x00000000000000000000AA); CI needs extra time
+  await page.waitForTimeout(12000);
 
   await page.getByRole('button', { name: /enviar solicitud/i }).click();
   // Use heading-level check to avoid matching static page text (e.g. "Gracias a ellos es posible")

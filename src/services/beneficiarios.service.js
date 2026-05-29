@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import * as BeneficiarioModel from "../models/beneficiarios.model.js";
-import * as MembresiasModel from "../models/membresias.model.js";
 import * as NotificacionesModel from "../models/notificaciones.model.js";
 import { badRequest, notFound, conflict, mapOracleError } from "../utils/httpErrors.js";
 import { unlinkOldProfileIfSafe } from "../utils/profileFiles.js";

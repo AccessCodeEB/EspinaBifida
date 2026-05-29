@@ -1,7 +1,7 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-28 (Miércoles) — post Semana 3 (sesión tarde)
-**Próxima entrega:** 2026-05-29 (Jueves)
+**Actualización:** 2026-05-29 (Jueves) — SDD + Documento de Calidad entregados, manuales de usuario completados
+**Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
 ---
@@ -17,11 +17,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (ramas) | **100%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 10 / 10 |
-| Archivos de prueba (Jest + Supertest) | 42 |
-| Pruebas E2E Playwright — API | 48 tests en 13 archivos |
-| Pruebas E2E Playwright — UI (QASE IDs 24,30–32,41–43) | 8 tests en 2 archivos (1 skipped: rate limit solo prod) |
-| Total tests E2E | **56 tests**, **7 skipped** esperados |
+| Migraciones de BD | 12 / 12 |
+| Archivos de prueba Jest (suites) | 50 |
+| Tests Jest | 1080 |
+| Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
+| Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
+| Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
+| Total tests E2E | **44 activos**, **7 skipped** esperados — **100% verde en CI** |
+| Issues SonarCloud Mantenibilidad | **0 abiertos** |
 
 ---
 
@@ -40,8 +43,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
 | **Notificaciones** | Alertas automáticas de stock bajo y membresías próximas/vencidas, job nocturno cron, panel en dashboard | 100% |
-| **Migraciones BD** | 10 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
-| **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting | 100% |
+| **Auditoría** | Registro de operaciones sensibles en `AUDITORIA_OPERACIONES` (fire-and-forget) | 100% |
+| **Migraciones BD** | 12 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting, validación Zod | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
 
@@ -71,13 +75,22 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 40 archivos de prueba, 100% cobertura en statements, branches, functions y lines
+- 50 archivos de prueba Jest, 1080 tests, 100% cobertura en statements, branches, functions y lines
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
 - Transformación automática de columnas Oracle a camelCase
 - Modo oscuro (dark mode)
 - Cloudflare Turnstile en formulario público
+- CI/CD en GitHub Actions (`test.yml` corre `npm run test:coverage` en cada push/PR a main)
+- Documentación de API: Swagger/OpenAPI 3.0 en `/api-docs` (dev), 82 endpoints anotados, JWT integrado
+- Auditoría de operaciones sensibles: tabla `AUDITORIA_OPERACIONES` con 6 operaciones rastreadas
+- Baja de beneficiario en transacción atómica (baja + cancelación de membresías con rollback)
+- SonarCloud: 0 issues abiertos de mantenibilidad (9 corregidos 2026-05-28)
+- CI E2E completamente operativo: 44 tests activos pasan en GitHub Actions contra Oracle Cloud DB
+- Bug fix formulario público: `buildAltaCreatePayload` omite campos vacíos (`cp`, teléfonos, correo) para evitar error Zod en backend al enviar strings vacíos en campos con regex
+- Manuales de usuario: `docs/manual-usuario-interno.md` (personal de la asociación, 13 secciones) y `docs/manual-usuario-publico.md` (pacientes y familias, 5 secciones)
+- Documentación académica: `docs/SDD.md` (Documento de Diseño de Software, 1175 líneas) y `docs/documento-calidad.md` (Plan de Calidad con casos de prueba, métricas y lecciones aprendidas)
 
 ---
 
@@ -86,35 +99,16 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
-| ~~**CI/CD GitHub Actions**~~ | ✅ Completado | — |
 
 ---
 
 ## ❌ Lo que falta por hacer
 
-### Alta prioridad (necesario para entrega al socio formador)
-
-| Tarea | Descripción |
-|---|---|
-| ~~**Documentación de la API**~~ | ✅ **Completado** — Swagger/OpenAPI 3.0 en `/api-docs` (dev). 82 endpoints anotados con JSDoc en 16 archivos de rutas. JWT integrado (botón Authorize). Guard `NODE_ENV !== 'production'`. `npm test` pasa incluyendo `swagger.test.js`. |
-| ~~**Pruebas E2E**~~ | ✅ **Completado** — 41 tests Playwright + QASE (IDs 1–43): API (auth, beneficiarios, membresías, servicios, inventario, reportes, pre-registro, artículos, citas, roles, seguridad) + UI (formulario público, UAT). `npm run test:e2e` |
-| ~~**Validación de entradas con esquemas**~~ | ✅ **Completado** — `validate()` Zod aplicado en todas las rutas POST/PUT/PATCH, incluyendo rutas v1. |
-| ~~**CI/CD en GitHub Actions**~~ | ✅ **Completado** — `test.yml` corre `npm run test:coverage` en cada push/PR a main. Job `e2e` condicional a `ORACLE_E2E_ENABLED=true`. Cobertura posteada automáticamente como comentario en PRs. |
-
-### Prioridad media
-
-| Tarea | Descripción |
-|---|---|
-| ~~**Auditoría de operaciones sensibles**~~ | ✅ **Completado** — tabla `AUDITORIA_OPERACIONES` (migration-012), modelo `auditoria.model.js`, fire-and-forget en 6 operaciones sensibles: `CAMBIO_ESTATUS`, `BAJA_LOGICA`, `ELIMINACION_PERMANENTE`, `APROBAR_PRE_REGISTRO`, `RECHAZAR_PRE_REGISTRO`, `DESACTIVAR_ADMIN`. Tests unitarios en `auditoria.model.test.js`. |
-| ~~**Manejo de errores de BD**~~ | ✅ **Completado** — `deactivate()` de beneficiario ahora ejecuta baja + cancelación de membresías en una sola transacción atómica con rollback (`deactivateConCancelacionMembresias`). Era el único caso multi-paso crítico sin rollback coordinado. |
-| ~~**Optimización de imágenes**~~ | ✅ **Completado** — `loading="lazy"` y `decoding="async"` agregados a todas las fotos de perfil (`BeneficiariosTable`, `BeneficiarioDetailPanel`, `dashboard`, `preregistro`, `panel/page`). Nota: `<Image>` de Next.js no aplica porque las fotos se almacenan como data URLs en Oracle. |
-
 ### Prioridad baja (nice-to-have)
 
 | Tarea | Descripción |
 |---|---|
-| Error Boundaries en frontend | Sin componente de fallback para errores inesperados |
-| Manual de usuario | No existe documentación para el personal de la asociación |
+| Error Boundaries en frontend | Sin componente de fallback para errores inesperados en React |
 | Estrategia de respaldo de BD | No está documentado un plan de backups Oracle |
 
 ---
@@ -123,7 +117,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ### Capa 1 — Pruebas unitarias e integración (Jest + Supertest)
 
-**43 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
+**50 archivos de prueba** en `src/tests/` + `frontend/lib/__tests__/`, ejecutados con `npm test`.
 
 | Módulo | Archivos de prueba |
 |---|---|
@@ -131,23 +125,24 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Administradores | `administradores.model.test.js`, `administradores.service.test.js` |
 | Membresías | `membresias.model.test.js`, `membresias.service.test.js`, `membresias.controller.test.js` |
 | Servicios | `servicios.model.test.js`, `servicios.service.test.js`, `servicios.controller.test.js` |
-| Artículos / Inventario | `articulos.model.test.js`, `articulos.service.test.js`, `articulos.test.js`, `inventario.model.test.js`, `inventario.service.test.js`, `inventario.test.js`, `inventario.criteria.test.js` |
+| Artículos / Inventario | `articulos.model.test.js`, `articulos.service.test.js`, `articulos.test.js`, `inventario.model.test.js`, `inventario.service.test.js`, `inventario.test.js`, `inventario.criteria.test.js`, `inventario.schema.test.js` |
 | Reportes | `reportes.model.test.js`, `reportes.service.test.js`, `reportes.controller.test.js`, `reportes.unit.test.js` |
-| Notificaciones | `notificaciones.service.test.js`, `notificaciones.controller.test.js` |
+| Notificaciones | `notificaciones.service.test.js`, `notificaciones.controller.test.js`, `notificacionesScheduler.test.js` |
 | Seguridad / Auth | `rateLimiter.test.js`, `otpStore.test.js`, `verifyTurnstile.test.js`, `sms.test.js` |
-| Infraestructura | `db.test.js`, `dbTransform.test.js`, `health.test.js`, `migrations.test.js`, `email.test.js`, `uploadProfilePhoto.test.js`, `profile-photos-fallback.test.js` |
+| Infraestructura | `db.test.js`, `dbTransform.test.js`, `health.test.js`, `migrations.test.js`, `email.test.js`, `uploadProfilePhoto.test.js`, `profile-photos-fallback.test.js`, `refreshTokens.model.test.js` |
 | Flujos integrados | `flujo-beneficiario-membresia-servicio.test.js`, `configuracion.routes.test.js`, `controllers-misc.test.js`, `core-coverage.test.js` |
 | Schedulers | `reporteScheduler.test.js` |
 | Validadores | `validators.test.js` |
 | Auditoría | `auditoria.model.test.js` |
+| Frontend | `curp-generator.test.ts` |
 
 **Cobertura alcanzada:** 100% en statements, branches, functions y lines (verificado con `npm run test:coverage`).
 
 ### Capa 2 — Pruebas E2E (Playwright + QASE reporter)
 
-**13 archivos spec** en `e2e/`, ejecutados con `npm run test:e2e`. Integrados con QASE para trazabilidad de casos de prueba.
+**14 archivos spec** en `e2e/`, ejecutados con `npm run test:e2e`. Integrados con QASE para trazabilidad de casos de prueba. **CI E2E activo** con Oracle Cloud DB (variable `ORACLE_E2E_ENABLED=true`).
 
-#### Tests de API (`e2e/api/`) — 38 tests
+#### Tests de API (`e2e/api/`) — 37 tests activos
 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
@@ -162,9 +157,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | `articulos.spec.ts` | 25 | CRUD artículos, stock tracking |
 | `citas.spec.ts` | 26, 27 | CRUD citas, filtros por fecha |
 | `roles.spec.ts` | 28 | Listado de roles |
-| `seguridad.spec.ts` | 29, 37, 38, 39, 40 | RBAC, rutas protegidas, acceso sin token |
+| `seguridad.spec.ts` | 29, 37, 38, 39, 40 | RBAC, rutas protegidas, acceso sin token (5 skipped: rate limit, headers, refresh token — solo prod) |
 
-#### Tests de UI (`e2e/ui/`) — 8 tests
+#### Tests de UI (`e2e/ui/`) — 7 tests activos
 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
@@ -188,6 +183,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - **Radix Select**: todos los dropdowns usan pattern `locator('#id').click()` → `getByRole('option')` (no `<select>` nativo)
 - **forceDelete pattern**: cleanup de beneficiarios aprobados: `PATCH estatus=Inactivo` → `PUT notas='[SOLICITUD_PUBLICA_PRE_REG]'` → `DELETE /pre-registro`
 - **Rate limiting**: `isTest` en `rateLimiter.js` desactiva los límites en `NODE_ENV=test`; UAT-003 salta en dev/test
+- **CI E2E**: job `e2e` en `test.yml` activo con Oracle Instant Client + wallet, condicionado a `vars.ORACLE_E2E_ENABLED=true`; credenciales E2E en secrets `E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD` con fallback a `prueba@espina.com`
 
 ### Comandos de prueba
 
@@ -214,8 +210,9 @@ npx playwright test --config=e2e/playwright.config.ts --project=ui
 |---|---|---|---|
 | **Semana 1** | 19 — 23 May | Refactoring + Rate limiting + Seguridad | ✅ Completado |
 | **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) | ✅ Completado |
-| **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E básicas | ✅ E2E completado (41 tests Playwright + QASE) |
-| **Semana 4** | 09 — 13 Jun | CI/CD en GitHub Actions + revisión final con socio formador | ⏳ Pendiente |
+| **Semana 3** | 26 — 30 May | E2E 100% verde en CI, bug fix formulario público, SonarCloud limpio | ✅ Completado |
+| **Semana 4** | 02 — 06 Jun | Revisión final, preparación para entrega al socio formador | ⏳ Pendiente |
+| **Semana 5** | 09 — 13 Jun | Entrega final al socio formador | ⏳ Pendiente |
 
 > Las entregas de progreso se generan cada **martes y jueves**.
 
@@ -237,6 +234,7 @@ Ver: https://github.com/AccessCodeEB/EspinaBifida/security/dependabot
 - El formulario público de pre-registro usa Cloudflare Turnstile para protección contra bots
 - SMS OTP para cambio de contraseña: `src/utils/otpStore.js` (Map en memoria, TTL 5 min)
 - Sin Twilio configurado: modo dev activo — código visible en consola del servidor (nunca en prod)
+- Auditoría de operaciones sensibles: fire-and-forget post-response, no bloquea al cliente si falla
 
 ---
 

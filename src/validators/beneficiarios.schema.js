@@ -67,4 +67,4 @@ export const solicitudPublicaSchema = z.object({
   telefonoCelular: z.string().regex(TEL_REGEX, "telefonoCelular debe tener 10 dígitos").optional(),
   correoElectronico: z.string().regex(EMAIL_REGEX, "correoElectronico inválido").optional(),
   notas:          z.string().max(500).optional(),
-}).passthrough();
+}).catchall(z.unknown());

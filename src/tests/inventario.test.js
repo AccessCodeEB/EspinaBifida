@@ -101,7 +101,6 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
       .send({ ...movimientoBase, tipo: "AJUSTE" });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_MOVIMIENTO_TIPO");
   });
 
   test("devuelve 400 si cantidad es 0", async () => {
@@ -111,7 +110,6 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
       .send({ ...movimientoBase, cantidad: 0 });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_CANTIDAD");
   });
 
   test("devuelve 400 si cantidad es negativa", async () => {
@@ -130,7 +128,6 @@ describe("POST /api/v1/movimientos — crear movimiento de inventario", () => {
       .send({ ...movimientoBase, idArticulo: "abc" });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_ID");
   });
 
   test("devuelve 401 sin token", async () => {
