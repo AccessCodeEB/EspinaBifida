@@ -128,6 +128,8 @@ jobs:
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
       QASE_TOKEN: ${{ secrets.QASE_TOKEN }}
+      # TC-013 corre contra Render (rate limiter activo) en lugar del backend local
+      E2E_RATE_LIMIT_URL: https://espinabifida-api.onrender.com
 
     steps:
       - uses: actions/checkout@v4
