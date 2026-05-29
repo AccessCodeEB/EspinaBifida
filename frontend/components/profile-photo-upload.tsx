@@ -95,7 +95,6 @@ export function ProfilePhotoUpload({
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
-  const [cropPreviewUrl, setCropPreviewUrl] = useState<string | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraSupported, setCameraSupported] = useState(false)
 
@@ -107,9 +106,9 @@ export function ProfilePhotoUpload({
     fotoPerfilUrl ?? undefined,
     previewSrc ? null : imageRevision || null
   )
-  const displaySrc = cropPreviewUrl ?? previewSrc ?? serverSrc
+  const displaySrc = previewSrc ?? serverSrc
   const dim = sizeClass[size]
-  const imgKey = `${displaySrc ?? ""}|${imageRevision}|${previewSrc ?? ""}|${cropPreviewUrl ?? ""}`
+  const imgKey = `${displaySrc ?? ""}|${imageRevision}|${previewSrc ?? ""}`
 
   const cancelCrop = useCallback(() => {
     if (cropSrc) URL.revokeObjectURL(cropSrc)
@@ -117,15 +116,16 @@ export function ProfilePhotoUpload({
     setCropOpen(false)
   }, [cropSrc])
 
-  // El crop solo actualiza el preview local — no re-sube al servidor.
-  // La foto original ya fue subida en processImageFile antes de abrir el crop.
+  // Sube el recorte rectangular al servidor para que persista en avatar y credencial.
   const finishCrop = useCallback(
-    async (previewUrl: string) => {
-      if (cropPreviewUrl) URL.revokeObjectURL(cropPreviewUrl)
-      setCropPreviewUrl(previewUrl)
-      cancelCrop()
+    async (file: File) => {
+      try {
+        await onFileSelected(file)
+      } finally {
+        cancelCrop()
+      }
     },
-    [cancelCrop, cropPreviewUrl]
+    [onFileSelected, cancelCrop]
   )
 
   const processImageFile = useCallback(
@@ -135,17 +135,18 @@ export function ProfilePhotoUpload({
         toast.error("Formato no válido. Usa JPEG, PNG, WebP o GIF.")
         return
       }
-      // Limpiar preview de crop anterior al elegir nueva foto
-      setCropPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null })
 
-      // Redimensionar y subir la foto original sin recorte circular
+      // Redimensionar para que el canvas de crop sea manejable
       const resized = await resizeImageFile(file)
-      await onFileSelected(resized)
 
-      if (!enableCrop) return
+      if (!enableCrop) {
+        // Sin crop: subir la imagen original redimensionada directamente
+        await onFileSelected(resized)
+        return
+      }
 
-      // Abrir crop solo para encuadre visual — el resultado es un preview local,
-      // no se re-sube al servidor (la original ya está guardada arriba)
+      // Con crop: mostrar el dialog para que el usuario encuadre.
+      // La subida ocurre solo cuando el usuario confirma el crop (finishCrop).
       const url = URL.createObjectURL(resized)
       setCropSrc((prev) => {
         if (prev) URL.revokeObjectURL(prev)

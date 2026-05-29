@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { getCroppedPreviewUrl } from "@/lib/profile-photo-crop"
+import { getProfilePhotoCroppedBlob } from "@/lib/profile-photo-crop"
 
 const MAX_ZOOM = 4
 const MIN_ZOOM = 1
@@ -24,8 +24,8 @@ export interface ProfilePhotoCropDialogProps {
   /** object URL de la imagen elegida */
   imageSrc: string | null
   onClose: () => void
-  /** URL local (object URL) del área recortada, solo para preview — no se sube al servidor */
-  onComplete: (previewUrl: string) => void | Promise<void>
+  /** Archivo recortado rectangular listo para subir al servidor */
+  onComplete: (file: File) => void | Promise<void>
 }
 
 export function ProfilePhotoCropDialog({
@@ -56,8 +56,9 @@ export function ProfilePhotoCropDialog({
     if (!imageSrc || !croppedAreaPixels) return
     setBusy(true)
     try {
-      const previewUrl = await getCroppedPreviewUrl(imageSrc, croppedAreaPixels)
-      await onComplete(previewUrl)
+      const blob = await getProfilePhotoCroppedBlob(imageSrc, croppedAreaPixels)
+      const file = new File([blob], "foto-perfil.jpg", { type: "image/jpeg" })
+      await onComplete(file)
     } finally {
       setBusy(false)
     }
