@@ -14,8 +14,8 @@
  * en el sistema de archivos (entorno local).
  */
 
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 const WALLET_FILES = {
   "tnsnames.ora":     "WALLET_TNSNAMES_B64",

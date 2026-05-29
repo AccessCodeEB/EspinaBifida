@@ -45,7 +45,7 @@ app.use(cors({
     if (!origin) return callback(null, true); // curl, SSR, mobile apps
     const frontendUrl = process.env.FRONTEND_URL;
     if (!frontendUrl) return callback(null, true); // dev: permitir cualquier origen
-    const allowed = [frontendUrl, "http://localhost:3001"];
+    const allowed = [frontendUrl, process.env.FRONTEND_DEV_URL || "http://localhost:3001"];
     if (allowed.includes(origin)) return callback(null, true);
     return callback(new Error("CORS: origen no permitido"));
   },

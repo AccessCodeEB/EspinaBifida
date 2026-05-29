@@ -48,13 +48,10 @@ Las rutas v1 pueden incluir funcionalidades adicionales documentadas en los tags
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: process.env.API_URL || 'http://localhost:3000',
         description: 'Servidor de desarrollo',
       },
-      {
-        url: 'https://staging.espinabifida.mx',
-        description: 'Servidor de staging',
-      },
+      ...(process.env.STAGING_URL ? [{ url: process.env.STAGING_URL, description: 'Servidor de staging' }] : []),
     ],
     components: {
       securitySchemes: {

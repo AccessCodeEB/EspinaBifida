@@ -19,7 +19,7 @@ export default defineConfig({
             {
               mode: 'testops',
               testops: {
-                api: { token: process.env.QASE_TOKEN ?? '26b06f45f7c19dd065f121bde43cb5d62838e16c0abccf5bdd06d392d3ad9708' },
+                api: { token: process.env.QASE_TOKEN ?? '' },
                 project: 'EBF',
                 run: { complete: true },
               },
