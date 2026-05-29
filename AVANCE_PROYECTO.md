@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-29 (Jueves) — E2E 100% verde en CI, bug fix formulario público
+**Actualización:** 2026-05-29 (Jueves) — SDD + Documento de Calidad entregados, manuales de usuario completados
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -89,6 +89,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - SonarCloud: 0 issues abiertos de mantenibilidad (9 corregidos 2026-05-28)
 - CI E2E completamente operativo: 44 tests activos pasan en GitHub Actions contra Oracle Cloud DB
 - Bug fix formulario público: `buildAltaCreatePayload` omite campos vacíos (`cp`, teléfonos, correo) para evitar error Zod en backend al enviar strings vacíos en campos con regex
+- Manuales de usuario: `docs/manual-usuario-interno.md` (personal de la asociación, 13 secciones) y `docs/manual-usuario-publico.md` (pacientes y familias, 5 secciones)
+- Documentación académica: `docs/SDD.md` (Documento de Diseño de Software, 1175 líneas) y `docs/documento-calidad.md` (Plan de Calidad con casos de prueba, métricas y lecciones aprendidas)
 
 ---
 
@@ -107,7 +109,6 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | Error Boundaries en frontend | Sin componente de fallback para errores inesperados en React |
-| Manual de usuario | No existe documentación para el personal de la asociación |
 | Estrategia de respaldo de BD | No está documentado un plan de backups Oracle |
 
 ---
