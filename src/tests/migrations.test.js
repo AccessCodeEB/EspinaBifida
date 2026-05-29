@@ -1424,3 +1424,195 @@ describe("runMigration009 — falla al obtener conexión", () => {
     expect(mockClose).not.toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// runMigration013 — Trazabilidad Oracle: FECHA_CREACION + FECHA_MODIFICACION + triggers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { runMigration013 } = await import("../migrations/013_trazabilidad_oracle.js");
+
+/**
+ * Número de tablas con ambas columnas + trigger.
+ * TABLAS_FULL = ["CREDENCIALES","SERVICIOS","ARTICULOS","CITAS","ADMINISTRADORES"]
+ */
+const TABLAS_FULL_COUNT = 5;
+
+/** Mock: todo ya existe (todas las columnas y triggers presentes). */
+function mockMigration013AllExists() {
+  // BENEFICIARIOS: columna + trigger
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] }); // FECHA_MODIFICACION existe
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] }); // TRG_BENEFICIARIOS_BU existe
+  // MOVIMIENTOS_INVENTARIO: solo columna
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] }); // FECHA_CREACION existe
+  // TABLAS_FULL: 3 checks cada una (FECHA_CREACION, FECHA_MODIFICACION, trigger)
+  for (let i = 0; i < TABLAS_FULL_COUNT * 3; i++) {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+  }
+}
+
+/** Mock: nada existe (todas las columnas y triggers ausentes). */
+function mockMigration013NothingExists() {
+  // BENEFICIARIOS.FECHA_MODIFICACION no existe → ALTER
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+  mockExecute.mockResolvedValueOnce({});
+  // TRG_BENEFICIARIOS_BU no existe → CREATE
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+  mockExecute.mockResolvedValueOnce({});
+  // MOVIMIENTOS_INVENTARIO.FECHA_CREACION no existe → ALTER
+  mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+  mockExecute.mockResolvedValueOnce({});
+  // 5 tablas × 3 pares (check+DDL) × 2 columnas + 1 trigger
+  for (let i = 0; i < TABLAS_FULL_COUNT; i++) {
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // FECHA_CREACION no existe
+    mockExecute.mockResolvedValueOnce({});                      // ALTER ADD FECHA_CREACION
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // FECHA_MODIFICACION no existe
+    mockExecute.mockResolvedValueOnce({});                      // ALTER ADD FECHA_MODIFICACION
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] }); // trigger no existe
+    mockExecute.mockResolvedValueOnce({});                      // CREATE TRIGGER
+  }
+}
+
+describe("runMigration013 — todo ya existe", () => {
+  test("no ejecuta ningún DDL, hace commit y cierra conexión", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    mockMigration013AllExists();
+
+    await runMigration013();
+
+    // 2 (beneficiarios) + 1 (movimientos) + 5×3 (tablas_full) = 18 selects
+    expect(mockExecute).toHaveBeenCalledTimes(18);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    const calls = mockExecute.mock.calls.map((c) => c[0]?.trim ? c[0].trim() : c[0]);
+    expect(calls.some((s) => /ALTER TABLE/.test(s))).toBe(false);
+    expect(calls.some((s) => /CREATE.*TRIGGER/.test(s))).toBe(false);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — estado inicial (nada existe)", () => {
+  test("ejecuta todos los ALTER + triggers, hace commit y cierra conexión", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    mockMigration013NothingExists();
+
+    await runMigration013();
+
+    // 2+2 (beneficiarios) + 2 (movimientos) + 5×6 (tablas_full: 2col+1trg × 2 por par) = 36
+    expect(mockExecute).toHaveBeenCalledTimes(36);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+
+    const calls = mockExecute.mock.calls.map((c) => c[0]?.trim ? c[0].trim() : c[0]);
+    expect(calls.some((s) => /ALTER TABLE BENEFICIARIOS ADD FECHA_MODIFICACION/i.test(s))).toBe(true);
+    expect(calls.some((s) => /TRG_BENEFICIARIOS_BU/i.test(s))).toBe(true);
+    expect(calls.some((s) => /ALTER TABLE MOVIMIENTOS_INVENTARIO ADD FECHA_CREACION/i.test(s))).toBe(true);
+    expect(calls.some((s) => /ALTER TABLE CREDENCIALES ADD FECHA_CREACION/i.test(s))).toBe(true);
+    expect(calls.some((s) => /TRG_CREDENCIALES_BU/i.test(s))).toBe(true);
+    expect(calls.some((s) => /TRG_ADMINISTRADORES_BU/i.test(s))).toBe(true);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — estado parcial: BENEFICIARIOS ya tiene columna, trigger falta", () => {
+  test("omite ALTER de BENEFICIARIOS pero crea el trigger", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    // BENEFICIARIOS.FECHA_MODIFICACION existe
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+    // TRG_BENEFICIARIOS_BU no existe → CREATE
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+    mockExecute.mockResolvedValueOnce({});
+    // MOVIMIENTOS_INVENTARIO.FECHA_CREACION existe
+    mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+    // tablas_full: todo existe
+    for (let i = 0; i < TABLAS_FULL_COUNT * 3; i++) {
+      mockExecute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+    }
+
+    await runMigration013();
+
+    const calls = mockExecute.mock.calls.map((c) => c[0]?.trim ? c[0].trim() : c[0]);
+    expect(calls.some((s) => /TRG_BENEFICIARIOS_BU/i.test(s))).toBe(true);
+    expect(calls.some((s) => /ALTER TABLE BENEFICIARIOS/.test(s))).toBe(false);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — formato posicional en SELECT CNT (rama ?? rows[0][0])", () => {
+  test("interpreta CNT desde el índice posicional — trata todo como existente", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    // Todas las respuestas en formato posicional: [[1]] → CNT=undef, rows[0][0]=1 → existe
+    for (let i = 0; i < 18; i++) {
+      mockExecute.mockResolvedValueOnce({ rows: [[1]] });
+    }
+
+    await runMigration013();
+
+    expect(mockExecute).toHaveBeenCalledTimes(18);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    logSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — error durante la ejecución", () => {
+  test("captura el error, logea y cierra conexión sin relanzar", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-01031: insufficient privileges"));
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration013()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[migration-013]"),
+      expect.any(String)
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — error sin .message (rama ?? err)", () => {
+  test("logea el objeto raw cuando el error no tiene .message", async () => {
+    mockExecute.mockRejectedValueOnce("ORA-raw-error-013");
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration013()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[migration-013]"),
+      "ORA-raw-error-013"
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — falla al obtener conexión", () => {
+  test("captura el error sin intentar cerrar conexión nula", async () => {
+    dbModuleMock.getConnection.mockRejectedValueOnce(
+      new Error("ORA-12541: TNS:no listener")
+    );
+
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(runMigration013()).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(mockClose).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
+describe("runMigration013 — connection.close() lanza (finally catch)", () => {
+  test("silencia el error de close y no relanza", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    mockMigration013AllExists();
+    mockClose.mockRejectedValueOnce(new Error("close failed"));
+
+    await expect(runMigration013()).resolves.toBeUndefined();
+    logSpy.mockRestore();
+  });
+});
