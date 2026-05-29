@@ -67,12 +67,21 @@ async function buildCredencialBlobUrl(b: Beneficiario & { fotoPerfilUrl?: string
   const fotoSrc = b.fotoPerfilUrl ?? ""
   const iniciales = `${b.nombres?.[0] ?? ""}${b.apellidoPaterno?.[0] ?? ""}`
 
+  function arrayBufferToBase64(buf: ArrayBuffer): string {
+    const bytes = new Uint8Array(buf)
+    let binary = ""
+    const chunkSize = 8192
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+    }
+    return btoa(binary)
+  }
+
   let logoDataUrl = ""
   try {
     const res = await fetch("/logo-espina-bifida.png")
     const buf = await res.arrayBuffer()
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
-    logoDataUrl = `data:image/png;base64,${b64}`
+    logoDataUrl = `data:image/png;base64,${arrayBufferToBase64(buf)}`
   } catch { /* logo opcional */ }
 
   let fotoDataUrl = ""
@@ -81,8 +90,7 @@ async function buildCredencialBlobUrl(b: Beneficiario & { fotoPerfilUrl?: string
       const res = await fetch(fotoSrc)
       const buf = await res.arrayBuffer()
       const mime = res.headers.get("content-type") || "image/jpeg"
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
-      fotoDataUrl = `data:${mime};base64,${b64}`
+      fotoDataUrl = `data:${mime};base64,${arrayBufferToBase64(buf)}`
     } catch { /* foto opcional */ }
   }
 
