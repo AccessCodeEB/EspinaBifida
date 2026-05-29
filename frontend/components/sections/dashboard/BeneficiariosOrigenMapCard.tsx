@@ -129,21 +129,19 @@ export function BeneficiariosOrigenMapCard({ stateCounts, loading = false }: Ben
       <CardContent className="p-0">
         <div className="grid items-stretch gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="border-b border-border/40 bg-muted/20 p-4 sm:p-5 lg:border-b-0 lg:border-r lg:border-border/40">
-            <div className="flex h-full min-h-[340px] flex-col rounded-2xl border border-slate-300/60 bg-slate-700 px-4 py-4 shadow-sm dark:border-slate-600/60 dark:bg-slate-700 sm:px-5 sm:py-5">
+            <div className="flex h-full min-h-[340px] flex-col rounded-2xl border border-slate-200 bg-slate-100 px-4 py-4 shadow-sm dark:border-slate-600/60 dark:bg-slate-700 sm:px-5 sm:py-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">México</p>
-                  <p className="mt-1 text-base font-semibold text-white">Distribución por estado</p>
-                  <p className="text-xs text-white/55">Beneficiarios registrados por entidad federativa</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-white/50">México</p>
+                  <p className="mt-1 text-base font-semibold text-slate-800 dark:text-white">Distribución por estado</p>
+                  <p className="text-xs text-slate-500 dark:text-white/55">Beneficiarios registrados por entidad federativa</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-right">
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-white/45">Cobertura</p>
-                  <p className="mt-1 text-sm font-semibold text-white">{loading ? "--" : formatPercent(summary.coverage)}</p>
+                <div className="rounded-2xl border border-slate-300/60 bg-slate-200/60 px-3 py-2 text-right dark:border-white/10 dark:bg-white/5">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400 dark:text-white/45">Cobertura</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-white">{loading ? "--" : formatPercent(summary.coverage)}</p>
                 </div>
               </div>
               <div className="mt-4 flex-1">
-                {/* MapChart: intenta cargar GeoJSON/TopoJSON desde /public/geo */}
-                {/* Si no existe, MapChart muestra el mensaje de fallback */}
                 <div className="h-full min-h-[220px] overflow-hidden rounded-[1.25rem]">
                   <MapChart
                     stateCounts={stateCounts}
@@ -154,7 +152,7 @@ export function BeneficiariosOrigenMapCard({ stateCounts, loading = false }: Ben
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/75">
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-300/60 bg-slate-200/40 px-4 py-3 text-xs text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-white/75">
                 <span>Escala visual por cantidad de beneficiarios</span>
                 <div className="flex items-center gap-1.5">
                   <span className="size-2.5 rounded-full bg-[#dde4ed]" />
