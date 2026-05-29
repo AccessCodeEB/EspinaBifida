@@ -174,6 +174,8 @@ export function BeneficiarioDetailPanel({
                             src={fotoUrl}
                             alt="Perfil del beneficiario"
                             className="size-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-105"
+                            loading="lazy"
+                            decoding="async"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                           <ZoomIn className="absolute size-6 text-white opacity-0 drop-shadow-md transition-all duration-300 group-hover:scale-110 group-hover:opacity-100" strokeWidth={2} />
@@ -317,6 +319,8 @@ export function BeneficiarioDetailPanel({
               src={fotoZoomUrl}
               alt="Foto de perfil"
               className="mx-auto aspect-square max-h-[min(85vh,800px)] w-auto max-w-[min(92vw,800px)] object-cover rounded-full shadow-2xl"
+              loading="lazy"
+              decoding="async"
             />
           ) : null}
         </DialogContent>
