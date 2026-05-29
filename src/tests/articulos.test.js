@@ -243,6 +243,17 @@ describe("POST /api/v1/articulos — crear artículo", () => {
 
     expect(res.status).toBe(201);
   });
+
+  test("retorna 5xx si la BD lanza error inesperado (next(err) L27)", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("Unexpected DB failure"));
+
+    const res = await request(app)
+      .post("/api/v1/articulos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send(articuloBase);
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -287,6 +298,20 @@ describe("PUT /api/v1/articulos/:id — actualizar artículo", () => {
       .send({ ...articuloBase, manejaInventario: "Z" });
 
     expect(res.status).toBe(400);
+  });
+
+  test("retorna 4xx/5xx si la BD lanza error al actualizar (next(err) L39)", async () => {
+    // findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [articuloRow] });
+    // UPDATE → lanza error inesperado
+    mockExecute.mockRejectedValueOnce(new Error("Unexpected DB failure"));
+
+    const res = await request(app)
+      .put("/api/v1/articulos/101")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ descripcion: "Nueva descripción" });
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
 

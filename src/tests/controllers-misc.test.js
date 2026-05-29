@@ -1240,3 +1240,86 @@ describe("PATCH /administradores/forgot-password/reset — resetPasswordPublico"
     expect(res.status).toBe(404);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/v1/administradores/refresh — refresh token
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /api/v1/administradores/refresh — renovar token", () => {
+  test("renueva el par de tokens con refreshToken válido (200)", async () => {
+    const futureDate = new Date(Date.now() + 86400000);
+    // findByHash → token válido no revocado
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ID_TOKEN: 1, ID_ADMIN: 1, EXPIRES_AT: futureDate, REVOCADO: 0 }],
+    });
+    // revoke (UPDATE)
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    // findById (admin activo)
+    mockExecute.mockResolvedValueOnce({ rows: [adminRow] });
+    // insert nuevo refresh token
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .post("/api/v1/administradores/refresh")
+      .send({ refreshToken: "some-valid-raw-token" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("token");
+    expect(res.body).toHaveProperty("refreshToken");
+  });
+
+  test("retorna 401 si el token está revocado", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ID_TOKEN: 1, ID_ADMIN: 1, EXPIRES_AT: new Date(Date.now() + 86400000), REVOCADO: 1 }],
+    });
+
+    const res = await request(app)
+      .post("/api/v1/administradores/refresh")
+      .send({ refreshToken: "revoked-token" });
+
+    expect(res.status).toBe(401);
+  });
+
+  test("retorna 401 si el token no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post("/api/v1/administradores/refresh")
+      .send({ refreshToken: "nonexistent-token" });
+
+    expect(res.status).toBe(401);
+  });
+
+  test("retorna 400 si falta refreshToken en el body (Zod)", async () => {
+    const res = await request(app)
+      .post("/api/v1/administradores/refresh")
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/v1/administradores/logout — revocar refresh token
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("POST /api/v1/administradores/logout — cerrar sesión", () => {
+  test("revoca el refreshToken y retorna 204", async () => {
+    // revoke (UPDATE)
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .post("/api/v1/administradores/logout")
+      .send({ refreshToken: "some-token-to-revoke" });
+
+    expect(res.status).toBe(204);
+  });
+
+  test("retorna 400 si falta refreshToken en el body (Zod)", async () => {
+    const res = await request(app)
+      .post("/api/v1/administradores/logout")
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+});

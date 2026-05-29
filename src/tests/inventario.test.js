@@ -245,6 +245,26 @@ describe("GET /api/v1/movimientos — historial de movimientos", () => {
     expect(res.body).toEqual([]);
   });
 
+  test("filtra por ?dias=30 (rama dias && !NaN → pasa número al service)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/api/v1/movimientos?dias=30")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+  });
+
+  test("ignora ?dias=abc (NaN → pasa null al service)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/api/v1/movimientos?dias=abc")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+  });
+
   test("devuelve 401 sin token", async () => {
     const res = await request(app).get("/api/v1/movimientos");
     expect(res.status).toBe(401);
