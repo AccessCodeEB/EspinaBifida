@@ -17,6 +17,7 @@ async function loginUI(page: import('@playwright/test').Page) {
 }
 
 test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ page }) => {
+  test.setTimeout(120_000); // flujo completo: cleanup + form + Turnstile + aprobación
   // Cleanup: remove any prior UAT_CURP record (PENDIENTE or approved) so form always creates fresh
   const ctxBase = await request.newContext({ baseURL: API_BASE });
   const loginRes = await ctxBase.post('/administradores/login', {

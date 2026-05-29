@@ -64,7 +64,10 @@ test(qase(51, 'PUT /administradores/:id actualiza datos del admin'), async ({ ap
     data: { nombreCompleto: 'E2E Admin Actualizado', idRol: 2 },
   });
   expect(res.status()).toBe(200);
-  const body = await res.json();
+  // El PUT retorna solo message; verificar con GET
+  const getRes = await apiContext.get(`/administradores/${testAdminId}`);
+  expect(getRes.status()).toBe(200);
+  const body = await getRes.json();
   const data = body.data ?? body;
   expect(String(data.nombreCompleto ?? data.NOMBRE_COMPLETO ?? '').toLowerCase()).toContain('actualizado');
 });
@@ -85,7 +88,8 @@ test(qase(53, 'DELETE /administradores/:id desactiva el admin (baja lógica)'), 
   // Verificar que el admin queda inactivo (ACTIVO=0), no eliminado
   const getRes = await apiContext.get(`/administradores/${testAdminId}`);
   expect(getRes.status()).toBe(200);
-  const data = (await getRes.json()).data ?? {};
+  const body = await getRes.json();
+  const data = body.data ?? body;
   expect(data.activo ?? data.ACTIVO).toBe(0);
   // Limpiar flag para que afterAll no lo intente borrar de nuevo
   testAdminId = null;

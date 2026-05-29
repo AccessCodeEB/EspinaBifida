@@ -71,7 +71,10 @@ test(qase(45, 'PUT /beneficiarios/:curp actualiza datos correctamente'), async (
     data: { nombres: 'E2E Actualizado', apellidoPaterno: 'Test', apellidoMaterno: 'Playwright' },
   });
   expect(res.status()).toBe(200);
-  const body = await res.json();
+  // El PUT retorna solo message; verificar con GET
+  const getRes = await apiContext.get(`/beneficiarios/${TEST_CURP_OPS}`);
+  expect(getRes.status()).toBe(200);
+  const body = await getRes.json();
   const data = body.data ?? body;
   expect(String(data.nombres ?? data.NOMBRES ?? '').toLowerCase()).toContain('actualizado');
 });
