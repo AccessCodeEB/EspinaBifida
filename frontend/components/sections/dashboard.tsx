@@ -31,6 +31,8 @@ const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
 const INVENTARIO_BAJO_UMBRAL = 3
 const PAGE_SIZE = 5
+const MEM_PAGE = 8
+const PAGOS_FETCH_LIMIT = 500
 
 function fmtDate() {
   return new Date().toLocaleDateString("es-MX", {
@@ -219,7 +221,7 @@ export function DashboardSection() {
       .catch(() => { setActivosMembresia(null); setSolicitudesPendientes(null); setListaSolicitudes([]); setBeneficiarios([]) })
       .finally(() => setLoadingBenef(false))
 
-    getPagosRecientes(100)
+    getPagosRecientes(PAGOS_FETCH_LIMIT)
       .then(setPagos)
       .catch(() => setPagos([]))
       .finally(() => setLoadingPagos(false))
@@ -242,7 +244,6 @@ export function DashboardSection() {
     return beneficiarios
       .filter((b) => b.estatus !== "Baja" && b.diasRestantes != null)
       .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999))
-      .slice(0, 100)
   }, [beneficiarios])
 
   /* ── Citas de hoy ── */
@@ -550,7 +551,6 @@ export function DashboardSection() {
 
         {/* Control de membresías */}
         {(() => {
-          const MEM_PAGE = 8
           const [memPage, setMemPage] = useState(0)
           const totalMemPages = Math.max(1, Math.ceil(membresiasPorVencer.length / MEM_PAGE))
           const paginatedMem = membresiasPorVencer.slice(memPage * MEM_PAGE, memPage * MEM_PAGE + MEM_PAGE)
