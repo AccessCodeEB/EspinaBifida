@@ -293,6 +293,8 @@ export function PreregistroSection() {
                             src={fotoRevisionRapidaSrc}
                             alt=""
                             className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <User className="size-7 text-slate-400" />

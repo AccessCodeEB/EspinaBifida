@@ -574,7 +574,7 @@ export function DashboardSection() {
                       <div key={b.curp ?? b.folio} className="flex items-center gap-2.5 border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/20 last:border-b-0">
                         <div className="size-7 shrink-0 overflow-hidden rounded-full text-[11px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: fotoUrl ? undefined : NAVY }}>
                           {fotoUrl
-                            ? <img src={fotoUrl} alt="" className="size-full object-cover" onError={(e) => { e.currentTarget.style.display = "none" }} />
+                            ? <img src={fotoUrl} alt="" className="size-full object-cover" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none" }} />
                             : inicial
                           }
                         </div>

@@ -214,4 +214,71 @@ describe('runJob', () => {
     await Service.runJob();
     expect(mockSyncCitasHoyConsolidado).toHaveBeenCalledWith(null);
   });
+
+  it('usa "unidad" en singular cuando INVENTARIO_ACTUAL es exactamente 1', async () => {
+    mockFindArticulosConStockBajo.mockResolvedValueOnce([
+      { ID_ARTICULO: 1, DESCRIPCION: 'Muleta', INVENTARIO_ACTUAL: 1, STOCK_MINIMO: 5 },
+    ]);
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([]);
+    mockFindCitasHoyProgramadas.mockResolvedValueOnce([]);
+
+    await Service.runJob();
+
+    expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(
+      expect.stringContaining('1 unidad disponible')
+    );
+  });
+
+  it('trunca descripcion larga en mensaje de artículo único (trimNombre > max)', async () => {
+    const longDesc = 'A'.repeat(40); // > 35 chars → debe truncarse
+    mockFindArticulosConStockBajo.mockResolvedValueOnce([
+      { ID_ARTICULO: 1, DESCRIPCION: longDesc, INVENTARIO_ACTUAL: 3, STOCK_MINIMO: 10 },
+    ]);
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([]);
+    mockFindCitasHoyProgramadas.mockResolvedValueOnce([]);
+
+    await Service.runJob();
+
+    const msg = mockSyncStockBajoConsolidado.mock.calls[0][0];
+    expect(msg).toMatch(/…/); // debe contener el carácter de truncamiento
+  });
+
+  it('incluye "y N más" cuando hay más de 5 artículos con stock bajo', async () => {
+    const rows = Array.from({ length: 7 }, (_, i) => ({
+      ID_ARTICULO: i + 1,
+      DESCRIPCION: `Art${i + 1}`,
+      INVENTARIO_ACTUAL: 0,
+      STOCK_MINIMO: 5,
+    }));
+    mockFindArticulosConStockBajo.mockResolvedValueOnce(rows);
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([]);
+    mockFindCitasHoyProgramadas.mockResolvedValueOnce([]);
+
+    await Service.runJob();
+
+    expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(
+      expect.stringContaining('y 2 más')
+    );
+  });
+
+  it('trunca mensaje a 500 chars cuando la lista de artículos es muy larga', async () => {
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      ID_ARTICULO: i + 1,
+      DESCRIPCION: 'A'.repeat(30),
+      INVENTARIO_ACTUAL: 0,
+      STOCK_MINIMO: 5,
+    }));
+    mockFindArticulosConStockBajo.mockResolvedValueOnce(rows);
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([]);
+    mockFindCitasHoyProgramadas.mockResolvedValueOnce([]);
+
+    await Service.runJob();
+
+    const msg = mockSyncStockBajoConsolidado.mock.calls[0][0];
+    expect(msg.length).toBeLessThanOrEqual(500);
+  });
 });

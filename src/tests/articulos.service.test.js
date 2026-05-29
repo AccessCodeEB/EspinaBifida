@@ -145,3 +145,37 @@ describe('normalizeData — idArticulo undefined (L11: val===undefined branch)',
     expect(data.idArticulo).toBeNull();
   });
 });
+
+// ── normalizeData — ramas de throw badRequest ─────────────────────────────────
+
+describe('normalizeData — throw badRequest en campos inválidos', () => {
+  it('lanza 400 si idArticulo no es numérico (NaN)', () => {
+    expect(() => Service.create({ idArticulo: 'abc' }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+
+  it('lanza 400 si cuotaRecuperacion es negativa', () => {
+    expect(() => Service.create({ idArticulo: 1, cuotaRecuperacion: -1 }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+
+  it('lanza 400 si inventarioActual es negativo', () => {
+    expect(() => Service.create({ idArticulo: 1, inventarioActual: -1 }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+
+  it('lanza 400 si manejaInventario no es S ni N', () => {
+    expect(() => Service.create({ idArticulo: 1, manejaInventario: 'X' }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+
+  it('lanza 400 si idCategoria no es numérico (NaN)', () => {
+    expect(() => Service.create({ idArticulo: 1, idCategoria: 'abc' }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+
+  it('lanza 400 si stockMinimo es negativo', () => {
+    expect(() => Service.create({ idArticulo: 1, stockMinimo: -1 }))
+      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  });
+});

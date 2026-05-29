@@ -202,6 +202,7 @@ function PanelHomeContent() {
                     src={headerAvatarSrc}
                     alt=""
                     className="size-full object-cover object-center"
+                    decoding="async"
                   />
                 </div>
               ) : (

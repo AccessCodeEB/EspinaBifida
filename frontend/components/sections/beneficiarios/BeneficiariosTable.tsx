@@ -189,6 +189,8 @@ export function BeneficiariosTable({
                     src={cardPhoto}
                     alt=""
                     className="size-full object-contain object-center"
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => { e.currentTarget.style.display = "none" }}
                   />
                 ) : (
