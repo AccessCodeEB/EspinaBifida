@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
@@ -34,6 +35,7 @@ export default function RootLayout({
           {children}
           <Toaster richColors position="bottom-right" gap={8} duration={3500} />
           <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
