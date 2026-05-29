@@ -19,6 +19,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import {
   getInventario, registrarMovimiento, crearArticulo, eliminarArticulo, actualizarArticulo,
   getMovimientos,
@@ -83,7 +84,7 @@ export function InventarioSection() {
     setLoading(true)
     getInventario()
       .then(setInventario)
-      .catch(err => setError(err?.message ?? "Error al cargar inventario"))
+      .catch(err => setError(friendlyError(err, "No se pudo cargar el inventario")))
       .finally(() => setLoading(false))
   }
   useEffect(() => { loadData() }, [])
@@ -200,7 +201,7 @@ export function InventarioSection() {
       
       toast.success(updates.length > 0 ? updates.join(" • ") : "Cambios guardados")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "No se pudo guardar los cambios"
+      const msg = friendlyError(err, "No se pudo guardar los cambios")
       setMovimientoError(msg)
       toast.error(msg)
     } finally {
@@ -249,8 +250,8 @@ export function InventarioSection() {
       await refreshInventario(); setShowAgregarDialog(false)
       toast.success("Artículo agregado al inventario")
     } catch (err: unknown) {
-      setArticuloError(err instanceof Error ? err.message : "No se pudo agregar el artículo")
-      toast.error(err instanceof Error ? err.message : "No se pudo agregar el artículo")
+      setArticuloError(friendlyError(err, "No se pudo agregar el artículo"))
+      toast.error(friendlyError(err, "No se pudo agregar el artículo"))
     } finally { setSavingArticulo(false) }
   }
 
@@ -270,8 +271,8 @@ export function InventarioSection() {
         setShowEliminarDialog(false)
         toast.info("El artículo ya había sido eliminado del sistema")
       } else {
-        setArticuloError(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
-        toast.error(err instanceof Error ? err.message : "No se pudo eliminar el artículo")
+        setArticuloError(friendlyError(err, "No se pudo eliminar el artículo"))
+        toast.error(friendlyError(err, "No se pudo eliminar el artículo"))
       }
     } finally { setSavingArticulo(false) }
   }

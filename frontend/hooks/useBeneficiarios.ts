@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import {
   getBeneficiarios,
   createBeneficiario,
@@ -296,7 +297,7 @@ export function useBeneficiarios() {
       setFotoBustByCurp((prev) => ({ ...prev, [c]: (prev[c] ?? 0) + 1 }))
       toast.success("Foto de perfil actualizada", { duration: 2800 })
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "No se pudo subir la foto")
+      toast.error(friendlyError(err, "No se pudo subir la foto de perfil"))
     } finally {
       setFotoUploading(false)
     }
@@ -322,7 +323,7 @@ export function useBeneficiarios() {
       toast.success("Foto de perfil eliminada", { duration: 2800 })
       return true
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "No se pudo eliminar la foto")
+      toast.error(friendlyError(err, "No se pudo eliminar la foto de perfil"))
       return false
     } finally {
       setFotoUploading(false)
@@ -424,7 +425,7 @@ export function useBeneficiarios() {
       setShowEditDialog(false)
       return true
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Error al eliminar")
+      setSaveError(friendlyError(err, "No se pudo eliminar el beneficiario"))
       return false
     } finally {
       setIsSaving(false)
@@ -447,7 +448,7 @@ export function useBeneficiarios() {
       )
       return true
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Error al dar de baja")
+      setSaveError(friendlyError(err, "No se pudo dar de baja al beneficiario"))
       return false
     } finally {
       setIsSaving(false)
@@ -465,7 +466,7 @@ export function useBeneficiarios() {
       setShowEditDialog(false)
       return true
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Error al eliminar")
+      setSaveError(friendlyError(err, "No se pudo eliminar el beneficiario"))
       return false
     } finally {
       setIsSaving(false)

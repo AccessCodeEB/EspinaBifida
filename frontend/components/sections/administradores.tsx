@@ -14,6 +14,7 @@ import {
   Inbox,
 } from "lucide-react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -94,7 +95,7 @@ export function AdministradoresSection() {
       const data = await getAllAdmins()
       setRows(data)
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudieron cargar los administradores")
+      toast.error(friendlyError(e, "No se pudieron cargar los administradores"))
     } finally {
       setLoading(false)
     }
@@ -140,7 +141,7 @@ export function AdministradoresSection() {
       setCreateForm(EMPTY_CREATE)
       await load()
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudo crear el administrador")
+      toast.error(friendlyError(e, "No se pudo crear el administrador"))
     } finally {
       setSaving(false)
     }
@@ -180,7 +181,7 @@ export function AdministradoresSection() {
       setEditTarget(null)
       await load()
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudo actualizar")
+      toast.error(friendlyError(e, "No se pudo actualizar el administrador"))
     } finally {
       setEditSaving(false)
     }
@@ -197,7 +198,7 @@ export function AdministradoresSection() {
       setDeactivateTarget(null)
       await load()
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudo desactivar")
+      toast.error(friendlyError(e, "No se pudo desactivar el administrador"))
     } finally {
       setDeactivating(false)
     }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { friendlyError } from "@/lib/friendly-error"
 import Link from "next/link"
 import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog"
@@ -29,7 +30,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     try {
       await onLogin(email, password)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Credenciales inválidas")
+      setError(friendlyError(err, "Correo o contraseña incorrectos"))
     } finally {
       setLoading(false)
     }

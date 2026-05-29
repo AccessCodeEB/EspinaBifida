@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { tokenStorage } from "@/lib/token"
+import { friendlyError } from "@/lib/friendly-error"
 import {
   loginAdmin,
   getAdmin,
@@ -73,7 +74,7 @@ export function useAdminData(open: boolean) {
         tokenStorage.clear()
         setNeedsLogin(true)
       } else {
-        setLoadError(err instanceof Error ? err.message : "Error al cargar datos")
+        setLoadError(friendlyError(err, "No se pudo cargar la información del administrador"))
       }
     } finally {
       setLoading(false)
@@ -93,7 +94,7 @@ export function useAdminData(open: boolean) {
       setLoginForm(EMPTY_LOGIN)
       await loadAdmin(res.admin.idAdmin)
     } catch (err: unknown) {
-      setLoginError(err instanceof Error ? err.message : "Credenciales inválidas")
+      setLoginError(friendlyError(err, "Correo o contraseña incorrectos"))
     } finally {
       setLoggingIn(false)
     }
@@ -116,7 +117,7 @@ export function useAdminData(open: boolean) {
       setAdmin((prev) => prev ? { ...prev, ...form } : prev)
       setSaveOk(true)
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Error al guardar")
+      setSaveError(friendlyError(err, "No se pudo guardar los cambios"))
     } finally {
       setSaving(false)
     }
@@ -142,7 +143,7 @@ export function useAdminData(open: boolean) {
       setPwForm(EMPTY_PW)
       setShowPwForm(false)
     } catch (err: unknown) {
-      setPwError(err instanceof Error ? err.message : "Error al cambiar contraseña")
+      setPwError(friendlyError(err, "No se pudo cambiar la contraseña"))
     } finally {
       setPwSaving(false)
     }
@@ -173,7 +174,7 @@ export function useAdminData(open: boolean) {
       await solicitarCodigo(admin.idAdmin)
       setCodeSent(true)
     } catch (err: unknown) {
-      setCodeError(err instanceof Error ? err.message : "Error al enviar el código")
+      setCodeError(friendlyError(err, "No se pudo enviar el código. Intenta de nuevo."))
     } finally {
       setSendingCode(false)
     }

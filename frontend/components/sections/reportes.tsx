@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { downloadReporte, fetchReporteUrl, fetchReporteSheets, getHistorico, type ReporteHistorico } from "@/services/reportes"
+import { friendlyError } from "@/lib/friendly-error"
 
 // ── Tipos de reporte ──────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ export function ReportesSection() {
         setPreviewSheets(null)
       }
     } catch (err) {
-      setPreviewError(err instanceof Error ? err.message : "Error al generar la vista previa.")
+      setPreviewError(friendlyError(err, "No se pudo generar la vista previa del reporte"))
       setPreviewUrl(null)
       setPreviewSheets(null)
     } finally {
@@ -174,7 +175,7 @@ export function ReportesSection() {
     try {
       await downloadReporte(fechas.fechaInicio, fechas.fechaFin, selectedFormat, selectedReport)
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "Error al generar el reporte.")
+      setDownloadError(friendlyError(err, "No se pudo descargar el reporte"))
     } finally {
       setIsDownloading(false)
     }

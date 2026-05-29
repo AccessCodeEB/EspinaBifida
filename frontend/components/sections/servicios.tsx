@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import {
   CalendarDays,
   ChevronDown,
@@ -382,7 +383,7 @@ export function ServiciosSection() {
       setFechaServicio(hoy)
       toast.success("Servicio registrado correctamente")
     } catch (err) {
-      setRegistroError(err instanceof Error ? err.message : "Error al registrar el servicio")
+      setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
     } finally {
       setRegistroLoading(false)
     }
@@ -404,7 +405,7 @@ export function ServiciosSection() {
           console.error("Error al confirmar eliminación:", err)
           const updated = await getServicios()
           setServiciosRegistrados(updated)
-          alert(err instanceof Error ? err.message : "Error al eliminar el servicio")
+          toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
         } finally {
           setPendingDelete(null)
         }
@@ -414,7 +415,7 @@ export function ServiciosSection() {
       toast.success("Servicio eliminado", { description: "Tienes 8 segundos para deshacer." })
     } catch (err) {
       console.error("Error al eliminar servicio:", err)
-      toast.error(err instanceof Error ? err.message : "Error al eliminar el servicio")
+      toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
     } finally {
       setEliminandoServicio(false)
     }

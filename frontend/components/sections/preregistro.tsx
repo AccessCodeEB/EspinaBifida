@@ -19,6 +19,7 @@ import {
   ArrowUp,
 } from "lucide-react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -114,7 +115,7 @@ export function PreregistroSection() {
       const data = await getBeneficiarios()
       setRows(data)
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudieron cargar las solicitudes")
+      toast.error(friendlyError(e, "No se pudieron cargar las solicitudes"))
     } finally {
       setLoading(false)
     }
@@ -197,7 +198,7 @@ export function PreregistroSection() {
       await load()
       setCompletarExpediente({ curp: id, nombre })
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudo aprobar")
+      toast.error(friendlyError(e, "No se pudo aprobar la solicitud"))
     } finally {
       setAccionCurp(null)
     }
@@ -215,7 +216,7 @@ export function PreregistroSection() {
       setSelected(null)
       await load()
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "No se pudo cancelar")
+      toast.error(friendlyError(e, "No se pudo rechazar la solicitud"))
     } finally {
       setAccionCurp(null)
     }

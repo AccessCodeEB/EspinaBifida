@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { friendlyError } from "@/lib/friendly-error"
 import { Mail, KeyRound, Loader2, CheckCircle2 } from "lucide-react"
 import {
   Dialog,
@@ -59,7 +60,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
       }
       setStep("codigo")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al enviar el código"
+      const msg = friendlyError(err, "No se pudo enviar el código. Intenta de nuevo.")
       setError(msg)
     } finally {
       setLoading(false)
@@ -75,7 +76,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
       await resetPasswordPublico(email, codigo, nuevaPass)
       setStep("done")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al restablecer la contraseña"
+      const msg = friendlyError(err, "No se pudo restablecer la contraseña. Verifica el código e intenta de nuevo.")
       setError(msg)
     } finally {
       setLoading(false)
