@@ -95,6 +95,7 @@ export function ProfilePhotoUpload({
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [cropPreviewUrl, setCropPreviewUrl] = useState<string | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraSupported, setCameraSupported] = useState(false)
 
@@ -106,9 +107,9 @@ export function ProfilePhotoUpload({
     fotoPerfilUrl ?? undefined,
     previewSrc ? null : imageRevision || null
   )
-  const displaySrc = previewSrc ?? serverSrc
+  const displaySrc = cropPreviewUrl ?? previewSrc ?? serverSrc
   const dim = sizeClass[size]
-  const imgKey = `${displaySrc ?? ""}|${imageRevision}|${previewSrc ?? ""}`
+  const imgKey = `${displaySrc ?? ""}|${imageRevision}|${previewSrc ?? ""}|${cropPreviewUrl ?? ""}`
 
   const cancelCrop = useCallback(() => {
     if (cropSrc) URL.revokeObjectURL(cropSrc)
@@ -116,15 +117,15 @@ export function ProfilePhotoUpload({
     setCropOpen(false)
   }, [cropSrc])
 
+  // El crop solo actualiza el preview local — no re-sube al servidor.
+  // La foto original ya fue subida en processImageFile antes de abrir el crop.
   const finishCrop = useCallback(
-    async (file: File) => {
-      try {
-        await onFileSelected(file)
-      } finally {
-        cancelCrop()
-      }
+    async (previewUrl: string) => {
+      if (cropPreviewUrl) URL.revokeObjectURL(cropPreviewUrl)
+      setCropPreviewUrl(previewUrl)
+      cancelCrop()
     },
-    [onFileSelected, cancelCrop]
+    [cancelCrop, cropPreviewUrl]
   )
 
   const processImageFile = useCallback(
@@ -134,16 +135,17 @@ export function ProfilePhotoUpload({
         toast.error("Formato no válido. Usa JPEG, PNG, WebP o GIF.")
         return
       }
-      // Redimensionar antes de guardar (garantiza base64 manejable en Oracle)
-      const resized = await resizeImageFile(file)
+      // Limpiar preview de crop anterior al elegir nueva foto
+      setCropPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null })
 
-      // Guardar la foto original tal cual, antes de abrir el crop
+      // Redimensionar y subir la foto original sin recorte circular
+      const resized = await resizeImageFile(file)
       await onFileSelected(resized)
 
       if (!enableCrop) return
 
-      // Abrir crop para que el usuario refine el encuadre;
-      // si aplica, se guarda la versión recortada encima de la original
+      // Abrir crop solo para encuadre visual — el resultado es un preview local,
+      // no se re-sube al servidor (la original ya está guardada arriba)
       const url = URL.createObjectURL(resized)
       setCropSrc((prev) => {
         if (prev) URL.revokeObjectURL(prev)

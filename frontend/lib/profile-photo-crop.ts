@@ -12,8 +12,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 const OUT = 512
 
 /**
- * Recorta la región indicada por `pixelCrop` (cuadrado, típico de crop circular en pantalla)
- * y la escribe en un canvas circular (relleno opaco en esquinas para JPEG).
+ * Recorta la región indicada por `pixelCrop` en formato cuadrado rectangular.
+ * La forma circular se aplica solo visualmente en el frontend con CSS (rounded-full).
+ * Nunca se guarda una imagen con recorte circular en el servidor.
  */
 export async function getProfilePhotoCroppedBlob(
   imageSrc: string,
@@ -22,20 +23,11 @@ export async function getProfilePhotoCroppedBlob(
   quality = 0.9
 ): Promise<Blob> {
   const image = await loadImage(imageSrc)
-  const side = Math.round(Math.min(pixelCrop.width, pixelCrop.height))
   const canvas = document.createElement("canvas")
   canvas.width = OUT
   canvas.height = OUT
   const ctx = canvas.getContext("2d")
   if (!ctx) throw new Error("Canvas 2D no disponible")
-
-  const r = OUT / 2
-  ctx.fillStyle = "#ffffff"
-  ctx.fillRect(0, 0, OUT, OUT)
-  ctx.beginPath()
-  ctx.arc(r, r, r, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.clip()
 
   ctx.drawImage(
     image,
@@ -59,4 +51,13 @@ export async function getProfilePhotoCroppedBlob(
       quality
     )
   })
+}
+
+/**
+ * Genera un object URL con la imagen recortada para usar como preview local.
+ * No implica ninguna subida al servidor.
+ */
+export async function getCroppedPreviewUrl(imageSrc: string, pixelCrop: Area): Promise<string> {
+  const blob = await getProfilePhotoCroppedBlob(imageSrc, pixelCrop)
+  return URL.createObjectURL(blob)
 }
