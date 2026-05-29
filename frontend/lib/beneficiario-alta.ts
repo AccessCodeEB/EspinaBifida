@@ -260,9 +260,12 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     TIPOS_ESPINA_BIFIDA_OPCIONES.find(
       (t) => t.toLowerCase() === String(form.tipo ?? "").trim().toLowerCase()
     ) ?? String(form.tipo ?? "").trim()
+  // CURP usa H=Hombre / M=Mujer; el backend espera M=Masculino / F=Femenino
+  const generoApi = form.genero === "H" ? "M" : form.genero === "M" ? "F" : form.genero
   return {
     ...form,
     curp: form.curp.toUpperCase(),
+    genero: generoApi,
     telefonoCelular: celularDigits || undefined,
     telefonoCasa: casaDigits || undefined,
     telefonoEmergencia: emergenciaDigits || undefined,
