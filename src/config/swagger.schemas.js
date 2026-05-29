@@ -19,7 +19,7 @@ export const schemas = {
         type: 'string',
         minLength: 18,
         maxLength: 18,
-        pattern: '^[A-Z]{4}\\d{6}[HM][A-Z]{5}[A-Z0-9]\\d$',
+        pattern: String.raw`^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$`,
         description: 'Clave Única de Registro de Población (PK)',
         example: 'GOCL900101HDFNRN09',
       },
@@ -63,8 +63,8 @@ export const schemas = {
       CURP: { type: 'string', description: 'FK → BENEFICIARIOS', example: 'GOCL900101HDFNRN09' },
       ID_TIPO_SERVICIO: { type: 'integer', example: 3 },
       FECHA: { type: 'string', format: 'date-time' },
-      COSTO: { type: 'number', format: 'float', example: 150.00 },
-      MONTO_PAGADO: { type: 'number', format: 'float', example: 150.00 },
+      COSTO: { type: 'number', format: 'float', example: 150 },
+      MONTO_PAGADO: { type: 'number', format: 'float', example: 150 },
       REFERENCIA_ID: {
         type: 'integer',
         nullable: true,
@@ -87,7 +87,7 @@ export const schemas = {
       ID_ARTICULO: { type: 'integer', example: 10 },
       DESCRIPCION: { type: 'string', example: 'Silla de ruedas estándar' },
       UNIDAD: { type: 'string', example: 'pieza' },
-      CUOTA_RECUPERACION: { type: 'number', format: 'float', example: 200.00 },
+      CUOTA_RECUPERACION: { type: 'number', format: 'float', example: 200 },
       INVENTARIO_ACTUAL: { type: 'integer', example: 5 },
       MANEJA_INVENTARIO: {
         type: 'string',

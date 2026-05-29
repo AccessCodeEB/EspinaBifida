@@ -1,5 +1,3 @@
-import { ZodError } from "zod";
-
 /**
  * Crea un middleware Express que valida req.body contra un schema Zod.
  * Devuelve 400 con la lista de errores si la validación falla.
