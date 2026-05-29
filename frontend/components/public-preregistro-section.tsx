@@ -455,7 +455,15 @@ export function PublicPreregistroSection({
               </Select>
             </FieldShell>
 
-            <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp-homoclave" className="sm:col-span-2">
+            <div className="sm:col-span-2 space-y-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <Label htmlFor="prereg-curp-homoclave" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">
+                  CURP<span className="text-red-500"> *</span>
+                </Label>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Escribe los últimos 2 caracteres (homoclave) en el recuadro de la derecha
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 {/* Prefijo autocompletado (16 chars) — solo lectura */}
                 <Input
@@ -485,7 +493,8 @@ export function PublicPreregistroSection({
                   autoComplete="off"
                 />
               </div>
-            </FieldShell>
+              {errors.curp ? <p className="text-xs font-medium text-red-500">{errors.curp}</p> : null}
+            </div>
           </div>
         </StepCard>
 
