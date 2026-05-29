@@ -114,7 +114,7 @@ export function AppSidebar({
       {/* ── Branding + Toggle ── */}
       <div className="flex items-center gap-3 px-3 py-4">
         {/* Logo */}
-        <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08]">
+        <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
           <Image src="/logo-espina-bifida.png" alt="Logo" width={26} height={26} className="object-contain" />
         </div>
 

@@ -595,93 +595,113 @@ export function BeneficiarioFormDialog({
                     {/* Cara frontal */}
                     <div className="relative flex h-full flex-col" style={{ background: "linear-gradient(135deg, #0a3460 0%, #1260a8 58%, #0f4c81 100%)" }}>
 
-                      {/* Decoraciones */}
+                      {/* Decoraciones de fondo */}
                       <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
                         style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "11px 11px" }} />
-                      <div className="pointer-events-none absolute bottom-0 right-0 size-48 rounded-full opacity-[0.07]"
-                        style={{ background: "radial-gradient(circle, #fff, transparent)", transform: "translate(35%, 35%)" }} />
-                      {/* Línea dorada superior */}
-                      <div className="absolute top-0 left-0 right-0 h-[2.5px]"
-                        style={{ background: "linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)" }} />
+                      <div className="pointer-events-none absolute bottom-0 right-0 rounded-full opacity-[0.07]"
+                        style={{ width: "160px", height: "160px", background: "radial-gradient(circle, #fff, transparent)", transform: "translate(35%, 35%)" }} />
 
-                      {/* Encabezado */}
-                      <div className="relative flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2">
-                        {/* Logo en cápsula blanca */}
-                        <div className="flex shrink-0 items-center justify-center rounded-lg bg-white p-1">
+                      {/* Línea dorada superior */}
+                      <div className="absolute top-0 left-0 right-0 z-10" style={{ height: "2.5px", background: "linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)" }} />
+
+                      {/* ── Header institucional ── */}
+                      <div className="relative z-10 flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-1.5"
+                        style={{ background: "rgba(0,0,0,0.18)" }}>
+                        <div className="flex shrink-0 items-center justify-center rounded bg-white" style={{ padding: "2px", width: "20px", height: "20px" }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/logo-espina-bifida.png" alt="" className="h-6 w-auto object-contain" />
+                          <img src="/logo-espina-bifida.png" alt="" style={{ height: "14px", width: "auto", objectFit: "contain" }} />
                         </div>
-                        <div className="text-right">
-                          <p className="text-[7px] font-bold uppercase tracking-[0.12em] text-white/60">Asociación Espina Bífida NL</p>
-                          <p className="text-[9px] font-bold text-white">Credencial de Beneficiario</p>
+                        <div className="flex flex-1 min-w-0 items-baseline justify-between gap-2">
+                          <p style={{ fontSize: "6.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em", color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>
+                            Asociación Espina Bífida de Nuevo León
+                          </p>
+                          <p style={{ fontSize: "7.5px", fontWeight: 800, color: "rgba(255,255,255,0.90)", lineHeight: 1, whiteSpace: "nowrap" }}>
+                            Credencial de Beneficiario
+                          </p>
                         </div>
                       </div>
 
-                      {/* Cuerpo */}
-                      <div className="relative flex flex-1 items-center gap-4 px-4 py-2">
+                      {/* ── Cuerpo: foto + datos ── */}
+                      <div className="relative z-10 flex flex-1 min-h-0 items-stretch gap-3 px-3 py-2.5">
 
-                        {/* Foto del beneficiario */}
-                        <div className="shrink-0">
-                          <div className="overflow-hidden rounded-xl border-2 border-white/40 shadow-lg"
-                            style={{ width: "68px", height: "86px" }}>
+                        {/* Foto: columna izquierda, tamaño retrato proporcional */}
+                        <div className="shrink-0 self-center">
+                          <div className="overflow-hidden border-2 border-white/35 shadow-lg bg-white/10"
+                            style={{ width: "72px", height: "90px", borderRadius: "8px" }}>
                             {credPhoto ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={credPhoto} alt="" className="size-full object-cover object-top" />
+                              <img src={credPhoto} alt="" className="size-full object-cover object-center" />
                             ) : (
-                              <div className="flex size-full items-center justify-center bg-white/15 text-xl font-black text-white">
+                              <div className="flex size-full items-center justify-center text-xl font-black" style={{ color: "rgba(255,255,255,0.65)" }}>
                                 {iniciales}
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Datos */}
-                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+                        {/* Datos: columna derecha, centrada verticalmente */}
+                        <div className="flex min-w-0 flex-1 flex-col justify-center" style={{ gap: "8px" }}>
+
                           {/* Nombre + CURP */}
-                          <div className="flex flex-col gap-1">
-                            <p className="text-[13px] font-black leading-tight text-white uppercase tracking-wide"
-                              style={{ wordBreak: "break-word" }}>{nombre}</p>
+                          <div>
+                            <p style={{ fontSize: "15px", fontWeight: 900, color: "#fff", textTransform: "uppercase", letterSpacing: "0.02em", lineHeight: 1.15, wordBreak: "break-word" }}>
+                              {nombre}
+                            </p>
                             {credencialBeneficiario.curp && (
-                              <p className="font-mono text-[8px] font-semibold text-amber-300 tracking-wider">
+                              <p style={{ fontFamily: "Courier New, monospace", fontSize: "9px", fontWeight: 600, color: "#fbbf24", letterSpacing: "0.08em", marginTop: "3px" }}>
                                 {credencialBeneficiario.curp}
                               </p>
                             )}
                           </div>
+
                           {/* Divisor */}
-                          <div className="w-full h-px bg-white/20" />
-                          {/* Grid de campos formales */}
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div style={{ height: "1px", background: "rgba(255,255,255,0.18)" }} />
+
+                          {/* Grid de campos — 2 columnas */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
                             {credencialBeneficiario.fechaNacimiento && (
                               <div>
-                                <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Fecha de Nac.</p>
-                                <p className="text-[10px] font-bold text-white">{credencialBeneficiario.fechaNacimiento}</p>
+                                <p style={{ fontSize: "6.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.48)", marginBottom: "2px" }}>Fecha de Nac.</p>
+                                <p style={{ fontSize: "11px", fontWeight: 700, color: "#fff", lineHeight: 1.1 }}>{credencialBeneficiario.fechaNacimiento}</p>
                               </div>
                             )}
                             {credencialBeneficiario.tipoSangre && (
                               <div>
-                                <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Tipo de Sangre</p>
-                                <p className="text-[10px] font-bold text-red-300">{credencialBeneficiario.tipoSangre}</p>
+                                <p style={{ fontSize: "6.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.48)", marginBottom: "2px" }}>Tipo de Sangre</p>
+                                <p style={{ fontSize: "11px", fontWeight: 700, color: "#fca5a5", lineHeight: 1.1 }}>{credencialBeneficiario.tipoSangre}</p>
                               </div>
                             )}
                             <div>
-                              <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Folio</p>
-                              <p className="font-mono text-[10px] font-bold text-amber-200">{credencialBeneficiario.folio}</p>
+                              <p style={{ fontSize: "6.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.48)", marginBottom: "2px" }}>Folio</p>
+                              <p style={{ fontFamily: "Courier New, monospace", fontSize: "11px", fontWeight: 700, color: "#fde68a", lineHeight: 1.1 }}>{credencialBeneficiario.folio}</p>
                             </div>
+                            {credencialBeneficiario.genero && (
+                              <div>
+                                <p style={{ fontSize: "6.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.48)", marginBottom: "2px" }}>Género</p>
+                                <p style={{ fontSize: "11px", fontWeight: 700, color: "#fff", lineHeight: 1.1 }}>{credencialBeneficiario.genero === "M" ? "Masculino" : credencialBeneficiario.genero === "F" ? "Femenino" : credencialBeneficiario.genero}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Banda inferior — sin estatus */}
-                      <div className="relative flex shrink-0 items-center justify-between bg-black/30 px-4 py-1.5">
-                        <span className="text-[7.5px] font-semibold uppercase tracking-wider text-white/55">
+                      {/* ── Footer: tipo + estatus ── */}
+                      <div className="relative z-10 shrink-0 flex items-center justify-between px-3 py-1"
+                        style={{ background: "rgba(0,0,0,0.28)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                        <p style={{ fontSize: "6px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(255,255,255,0.50)" }}>
                           {credencialBeneficiario.tipo ?? "Beneficiario"}
-                          {credencialBeneficiario.genero ? ` · ${credencialBeneficiario.genero}` : ""}
-                        </span>
-                        {credencialBeneficiario.fechaAlta && (
-                          <span className="text-[7.5px] font-semibold text-white/40">
-                            Exp. {credencialBeneficiario.fechaAlta}
-                          </span>
-                        )}
+                        </p>
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", gap: "4px",
+                          borderRadius: "999px", padding: "2px 8px",
+                          background: esActivo ? "rgba(16,185,129,0.20)" : "rgba(244,63,94,0.20)",
+                          color: esActivo ? "#10b981" : "#f43f5e",
+                        }}>
+                          <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: esActivo ? "#10b981" : "#f43f5e", flexShrink: 0 }} />
+                          <p style={{ fontSize: "6.5px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                            {credencialBeneficiario.estatus}
+                          </p>
+                        </div>
                       </div>
 
                     </div>
