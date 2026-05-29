@@ -39,8 +39,8 @@ authTest(qase(40, 'RT-018: GET /reportes/periodo?tipo=estadisticas genera PDF'),
 });
 
 test(qase(18, 'TC-006: UI genera reporte y permite exportar'), async ({ page }) => {
-  const frontendUrl = process.env.E2E_FRONTEND_URL || '';
-  test.skip(!frontendUrl, 'TC-006 requiere E2E_FRONTEND_URL apuntando al frontend (local o CI)');
+  const frontendUrl = process.env.E2E_FRONTEND_URL || 'http://localhost:3001';
+  test.skip(process.env.E2E_RUN_UI_TESTS !== 'true', 'TC-006 requiere E2E_RUN_UI_TESTS=true (frontend debe estar corriendo)');
   await page.goto(`${frontendUrl}/panel`);
   await page.fill('input[type="email"]', process.env.E2E_ADMIN_EMAIL || 'prueba@espina.com');
   await page.fill('input[type="password"]', process.env.E2E_ADMIN_PASSWORD || '222222');

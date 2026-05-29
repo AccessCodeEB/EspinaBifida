@@ -130,6 +130,8 @@ jobs:
       QASE_TOKEN: ${{ secrets.QASE_TOKEN }}
       # TC-013 corre contra Render (rate limiter activo) en lugar del backend local
       E2E_RATE_LIMIT_URL: https://espinabifida-api.onrender.com
+      # TC-006 corre porque el frontend está levantado en CI
+      E2E_RUN_UI_TESTS: "true"
 
     steps:
       - uses: actions/checkout@v4
