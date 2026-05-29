@@ -142,11 +142,10 @@ export function PublicPreregistroSection({
   const [done, setDone] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState("")
   const turnstileRef = useRef<TurnstileInstance | null>(null)
-  const curpEditadoManualmente = useRef(false)
+  const [homoclave, setHomoclave] = useState("")
   const submittingRef = useRef(false)
 
   useEffect(() => {
-    if (curpEditadoManualmente.current) return
     const prefix = generateCurpPrefix({
       apellidoPaterno: form.apellidoPaterno,
       apellidoMaterno: form.apellidoMaterno,
@@ -155,8 +154,9 @@ export function PublicPreregistroSection({
       genero: form.genero,
       estado: form.estado,
     })
-    setForm((p) => ({ ...p, curp: prefix }))
-  }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estado])
+    setForm((p) => ({ ...p, curp: prefix + homoclave }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estado, homoclave])
 
   const turnstileSiteKey = useMemo(
     () =>
@@ -171,10 +171,6 @@ export function PublicPreregistroSection({
   )
 
   const change = useCallback((field: keyof BeneficiarioAltaForm, value: string | boolean) => {
-    if (field === "curp") {
-      curpEditadoManualmente.current = true
-      if (value === "") curpEditadoManualmente.current = false
-    }
     if (field === "estado") {
       setForm((p) => ({ ...p, [field]: value as string, ciudad: "" }))
       setErrors((e) => {
@@ -199,7 +195,7 @@ export function PublicPreregistroSection({
     setErrors({})
     setDone(false)
     setTurnstileToken("")
-    curpEditadoManualmente.current = false
+    setHomoclave("")
     turnstileRef.current?.reset()
   }, [])
 
@@ -459,19 +455,36 @@ export function PublicPreregistroSection({
               </Select>
             </FieldShell>
 
-            <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp" className="sm:col-span-2">
-              <Input
-                id="prereg-curp"
-                value={form.curp}
-                onChange={(e) => change("curp", e.target.value.toUpperCase())}
-                maxLength={18}
-                className={cn(
-                  "h-11 rounded-lg bg-white font-mono uppercase tracking-wide dark:bg-slate-900",
-                  errors.curp && "border-red-400"
-                )}
-                placeholder="Se autocompleta — agrega los últimos 2 caracteres (homoclave)"
-                autoComplete="off"
-              />
+            <FieldShell label="CURP" required error={errors.curp} htmlFor="prereg-curp-homoclave" className="sm:col-span-2">
+              <div className="flex items-center gap-2">
+                {/* Prefijo autocompletado (16 chars) — solo lectura */}
+                <Input
+                  id="prereg-curp"
+                  value={form.curp.slice(0, 16)}
+                  readOnly
+                  tabIndex={-1}
+                  className="h-11 flex-1 rounded-lg bg-muted/60 font-mono uppercase tracking-wide text-muted-foreground cursor-default select-none dark:bg-slate-800"
+                  placeholder="SE AUTOCOMPLETA"
+                  autoComplete="off"
+                />
+                {/* Homoclave — últimos 2 caracteres editables */}
+                <Input
+                  id="prereg-curp-homoclave"
+                  value={homoclave}
+                  onChange={(e) => {
+                    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 2)
+                    setHomoclave(v)
+                    if (errors.curp) setErrors((prev) => { const next = { ...prev }; delete next.curp; return next })
+                  }}
+                  maxLength={2}
+                  className={cn(
+                    "h-11 w-16 shrink-0 rounded-lg bg-white font-mono uppercase tracking-widest text-center dark:bg-slate-900",
+                    errors.curp && "border-red-400"
+                  )}
+                  placeholder="XX"
+                  autoComplete="off"
+                />
+              </div>
             </FieldShell>
           </div>
         </StepCard>
