@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-28 (Miércoles) — post Semana 3
+**Actualización:** 2026-05-28 (Miércoles) — post Semana 3 (sesión tarde)
 **Próxima entrega:** 2026-05-29 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -106,8 +106,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | ~~**Auditoría de operaciones sensibles**~~ | ✅ **Completado** — tabla `AUDITORIA_OPERACIONES` (migration-012), modelo `auditoria.model.js`, fire-and-forget en 6 operaciones sensibles: `CAMBIO_ESTATUS`, `BAJA_LOGICA`, `ELIMINACION_PERMANENTE`, `APROBAR_PRE_REGISTRO`, `RECHAZAR_PRE_REGISTRO`, `DESACTIVAR_ADMIN`. Tests unitarios en `auditoria.model.test.js`. |
-| **Manejo de errores de BD** | Fallos parciales en operaciones multi-paso pueden dejar estado inconsistente |
-| **Optimización de imágenes** | Las fotos de perfil no usan `<Image>` de Next.js ni lazy loading |
+| ~~**Manejo de errores de BD**~~ | ✅ **Completado** — `deactivate()` de beneficiario ahora ejecuta baja + cancelación de membresías en una sola transacción atómica con rollback (`deactivateConCancelacionMembresias`). Era el único caso multi-paso crítico sin rollback coordinado. |
+| ~~**Optimización de imágenes**~~ | ✅ **Completado** — `loading="lazy"` y `decoding="async"` agregados a todas las fotos de perfil (`BeneficiariosTable`, `BeneficiarioDetailPanel`, `dashboard`, `preregistro`, `panel/page`). Nota: `<Image>` de Next.js no aplica porque las fotos se almacenan como data URLs en Oracle. |
 
 ### Prioridad baja (nice-to-have)
 
