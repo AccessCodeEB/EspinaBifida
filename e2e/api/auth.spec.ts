@@ -1,7 +1,7 @@
 import { test, expect, request } from '@playwright/test';
 import { qase } from 'playwright-qase-reporter';
 
-const BASE = 'http://localhost:3000';
+const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
 test(qase(33, 'RT-001: Login con credenciales válidas retorna 200 con JWT'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
@@ -19,7 +19,7 @@ test(qase(33, 'RT-001: Login con credenciales válidas retorna 200 con JWT'), as
 test(qase(34, 'RT-002: Login con credenciales inválidas retorna 401'), async () => {
   const ctx = await request.newContext({ baseURL: BASE });
   const res = await ctx.post('/administradores/login', {
-    data: { email: 'prueba@espina.com', password: 'wrongpassword' },
+    data: { email: 'prueba@espina.com', password: 'wrong_e2e_rt002_intentional' },
   });
   expect(res.status()).toBe(401);
   await ctx.dispose();

@@ -27,7 +27,7 @@ authTest(qase(16, 'TC-004: Reporte de inventario retorna 200'), async ({ apiCont
 });
 
 test(qase(17, 'TC-005: Sin token retorna 401'), async () => {
-  const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
+  const ctx = await request.newContext({ baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000' });
   const res401 = await ctx.get(`/api/v1/reportes/periodo?tipo=beneficiarios&${PERIODO}`);
   expect(res401.status()).toBe(401);
   await ctx.dispose();

@@ -3,7 +3,7 @@ import { test as authTest } from '../fixtures/auth';
 import { cleanupPreregistros } from '../helpers/cleanup';
 import { qase } from 'playwright-qase-reporter';
 
-const BASE = 'http://localhost:3000';
+const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
 // CURPs válidas: ^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$
 const TEST_CURP = 'PLAW000201HXXXXXX1';
 const TEST_CURP_RECHAZAR = 'PLAW000201HXXXXXX2';

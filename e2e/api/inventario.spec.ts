@@ -26,6 +26,7 @@ test(qase(9, 'Descontar inventario al usar insumo'), async ({ apiContext }) => {
   const idArticulo = articulo?.idArticulo ?? articulo?.id_articulo;
   const stockAntes = articulo?.inventarioActual ?? articulo?.inventario_actual ?? 10;
 
+  // Setup: asegurar stock suficiente
   await apiContext.post('/inventario/movimientos', {
     data: { idArticulo, tipo: 'ENTRADA', cantidad: 10, motivo: 'E2E setup' },
   });
@@ -35,12 +36,17 @@ test(qase(9, 'Descontar inventario al usar insumo'), async ({ apiContext }) => {
   });
   expect([200, 201]).toContain(res.status());
 
-  // GET /inventario no acepta /:id, obtener la lista y filtrar
+  // Verificar: stock debe ser stockAntes + 10 - 1 = stockAntes + 9
   const artResPost = await apiContext.get('/inventario');
   const artBodyPost = await artResPost.json();
   const articuloPost = (artBodyPost.data ?? artBodyPost).find(
     (a: { idArticulo: number }) => a.idArticulo === idArticulo
   );
   const stockDespues = articuloPost?.inventarioActual ?? articuloPost?.inventario_actual ?? 0;
-  expect(stockDespues).toBeLessThan(stockAntes + 11);
+  expect(stockDespues).toBe(stockAntes + 9);
+
+  // Cleanup: revertir los movimientos de setup (ENTRADA 10, SALIDA 1 → net +9 → revertir con SALIDA 9)
+  await apiContext.post('/inventario/movimientos', {
+    data: { idArticulo, tipo: 'SALIDA', cantidad: 9, motivo: 'E2E cleanup - revertir setup' },
+  }).catch(() => {});
 });

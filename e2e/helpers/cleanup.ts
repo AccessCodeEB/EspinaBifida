@@ -1,15 +1,20 @@
 import { APIRequestContext, request } from '@playwright/test';
 
+const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
+
 async function authedContext(): Promise<APIRequestContext> {
-  const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
+  const ctx = await request.newContext({ baseURL: BASE_URL });
   const loginRes = await ctx.post('/administradores/login', {
-    data: { email: 'prueba@espina.com', password: '222222' },
+    data: {
+      email: process.env.E2E_ADMIN_EMAIL || 'prueba@espina.com',
+      password: process.env.E2E_ADMIN_PASSWORD || '222222',
+    },
   });
   const body = await loginRes.json();
   const token: string = body.token ?? body.data?.token ?? body.accessToken;
   await ctx.dispose();
   return request.newContext({
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE_URL,
     extraHTTPHeaders: { Authorization: `Bearer ${token}` },
   });
 }
@@ -29,7 +34,11 @@ export async function cleanupBeneficiarios(ctx?: APIRequestContext): Promise<voi
 }
 
 async function forceDeletePlaw(c: APIRequestContext, curp: string): Promise<void> {
-  // Try direct delete (works if still in PENDIENTE state)
+  // Hard delete primero (más limpio para datos de prueba)
+  const hard = await c.delete(`/beneficiarios/${curp}/eliminar`).catch(() => null);
+  if (hard?.ok()) return;
+
+  // Fallback: pre-registro delete (funciona si está en estado PENDIENTE)
   const direct = await c.delete(`/beneficiarios/${curp}/pre-registro`).catch(() => null);
   if (direct?.ok()) return;
 

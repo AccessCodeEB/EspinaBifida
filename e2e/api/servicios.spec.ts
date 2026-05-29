@@ -2,6 +2,13 @@ import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
 const TEST_CURP = 'AUSD050124MDFGNYA8';
+const createdServicioIds: number[] = [];
+
+test.afterAll(async ({ apiContext }) => {
+  for (const id of createdServicioIds) {
+    await apiContext.delete(`/servicios/${id}`).catch(() => {});
+  }
+});
 
 test(qase(6, 'Asignar servicio a beneficiario activo'), async ({ apiContext }) => {
   const catRes = await apiContext.get('/servicios-catalogo');
@@ -20,6 +27,9 @@ test(qase(6, 'Asignar servicio a beneficiario activo'), async ({ apiContext }) =
     },
   });
   expect([200, 201]).toContain(res.status());
+  const body = await res.json();
+  const id = body.data?.idServicio ?? body.data?.id_servicio ?? body.idServicio;
+  if (id) createdServicioIds.push(id);
 });
 
 test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiContext }) => {
@@ -42,7 +52,7 @@ test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiC
   });
   expect([200, 201]).toContain(res.status());
 
-  // GET /inventario no acepta /:id, obtener la lista y filtrar
+  // Verificar stock aumentó antes de limpiar
   const artResPost = await apiContext.get('/inventario');
   const artBodyPost = await artResPost.json();
   const articuloPost = (artBodyPost.data ?? artBodyPost).find(
@@ -50,4 +60,14 @@ test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiC
   );
   const stockDespues = articuloPost?.inventarioActual ?? articuloPost?.inventario_actual ?? 0;
   expect(stockDespues).toBe(stockAntes + 5);
+
+  // Revertir la entrada para no dejar stock inflado en producción
+  await apiContext.post('/inventario/movimientos', {
+    data: {
+      idArticulo,
+      tipo: 'SALIDA',
+      cantidad: 5,
+      motivo: 'E2E cleanup - revertir entrada de prueba',
+    },
+  }).catch(() => {});
 });
