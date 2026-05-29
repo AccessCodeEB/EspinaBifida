@@ -395,41 +395,41 @@ export function AdministradoresSection() {
                     </td>
                     <td className="py-3 text-center">
                       <span className={cn(
-                        "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold",
+                        "inline-flex items-center gap-1.5 text-[11px] font-semibold",
                         admin.activo === 1
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                          : "bg-muted text-muted-foreground"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-muted-foreground"
                       )}>
-                        <span className={cn("size-1.5 rounded-full", admin.activo === 1 ? "bg-emerald-500" : "bg-muted-foreground/40")} />
+                        <span className={cn("size-1.5 rounded-full shrink-0", admin.activo === 1 ? "bg-emerald-500" : "bg-muted-foreground/40")} />
                         {admin.activo === 1 ? "Activo" : "Inactivo"}
                       </span>
                     </td>
                     <td className="py-3 pr-5">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-0.5">
                         <button
                           title="Editar"
                           disabled={admin.activo !== 1}
                           onClick={() => openEdit(admin)}
-                          className="flex items-center gap-1 rounded-md border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                          className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                         >
-                          <Pencil className="size-3" /> Editar
+                          <Pencil className="size-3.5" />
                         </button>
                         {admin.activo === 1 && (
                           <button
                             title="Cambiar contraseña"
                             onClick={() => openResetPw(admin)}
-                            className="flex items-center gap-1 rounded-md border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+                            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           >
-                            <KeyRound className="size-3" /> Contraseña
+                            <KeyRound className="size-3.5" />
                           </button>
                         )}
                         {admin.activo === 1 && admin.idAdmin !== session?.idAdmin && (
                           <button
                             title="Desactivar"
                             onClick={() => setDeactivateTarget(admin)}
-                            className="flex items-center gap-1 rounded-md border border-destructive/30 px-2.5 py-1.5 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/10"
+                            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <ShieldOff className="size-3" /> Desactivar
+                            <ShieldOff className="size-3.5" />
                           </button>
                         )}
                       </div>
@@ -444,7 +444,7 @@ export function AdministradoresSection() {
 
       {/* ── Crear ── */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!saving) setShowCreate(o) }}>
-        <DialogContent className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
+        <DialogContent showCloseButton={false} className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
           <ModalHeader title="Nuevo administrador" subtitle="Crea una cuenta de acceso al sistema." onClose={() => { if (!saving) setShowCreate(false) }} />
           <div className="space-y-4 px-5 py-5">
             <Field label="Nombre completo" id="c-nombre" value={createForm.nombreCompleto} onChange={(v) => setCreateForm(f => ({ ...f, nombreCompleto: v }))} error={createErrors.nombreCompleto} placeholder="Ej. María García López" />
@@ -464,7 +464,7 @@ export function AdministradoresSection() {
 
       {/* ── Editar ── */}
       <Dialog open={editTarget !== null} onOpenChange={(o) => { if (!editSaving && !o) setEditTarget(null) }}>
-        <DialogContent className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
+        <DialogContent showCloseButton={false} className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
           <ModalHeader title="Editar administrador" subtitle={editTarget?.email} onClose={() => { if (!editSaving) setEditTarget(null) }} />
           <div className="space-y-4 px-5 py-5">
             <Field label="Nombre completo" id="e-nombre" value={editForm.nombreCompleto} onChange={(v) => setEditForm(f => ({ ...f, nombreCompleto: v }))} error={editErrors.nombreCompleto} />
@@ -483,7 +483,7 @@ export function AdministradoresSection() {
 
       {/* ── Cambiar contraseña ── */}
       <Dialog open={pwTarget !== null} onOpenChange={(o) => { if (!pwSaving && !o) setPwTarget(null) }}>
-        <DialogContent className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
+        <DialogContent showCloseButton={false} className="max-w-md gap-0 p-0 overflow-hidden border border-border/60 shadow-xl sm:rounded-xl">
           <ModalHeader
             title="Restablecer contraseña"
             subtitle={`Cuenta: ${pwTarget?.nombreCompleto ?? ""}`}

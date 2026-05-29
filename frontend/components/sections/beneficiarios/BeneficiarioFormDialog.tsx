@@ -99,6 +99,10 @@ async function buildCredencialBlobUrl(b: Beneficiario & { fotoPerfilUrl?: string
       ? ""
       : (typeof value === "boolean" ? (value ? "Sí" : "No") : String(value))
 
+  const esActivo = b.estatus === "Activo"
+  const statusColor = esActivo ? "#10b981" : "#f43f5e"
+  const statusBg   = esActivo ? "rgba(16,185,129,0.18)" : "rgba(244,63,94,0.18)"
+
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -107,106 +111,146 @@ async function buildCredencialBlobUrl(b: Beneficiario & { fotoPerfilUrl?: string
 <style>
   @page { size: 85.6mm 54mm; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; font-size: 5.5pt; color: #111; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .page { width: 85.6mm; height: 54mm; overflow: hidden; position: relative; }
-  .lbl  { font-size: 5pt; color: #333; }
-  .val  { font-size: 5.5pt; font-weight: 600; color: #000; }
-  .f    { margin-bottom: 0.8mm; line-height: 1.3; }
-  .fr-top { display: flex; height: 26mm; border-bottom: 0.3mm solid #ccc; }
-  .fr-logo-col { width: 23mm; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 1.5mm; border-right: 0.3mm solid #ccc; }
-  .fr-logo-col img { width: 100%; height: auto; object-fit: contain; }
-  .fr-info-col { flex: 1; padding: 1.5mm 2mm 1mm 2mm; display: flex; flex-direction: column; gap: 0mm; }
-  .fr-folio { text-align: right; font-size: 6pt; margin-bottom: 1mm; }
-  .fr-folio .folio-lbl { color: #333; }
-  .fr-folio .folio-val { font-weight: 700; color: #000; }
-  .fr-tipo-badge { display: inline-block; font-size: 5pt; font-weight: 700; color: #c00; border: 0.4mm solid #c00; padding: 0 0.8mm; margin-left: 1mm; vertical-align: middle; }
-  .fr-bot { display: flex; height: 28mm; }
-  .fr-photo-col { width: 23mm; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; padding: 1.5mm 1.5mm 1mm 1.5mm; border-right: 0.3mm solid #ccc; }
-  .fr-photo { width: 18mm; height: 22mm; overflow: hidden; border: 0.4mm solid #999; background: #e8e8e8; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: 700; color: #888; }
-  .fr-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
-  .fr-bot-info { flex: 1; padding: 1.5mm 2mm 1mm 2mm; display: flex; flex-direction: column; justify-content: space-between; }
-  .bk-body { padding: 2mm 2.5mm 1.5mm 2.5mm; }
-  .bk-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1mm; line-height: 1.3; }
-  .bk-row .lbl { font-size: 5pt; color: #333; }
-  .bk-row .val { font-size: 5.5pt; font-weight: 600; }
-  .bk-sep { border-top: 0.3mm solid #ccc; margin: 1.5mm 0; }
-  .bk-bot { position: absolute; bottom: 0; left: 0; right: 0; border-top: 0.3mm solid #ccc; display: flex; }
-  .bk-assoc { flex: 1; padding: 1.5mm 2mm; font-size: 4.2pt; color: #333; line-height: 1.5; border-right: 0.3mm solid #ccc; }
-  .bk-assoc .assoc-name { font-size: 4.5pt; font-weight: 700; color: #0a3d6e; line-height: 1.3; }
-  .bk-nacimiento { width: 38mm; flex-shrink: 0; padding: 1.5mm 2mm; font-size: 4.8pt; }
-  .bk-nacimiento .nac-title { font-size: 5pt; font-weight: 700; margin-bottom: 1mm; }
-  .bk-nacimiento table { border-collapse: collapse; width: 100%; }
-  .bk-nacimiento td { padding: 0.3mm 0; font-size: 4.5pt; vertical-align: top; }
-  .bk-nacimiento td:first-child { color: #444; padding-right: 1mm; white-space: nowrap; }
-  .bk-nacimiento td:last-child  { font-weight: 600; color: #000; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ── FRENTE ───────────────────────────────── */
+  .card { width: 85.6mm; height: 54mm; overflow: hidden; position: relative;
+          background: linear-gradient(135deg, #0a3460 0%, #1260a8 60%, #0f4c81 100%); }
+  .dots { position:absolute;inset:0;opacity:.05;
+          background-image:radial-gradient(circle,#fff 1px,transparent 1px);
+          background-size:11px 11px; }
+  .glow { position:absolute;bottom:0;right:0;width:38mm;height:38mm;
+          background:radial-gradient(circle,#fff,transparent);
+          opacity:.08;transform:translate(35%,35%);border-radius:50%; }
+  .accent { position:absolute;top:0;left:0;right:0;height:1.5px;
+            background:linear-gradient(90deg,#f59e0b,#fbbf24,#f59e0b); }
+
+  /* Header */
+  .hdr { position:relative;display:flex;align-items:center;justify-content:space-between;
+         padding:2.2mm 3mm 1.8mm 3mm;border-bottom:0.3mm solid rgba(255,255,255,0.12); }
+  .hdr-logo { height:6mm;width:auto;object-fit:contain; }
+  .hdr-right { text-align:right; }
+  .hdr-assoc { font-size:4.8pt;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.55); }
+  .hdr-title { font-size:5.5pt;font-weight:700;color:rgba(255,255,255,0.90); }
+
+  /* Body */
+  .body { position:relative;display:flex;align-items:stretch;gap:2.5mm;padding:2mm 3mm 1.8mm 3mm;flex:1; }
+  .photo-wrap { flex-shrink:0;display:flex;align-items:center; }
+  .photo { width:16mm;height:21mm;overflow:hidden;border-radius:1.5mm;
+           border:0.5mm solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.1); }
+  .photo img { width:100%;height:100%;object-fit:cover;object-position:center; }
+  .photo-initials { width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+                    font-size:9pt;font-weight:700;color:rgba(255,255,255,0.6); }
+  .info { flex:1;display:flex;flex-direction:column;justify-content:space-between;min-width:0; }
+  .name { font-size:7.5pt;font-weight:900;color:#fff;text-transform:uppercase;
+          letter-spacing:0.02em;line-height:1.25;word-break:break-word; }
+  .curp-line { font-family:Courier New,monospace;font-size:5pt;font-weight:600;
+               color:#fbbf24;letter-spacing:0.06em;margin-top:0.8mm; }
+  .grid { display:grid;grid-template-columns:1fr 1fr;gap:0.5mm 3mm;margin-top:1.5mm; }
+  .field-lbl { font-size:4pt;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45); }
+  .field-val { font-size:5.5pt;font-weight:700;color:rgba(255,255,255,0.92);line-height:1.3; }
+  .field-val.blood { color:#fca5a5; }
+  .field-val.folio { font-family:Courier New,monospace; }
+
+  /* Footer */
+  .ftr { position:relative;display:flex;align-items:center;justify-content:space-between;
+         background:rgba(0,0,0,0.28);padding:1.2mm 3mm; }
+  .ftr-tipo { font-size:5pt;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.50); }
+  .ftr-status { display:inline-flex;align-items:center;gap:1mm;
+                border-radius:99mm;padding:0.4mm 2mm;font-size:5pt;font-weight:700;
+                background:${statusBg};color:${statusColor}; }
+  .ftr-dot { width:1.5mm;height:1.5mm;border-radius:50%;background:${statusColor}; }
+
+  /* ── REVERSO ──────────────────────────────── */
+  .back { width:85.6mm;height:54mm;overflow:hidden;position:relative;background:#fff;page-break-before:always; }
+  .back-stripe { height:8mm;background:linear-gradient(135deg,#0a3460,#1260a8);
+                 display:flex;align-items:center;padding:0 3mm;gap:2mm; }
+  .back-logo { height:5mm;width:auto;object-fit:contain; }
+  .back-stripe-txt { font-size:5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.80); }
+  .back-body { padding:1.5mm 3mm 1mm 3mm;display:flex;flex-direction:column;gap:1mm; }
+  .bk-row { display:flex;gap:2mm;align-items:baseline;line-height:1.4; }
+  .bk-lbl { font-size:4.5pt;color:#555;white-space:nowrap;min-width:20mm; }
+  .bk-val { font-size:5pt;font-weight:700;color:#111;word-break:break-word; }
+  .bk-sep { border-top:0.3mm solid #ddd;margin:1mm 0; }
+  .bk-grid { display:grid;grid-template-columns:1fr 1fr;gap:0.5mm 3mm; }
+  .back-footer { position:absolute;bottom:0;left:0;right:0;border-top:0.3mm solid #ddd;
+                 display:flex;padding:1.2mm 3mm;align-items:flex-end; }
+  .assoc-block { flex:1; }
+  .assoc-name { font-size:4.8pt;font-weight:700;color:#0a3d6e;line-height:1.4; }
+  .assoc-detail { font-size:4pt;color:#555;line-height:1.5; }
+  .qr-placeholder { width:12mm;height:12mm;border:0.4mm solid #ccc;display:flex;align-items:center;
+                    justify-content:center;font-size:3.5pt;color:#aaa;text-align:center; }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="fr-top">
-    <div class="fr-logo-col">${logoHtml}</div>
-    <div class="fr-info-col">
-      <div class="fr-folio">
-        <span class="folio-lbl">Folio:</span>
-        <span class="folio-val"> ${b.folio ?? ""}</span>
-      </div>
-      <div class="f">
-        <span class="lbl">Nombre:</span>
-        <span class="val"> ${nombre}</span>
-        ${b.tipo ? `<span class="fr-tipo-badge">${b.tipo.charAt(0).toUpperCase()}</span>` : ""}
-      </div>
-      ${direccion ? `<div class="f"><span class="lbl">Dirección:</span> <span class="val">${direccion}</span></div>` : ""}
+
+<!-- FRENTE -->
+<div class="card">
+  <div class="dots"></div>
+  <div class="glow"></div>
+  <div class="accent"></div>
+
+  <div class="hdr">
+    ${logoHtml ? `<img class="hdr-logo" src="${logoDataUrl}" alt="AEBNL" />` : `<span style="font-size:6pt;font-weight:900;color:#fff;">AEBNL</span>`}
+    <div class="hdr-right">
+      <div class="hdr-assoc">Asociación Espina Bífida NL</div>
+      <div class="hdr-title">Credencial de Beneficiario</div>
     </div>
   </div>
-  <div class="fr-bot">
-    <div class="fr-photo-col">
-      <div class="fr-photo">${photoHtml}</div>
+
+  <div class="body">
+    <div class="photo-wrap">
+      <div class="photo">${photoHtml}</div>
     </div>
-    <div class="fr-bot-info">
+    <div class="info">
       <div>
-        ${telefono ? `<div class="f"><span class="lbl">Tel. Casa</span> <span class="val">${telefono}</span></div>` : ""}
-        ${b.nombrePadreMadre ? `<div class="f"><span class="lbl">Nombre de padres:</span><br/><span class="val">${b.nombrePadreMadre}</span></div>` : ""}
+        <div class="name">${nombre}</div>
+        ${b.curp ? `<div class="curp-line">${b.curp}</div>` : ""}
       </div>
-      <div class="f">
-        <span class="lbl">Fecha de Expedicion:</span>
-        <span class="val"> ${b.fechaAlta ?? ""}</span>
+      <div class="grid">
+        ${b.fechaNacimiento ? `<div><div class="field-lbl">Fecha de Nac.</div><div class="field-val">${fv(b.fechaNacimiento)}</div></div>` : ""}
+        ${b.tipoSangre ? `<div><div class="field-lbl">Tipo de Sangre</div><div class="field-val blood">${fv(b.tipoSangre)}</div></div>` : ""}
+        ${b.numeroCredencial ? `<div><div class="field-lbl">No. Credencial</div><div class="field-val">${fv(b.numeroCredencial)}</div></div>` : ""}
+        <div><div class="field-lbl">Folio</div><div class="field-val folio">${b.folio ?? ""}</div></div>
+        ${b.genero ? `<div><div class="field-lbl">Género</div><div class="field-val">${fv(b.genero)}</div></div>` : ""}
+        ${b.fechaAlta ? `<div><div class="field-lbl">Expedición</div><div class="field-val">${fv(b.fechaAlta)}</div></div>` : ""}
       </div>
     </div>
+  </div>
+
+  <div class="ftr">
+    <span class="ftr-tipo">${b.tipo ?? "Beneficiario"}${b.genero ? " · " + b.genero : ""}</span>
+    <span class="ftr-status"><span class="ftr-dot"></span>${b.estatus}</span>
   </div>
 </div>
-<div class="page" style="page-break-before:always;">
-  <div class="bk-body">
-    <div class="bk-row"><div><span class="lbl">Padecimiento:</span></div></div>
-    <div class="bk-row">
-      <div><span class="lbl">Tipo de Sangre:</span> <span class="val">${fv(b.tipoSangre)}</span></div>
-      <div><span class="lbl">Tiene Valvula?</span> <span class="val">${fv(b.usaValvula)}</span></div>
-    </div>
-    <div class="bk-row" style="margin-top:1mm;"><span class="lbl">En caso de accidente avisar a:</span></div>
-    <div class="bk-row">
-      <span class="val">${fv(b.contactoEmergencia)}</span>
-      <div><span class="lbl">Teléfono:</span> <span class="val">${fv(b.telefonoEmergencia || b.telefonoCasa)}</span></div>
-    </div>
-    <div class="bk-row" style="margin-top:0.5mm;">
-      <span class="lbl">Correo Electrónico:</span> <span class="val">${fv(b.correoElectronico)}</span>
-    </div>
+
+<!-- REVERSO -->
+<div class="back">
+  <div class="back-stripe">
+    ${logoHtml ? `<img class="back-logo" src="${logoDataUrl}" alt="AEBNL" />` : ""}
+    <span class="back-stripe-txt">Asociación de Espina Bífida de Nuevo León, A.B.P.</span>
   </div>
-  <div class="bk-bot">
-    <div class="bk-assoc">
-      <div class="assoc-name">ASOCIACION DE ESPINA BIFIDA<br/>DE NUEVO LEON ABP</div>
-      <div style="margin-top:0.8mm;">Monterrey, NL</div>
-      <div>Teléfono: ${fv(b.telefonoCasa) || ""}</div>
-      <div>www.espinabifida.org.mx</div>
+  <div class="back-body">
+    <div class="bk-grid">
+      <div class="bk-row"><span class="bk-lbl">Tipo de Sangre:</span><span class="bk-val">${fv(b.tipoSangre)}</span></div>
+      <div class="bk-row"><span class="bk-lbl">Usa Válvula:</span><span class="bk-val">${fv(b.usaValvula)}</span></div>
     </div>
-    <div class="bk-nacimiento">
-      <div class="nac-title">Datos de Nacimiento:</div>
-      <table>
-        <tr><td>Fecha</td><td>${fv(b.fechaNacimiento)}</td></tr>
-        <tr><td>Lugar Nac.</td><td>${fv(b.ciudad || b.municipio)}</td></tr>
-        <tr><td>Hospital</td><td>${fv(b.hospitalNacimiento)}</td></tr>
-      </table>
+    <div class="bk-sep"></div>
+    <div class="bk-row"><span class="bk-lbl">Nombre padres/tutor:</span><span class="bk-val">${fv(b.nombrePadreMadre)}</span></div>
+    <div class="bk-sep"></div>
+    <div style="font-size:4.5pt;font-weight:700;color:#333;margin-bottom:0.5mm;">En caso de accidente avisar a:</div>
+    <div class="bk-row"><span class="bk-lbl">${fv(b.contactoEmergencia)}</span><span class="bk-val">Tel: ${fv(b.telefonoEmergencia || b.telefonoCasa)}</span></div>
+    ${b.correoElectronico ? `<div class="bk-row" style="margin-top:0.3mm;"><span class="bk-lbl">Correo:</span><span class="bk-val">${fv(b.correoElectronico)}</span></div>` : ""}
+  </div>
+  <div class="back-footer">
+    <div class="assoc-block">
+      <div class="assoc-name">ASOCIACIÓN DE ESPINA BÍFIDA<br/>DE NUEVO LEÓN, A.B.P.</div>
+      <div class="assoc-detail">Monterrey, Nuevo León · www.espinabifida.org.mx</div>
     </div>
+    <div class="qr-placeholder">QR<br/>Folio</div>
   </div>
 </div>
+
 </body>
 </html>`
 
@@ -519,83 +563,119 @@ export function BeneficiarioFormDialog({
           if (!open) setCredencialBeneficiario(null)
         }}
       >
-        <DialogContent className="max-w-md w-[calc(100vw-2rem)] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-2xl">
+        <DialogContent className="max-w-[480px] w-[calc(100vw-2rem)] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-2xl">
           {credencialBeneficiario && (() => {
             const credPhoto = resolvePublicUploadUrl(credencialBeneficiario.fotoPerfilUrl ?? undefined)
+            const nombre = [credencialBeneficiario.nombres, credencialBeneficiario.apellidoPaterno, credencialBeneficiario.apellidoMaterno].filter(Boolean).join(" ")
+            const esActivo = credencialBeneficiario.estatus === "Activo"
+            const iniciales = `${credencialBeneficiario.nombres?.[0] ?? ""}${credencialBeneficiario.apellidoPaterno?.[0] ?? ""}`
             return (
               <>
-                <div className="border-b border-border/50 bg-primary/5 px-6 py-4">
-                  <DialogHeader className="gap-1 text-left">
-                    <DialogTitle className="text-lg font-bold">Credencial digital</DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground">
-                      Vista previa de la credencial del beneficiario.
-                    </DialogDescription>
-                  </DialogHeader>
+                {/* ── Header del dialog ── */}
+                <div className="flex items-center justify-between border-b border-border/50 px-5 py-2.5">
+                  <div>
+                    <DialogTitle className="text-sm font-bold text-foreground">Credencial digital</DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">Vista previa · CR80</DialogDescription>
+                  </div>
                 </div>
-                <div className="bg-muted/20 px-6 py-6">
-                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-md">
-                    <div className="flex items-center justify-between gap-3 border-b border-border/50 bg-primary/6 px-4 py-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/logo-espina-bifida.png"
-                        alt=""
-                        className="h-9 w-auto object-contain"
-                      />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Beneficiario
-                      </span>
-                    </div>
-                    <div className="flex gap-4 p-4">
-                      <div
-                        className={cn(
-                          "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl text-lg font-bold shadow-sm",
-                          getPhotoRingClasses(credencialBeneficiario.estatus)
-                        )}
-                      >
-                        {credPhoto ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={credPhoto}
-                            alt=""
-                            className="absolute inset-0 size-full object-contain object-center bg-muted/40"
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center">
-                            {(credencialBeneficiario.nombres?.[0] ?? "")}
-                            {(credencialBeneficiario.apellidoPaterno?.[0] ?? "")}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-bold leading-tight text-foreground line-clamp-2">
-                          {credencialBeneficiario.nombres} {credencialBeneficiario.apellidoPaterno}{" "}
-                          {credencialBeneficiario.apellidoMaterno}
-                        </p>
-                        <p className="text-xs font-semibold text-primary/90">{credencialBeneficiario.folio}</p>
-                        {credencialBeneficiario.numeroCredencial && (
-                          <p className="font-mono text-[11px] font-bold text-amber-800 dark:text-amber-400">
-                            No. {credencialBeneficiario.numeroCredencial}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2 border-t border-border/40 bg-muted/30 px-4 py-3 text-xs">
-                      {credencialBeneficiario.curp && (
-                        <div>
-                          <p className="font-bold uppercase tracking-wide text-muted-foreground">CURP</p>
-                          <p className="mt-0.5 break-all font-medium text-foreground">{credencialBeneficiario.curp}</p>
+
+                {/* ── Tarjeta CR80 ── */}
+                <div className="bg-muted/30 px-5 py-3">
+                  {/* Proporciones CR80: 85.6mm × 54mm ≈ 1.586 ratio */}
+                  <div className="w-full overflow-hidden rounded-xl shadow-2xl" style={{ aspectRatio: "85.6/54" }}>
+
+                    {/* Cara frontal */}
+                    <div className="relative flex h-full flex-col" style={{ background: "linear-gradient(135deg, #0a3460 0%, #1260a8 58%, #0f4c81 100%)" }}>
+
+                      {/* Decoraciones */}
+                      <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
+                        style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "11px 11px" }} />
+                      <div className="pointer-events-none absolute bottom-0 right-0 size-48 rounded-full opacity-[0.07]"
+                        style={{ background: "radial-gradient(circle, #fff, transparent)", transform: "translate(35%, 35%)" }} />
+                      {/* Línea dorada superior */}
+                      <div className="absolute top-0 left-0 right-0 h-[2.5px]"
+                        style={{ background: "linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)" }} />
+
+                      {/* Encabezado */}
+                      <div className="relative flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2">
+                        {/* Logo en cápsula blanca */}
+                        <div className="flex shrink-0 items-center justify-center rounded-lg bg-white p-1">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/logo-espina-bifida.png" alt="" className="h-6 w-auto object-contain" />
                         </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <span className="text-muted-foreground">Membresía:</span>
-                        {getEstatusBadge(credencialBeneficiario.estatus)}
+                        <div className="text-right">
+                          <p className="text-[7px] font-bold uppercase tracking-[0.12em] text-white/60">Asociación Espina Bífida NL</p>
+                          <p className="text-[9px] font-bold text-white">Credencial de Beneficiario</p>
+                        </div>
                       </div>
-                      {credencialBeneficiario.tipo && (
-                        <p className="text-muted-foreground">
-                          <span className="font-semibold text-foreground">Tipo: </span>
-                          {credencialBeneficiario.tipo}
-                        </p>
-                      )}
+
+                      {/* Cuerpo */}
+                      <div className="relative flex flex-1 items-center gap-4 px-4 py-2">
+
+                        {/* Foto del beneficiario */}
+                        <div className="shrink-0">
+                          <div className="overflow-hidden rounded-xl border-2 border-white/40 shadow-lg"
+                            style={{ width: "68px", height: "86px" }}>
+                            {credPhoto ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={credPhoto} alt="" className="size-full object-cover object-top" />
+                            ) : (
+                              <div className="flex size-full items-center justify-center bg-white/15 text-xl font-black text-white">
+                                {iniciales}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Datos */}
+                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+                          {/* Nombre + CURP */}
+                          <div className="flex flex-col gap-1">
+                            <p className="text-[13px] font-black leading-tight text-white uppercase tracking-wide"
+                              style={{ wordBreak: "break-word" }}>{nombre}</p>
+                            {credencialBeneficiario.curp && (
+                              <p className="font-mono text-[8px] font-semibold text-amber-300 tracking-wider">
+                                {credencialBeneficiario.curp}
+                              </p>
+                            )}
+                          </div>
+                          {/* Divisor */}
+                          <div className="w-full h-px bg-white/20" />
+                          {/* Grid de campos formales */}
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {credencialBeneficiario.fechaNacimiento && (
+                              <div>
+                                <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Fecha de Nac.</p>
+                                <p className="text-[10px] font-bold text-white">{credencialBeneficiario.fechaNacimiento}</p>
+                              </div>
+                            )}
+                            {credencialBeneficiario.tipoSangre && (
+                              <div>
+                                <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Tipo de Sangre</p>
+                                <p className="text-[10px] font-bold text-red-300">{credencialBeneficiario.tipoSangre}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-[7px] font-bold uppercase tracking-wider text-white/55 mb-0.5">Folio</p>
+                              <p className="font-mono text-[10px] font-bold text-amber-200">{credencialBeneficiario.folio}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Banda inferior — sin estatus */}
+                      <div className="relative flex shrink-0 items-center justify-between bg-black/30 px-4 py-1.5">
+                        <span className="text-[7.5px] font-semibold uppercase tracking-wider text-white/55">
+                          {credencialBeneficiario.tipo ?? "Beneficiario"}
+                          {credencialBeneficiario.genero ? ` · ${credencialBeneficiario.genero}` : ""}
+                        </span>
+                        {credencialBeneficiario.fechaAlta && (
+                          <span className="text-[7.5px] font-semibold text-white/40">
+                            Exp. {credencialBeneficiario.fechaAlta}
+                          </span>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
