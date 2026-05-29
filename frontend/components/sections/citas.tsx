@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -84,7 +85,7 @@ export function CitasSection() {
     if(!silent) setLoading(true)
     getCitas()
       .then(setCitas)
-      .catch(err => setError(err?.message ?? "Error al cargar citas"))
+      .catch(err => setError(friendlyError(err, "No se pudo cargar las citas")))
       .finally(() => { if(!silent) setLoading(false) })
   }, [])
 
@@ -231,8 +232,9 @@ export function CitasSection() {
         description: `${form.fecha} · ${form.hora}`,
       })
     } catch (err: unknown) {
-      setSaveError((err as Error)?.message ?? "Error al guardar la cita.")
-      toast.error((err as Error)?.message ?? "Error al guardar la cita.")
+      const msg = friendlyError(err, "No se pudo guardar la cita")
+      setSaveError(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }

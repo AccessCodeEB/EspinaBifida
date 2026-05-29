@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
+import { friendlyError } from "@/lib/friendly-error"
 import {
   Search, CreditCard, Building2, RefreshCw,
   Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp,
@@ -101,8 +102,9 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
       })
       onSuccess(); onClose()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al registrar la membresía.")
-      toast.error(e instanceof Error ? e.message : "Error al registrar la membresía.")
+      const msg = friendlyError(e, "No se pudo registrar la membresía")
+      setError(msg)
+      toast.error(msg)
     } finally { setLoading(false) }
   }
 
@@ -185,7 +187,7 @@ export function MembresiasSection() {
       setTodosBeneficiarios(benef)
       setPagos(pagosData)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar membresías")
+      setError(friendlyError(err, "No se pudo cargar la información de membresías"))
     } finally { setLoading(false) }
   }, [])
 

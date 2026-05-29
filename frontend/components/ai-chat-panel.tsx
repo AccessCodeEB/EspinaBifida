@@ -206,7 +206,7 @@ export function AiChatPanel({ onAction }: { onAction: (action: AiAction) => void
 
       if (!res.ok || !res.body) {
         const errData = await res.json().catch(() => null)
-        throw new Error(errData?.error ?? `Error del servidor (${res.status})`)
+        throw new Error(errData?.error ?? "El asistente no está disponible en este momento. Intenta de nuevo.")
       }
 
       const reader = res.body.getReader()
@@ -241,7 +241,7 @@ export function AiChatPanel({ onAction }: { onAction: (action: AiAction) => void
             ])
           })
           .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Error al crear la cita"
+            const msg = err instanceof Error ? err.message : "No se pudo crear la cita. Intenta de nuevo."
             setMessages((prev) => [
               ...prev,
               { id: newId(), role: "assistant", content: `⚠️ ${msg}` },
@@ -251,7 +251,7 @@ export function AiChatPanel({ onAction }: { onAction: (action: AiAction) => void
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return
-      const msg = err instanceof Error ? err.message : "Error desconocido"
+      const msg = err instanceof Error ? err.message : "Ocurrió un error inesperado. Intenta de nuevo."
       setMessages((prev) => [
         ...prev,
         { id: newId(), role: "assistant", content: `⚠️ ${msg}` },
