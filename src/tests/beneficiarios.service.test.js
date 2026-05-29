@@ -5,6 +5,7 @@ const mockFindById       = jest.fn();
 const mockCreate         = jest.fn();
 const mockUpdate         = jest.fn();
 const mockDeactivate     = jest.fn();
+const mockDeactivateConCancelacion = jest.fn();
 const mockUpdateEstatus  = jest.fn();
 const mockUpdateEstatusAndNotas = jest.fn();
 const mockHardDelete     = jest.fn();
@@ -18,6 +19,7 @@ jest.unstable_mockModule("../models/beneficiarios.model.js", () => ({
   create:     mockCreate,
   update:     mockUpdate,
   deactivate: mockDeactivate,
+  deactivateConCancelacionMembresias: mockDeactivateConCancelacion,
   updateEstatus: mockUpdateEstatus,
   updateEstatusAndNotas: mockUpdateEstatusAndNotas,
   hardDelete: mockHardDelete,
@@ -262,21 +264,18 @@ describe("update", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("deactivate", () => {
-  test("da de baja y cancela membresías activas del beneficiario", async () => {
+  test("ejecuta baja y cancelación de membresías como transacción atómica", async () => {
     mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
-    mockDeactivate.mockResolvedValue(1);
-    mockCancelarPorCurp.mockResolvedValue(undefined);
+    mockDeactivateConCancelacion.mockResolvedValue(undefined);
 
     await Service.deactivate(CURP_VALIDA);
 
-    expect(mockDeactivate).toHaveBeenCalledWith(CURP_VALIDA);
-    expect(mockCancelarPorCurp).toHaveBeenCalledWith(CURP_VALIDA);
+    expect(mockDeactivateConCancelacion).toHaveBeenCalledWith(CURP_VALIDA);
   });
 
   test("dispara notificación BENEFICIARIO_BAJA tras dar de baja", async () => {
     mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, NOMBRES: "Juan", APELLIDO_PATERNO: "García", ESTATUS: "Activo" });
-    mockDeactivate.mockResolvedValue(1);
-    mockCancelarPorCurp.mockResolvedValue(undefined);
+    mockDeactivateConCancelacion.mockResolvedValue(undefined);
     mockInsertBeneficiarioBaja.mockResolvedValue(undefined);
 
     await Service.deactivate(CURP_VALIDA);
@@ -287,14 +286,11 @@ describe("deactivate", () => {
     );
   });
 
-  test("cancelarPorCurp siempre se llama, incluso si beneficiario ya estaba Inactivo", async () => {
-    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Inactivo" });
-    mockDeactivate.mockResolvedValue(1);
-    mockCancelarPorCurp.mockResolvedValue(undefined);
+  test("si la transacción falla, el error se propaga al caller", async () => {
+    mockFindById.mockResolvedValue({ CURP: CURP_VALIDA, ESTATUS: "Activo" });
+    mockDeactivateConCancelacion.mockRejectedValue(new Error("ORA-00001"));
 
-    await Service.deactivate(CURP_VALIDA);
-
-    expect(mockCancelarPorCurp).toHaveBeenCalledWith(CURP_VALIDA);
+    await expect(Service.deactivate(CURP_VALIDA)).rejects.toThrow("ORA-00001");
   });
 
   test("beneficiario no encontrado → BENEFICIARIO_NOT_FOUND (404)", async () => {
@@ -304,8 +300,7 @@ describe("deactivate", () => {
       Service.deactivate(CURP_VALIDA)
     ).rejects.toMatchObject({ code: "BENEFICIARIO_NOT_FOUND" });
 
-    expect(mockDeactivate).not.toHaveBeenCalled();
-    expect(mockCancelarPorCurp).not.toHaveBeenCalled();
+    expect(mockDeactivateConCancelacion).not.toHaveBeenCalled();
   });
 
   test("CURP inválida → INVALID_CURP (400) sin consultar BD", async () => {

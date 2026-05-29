@@ -11,6 +11,7 @@ import { runMigration008 } from "./migrations/008_administradores_telefono.js";
 import { runMigration009 } from "./migrations/009_notificaciones.js";
 import { runMigration010 } from "./migrations/010_fix_sequences.js";
 import { runMigration011 } from "./migrations/011_refresh_tokens.js";
+import { runMigration012 } from "./migrations/012_auditoria_operaciones.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
@@ -65,6 +66,7 @@ async function initOracle() {
   await runMigration009();
   await runMigration010();
   await runMigration011();
+  await runMigration012();
   initScheduler();
   initNotificacionesScheduler();
 }

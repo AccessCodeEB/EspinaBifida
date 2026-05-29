@@ -1,6 +1,12 @@
 import { Router } from "express";
 import * as BeneficiarioController from "../controllers/beneficiarios.controller.js";
 import { verifyToken, checkRole } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import {
+  crearBeneficiarioSchema,
+  actualizarBeneficiarioSchema,
+  actualizarEstatusSchema,
+} from "../validators/beneficiarios.schema.js";
 
 const router = Router();
 
@@ -201,7 +207,7 @@ router.get("/:curp", BeneficiarioController.getById);
  *             schema:
  *               $ref: '#/components/schemas/Error409'
  */
-router.post("/", BeneficiarioController.create);
+router.post("/", validate(crearBeneficiarioSchema), BeneficiarioController.create);
 
 /**
  * @openapi
@@ -291,7 +297,7 @@ router.post("/", BeneficiarioController.create);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.put("/:curp", BeneficiarioController.update);
+router.put("/:curp", validate(actualizarBeneficiarioSchema), BeneficiarioController.update);
 
 /**
  * @openapi
@@ -361,7 +367,7 @@ router.put("/:curp", BeneficiarioController.update);
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.patch("/:curp/estatus", BeneficiarioController.updateEstatus);
+router.patch("/:curp/estatus", validate(actualizarEstatusSchema), BeneficiarioController.updateEstatus);
 
 /**
  * @openapi

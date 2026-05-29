@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-24 (Sábado) — post Semana 2
+**Actualización:** 2026-05-28 (Miércoles) — post Semana 3
 **Próxima entrega:** 2026-05-29 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -19,9 +19,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 10 / 10 |
 | Archivos de prueba (Jest + Supertest) | 42 |
-| Pruebas E2E Playwright — API (QASE IDs 1–40) | 38 tests en 11 archivos |
+| Pruebas E2E Playwright — API | 48 tests en 13 archivos |
 | Pruebas E2E Playwright — UI (QASE IDs 24,30–32,41–43) | 8 tests en 2 archivos (1 skipped: rate limit solo prod) |
-| Total tests E2E | **46 tests**, **7 skipped** esperados |
+| Total tests E2E | **56 tests**, **7 skipped** esperados |
 
 ---
 
@@ -86,7 +86,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
-| **CI/CD GitHub Actions** | `.github/workflows` existe pero vacío — no hay pipeline automático en PRs | Media |
+| ~~**CI/CD GitHub Actions**~~ | ✅ Completado | — |
 
 ---
 
@@ -98,14 +98,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | ~~**Documentación de la API**~~ | ✅ **Completado** — Swagger/OpenAPI 3.0 en `/api-docs` (dev). 82 endpoints anotados con JSDoc en 16 archivos de rutas. JWT integrado (botón Authorize). Guard `NODE_ENV !== 'production'`. `npm test` pasa incluyendo `swagger.test.js`. |
 | ~~**Pruebas E2E**~~ | ✅ **Completado** — 41 tests Playwright + QASE (IDs 1–43): API (auth, beneficiarios, membresías, servicios, inventario, reportes, pre-registro, artículos, citas, roles, seguridad) + UI (formulario público, UAT). `npm run test:e2e` |
-| **Validación de entradas con esquemas** | Las rutas no usan Joi/Zod; datos mal formados pueden llegar a la BD |
+| ~~**Validación de entradas con esquemas**~~ | ✅ **Completado** — `validate()` Zod aplicado en todas las rutas POST/PUT/PATCH, incluyendo rutas v1. |
+| ~~**CI/CD en GitHub Actions**~~ | ✅ **Completado** — `test.yml` corre `npm run test:coverage` en cada push/PR a main. Job `e2e` condicional a `ORACLE_E2E_ENABLED=true`. Cobertura posteada automáticamente como comentario en PRs. |
 
 ### Prioridad media
 
 | Tarea | Descripción |
 |---|---|
-| **Auditoría de operaciones sensibles** | No se registra quién hizo qué (baja de beneficiarios, aprobación de pre-registros, etc.) |
-| **CI/CD en GitHub Actions** | Correr tests automáticamente en cada PR |
+| ~~**Auditoría de operaciones sensibles**~~ | ✅ **Completado** — tabla `AUDITORIA_OPERACIONES` (migration-012), modelo `auditoria.model.js`, fire-and-forget en 6 operaciones sensibles: `CAMBIO_ESTATUS`, `BAJA_LOGICA`, `ELIMINACION_PERMANENTE`, `APROBAR_PRE_REGISTRO`, `RECHAZAR_PRE_REGISTRO`, `DESACTIVAR_ADMIN`. Tests unitarios en `auditoria.model.test.js`. |
 | **Manejo de errores de BD** | Fallos parciales en operaciones multi-paso pueden dejar estado inconsistente |
 | **Optimización de imágenes** | Las fotos de perfil no usan `<Image>` de Next.js ni lazy loading |
 
@@ -123,7 +123,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ### Capa 1 — Pruebas unitarias e integración (Jest + Supertest)
 
-**42 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
+**43 archivos de prueba** en `src/tests/`, ejecutados con `npm test`.
 
 | Módulo | Archivos de prueba |
 |---|---|
@@ -139,6 +139,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Flujos integrados | `flujo-beneficiario-membresia-servicio.test.js`, `configuracion.routes.test.js`, `controllers-misc.test.js`, `core-coverage.test.js` |
 | Schedulers | `reporteScheduler.test.js` |
 | Validadores | `validators.test.js` |
+| Auditoría | `auditoria.model.test.js` |
 
 **Cobertura alcanzada:** 100% en statements, branches, functions y lines (verificado con `npm run test:coverage`).
 
@@ -151,7 +152,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
 | `auth.spec.ts` | 1, 2, 3 | Login exitoso, token JWT, credenciales inválidas |
-| `beneficiarios.spec.ts` | 4, 5, 6, 7, 8 | CRUD beneficiario, búsqueda, CURP duplicada |
+| `beneficiarios.spec.ts` | 1, 2, 10, 44, 45, 46, 47, 48 | CRUD beneficiario, CURP inválida/duplicada, GET por CURP, PUT actualizar, PATCH estatus, DELETE baja lógica, DELETE eliminación permanente |
+| `administradores.spec.ts` | 49, 50, 51, 52, 53 | GET lista, GET por ID, PUT actualizar, validación 400, DELETE desactivar |
 | `membresias.spec.ts` | 9, 10, 11 | Alta membresía, validación vigencia, expiración |
 | `servicios.spec.ts` | 12, 13 | Registro servicio con membresía activa/inactiva |
 | `inventario.spec.ts` | 14, 15 | Movimientos de stock, alertas mínimo |
