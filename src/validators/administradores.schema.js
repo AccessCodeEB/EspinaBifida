@@ -53,3 +53,7 @@ export const resetPasswordSchema = z.object({
 export const actualizarTelefonoSchema = z.object({
   telefono: z.string().regex(TEL_REGEX, "telefono debe tener 10 dígitos").nullable().optional(),
 });
+
+export const resetPasswordSuperSchema = z.object({
+  passwordNueva: z.string().min(8, "passwordNueva debe tener al menos 8 caracteres"),
+});

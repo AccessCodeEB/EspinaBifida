@@ -14,6 +14,7 @@ import {
   recuperarPasswordSchema,
   resetPasswordSchema,
   actualizarTelefonoSchema,
+  resetPasswordSuperSchema,
 } from "../validators/administradores.schema.js";
 
 const router = Router();
@@ -570,6 +571,7 @@ router.put("/:idAdmin",             verifyToken, checkRole(1),    validate(actua
  *               $ref: '#/components/schemas/Error404'
  */
 router.patch("/:idAdmin/password",        verifyToken,                  validate(cambiarPasswordSchema), AdminController.changePassword);
+router.patch("/:idAdmin/reset-password",  verifyToken, checkRole(1),    validate(resetPasswordSuperSchema), AdminController.resetPasswordBySuper);
 
 /**
  * @swagger

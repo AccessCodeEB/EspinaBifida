@@ -83,6 +83,10 @@ export function changePassword(id: number, body: ChangePasswordBody) {
   return apiClient.patch<{ message: string }>(`/administradores/${id}/password`, body)
 }
 
+export function resetPasswordBySuper(id: number, passwordNueva: string) {
+  return apiClient.patch<{ message: string }>(`/administradores/${id}/reset-password`, { passwordNueva })
+}
+
 export function solicitarCodigo(id: number) {
   return apiClient.post<{ message: string; codigoDev?: string }>(
     `/administradores/${id}/solicitar-codigo`,
