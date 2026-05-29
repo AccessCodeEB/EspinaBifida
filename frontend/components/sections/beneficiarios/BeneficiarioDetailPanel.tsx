@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react"
 import {
   Edit, ZoomIn, X,
   User, MapPin, Phone, HeartPulse, Stethoscope, ClipboardList,
-  CheckCircle, AlertTriangle, XCircle,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogTitle,
@@ -20,25 +19,41 @@ function getEstatusBadge(estatus: string) {
   switch (estatus) {
     case "Activo":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 text-success border border-success/30 px-2 py-0.5 text-[10px] font-medium">
-          <CheckCircle className="size-3" />Activo
+        <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 text-xs font-semibold tracking-wide">
+          <span className="relative flex size-2">
+            <span className="animate-ping absolute inline-flex size-full rounded-full bg-emerald-500 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+          </span>
+          Activo
         </span>
       )
     case "Inactivo":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 text-warning border border-warning/30 px-2 py-0.5 text-[10px] font-medium">
-          <AlertTriangle className="size-3" />Inactivo
+        <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 text-xs font-semibold tracking-wide">
+          <span className="relative flex size-2">
+            <span className="animate-ping absolute inline-flex size-full rounded-full bg-amber-500 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+          </span>
+          Inactivo
         </span>
       )
     case "Baja":
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive border border-destructive/30 px-2 py-0.5 text-[10px] font-medium">
-          <XCircle className="size-3" />Baja
+        <span className="inline-flex items-center gap-1.5 text-rose-700 dark:text-rose-400 text-xs font-semibold tracking-wide">
+          <span className="relative flex size-2">
+            <span className="animate-ping absolute inline-flex size-full rounded-full bg-rose-500 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-rose-500" />
+          </span>
+          Baja
         </span>
       )
     default:
       return (
-        <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[10px] font-medium">
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground text-xs font-semibold tracking-wide">
+          <span className="relative flex size-2">
+            <span className="animate-ping absolute inline-flex size-full rounded-full bg-muted-foreground/40 opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-muted-foreground/40" />
+          </span>
           Sin membresía
         </span>
       )

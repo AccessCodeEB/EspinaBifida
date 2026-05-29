@@ -1,7 +1,7 @@
 "use client"
 
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
-import { Search, Plus, Eye, CreditCard, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from "lucide-react"
+import { Search, Plus, Eye, CreditCard, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle, Users } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,53 +56,88 @@ export function BeneficiariosTable({
   return (
     <>
       {/* ── Header ── */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Beneficiarios</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gestión de beneficiarios registrados.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="size-5 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Beneficiarios</h1>
+          </div>
+          <p className="mt-1.5 ml-11 text-sm text-muted-foreground">
+            Gestión y consulta de beneficiarios registrados en el sistema.
+          </p>
+        </div>
       </div>
 
-      {/* ── Buscador, filtros y nueva alta ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full sm:w-72 shrink-0">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por folio, nombre o ciudad..."
-            className="pl-9 h-10 bg-muted/30 focus-visible:bg-background transition-colors"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* ── Toolbar administrativa ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Izquierda: buscador + filtros */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Buscador */}
+          <div className="relative shrink-0">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Buscar folio, nombre o ciudad..."
+              className="pl-9 h-9 w-full sm:w-64 border-border/80 bg-muted/40 text-sm placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:border-primary/50 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Separador vertical */}
+          <div className="hidden sm:block h-6 w-px bg-border/60" />
+
+          {/* Filtros de estatus — control segmentado */}
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/50 p-1">
+            {(["Todos", "Activo", "Inactivo", "Baja"] as const).map((opcion) => {
+              const activo = filtroEstatus === opcion
+              const estilos = {
+                Todos: activo
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                Activo: activo
+                  ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500"
+                  : "text-muted-foreground hover:text-emerald-700 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40",
+                Inactivo: activo
+                  ? "bg-amber-500 text-white shadow-sm dark:bg-amber-500"
+                  : "text-muted-foreground hover:text-amber-700 hover:bg-amber-50 dark:hover:text-amber-400 dark:hover:bg-amber-950/40",
+                Baja: activo
+                  ? "bg-rose-600 text-white shadow-sm dark:bg-rose-500"
+                  : "text-muted-foreground hover:text-rose-700 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950/40",
+              }
+              return (
+                <button
+                  key={opcion}
+                  onClick={() => setFiltroEstatus(opcion)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150",
+                    estilos[opcion]
+                  )}
+                >
+                  {opcion === "Activo" && <CheckCircle className="size-3 shrink-0" />}
+                  {opcion === "Inactivo" && <AlertTriangle className="size-3 shrink-0" />}
+                  {opcion === "Baja" && <XCircle className="size-3 shrink-0" />}
+                  <span>{opcion}</span>
+                  <span className={cn(
+                    "ml-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    activo ? "bg-white/25 text-inherit" : "bg-muted-foreground/10 text-muted-foreground"
+                  )}>
+                    {conteos[opcion]}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          {(["Todos", "Activo", "Inactivo", "Baja"] as const).map((opcion) => {
-            const activo = filtroEstatus === opcion
-            const colores = {
-              Todos: activo ? "bg-[#005bb5] text-white border-[#005bb5]" : "border-border text-muted-foreground hover:border-[#005bb5]/40 hover:text-[#005bb5]",
-              Activo: activo ? "bg-success/20 text-success border-success/50 font-semibold" : "border-border text-muted-foreground hover:border-success/40 hover:text-success",
-              Inactivo: activo ? "bg-warning/20 text-warning border-warning/50 font-semibold" : "border-border text-muted-foreground hover:border-warning/40 hover:text-warning",
-              Baja: activo ? "bg-destructive/15 text-destructive border-destructive/40 font-semibold" : "border-border text-muted-foreground hover:border-destructive/30 hover:text-destructive",
-            }
-            return (
-              <button
-                key={opcion}
-                onClick={() => setFiltroEstatus(opcion)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all ${colores[opcion]}`}
-              >
-                {opcion === "Activo" && <CheckCircle className="size-3" />}
-                {opcion === "Inactivo" && <AlertTriangle className="size-3" />}
-                {opcion === "Baja" && <XCircle className="size-3" />}
-                {opcion}
-                <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activo ? "bg-white/20" : "bg-muted"}`}>
-                  {conteos[opcion]}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        <Button className="gap-2 shadow-sm shrink-0" onClick={onNuevaAlta}>
+        {/* Derecha: botón nueva alta */}
+        <Button
+          className="gap-2 shrink-0 h-9 px-4 text-sm font-semibold shadow-sm"
+          onClick={onNuevaAlta}
+        >
           <Plus className="size-4" />
-          Nueva Alta
+          Nuevo Beneficiario
         </Button>
       </div>
 
