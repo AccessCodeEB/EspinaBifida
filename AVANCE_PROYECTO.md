@@ -1,7 +1,7 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-28 (Miércoles) — post sesión tarde + fixes SonarCloud
-**Próxima entrega:** 2026-05-29 (Jueves)
+**Actualización:** 2026-05-29 (Jueves) — E2E 100% verde en CI, bug fix formulario público
+**Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
 ---
@@ -20,11 +20,11 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Migraciones de BD | 12 / 12 |
 | Archivos de prueba Jest (suites) | 50 |
 | Tests Jest | 1080 |
-| Pruebas E2E Playwright — API | 30 tests activos en 12 archivos |
-| Pruebas E2E Playwright — UI | 6 tests activos en 2 archivos |
-| Tests E2E skipped (esperados) | 10 (rate limit solo prod, headers seguridad, refresh token) |
-| Total tests E2E | **36 activos**, **10 skipped** esperados |
-| Issues SonarCloud Mantenibilidad | **0 abiertos** (9 resueltos hoy) |
+| Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
+| Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
+| Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
+| Total tests E2E | **44 activos**, **7 skipped** esperados — **100% verde en CI** |
+| Issues SonarCloud Mantenibilidad | **0 abiertos** |
 
 ---
 
@@ -87,6 +87,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Auditoría de operaciones sensibles: tabla `AUDITORIA_OPERACIONES` con 6 operaciones rastreadas
 - Baja de beneficiario en transacción atómica (baja + cancelación de membresías con rollback)
 - SonarCloud: 0 issues abiertos de mantenibilidad (9 corregidos 2026-05-28)
+- CI E2E completamente operativo: 44 tests activos pasan en GitHub Actions contra Oracle Cloud DB
+- Bug fix formulario público: `buildAltaCreatePayload` omite campos vacíos (`cp`, teléfonos, correo) para evitar error Zod en backend al enviar strings vacíos en campos con regex
 
 ---
 
@@ -137,9 +139,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ### Capa 2 — Pruebas E2E (Playwright + QASE reporter)
 
-**14 archivos spec** en `e2e/`, ejecutados con `npm run test:e2e`. Integrados con QASE para trazabilidad de casos de prueba.
+**14 archivos spec** en `e2e/`, ejecutados con `npm run test:e2e`. Integrados con QASE para trazabilidad de casos de prueba. **CI E2E activo** con Oracle Cloud DB (variable `ORACLE_E2E_ENABLED=true`).
 
-#### Tests de API (`e2e/api/`) — 30 tests activos
+#### Tests de API (`e2e/api/`) — 37 tests activos
 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
@@ -156,7 +158,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | `roles.spec.ts` | 28 | Listado de roles |
 | `seguridad.spec.ts` | 29, 37, 38, 39, 40 | RBAC, rutas protegidas, acceso sin token (5 skipped: rate limit, headers, refresh token — solo prod) |
 
-#### Tests de UI (`e2e/ui/`) — 6 tests activos
+#### Tests de UI (`e2e/ui/`) — 7 tests activos
 
 | Archivo | QASE IDs | Qué cubre |
 |---|---|---|
@@ -180,6 +182,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - **Radix Select**: todos los dropdowns usan pattern `locator('#id').click()` → `getByRole('option')` (no `<select>` nativo)
 - **forceDelete pattern**: cleanup de beneficiarios aprobados: `PATCH estatus=Inactivo` → `PUT notas='[SOLICITUD_PUBLICA_PRE_REG]'` → `DELETE /pre-registro`
 - **Rate limiting**: `isTest` en `rateLimiter.js` desactiva los límites en `NODE_ENV=test`; UAT-003 salta en dev/test
+- **CI E2E**: job `e2e` en `test.yml` activo con Oracle Instant Client + wallet, condicionado a `vars.ORACLE_E2E_ENABLED=true`; credenciales E2E en secrets `E2E_ADMIN_EMAIL`/`E2E_ADMIN_PASSWORD` con fallback a `prueba@espina.com`
 
 ### Comandos de prueba
 
@@ -206,8 +209,9 @@ npx playwright test --config=e2e/playwright.config.ts --project=ui
 |---|---|---|---|
 | **Semana 1** | 19 — 23 May | Refactoring + Rate limiting + Seguridad | ✅ Completado |
 | **Semana 2** | 26 — 30 May | Flujo de recuperación de contraseña (backend + frontend) | ✅ Completado |
-| **Semana 3** | 02 — 06 Jun | Documentación de API (Swagger) + pruebas E2E + auditoría + CI/CD | ✅ Completado |
-| **Semana 4** | 09 — 13 Jun | Revisión final con socio formador + detalles finales | ⏳ Pendiente |
+| **Semana 3** | 26 — 30 May | E2E 100% verde en CI, bug fix formulario público, SonarCloud limpio | ✅ Completado |
+| **Semana 4** | 02 — 06 Jun | Revisión final, preparación para entrega al socio formador | ⏳ Pendiente |
+| **Semana 5** | 09 — 13 Jun | Entrega final al socio formador | ⏳ Pendiente |
 
 > Las entregas de progreso se generan cada **martes y jueves**.
 
