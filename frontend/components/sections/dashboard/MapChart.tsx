@@ -137,12 +137,17 @@ export function MapChart({ stateCounts, height = 360, onHoverState, hoveredState
         })}
       </svg>
 
-      {tooltip && (
+      {tooltip && (() => {
+        const TOOLTIP_H = 96  // altura estimada del tooltip en px
+        const flipDown = tooltip.y < TOOLTIP_H + 16
+        return (
         <div
-          className="pointer-events-none absolute z-10 min-w-[180px] -translate-x-1/2 -translate-y-full rounded-2xl border border-white/10 bg-slate-950/95 px-3 py-2 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] backdrop-blur-sm"
+          className={`pointer-events-none absolute z-10 min-w-[180px] -translate-x-1/2 rounded-2xl border border-white/10 bg-slate-950/95 px-3 py-2 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] backdrop-blur-sm${flipDown ? "" : " -translate-y-full"}`}
           style={{
             left: `${Math.min(Math.max(tooltip.x, 96), 720)}px`,
-            top: `${Math.max(tooltip.y - 14, 24)}px`,
+            top: flipDown
+              ? `${tooltip.y + 14}px`
+              : `${tooltip.y - 14}px`,
           }}
         >
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/45">Estado</p>
@@ -158,7 +163,8 @@ export function MapChart({ stateCounts, height = 360, onHoverState, hoveredState
               : "Sin contribución en el total actual"}
           </p>
         </div>
-      )}
+        )
+      })()}
 
     </div>
   )
