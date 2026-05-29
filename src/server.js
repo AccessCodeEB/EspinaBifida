@@ -1,4 +1,5 @@
 import { createPool, closePool, getConnection } from "./config/db.js";
+import { setupWalletFromEnv } from "./startup/wallet.js";
 import app from "./app.js";
 import { runMigration001 } from "./migrations/001_foto_perfil_clob.js";
 import { runMigration002 } from "./migrations/002_reportes_generados.js";
@@ -20,8 +21,8 @@ const REQUIRED_ENV = [
   "DB_USER",
   "DB_PASSWORD",
   "DB_CONNECTION_STRING",
-  "ORACLE_CLIENT_PATH",
   "JWT_SECRET",
+  // ORACLE_CLIENT_PATH es opcional: si no está definida se usa thin mode (cloud)
 ];
 
 const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
@@ -52,6 +53,7 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT",  () => shutdown("SIGINT"));
 
 async function initOracle() {
+  setupWalletFromEnv(); // restaura wallet desde env vars en cloud (no-op en local)
   await createPool();
   // Verificar conectividad real antes de correr migraciones
   const probe = await getConnection();

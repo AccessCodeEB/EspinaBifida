@@ -19,23 +19,33 @@ export async function createPool() {
     ? nestedWallet
     : walletRoot;
 
-  process.env.TNS_ADMIN = walletDir;
+  const thickMode = !!process.env.ORACLE_CLIENT_PATH;
 
-  // Oracle Instant Client no resuelve '?/network/admin' (no hay $ORACLE_HOME).
-  // Actualizamos sqlnet.ora para que DIRECTORY apunte al directorio real del wallet.
-  const sqlnetPath = path.join(walletDir, "sqlnet.ora");
-  if (fs.existsSync(sqlnetPath)) {
-    const original = fs.readFileSync(sqlnetPath, "utf8");
-    // Normalizar a forward slashes para Oracle (funciona en Windows y Linux)
-    const walletDirNorm = walletDir.replace(/\\/g, "/");
-    const fixed = original.replace(/DIRECTORY="[^"]*"/g, `DIRECTORY="${walletDirNorm}"`);
-    if (fixed !== original) {
-      fs.writeFileSync(sqlnetPath, fixed, "utf8");
-      console.log(`[db] sqlnet.ora actualizado: DIRECTORY="${walletDirNorm}"`);
+  if (thickMode) {
+    // Modo grueso: requiere Oracle Instant Client (desarrollo local en Windows/Mac)
+    process.env.TNS_ADMIN = walletDir;
+
+    // Oracle Instant Client no resuelve '?/network/admin' (no hay $ORACLE_HOME).
+    // Actualizamos sqlnet.ora para que DIRECTORY apunte al directorio real del wallet.
+    const sqlnetPath = path.join(walletDir, "sqlnet.ora");
+    if (fs.existsSync(sqlnetPath)) {
+      const original = fs.readFileSync(sqlnetPath, "utf8");
+      const walletDirNorm = walletDir.replace(/\\/g, "/");
+      const fixed = original.replace(/DIRECTORY="[^"]*"/g, `DIRECTORY="${walletDirNorm}"`);
+      if (fixed !== original) {
+        fs.writeFileSync(sqlnetPath, fixed, "utf8");
+        console.log(`[db] sqlnet.ora actualizado: DIRECTORY="${walletDirNorm}"`);
+      }
     }
-  }
 
-  oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
+    oracledb.initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
+    console.log("[db] Modo: thick (Oracle Instant Client)");
+  } else {
+    // Modo thin: sin Oracle Instant Client, funciona en cualquier servidor Linux/cloud.
+    // oracledb v6+ lee TNS_ADMIN / configDir para resolver aliases del tnsnames.ora
+    // y walletLocation para los certificados TLS del Oracle Cloud wallet.
+    console.log("[db] Modo: thin (sin Oracle Instant Client)");
+  }
 
   // poolMin:0 → el pool se crea sin conexiones inmediatas; la conectividad real
   // se verifica de forma lazy (primer getConnection()). Esto evita que createPool()
@@ -44,6 +54,11 @@ export async function createPool() {
     user:          process.env.DB_USER,
     password:      process.env.DB_PASSWORD,
     connectString: process.env.DB_CONNECTION_STRING,
+    // Thin mode: apunta al directorio del wallet para resolver tnsnames.ora y TLS
+    ...(!thickMode && {
+      configDir:      walletDir,
+      walletLocation: walletDir,
+    }),
     poolMin:       0,
     poolMax:       10,
     poolIncrement: 1,

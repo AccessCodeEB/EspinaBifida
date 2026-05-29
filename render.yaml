@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: espinabifida-api
+    runtime: node
+    repo: https://github.com/AccessCodeEB/EspinaBifida
+    branch: main
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://espinabifida-nl.vercel.app
+      # Variables sensibles — se configuran manualmente en el dashboard de Render
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_CONNECTION_STRING
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Wallet Oracle Cloud (base64) — generar con: bash scripts/encode-wallet.sh
+      - key: WALLET_TNSNAMES_B64
+        sync: false
+      - key: WALLET_SQLNET_B64
+        sync: false
+      - key: WALLET_EWALLET_PEM_B64
+        sync: false
+      - key: WALLET_OJDBC_B64
+        sync: false
