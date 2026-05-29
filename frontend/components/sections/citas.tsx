@@ -16,6 +16,8 @@ import { CitasCalendarView, validateSlot } from "@/components/sections/citas-cal
 import { CitasListView } from "@/components/sections/citas-list-view"
 import { cn } from "@/lib/utils"
 
+const DISPONIBILIDAD_DIAS_BUSQUEDA = 7
+
 // 30-min time slots 08:00 – 20:00
 const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
   const h = 8 + Math.floor(i / 2), m = i % 2 === 0 ? "00" : "30"
@@ -165,7 +167,7 @@ export function CitasSection() {
     if (anchor < todayStart) anchor = todayStart
 
     let found = false
-    for (let dayOffset = 0; dayOffset < 7 && !found; dayOffset++) {
+    for (let dayOffset = 0; dayOffset < DISPONIBILIDAD_DIAS_BUSQUEDA && !found; dayOffset++) {
       const d = new Date(anchor)
       d.setDate(anchor.getDate() + dayOffset)
       const fechaStr = [

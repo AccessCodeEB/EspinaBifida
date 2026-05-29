@@ -21,6 +21,7 @@ import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
+const PAGOS_RECIENTES_LIMIT = 20
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ export function MembresiasSection() {
     setLoading(true); setError(null)
     try {
       await syncEstados().catch(() => {})
-      const [benef, pagosData] = await Promise.all([getBeneficiarios(), getPagosRecientes(20)])
+      const [benef, pagosData] = await Promise.all([getBeneficiarios(), getPagosRecientes(PAGOS_RECIENTES_LIMIT)])
       setTodosBeneficiarios(benef)
       setPagos(pagosData)
     } catch (err: unknown) {

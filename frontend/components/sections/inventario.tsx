@@ -26,6 +26,8 @@ import {
   type ArticuloInventario, type MovimientoInventario,
 } from "@/services/inventario"
 
+const MOVIMIENTOS_DIAS_DEFAULT = 30
+
 type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
 type SortDirection = "asc" | "desc"
 const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
@@ -95,7 +97,7 @@ export function InventarioSection() {
 
   const loadMovimientos = () => {
     setLoadingMovimientos(true)
-    getMovimientos(30)
+    getMovimientos(MOVIMIENTOS_DIAS_DEFAULT)
       .then(setMovimientos)
       .catch(() => setMovimientos([]))
       .finally(() => setLoadingMovimientos(false))
