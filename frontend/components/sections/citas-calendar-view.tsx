@@ -671,7 +671,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           </div>
           <div className="grid grid-cols-7 gap-y-0.5">
             {miniCells.map(({date,out},idx)=>{
-              const dc=citasDay(citas,date.getFullYear(),date.getMonth(),date.getDate())
+              const dc=citasDay(citas,date.getFullYear(),date.getMonth(),date.getDate()).filter(c=>c.estatus!=="Cancelada")
               const dots=Math.min(dc.length,3)
               const inW=weekDates.some(w=>sameDay(w,date))
               const isT=sameDay(date,todayRef)
