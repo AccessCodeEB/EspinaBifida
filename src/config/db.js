@@ -54,10 +54,13 @@ export async function createPool() {
     user:          process.env.DB_USER,
     password:      process.env.DB_PASSWORD,
     connectString: process.env.DB_CONNECTION_STRING,
-    // Thin mode: apunta al directorio del wallet para resolver tnsnames.ora y TLS
+    // Thin mode: apunta al directorio del wallet para resolver tnsnames.ora y TLS.
+    // WALLET_PASSWORD es requerida si ewallet.pem está cifrado (contraseña elegida
+    // al descargar el wallet desde Oracle Cloud Console).
     ...(!thickMode && {
       configDir:      walletDir,
       walletLocation: walletDir,
+      ...(process.env.WALLET_PASSWORD && { walletPassword: process.env.WALLET_PASSWORD }),
     }),
     poolMin:       0,
     poolMax:       10,
