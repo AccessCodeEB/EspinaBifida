@@ -127,6 +127,7 @@ jobs:
       NODE_ENV: test
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      QASE_TOKEN: ${{ secrets.QASE_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4

@@ -10,16 +10,15 @@ export default defineConfig({
   workers: 1,
   reporter: [
     ['list'],
-    // QASE reporter skipped in CI — QASE_MODE=off causes qase() to return undefined
-    // in v2.x, breaking every test(qase(...), fn) call at definition time.
-    ...(!isCI
+    // QASE reporter activo cuando QASE_TOKEN está definido (local y CI).
+    ...(process.env.QASE_TOKEN
       ? ([
           [
             'playwright-qase-reporter',
             {
               mode: 'testops',
               testops: {
-                api: { token: process.env.QASE_TOKEN ?? '' },
+                api: { token: process.env.QASE_TOKEN },
                 project: 'EBF',
                 run: { complete: true },
               },
