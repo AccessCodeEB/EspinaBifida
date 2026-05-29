@@ -298,7 +298,10 @@ export function DashboardSection() {
     })
   }, [pagos, beneficiarios])
 
-  const stateCounts = useMemo(() => buildEstadoOrigenCounts(beneficiarios), [beneficiarios])
+  const stateCounts = useMemo(() => {
+    const aprobados = beneficiarios.filter((b) => !esSolicitudPublicaPendiente(b))
+    return buildEstadoOrigenCounts(aprobados)
+  }, [beneficiarios])
 
   const serviciosEsteMes = useMemo(() => {
     const mesActual = mesActualISO()
