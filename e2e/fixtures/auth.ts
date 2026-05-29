@@ -7,7 +7,8 @@ type AuthFixtures = {
 
 export const test = base.extend<{}, AuthFixtures>({
   token: [async ({}, use) => {
-    const ctx = await request.newContext({ baseURL: 'http://localhost:3000' });
+    const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    const ctx = await request.newContext({ baseURL });
     const res = await ctx.post('/administradores/login', {
       data: {
         email:    process.env.E2E_ADMIN_EMAIL    || 'prueba@espina.com',
@@ -22,8 +23,9 @@ export const test = base.extend<{}, AuthFixtures>({
   }, { scope: 'worker' }],
 
   apiContext: [async ({ token }, use) => {
+    const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
     const ctx = await request.newContext({
-      baseURL: 'http://localhost:3000',
+      baseURL,
       extraHTTPHeaders: { Authorization: `Bearer ${token}` },
     });
     await use(ctx);

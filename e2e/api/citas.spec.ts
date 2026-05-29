@@ -2,6 +2,13 @@ import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
 const TEST_CURP = 'AUSD050124MDFGNYA8';
+const createdIds: number[] = [];
+
+test.afterAll(async ({ apiContext }) => {
+  for (const id of createdIds) {
+    await apiContext.delete(`/citas/${id}`).catch(() => {});
+  }
+});
 
 test(qase(37, 'RT-015: GET /citas retorna citas con paginación'), async ({ apiContext }) => {
   const res = await apiContext.get('/citas?page=1&limit=10');
@@ -26,4 +33,7 @@ test(qase(38, 'RT-016: POST /citas crea cita con datos válidos'), async ({ apiC
     },
   });
   expect([200, 201]).toContain(res.status());
+  const body = await res.json();
+  const id = body.data?.idCita ?? body.data?.id_cita ?? body.idCita;
+  if (id) createdIds.push(id);
 });
