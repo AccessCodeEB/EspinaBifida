@@ -21,6 +21,7 @@ import { getInventario }           from "@/services/inventario"
 import { getBeneficiarios }        from "@/services/beneficiarios"
 import { getPagosRecientes }       from "@/services/membresias"
 import { getCitas }                from "@/services/citas"
+import { getServicios, type Servicio } from "@/services/servicios"
 import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
 import { buildEstadoOrigenCounts } from "@/lib/beneficiarios-origen"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
@@ -178,11 +179,14 @@ export function DashboardSection() {
   const [loadingPagos, setLoadingPagos]               = useState(true)
   const [citas, setCitas]                             = useState<Cita[]>([])
   const [loadingCitas, setLoadingCitas]               = useState(true)
+  const [servicios, setServicios]                     = useState<Servicio[]>([])
+  const [loadingServicios, setLoadingServicios]       = useState(true)
   const [lastRefresh, setLastRefresh]                 = useState(new Date())
 
   function loadData() {
     setLoadingBenef(true); setLoadingStock(true)
     setLoadingPagos(true); setLoadingCitas(true)
+    setLoadingServicios(true)
     setLastRefresh(new Date())
 
     getInventario()
@@ -224,6 +228,11 @@ export function DashboardSection() {
       .then(setCitas)
       .catch(() => setCitas([]))
       .finally(() => setLoadingCitas(false))
+
+    getServicios()
+      .then(setServicios)
+      .catch(() => setServicios([]))
+      .finally(() => setLoadingServicios(false))
   }
 
   useEffect(() => { loadData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -291,6 +300,16 @@ export function DashboardSection() {
 
   const stateCounts = useMemo(() => buildEstadoOrigenCounts(beneficiarios), [beneficiarios])
 
+  const serviciosEsteMes = useMemo(() => {
+    const mesActual = mesActualISO()
+    return servicios.filter((s) => (s.fecha ?? "").startsWith(mesActual)).length
+  }, [servicios])
+
+  const mesNomCapitalizado = useMemo(() => {
+    const mesNom = new Date().toLocaleDateString("es-MX", { month: "long" })
+    return mesNom.charAt(0).toUpperCase() + mesNom.slice(1)
+  }, [])
+
   const kpis = useMemo(() => [
     {
       label: "Beneficiarios activos", value: activosMembresia ?? "--",
@@ -304,17 +323,17 @@ export function DashboardSection() {
       loading: loadingBenef,
     },
     {
-      label: "Servicios este mes", value: "83",
-      sub: "Cierre estimado: Febrero", icon: ClipboardList, color: "#10b981",
-      trend: "up" as const, loading: false,
+      label: "Servicios este mes", value: serviciosEsteMes,
+      sub: `Cierre estimado: ${mesNomCapitalizado}`, icon: ClipboardList, color: "#10b981",
+      trend: serviciosEsteMes > 0 ? "up" as const : "flat" as const, loading: loadingServicios,
     },
     {
       label: "Artículos agotados", value: agotadosCount ?? "--",
       sub: agotadosCount === 0 ? "Sin agotados" : "Sin existencias",
       icon: Package, color: agotadosCount ? "#ef4444" : "#10b981",
-      trend: agotadosCount ? "down" as const : "flat" as const, loading: false,
+      trend: agotadosCount ? "down" as const : "flat" as const, loading: loadingStock,
     },
-  ], [activosMembresia, solicitudesPendientes, inventarioBajoCount, agotadosCount, loadingBenef])
+  ], [activosMembresia, solicitudesPendientes, serviciosEsteMes, mesNomCapitalizado, agotadosCount, loadingBenef, loadingServicios, loadingStock])
 
   const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
