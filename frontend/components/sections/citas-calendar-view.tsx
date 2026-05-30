@@ -389,15 +389,15 @@ function ActionCenter({
 
   if(!pending.length)return(
     <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Citas Pendientes</p>
-      <p className="text-xs text-muted-foreground/50">Sin citas pendientes ✓</p>
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Por Atender</p>
+      <p className="text-xs text-muted-foreground/50">Sin citas por atender ✓</p>
     </div>
   )
   return(
     <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 flex flex-col gap-2">
       {/* Header */}
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
-        <AlertCircle className="size-3 text-amber-400"/>Citas Pendientes
+        <AlertCircle className="size-3 text-amber-400"/>Por Atender
         <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
       </p>
 
