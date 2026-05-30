@@ -44,7 +44,7 @@ test(qase(18, 'TC-006: UI genera reporte y permite exportar'), async ({ page }) 
   await page.goto(`${frontendUrl}/panel`);
   await page.fill('input[type="email"]', process.env.E2E_ADMIN_EMAIL || 'prueba@espina.com');
   await page.fill('input[type="password"]', process.env.E2E_ADMIN_PASSWORD || '222222');
-  await page.getByRole('button', { name: /iniciar|entrar|login/i }).click();
+  await page.locator('button[type="submit"]').click();
   await page.waitForURL('**/panel**');
 
   await page.getByRole('button', { name: /reporte/i }).click();

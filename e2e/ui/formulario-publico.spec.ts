@@ -89,7 +89,7 @@ test(qase(24, 'TC-012: Formulario público muestra folio al enviar'), async ({ p
   await page.fill('#prereg-mail', 'e2e@test.com').catch(() => {});
 
   // CURP — fill with a valid CURP (TC-012 uses a fixed test CURP)
-  await page.fill('#prereg-curp', 'PLAW000201HXXXXXX3');
+  await page.fill('#prereg-curp-homoclave', 'X3');
 
   // Válvula (required)
   await page.locator('#prereg-valv').click().catch(() => {});

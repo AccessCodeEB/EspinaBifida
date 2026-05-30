@@ -89,7 +89,7 @@ test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ pa
   await page.fill('#prereg-mail', 'uat001@test.com').catch(() => {});
 
   // CURP — set explicitly AFTER auto-calculation, providing valid 18-char value
-  await page.fill('#prereg-curp', UAT_CURP).catch(() => {});
+  await page.fill('#prereg-curp-homoclave', '03');
 
   // Válvula
   await page.locator('#prereg-valv').click().catch(() => {});
