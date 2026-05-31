@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getCitas, createCita, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
-import { TIPOS_SERVICIO_SUGERIDOS } from "@/services/servicios"
+import { getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
 import { cn } from "@/lib/utils"
@@ -82,6 +82,7 @@ export function CitasSection() {
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [buscaBenef, setBuscaBenef] = useState("")
   const [showBenefList, setShowBenefList] = useState(false)
+  const [catalogoServicios, setCatalogoServicios] = useState<TipoServicioCompleto[]>([])
 
   const loadCitas = useCallback((silent=false) => {
     if(!silent) setLoading(true)
@@ -99,6 +100,7 @@ export function CitasSection() {
   useEffect(() => {
     loadCitas()
     getBeneficiarios().then(setBeneficiarios).catch(() => {})
+    getCatalogoServicios().then(setCatalogoServicios).catch(() => {})
   }, [loadCitas])
 
   const today = useMemo(() => new Date(), [])
@@ -383,7 +385,7 @@ export function CitasSection() {
               <Select value={form.idTipoServicio} onValueChange={v => { setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }}>
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
-                  {TIPOS_SERVICIO_SUGERIDOS.map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
+                  {catalogoServicios.map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
