@@ -16,15 +16,16 @@ function mapServicio(row) {
     fechaStr = Number.isNaN(d.getTime()) ? String(r.fecha).slice(0, 10) : d.toISOString().slice(0, 10);
   }
   return {
-    id:        r.idServicio,
-    folio:     r.curp,
-    nombre:    r.nombreBeneficiario?.trim() ?? r.curp,
-    servicio:  r.tipoServicio ?? "Servicio",
-    fecha:     fechaStr,
-    monto:     formatMonto(r.costo),
-    estatus:   r.estatusServicio ?? "COMPLETADO",
-    membresia: r.membresiaEstatus ?? "Sin membresia",
-    notas:     safeClobString(r.notas),
+    id:                r.idServicio,
+    folio:             r.curp,
+    nombre:            r.nombreBeneficiario?.trim() ?? r.curp,
+    servicio:          r.tipoServicio ?? "Servicio",
+    fecha:             fechaStr,
+    monto:             formatMonto(r.costo),
+    estatus:           r.estatusServicio ?? "COMPLETADO",
+    membresia:         r.membresiaEstatus ?? "Sin membresia",
+    notas:             safeClobString(r.notas),
+    articuloEntregado: r.articuloEntregado ?? null,
   };
 }
 
