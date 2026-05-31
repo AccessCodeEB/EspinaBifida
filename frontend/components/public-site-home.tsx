@@ -104,7 +104,7 @@ const SERVICIOS = [
   },
   {
     icon: Armchair,
-    title: "Comodato de equipo",
+    title: "Préstamo de equipo",
     desc: "Préstamo de sillas de ruedas, andaderas y equipo ortopédico para mejorar la movilidad y calidad de vida.",
   },
   {
