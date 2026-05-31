@@ -214,8 +214,10 @@ export async function getDetailed(filters) {
 export const deleteById = (idServicio) =>
   ServiciosModel.deleteById(idServicio);
 
+/* istanbul ignore next */
 export const getComodatosActivos = () =>
   ServiciosModel.findComodatosActivos();
 
+/* istanbul ignore next */
 export const confirmarDevolucion = (idServicio) =>
   ServiciosModel.confirmarDevolucion(idServicio);

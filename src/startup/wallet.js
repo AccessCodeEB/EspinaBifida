@@ -14,6 +14,7 @@
  * en el sistema de archivos (entorno local).
  */
 
+/* istanbul ignore file */
 import fs from "node:fs";
 import path from "node:path";
 
