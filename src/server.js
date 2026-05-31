@@ -18,6 +18,8 @@ import { runMigration014 } from "./migrations/014_categorias_inventario.js";
 import { runMigration015 } from "./migrations/015_servicios_comodatos.js";
 import { runMigration016 } from "./migrations/016_categorizar_articulos.js";
 import { runMigration017 } from "./migrations/017_servicio_articulos_sequence.js";
+import { runMigration018 } from "./migrations/018_insumos_articulos.js";
+import { runMigration019 } from "./migrations/019_notificaciones_tipo_comodato.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
@@ -79,6 +81,8 @@ async function initOracle() {
   await runMigration015();
   await runMigration016();
   await runMigration017();
+  await runMigration018();
+  await runMigration019();
   initScheduler();
   initNotificacionesScheduler();
 }
