@@ -14,6 +14,8 @@ const {
   findMembresiasProximas,
   findMembresiasVencidas,
   findCitasHoyProgramadas,
+  findComodatosPorVencer,
+  syncComodatosPorVencer,
   findAll,
   findPendientes,
   countPendientes,
@@ -286,6 +288,71 @@ describe("insertReporteGenerado", () => {
       expect.stringContaining("REPORTE_GENERADO"),
       expect.objectContaining({ msg: expect.stringContaining(label) })
     );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── findComodatosPorVencer ────────────────────────────────────────────────────
+
+describe("findComodatosPorVencer", () => {
+  it("retorna las filas de comodatos por vencer", async () => {
+    const rows = [{ ID_SERVICIO: 1, CURP: "X", NOMBRE: "Juan", DIAS_RESTANTES: 2, ARTICULO: "Silla" }];
+    mockExecute.mockResolvedValueOnce({ rows });
+    const result = await findComodatosPorVencer();
+    expect(result).toBe(rows);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("retorna arreglo vacío cuando no hay comodatos por vencer", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const result = await findComodatosPorVencer();
+    expect(result).toEqual([]);
+  });
+});
+
+// ── syncComodatosPorVencer ────────────────────────────────────────────────────
+
+describe("syncComodatosPorVencer", () => {
+  it("inserta nueva notificación cuando no hay PENDIENTE y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin PENDIENTE
+    mockExecute.mockResolvedValueOnce({});           // INSERT
+
+    await syncComodatosPorVencer("Préstamo por vencer: Juan — Silla (2 días).");
+
+    const insertSql = mockExecute.mock.calls[1][0];
+    expect(insertSql).toMatch(/INSERT INTO NOTIFICACIONES/i);
+    expect(insertSql).toMatch(/COMODATO_POR_VENCER/);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("actualiza la existente cuando hay PENDIENTE y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 7 }] }); // SELECT
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE
+
+    await syncComodatosPorVencer("Nuevo mensaje");
+
+    const updateSql = mockExecute.mock.calls[1][0];
+    expect(updateSql).toMatch(/UPDATE NOTIFICACIONES/i);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("marca como leída cuando hay PENDIENTE pero mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 3 }] }); // SELECT
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE LEIDA
+
+    await syncComodatosPorVencer(null);
+
+    const updateSql = mockExecute.mock.calls[1][0];
+    expect(updateSql).toMatch(/LEIDA/);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("no hace nada cuando no hay PENDIENTE y mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin PENDIENTE
+
+    await syncComodatosPorVencer(null);
+
+    expect(mockExecute).toHaveBeenCalledTimes(1); // solo el SELECT
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });
