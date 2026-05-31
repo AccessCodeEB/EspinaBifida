@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-29 (Jueves) — SDD + Documento de Calidad entregados, manuales de usuario completados; Rediseño inventario+servicios: categorías, comodatos, safety net, historial mejorado
+**Actualización:** 2026-05-31 (Sábado) — Bug fix ORA-01400 resuelto, rediseño tabla servicios, nomenclatura unificada, insumos médicos, notificaciones préstamos por vencer, cobertura 96%+
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -12,14 +12,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Indicador | Estado |
 |---|---|
-| Cobertura de pruebas (statements) | **100%** |
-| Cobertura de pruebas (funciones) | **100%** |
-| Cobertura de pruebas (ramas) | **100%** |
+| Cobertura de pruebas (statements) | **98.29%** |
+| Cobertura de pruebas (funciones) | **96.33%** |
+| Cobertura de pruebas (ramas) | **96.99%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 15 / 15 |
+| Migraciones de BD | 19 / 19 |
 | Archivos de prueba Jest (suites) | 50 |
-| Tests Jest | 1080 |
+| Tests Jest | 1113 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -42,9 +42,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
-| **Notificaciones** | Alertas automáticas de stock bajo y membresías próximas/vencidas, job nocturno cron, panel en dashboard | 100% |
+| **Notificaciones** | Alertas automáticas de stock bajo, membresías próximas/vencidas, citas del día y **préstamos de equipo por vencer/vencidos**, job nocturno cron, panel con cards por tipo | 100% |
 | **Auditoría** | Registro de operaciones sensibles en `AUDITORIA_OPERACIONES` (fire-and-forget) | 100% |
-| **Migraciones BD** | 15 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Migraciones BD** | 19 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting, validación Zod | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -54,14 +54,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Dashboard** | ✅ Completo |
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo |
-| **Servicios** | ✅ Completo — tab Comodatos activos, confirmar devolución atómica, form con selector de artículo buscable, badges COMPLETADO/PRESTADO/DEVUELTO |
+| **Servicios** | ✅ Completo — tab **Préstamos activos**, tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), confirmar devolución atómica, form con selector de artículo buscable (obligatorio solo para comodatos), catálogo 100% dinámico sin hardcode, badges COMPLETADO/PRÉSTAMO/DEVUELTO |
 | **Citas** | ✅ Completo |
 | **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), safety net comodatos, selector de categoría al agregar artículo |
 | **Reportes** | ✅ Completo |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
 | **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
-| **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas |
+| **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas, **cards especiales para préstamos por vencer con días restantes** |
 
 ### Seguridad (completado 2026-05-21 al 2026-05-22)
 
@@ -75,7 +75,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 50 archivos de prueba Jest, 1080 tests, 100% cobertura en statements, branches, functions y lines
+- 50 archivos de prueba Jest, **1113 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
@@ -95,22 +95,55 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Cambios 2026-05-29 — Rediseño Inventario + Servicios
 
 **Inventario:**
-- 3 categorías en `CATEGORIAS_ARTICULO`: Medicamentos, Insumos Médicos, Equipos Médicos (migración 013)
+- 3 categorías en `CATEGORIAS_ARTICULO`: Medicamentos, Insumos Médicos, Equipos Médicos (migración 014)
 - Filtro por categoría en la UI — mismo Popover "Filtrar" que el filtro de stock
 - Safety net para Equipos Médicos: al intentar modificar un equipo desde inventario, pregunta si es préstamo a beneficiario o ajuste de stock. Si es préstamo, redirige a Servicios.
 - Selector de categoría obligatorio al agregar artículo nuevo
 - Endpoint `GET /articulos/categorias` para cargar categorías dinámicamente
-- Migración 015: categoriza automáticamente todos los artículos existentes por keywords en descripción
+- Migración 016: categoriza automáticamente todos los artículos existentes por keywords en descripción
 
 **Servicios:**
-- Columnas `ESTATUS` (VARCHAR2 20, default COMPLETADO) y `FECHA_DEVOLUCION_ESPERADA` (DATE) en tabla SERVICIOS (migración 014)
-- Columna `TIPO_SERVICIO` en `SERVICIOS_CATALOGO`: SERVICIO / CONSUMIBLE / COMODATO (migración 014)
-- Catálogo limpio: "Silla de Ruedas" renombrada a "Prestamo de Equipo", genérico "Comodato" eliminado (migración 014)
-- Tab **Comodatos activos** en la página de Servicios: muestra equipos prestados, días restantes/retraso, filas en ámbar si hay retraso
+- Columnas `ESTATUS` (VARCHAR2 20, default COMPLETADO) y `FECHA_DEVOLUCION_ESPERADA` (DATE) en tabla SERVICIOS (migración 015)
+- Columna `TIPO_SERVICIO` en `SERVICIOS_CATALOGO`: SERVICIO / CONSUMIBLE / COMODATO (migración 015)
+- Catálogo limpio: "Silla de Ruedas" renombrada a "Prestamo de Equipo", genérico "Comodato" eliminado (migración 015)
+- Tab **Préstamos activos** en la página de Servicios: muestra equipos prestados, días restantes/retraso, filas en ámbar si hay retraso
 - Botón **Confirmar devolución**: transacción atómica (ESTATUS='DEVUELTO' + ENTRADA en inventario)
 - Formulario nuevo servicio: selector de artículo con búsqueda (Combobox) filtrado por categoría; campo fecha devolución para comodatos
 - Historial de servicios: badges COMPLETADO/PRESTADO/DEVUELTO con color; filas PRESTADO destacadas en ámbar
 - Endpoints: `GET /servicios/comodatos`, `PATCH /servicios/:id/devolucion`
+
+### Cambios 2026-05-31 — Bug Fix, UX y Notificaciones
+
+**Bug Fix ORA-01400 — Registro de servicios con artículo:**
+- Causa raíz: `SP_REGISTRAR_SERVICIO` insertaba en SERVICIOS sin `ID_SERVICIO`, dependiendo de un trigger inexistente
+- Fix: `createWithInventarioTransaction` ahora usa `SEQ_SERVICIOS.NEXTVAL` y `SEQ_SERVICIO_ARTICULOS.NEXTVAL` explícitamente — sin SP
+- Migración 017: crea `SEQ_SERVICIO_ARTICULOS` + `TRG_SERVICIO_ARTICULOS_BI`
+- Afectaba COMODATO y CONSUMIBLE — ambos ya funcionan correctamente
+
+**Insumos Médicos:**
+- Tipo de servicio genérico "Insumos médicos" (reemplaza "Paquete de Pañales") — más flexible
+- Migración 018: inserta 15 artículos base de insumos (pañales, catéteres, guantes, gasas…) con stock 0
+- Artículo opcional para CONSUMIBLE — el servicio se registra aunque no haya stock disponible
+- Artículo obligatorio solo para COMODATO (necesario para tracking de devolución)
+
+**Rediseño tabla Servicios registrados:**
+- Fila entera clickeable → abre panel de detalle (sin botones inline)
+- Columna nueva: **Artículo entregado** (obtenida via subquery a SERVICIO_ARTICULOS)
+- Botón Eliminar movido al panel de detalle
+- Sort por fecha descendente por defecto (más reciente arriba)
+- Filtros simplificados: eliminados "Este mes" / "Últimos 7d" para UI más limpia
+
+**Nomenclatura unificada:**
+- "Comodatos activos" → **"Préstamos activos"** en toda la UI
+- "Comodato de equipo" → "Préstamo de equipo" en página pública
+- Catálogo de servicios 100% dinámico — eliminado `TIPOS_SERVICIO_SUGERIDOS` hardcodeado
+- Citas: carga catálogo dinámicamente desde API
+
+**Notificaciones de préstamos por vencer:**
+- Nueva notificación tipo `COMODATO_POR_VENCER` (migración 019 actualiza CHK_NOTIF_TIPO)
+- Job nocturno detecta préstamos con `FECHA_DEVOLUCION_ESPERADA ≤ hoy + 5 días`
+- Panel muestra cards individuales: beneficiario, equipo, días restantes o "Vencido hace N días"
+- Colores: ámbar para por vencer, rojo para vencidos
 
 ---
 
@@ -119,17 +152,18 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
-| **Registro servicio con comodato** | El flujo completo (selección de artículo + descuento de inventario) falla con ORA-01400 al hacer INSERT en la transacción. Diagnóstico pendiente con logging granular agregado. | Alta |
 
 ---
 
 ## ❌ Lo que falta por hacer
 
-### Prioridad alta
+### Prioridad media — Notificaciones futuras
 
 | Tarea | Descripción |
 |---|---|
-| **Bug: registro de comodato con artículo** | ORA-01400 al registrar servicio de tipo COMODATO con consumo de artículo. Logging granular ya agregado en `createWithInventarioTransaction`. Requiere diagnóstico al reiniciar servidor y observar logs `[createWithInventario]`. |
+| **Notificación: pre-registro pendiente** | Avisar cuando hay pre-registros en estado PENDIENTE sin revisar por más de N días. |
+| **Notificación: beneficiario sin membresía activa** | Avisar cuando un beneficiario activo lleva más de X días sin membresía vigente. |
+| **Notificación: reporte automático generado** | Confirmar en el panel cuando el scheduler nocturno generó el reporte mensual exitosamente. |
 
 ### Prioridad baja (nice-to-have)
 
@@ -163,7 +197,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Auditoría | `auditoria.model.test.js` |
 | Frontend | `curp-generator.test.ts` |
 
-**Cobertura alcanzada:** 100% en statements, branches, functions y lines (verificado con `npm run test:coverage`).
+**Cobertura alcanzada:** 98.29% statements / 96.99% branches / 96.33% functions / 98.56% lines — todos los umbrales de 95% superados (verificado con `npm run test:coverage`).
 
 ### Capa 2 — Pruebas E2E (Playwright + QASE reporter)
 
