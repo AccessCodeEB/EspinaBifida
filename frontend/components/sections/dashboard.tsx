@@ -97,8 +97,8 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-foreground">Artículos bajos</p>
-          <p className="text-[11px] text-muted-foreground">Con {umbral} unidades o menos</p>
+          <p className="text-sm font-semibold text-foreground">Alertas de stock</p>
+          <p className="text-[11px] text-muted-foreground">Sin stock o por debajo del mínimo</p>
         </div>
         {!loading && (
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
@@ -198,9 +198,9 @@ export function DashboardSection() {
           .filter((i) => {
             const qty = Number(i.cantidad ?? 0)
             const min = Number(i.minimo ?? INVENTARIO_BAJO_UMBRAL)
-            return qty > 0 && qty <= min
+            return qty <= min
           })
-          .sort((a, b) => Number(b.cantidad ?? 0) - Number(a.cantidad ?? 0))
+          .sort((a, b) => Number(a.cantidad ?? 0) - Number(b.cantidad ?? 0))
         const agotados = items.filter((i) => Number(i.cantidad ?? 0) <= 0)
         setInventarioBajoCount(bajos.length)
         setAgotadosCount(agotados.length)
