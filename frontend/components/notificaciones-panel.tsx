@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bell, Package, CreditCard, AlertTriangle, CheckCheck, Loader2, RefreshCw, ClipboardList, UserX, CalendarClock, FileText, X, ChevronRight } from "lucide-react"
+import { Bell, Package, CreditCard, AlertTriangle, CheckCheck, Loader2, RefreshCw, ClipboardList, UserX, CalendarClock, FileText, X, ChevronRight, RotateCcw } from "lucide-react"
 import {
   type Notificacion,
   type TipoNotificacion,
@@ -12,6 +12,7 @@ import {
   marcarTodasLeidas,
 } from "@/services/notificaciones"
 import { getInventario, type ArticuloInventario } from "@/services/inventario"
+import { getComodatos, type ComodatoActivo } from "@/services/servicios"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   STOCK_BAJO:         { label: "Stock bajo",           icon: Package,       color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -20,7 +21,8 @@ const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.Element
   PREREGISTRO_NUEVO:  { label: "Pre-registro nuevo",   icon: ClipboardList, color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30"   },
   BENEFICIARIO_BAJA:  { label: "Beneficiario de baja", icon: UserX,         color: "text-gray-500",   bg: "bg-gray-50 dark:bg-gray-950/30"   },
   CITA_HOY:           { label: "Cita sin confirmar",   icon: CalendarClock, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
-  REPORTE_GENERADO:   { label: "Reporte generado",     icon: FileText,      color: "text-green-500",  bg: "bg-green-50 dark:bg-green-950/30"  },
+  REPORTE_GENERADO:     { label: "Reporte generado",     icon: FileText,      color: "text-green-500",  bg: "bg-green-50 dark:bg-green-950/30"   },
+  COMODATO_POR_VENCER:  { label: "Préstamo por vencer",  icon: RotateCcw,     color: "text-amber-500",  bg: "bg-amber-50 dark:bg-amber-950/30"   },
 }
 
 function fmtFecha(iso: string) {
@@ -42,6 +44,7 @@ export function NotificacionesPanel() {
 
   const [detailNotif, setDetailNotif]           = useState<Notificacion | null>(null)
   const [detailArticulos, setDetailArticulos]   = useState<ArticuloInventario[]>([])
+  const [detailComodatos, setDetailComodatos]   = useState<ComodatoActivo[]>([])
   const [loadingDetail, setLoadingDetail]       = useState(false)
 
   const fetchCount = useCallback(async () => {
@@ -133,12 +136,33 @@ export function NotificacionesPanel() {
       } finally {
         setLoadingDetail(false)
       }
+    } else if (n.tipo === "COMODATO_POR_VENCER") {
+      setLoadingDetail(true)
+      try {
+        const hoy = new Date()
+        const limite = new Date(hoy); limite.setDate(hoy.getDate() + 5)
+        const todos = await getComodatos()
+        const porVencer = todos.filter(c => {
+          if (!c.fechaDevolucionEsperada) return false
+          const fecha = new Date(c.fechaDevolucionEsperada)
+          return fecha <= limite
+        }).sort((a, b) =>
+          new Date(a.fechaDevolucionEsperada ?? "").getTime() -
+          new Date(b.fechaDevolucionEsperada ?? "").getTime()
+        )
+        setDetailComodatos(porVencer)
+      } catch {
+        setDetailComodatos([])
+      } finally {
+        setLoadingDetail(false)
+      }
     }
   }
 
   const cerrarDetalle = () => {
     setDetailNotif(null)
     setDetailArticulos([])
+    setDetailComodatos([])
   }
 
   // Modal de detalle
@@ -209,6 +233,50 @@ export function NotificacionesPanel() {
                           }`}>
                             {a.cantidad} {a.unidad}
                           </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              ) : detailNotif.tipo === "COMODATO_POR_VENCER" ? (
+                loadingDetail ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : detailComodatos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No hay préstamos por vencer en los próximos 5 días.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      {detailComodatos.length} préstamo{detailComodatos.length !== 1 ? "s" : ""} por vencer o vencido{detailComodatos.length !== 1 ? "s" : ""}
+                    </p>
+                    {detailComodatos.map((c) => {
+                      const hoy = new Date()
+                      const fecha = c.fechaDevolucionEsperada ? new Date(c.fechaDevolucionEsperada) : null
+                      const dias = fecha ? Math.round((fecha.getTime() - hoy.setHours(0,0,0,0)) / 86400000) : null
+                      const vencido = dias !== null && dias < 0
+                      const hoyMismo = dias === 0
+                      return (
+                        <div
+                          key={c.idServicio}
+                          className={`rounded-lg px-3 py-2.5 ${vencido ? "bg-red-50 dark:bg-red-950/30" : "bg-amber-50 dark:bg-amber-950/20"}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground truncate">{c.nombreBeneficiario}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{c.nombreArticulo ?? "Equipo médico"}</p>
+                            </div>
+                            <span className={`shrink-0 text-[11px] font-bold tabular-nums ${vencido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                              {vencido
+                                ? `Vencido hace ${Math.abs(dias!)} día${Math.abs(dias!) !== 1 ? "s" : ""}`
+                                : hoyMismo
+                                  ? "Vence hoy"
+                                  : `${dias} día${dias !== 1 ? "s" : ""}`
+                              }
+                            </span>
+                          </div>
                         </div>
                       )
                     })}
