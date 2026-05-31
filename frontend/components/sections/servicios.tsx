@@ -37,12 +37,10 @@ import { StatusIcon } from "@/components/ui/status-icon"
 import {
   createServicio,
   deleteServicio,
-  getMontoSugeridoPorTipoServicio,
   getServicios,
   getComodatos,
   getCatalogoServicios,
   confirmarDevolucion,
-  TIPOS_SERVICIO_SUGERIDOS,
   type Servicio,
   type ComodatoActivo,
   type TipoServicioCompleto,
@@ -165,8 +163,8 @@ export function ServiciosSection() {
   const [tipoServicioFiltro, setTipoServicioFiltro] = useState("")
   const [fechaInicioFiltro, setFechaInicioFiltro] = useState("")
   const [fechaFinFiltro, setFechaFinFiltro] = useState("")
-  const [sortField, setSortField] = useState<SortField>("folio")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const [sortField, setSortField] = useState<SortField>("fecha")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [page, setPage] = useState(1)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
 
@@ -247,12 +245,9 @@ export function ServiciosSection() {
   const montoNum = Number(montoServicio)
   const montoEsValido = montoServicio.trim() !== "" && Number.isFinite(montoNum) && montoNum >= 0
   const fechaEsFutura = fechaServicio > hoy
-  const montoSugerido = Number.isInteger(idTipoServicioNumerico)
-    ? getMontoSugeridoPorTipoServicio(idTipoServicioNumerico)
-    : null
-  const tipoServicioSeleccionadoLabel =
-    catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)?.nombre ??
-    TIPOS_SERVICIO_SUGERIDOS.find((t) => t.idTipoServicio === idTipoServicioNumerico)?.nombre ?? ""
+  const tipoSeleccionado = catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)
+  const montoSugerido = tipoSeleccionado?.montoSugerido ?? null
+  const tipoServicioSeleccionadoLabel = tipoSeleccionado?.nombre ?? ""
   const tipoServicioClasificacion =
     catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)?.tipoServicio ?? "SERVICIO"
   const requiereArticulo = tipoServicioClasificacion === "COMODATO" || tipoServicioClasificacion === "CONSUMIBLE"
@@ -419,7 +414,7 @@ export function ServiciosSection() {
     if (!Number.isInteger(idTipoServicioNumerico) || idTipoServicioNumerico <= 0) { setRegistroError("Seleccione un tipo de servicio"); return }
     if (!montoEsValido) { setRegistroError("Ingrese un monto valido"); return }
     if (requiereDescripcionOtro && !descripcionOtro.trim()) { setRegistroError("Debe especificar en que consiste el servicio para la opcion 'Otros'"); return }
-    if (requiereArticulo && !idArticuloSeleccionado) { setRegistroError("Selecciona el artículo específico a entregar."); return }
+    if (esComodato && !idArticuloSeleccionado) { setRegistroError("Selecciona el equipo específico a prestar."); return }
     if (esComodato && !fechaDevolucionEsperada) { setRegistroError("Indica la fecha esperada de devolución."); return }
     if (fechaEsFutura) { setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores."); return }
 
@@ -456,7 +451,7 @@ export function ServiciosSection() {
         setActiveTab("comodatos")
         getComodatos().then(setComodatos).catch(() => {})
       }
-      toast.success(esComodato ? "Préstamo registrado. Aparece en Comodatos activos." : "Servicio registrado correctamente")
+      toast.success(esComodato ? "Préstamo registrado. Aparece en Préstamos activos." : "Servicio registrado correctamente")
     } catch (err) {
       setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
     } finally {
@@ -688,7 +683,7 @@ export function ServiciosSection() {
           }`}
         >
           <RotateCcw className="size-3.5" />
-          Comodatos activos
+          Préstamos activos
           {comodatos.length > 0 && activeTab !== "comodatos" && (
             <span className="ml-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
               {comodatos.length}
@@ -735,9 +730,8 @@ export function ServiciosSection() {
         sortDirection={sortDirection}
         onSortBy={handleSortBy}
         onSortPreset={applySortPreset}
-        onApplyQuickRange={applyQuickRange}
-        onViewDetalle={setServicioDetalle}
-        onEliminar={setServicioParaEliminar}
+
+        onRowClick={setServicioDetalle}
         setPage={setPage}
         pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
         onUndoDelete={handleUndoDelete}
@@ -748,7 +742,7 @@ export function ServiciosSection() {
         <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
             <div>
-              <p className="text-sm font-semibold text-foreground">Comodatos activos</p>
+              <p className="text-sm font-semibold text-foreground">Préstamos activos</p>
               <p className="text-[11px] text-muted-foreground">
                 Equipos médicos prestados pendientes de devolución · {comodatos.length} registro{comodatos.length !== 1 ? "s" : ""}
               </p>
@@ -765,7 +759,7 @@ export function ServiciosSection() {
 
           {loadingComodatos ? (
             <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-muted-foreground">Cargando comodatos...</p>
+              <p className="text-sm text-muted-foreground">Cargando préstamos...</p>
             </div>
           ) : comodatos.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2">
@@ -894,9 +888,12 @@ export function ServiciosSection() {
             <div className="space-y-3 pt-1">
               <div className="divide-y divide-border/40 rounded-xl border border-border/60">
                 {[
-                  { label: "Folio",    value: <span className="font-mono text-xs">{servicioDetalle.folio}</span> },
-                  { label: "Nombre",   value: servicioDetalle.nombre },
-                  { label: "Servicio", value: servicioDetalle.servicio },
+                  { label: "Beneficiario", value: servicioDetalle.nombre },
+                  { label: "CURP",         value: <span className="font-mono text-[11px]">{servicioDetalle.folio}</span> },
+                  { label: "Servicio",     value: servicioDetalle.servicio },
+                  ...(servicioDetalle.articuloEntregado
+                    ? [{ label: "Artículo", value: servicioDetalle.articuloEntregado }]
+                    : []),
                   { label: "Fecha",    value: servicioDetalle.fecha },
                   { label: "Monto",    value: <span className="font-bold">{formatMoney(servicioDetalle.montoNumero)}</span> },
                   { label: "Estatus",  value: <StatusIcon status={servicioDetalle.estatus} /> },
@@ -913,6 +910,14 @@ export function ServiciosSection() {
                   <p className="mt-1 text-xs text-foreground">{servicioDetalle.notas}</p>
                 </div>
               )}
+              <div className="flex justify-end border-t border-border/40 pt-3">
+                <button
+                  onClick={() => { setServicioParaEliminar(servicioDetalle); setServicioDetalle(null) }}
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                >
+                  Eliminar servicio
+                </button>
+              </div>
             </div>
           )}
         </DialogContent>
