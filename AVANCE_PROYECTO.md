@@ -183,6 +183,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ## ❌ Lo que falta por hacer
 
+### Prioridad alta
+
+| Tarea | Descripción |
+|---|---|
+| **Búsqueda por ciudad incluir estado** | Al usar el filtro de búsqueda (beneficiarios), que buscar por ciudad también filtre por estado simultáneamente — actualmente solo busca en el campo CIUDAD. |
+
 ### Prioridad media — Notificaciones futuras
 
 | Tarea | Descripción |
