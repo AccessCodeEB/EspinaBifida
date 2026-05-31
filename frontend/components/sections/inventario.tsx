@@ -203,6 +203,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     if (!id || isNaN(id)) { setMovimientoError("Selecciona un artículo válido."); return }
     if (isNaN(minimo) || minimo < 0) { setMovimientoError("Stock mínimo debe ser ≥ 0."); return }
     if (qty === 0 && minimo === (selectedItem?.minimo ?? 5)) { setMovimientoError("Sin cambios para guardar."); return }
+    if (qty !== 0 && !motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio para registrar un movimiento."); return }
     
     setSavingMovimiento(true); setSavingStockMinimo(true); setMovimientoError(null)
     try {
@@ -213,7 +214,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       
       // 2. Registrar movimiento si hay cantidad
       if (qty !== 0) {
-        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() || "No se especificó" })
+        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() })
       }
       
       await refreshInventario()
@@ -731,8 +732,18 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Motivo</label>
-              <Input className="h-10 text-sm" placeholder="Descripción del movimiento" value={motivoMovimiento} onChange={e => setMotivoMovimiento(e.target.value)} />
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Motivo {normQty(cantidadMovimiento) !== 0 && <span className="text-red-500 normal-case tracking-normal">*</span>}
+              </label>
+              <Input
+                className="h-10 text-sm"
+                placeholder="¿Por qué se modifica el stock?"
+                value={motivoMovimiento}
+                onChange={e => setMotivoMovimiento(e.target.value)}
+              />
+              {normQty(cantidadMovimiento) !== 0 && (
+                <p className="text-[11px] text-muted-foreground">Obligatorio cuando se registra un movimiento de stock.</p>
+              )}
             </div>
 
             {/* Divisor */}
