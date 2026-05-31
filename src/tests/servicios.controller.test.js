@@ -493,9 +493,10 @@ describe("GET /api/v1/servicios/comodatos — comodatos activos", () => {
 describe("PATCH /api/v1/servicios/:idServicio/devolucion — confirmar devolución", () => {
   test("confirma devolución cuando el servicio existe (200)", async () => {
     mockExecute
-      .mockResolvedValueOnce({ rows: [servicioRow] }) // getById
-      .mockResolvedValueOnce({ rows: [] })            // SELECT SERVICIO_ARTICULOS
-      .mockResolvedValueOnce({});                     // UPDATE SERVICIOS
+      .mockResolvedValueOnce({ rows: [servicioRow] })            // getById
+      .mockResolvedValueOnce({ rows: [{ NOMBRE: 'Juan Test' }] }) // SELECT nombre beneficiario
+      .mockResolvedValueOnce({ rows: [] })                        // SELECT SERVICIO_ARTICULOS
+      .mockResolvedValueOnce({});                                 // UPDATE SERVICIOS
 
     const res = await request(app)
       .patch(`/api/v1/servicios/1/devolucion`)

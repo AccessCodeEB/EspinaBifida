@@ -383,6 +383,7 @@ describe('findComodatosActivos', () => {
 
 describe('confirmarDevolucion', () => {
   it('actualiza ESTATUS a DEVUELTO y hace commit', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Juan García' }] });        // SELECT nombre beneficiario
     mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 3, CANTIDAD: 1 }] }); // SELECT SERVICIO_ARTICULOS
     mockApplyMovimiento.mockResolvedValueOnce({});                                   // ENTRADA inventario
     mockExecute.mockResolvedValueOnce({});                                           // UPDATE SERVICIOS
@@ -391,14 +392,15 @@ describe('confirmarDevolucion', () => {
 
     expect(mockApplyMovimiento).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ tipo: 'ENTRADA', cantidad: 1 })
+      expect.objectContaining({ tipo: 'ENTRADA', cantidad: 1, motivo: expect.stringContaining('Juan García') })
     );
     expect(mockCommit).toHaveBeenCalledTimes(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
   it('hace rollback cuando applyMovimiento falla en devolucion', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 2, CANTIDAD: 1 }] });
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Ana López' }] });          // SELECT nombre beneficiario
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 2, CANTIDAD: 1 }] }); // SELECT SERVICIO_ARTICULOS
     mockApplyMovimiento.mockRejectedValueOnce(new Error('ORA-fail'));
 
     await expect(ServiciosModel.confirmarDevolucion(5)).rejects.toThrow('ORA-fail');
@@ -408,8 +410,9 @@ describe('confirmarDevolucion', () => {
   });
 
   it('funciona sin artículos (servicio sin consumo registrado)', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [] }); // sin artículos
-    mockExecute.mockResolvedValueOnce({});           // UPDATE SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'María Torres' }] }); // SELECT nombre beneficiario
+    mockExecute.mockResolvedValueOnce({ rows: [] });                           // sin artículos
+    mockExecute.mockResolvedValueOnce({});                                     // UPDATE SERVICIOS
 
     await ServiciosModel.confirmarDevolucion(99);
 

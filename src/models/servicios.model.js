@@ -445,6 +445,17 @@ export async function confirmarDevolucion(idServicio) {
   try {
     conn = await getConnection();
 
+    // Obtener nombre del beneficiario para el motivo del movimiento
+    const { rows: benRows } = await conn.execute(
+      `SELECT b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS NOMBRE
+       FROM SERVICIOS s
+       JOIN BENEFICIARIOS b ON b.CURP = s.CURP
+       WHERE s.ID_SERVICIO = :id`,
+      { id: idServicio },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    const nombreBeneficiario = benRows[0]?.NOMBRE ?? `Servicio #${idServicio}`;
+
     const { rows: articulos } = await conn.execute(
       `SELECT ID_ARTICULO, CANTIDAD FROM SERVICIO_ARTICULOS WHERE ID_SERVICIO = :id`,
       { id: idServicio },
@@ -456,7 +467,7 @@ export async function confirmarDevolucion(idServicio) {
         idArticulo: art.ID_ARTICULO,
         tipo:       "ENTRADA",
         cantidad:   art.CANTIDAD,
-        motivo:     `Devolución de comodato — Servicio #${idServicio}`,
+        motivo:     `Devolución de préstamo — ${nombreBeneficiario}`,
       });
     }
 
