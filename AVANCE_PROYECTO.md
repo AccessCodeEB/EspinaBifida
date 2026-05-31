@@ -189,6 +189,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | **Búsqueda por ciudad incluir estado** | Al usar el filtro de búsqueda (beneficiarios), que buscar por ciudad también filtre por estado simultáneamente — actualmente solo busca en el campo CIUDAD. |
 | **Observaciones obligatorias en membresías** | Al registrar o renovar una membresía, el campo Observaciones debe ser obligatorio para que quede registro del motivo/contexto en el historial. |
+| **Búsqueda al eliminar artículo no actualizada** | Al eliminar un artículo desde inventario, la búsqueda/lista no se refresca automáticamente — el artículo sigue apareciendo hasta que el usuario recarga manualmente. |
 
 ### Prioridad media — Notificaciones futuras
 
