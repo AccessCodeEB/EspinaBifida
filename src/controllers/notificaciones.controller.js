@@ -55,3 +55,15 @@ export async function runJob(req, res, next) {
     next(err);
   }
 }
+
+export async function e2eCleanup(req, res, next) {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "No disponible en producción" });
+  }
+  try {
+    await Service.deleteE2ENotificaciones();
+    res.json({ message: "Notificaciones E2E eliminadas" });
+  } catch (err) {
+    next(err);
+  }
+}

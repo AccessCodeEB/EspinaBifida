@@ -71,6 +71,12 @@ async function forceDeletePlaw(c: APIRequestContext, curp: string): Promise<void
   await c.delete(`/beneficiarios/${curp}/pre-registro`).catch(() => {});
 }
 
+export async function cleanupNotificaciones(ctx?: APIRequestContext): Promise<void> {
+  const c = ctx ?? await authedContext();
+  await c.delete('/notificaciones/e2e-cleanup').catch(() => {});
+  if (!ctx) await c.dispose();
+}
+
 export async function cleanupPreregistros(ctx?: APIRequestContext): Promise<void> {
   const c = ctx ?? await authedContext();
 

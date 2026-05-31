@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/auth';
-import { cleanupBeneficiarios } from '../helpers/cleanup';
+import { cleanupBeneficiarios, cleanupNotificaciones } from '../helpers/cleanup';
 import { qase } from 'playwright-qase-reporter';
 
 // PLAW000201HXXXXXX0 cumple regex: ^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$
@@ -24,6 +24,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await cleanupBeneficiarios();
+  await cleanupNotificaciones();
 });
 
 test(qase(1, 'Registrar beneficiario con datos válidos'), async ({ apiContext }) => {

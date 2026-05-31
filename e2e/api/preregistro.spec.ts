@@ -1,6 +1,6 @@
 import { test, expect, request } from '@playwright/test';
 import { test as authTest } from '../fixtures/auth';
-import { cleanupPreregistros } from '../helpers/cleanup';
+import { cleanupPreregistros, cleanupNotificaciones } from '../helpers/cleanup';
 import { qase } from 'playwright-qase-reporter';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
@@ -33,6 +33,7 @@ test.beforeAll(async () => {
 
 authTest.afterAll(async () => {
   await cleanupPreregistros();
+  await cleanupNotificaciones();
 });
 
 test(qase(19, 'TC-007: POST /pre-registro crea registro con PENDIENTE y retorna 201'), async () => {

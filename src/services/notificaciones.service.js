@@ -1,6 +1,7 @@
 import * as Model from "../models/notificaciones.model.js";
 
-export const getAll          = (limit) => Model.findAll(limit);
+export const getAll                = (limit) => Model.findAll(limit);
+export const deleteE2ENotificaciones = ()      => Model.deleteE2ENotificaciones();
 export const getPendientes   = ()      => Model.findPendientes();
 export const getCount        = ()      => Model.countPendientes();
 export const marcarLeida     = (id)    => Model.markAsRead(id);

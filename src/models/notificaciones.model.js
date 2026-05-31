@@ -275,6 +275,16 @@ export const syncComodatosPorVencer = (mensaje) =>
     await conn.commit();
   });
 
+export const deleteE2ENotificaciones = () =>
+  withConnection(async conn => {
+    await conn.execute(
+      `DELETE FROM NOTIFICACIONES
+       WHERE CURP LIKE 'PLAW%'
+          OR UPPER(MENSAJE) LIKE '%PLAW%'`
+    );
+    await conn.commit();
+  });
+
 export const upsertMembresia = (curp, tipo, mensaje) =>
   withConnection(async conn => {
     const { rows } = await conn.execute(

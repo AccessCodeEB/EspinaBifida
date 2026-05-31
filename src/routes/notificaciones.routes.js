@@ -196,4 +196,7 @@ router.patch("/leer-todas",    verifyToken,              Ctrl.marcarTodasLeidas)
  */
 router.post( "/run-job",       verifyToken, checkRole(1), Ctrl.runJob);
 
+// Solo disponible fuera de producción — limpia notificaciones generadas por E2E tests
+router.delete("/e2e-cleanup", verifyToken, Ctrl.e2eCleanup);
+
 export default router;
