@@ -9,11 +9,13 @@ const mockMarkAsRead                   = jest.fn();
 const mockMarkAllAsRead                = jest.fn();
 const mockSyncStockBajoConsolidado     = jest.fn();
 const mockSyncCitasHoyConsolidado      = jest.fn();
+const mockSyncComodatosPorVencer       = jest.fn();
 const mockUpsertMembresia              = jest.fn();
 const mockFindArticulosConStockBajo    = jest.fn();
 const mockFindMembresiasProximas       = jest.fn();
 const mockFindMembresiasVencidas       = jest.fn();
 const mockFindCitasHoyProgramadas      = jest.fn();
+const mockFindComodatosPorVencer       = jest.fn();
 
 jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findAll:                   mockFindAll,
@@ -23,11 +25,13 @@ jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   markAllAsRead:             mockMarkAllAsRead,
   syncStockBajoConsolidado:  mockSyncStockBajoConsolidado,
   syncCitasHoyConsolidado:   mockSyncCitasHoyConsolidado,
+  syncComodatosPorVencer:    mockSyncComodatosPorVencer,
   upsertMembresia:           mockUpsertMembresia,
   findArticulosConStockBajo: mockFindArticulosConStockBajo,
   findMembresiasProximas:    mockFindMembresiasProximas,
   findMembresiasVencidas:    mockFindMembresiasVencidas,
   findCitasHoyProgramadas:   mockFindCitasHoyProgramadas,
+  findComodatosPorVencer:    mockFindComodatosPorVencer,
 }));
 
 const Service = await import('../services/notificaciones.service.js');
@@ -82,7 +86,9 @@ describe('runJob', () => {
   beforeEach(() => {
     mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
+    mockSyncComodatosPorVencer.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
+    mockFindComodatosPorVencer.mockResolvedValue([]);
   });
 
   it('llama syncStockBajoConsolidado una vez con mensaje del artículo cuando hay uno solo', async () => {
@@ -96,7 +102,7 @@ describe('runJob', () => {
     const res = await Service.runJob();
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('Silla'));
-    expect(res).toEqual({ stockBajo: 1, proximas: 0, vencidas: 0, citasHoy: 0 });
+    expect(res).toEqual({ stockBajo: 1, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('llama upsertMembresia MEMBRESIA_PROXIMA con mensaje de días', async () => {
@@ -154,7 +160,7 @@ describe('runJob', () => {
 
     const res = await Service.runJob();
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(null);
-    expect(res).toEqual({ stockBajo: 0, proximas: 0, vencidas: 0, citasHoy: 0 });
+    expect(res).toEqual({ stockBajo: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('genera mensaje consolidado y llama syncStockBajoConsolidado una vez para múltiples artículos', async () => {
@@ -173,7 +179,7 @@ describe('runJob', () => {
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('2 artículos'));
     expect(mockUpsertMembresia).toHaveBeenCalledTimes(2);
-    expect(res).toEqual({ stockBajo: 2, proximas: 2, vencidas: 0, citasHoy: 0 });
+    expect(res).toEqual({ stockBajo: 2, proximas: 2, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('genera mensaje para una sola cita de hoy sin confirmar', async () => {
@@ -279,6 +285,94 @@ describe('runJob', () => {
     await Service.runJob();
 
     const msg = mockSyncStockBajoConsolidado.mock.calls[0][0];
+    expect(msg.length).toBeLessThanOrEqual(500);
+  });
+});
+
+// ── checkComodatosPorVencer ───────────────────────────────────────────────────
+
+describe('checkComodatosPorVencer (via runJob)', () => {
+  beforeEach(() => {
+    mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
+    mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
+    mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockUpsertMembresia.mockResolvedValue(undefined);
+    mockFindArticulosConStockBajo.mockResolvedValue([]);
+    mockFindMembresiasProximas.mockResolvedValue([]);
+    mockFindMembresiasVencidas.mockResolvedValue([]);
+    mockFindCitasHoyProgramadas.mockResolvedValue([]);
+  });
+
+  it('llama syncComodatosPorVencer con null cuando no hay préstamos por vencer', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([]);
+    const res = await Service.runJob();
+    expect(mockSyncComodatosPorVencer).toHaveBeenCalledWith(null);
+    expect(res.comodatos).toBe(0);
+  });
+
+  it('genera mensaje para un préstamo que vence hoy', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 1, CURP: 'C1', NOMBRE: 'Juan Pérez', DIAS_RESTANTES: 0, ARTICULO: 'Andadera' },
+    ]);
+    const res = await Service.runJob();
+    expect(mockSyncComodatosPorVencer).toHaveBeenCalledWith(expect.stringContaining('vence hoy'));
+    expect(res.comodatos).toBe(1);
+  });
+
+  it('genera mensaje para un préstamo que vence en N días', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 2, CURP: 'C2', NOMBRE: 'Ana García', DIAS_RESTANTES: 3, ARTICULO: 'Silla de ruedas' },
+    ]);
+    await Service.runJob();
+    expect(mockSyncComodatosPorVencer).toHaveBeenCalledWith(expect.stringContaining('3 días'));
+  });
+
+  it('genera mensaje para un préstamo vencido (días negativos)', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 3, CURP: 'C3', NOMBRE: 'Luis Torres', DIAS_RESTANTES: -2, ARTICULO: 'Cojín' },
+    ]);
+    await Service.runJob();
+    expect(mockSyncComodatosPorVencer).toHaveBeenCalledWith(expect.stringContaining('vencido hace 2 días'));
+  });
+
+  it('genera mensaje consolidado para múltiples préstamos', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 1, NOMBRE: 'Ana', DIAS_RESTANTES: 1,  ARTICULO: 'Andadera' },
+      { ID_SERVICIO: 2, NOMBRE: 'Luis', DIAS_RESTANTES: -1, ARTICULO: 'Silla' },
+    ]);
+    const res = await Service.runJob();
+    expect(mockSyncComodatosPorVencer).toHaveBeenCalledWith(expect.stringContaining('2 préstamos'));
+    expect(res.comodatos).toBe(2);
+  });
+
+  it('usa "día" singular cuando vence en exactamente 1 día', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 4, NOMBRE: 'María', DIAS_RESTANTES: 1, ARTICULO: 'Caminador' },
+    ]);
+    await Service.runJob();
+    const msg = mockSyncComodatosPorVencer.mock.calls[0][0];
+    expect(msg).toMatch(/1 día[^s]/);
+  });
+
+  it('usa "día" singular cuando vencido hace exactamente 1 día', async () => {
+    mockFindComodatosPorVencer.mockResolvedValueOnce([
+      { ID_SERVICIO: 5, NOMBRE: 'Carlos', DIAS_RESTANTES: -1, ARTICULO: 'Muleta' },
+    ]);
+    await Service.runJob();
+    const msg = mockSyncComodatosPorVencer.mock.calls[0][0];
+    expect(msg).toMatch(/vencido hace 1 día[^s]/);
+  });
+
+  it('trunca el mensaje a 500 chars cuando hay muchos préstamos', async () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      ID_SERVICIO: i + 1,
+      NOMBRE: `${'A'.repeat(20)} ${i}`,
+      DIAS_RESTANTES: i - 3,
+      ARTICULO: 'A'.repeat(20),
+    }));
+    mockFindComodatosPorVencer.mockResolvedValueOnce(rows);
+    await Service.runJob();
+    const msg = mockSyncComodatosPorVencer.mock.calls[0][0];
     expect(msg.length).toBeLessThanOrEqual(500);
   });
 });
