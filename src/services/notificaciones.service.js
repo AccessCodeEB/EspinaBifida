@@ -73,13 +73,47 @@ async function checkMembresiasVencidas() {
   return rows.length;
 }
 
+const toTitleCase = (s) =>
+  String(s ?? "").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+async function checkComodatosPorVencer() {
+  const rows = await Model.findComodatosPorVencer();
+  if (rows.length === 0) {
+    await Model.syncComodatosPorVencer(null);
+    return 0;
+  }
+
+  const describir = (r) => {
+    const dias     = Number(r.DIAS_RESTANTES);
+    const articulo = trimNombre(toTitleCase(r.ARTICULO ?? "equipo"), 22);
+    const nombre   = trimNombre(r.NOMBRE, 22);
+    if (dias < 0)  return `${nombre} — ${articulo} (vencido hace ${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"})`;
+    if (dias === 0) return `${nombre} — ${articulo} (vence hoy)`;
+    return `${nombre} — ${articulo} (${dias} día${dias === 1 ? "" : "s"})`;
+  };
+
+  let msg;
+  if (rows.length === 1) {
+    msg = `Préstamo por vencer: ${describir(rows[0])}.`;
+  } else {
+    const lista = rows.slice(0, 3).map(describir).join("; ");
+    const extra = rows.length > 3 ? ` y ${rows.length - 3} más` : "";
+    msg = `${rows.length} préstamos por vencer o vencidos: ${lista}${extra}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+
+  await Model.syncComodatosPorVencer(msg);
+  return rows.length;
+}
+
 export async function runJob() {
-  const [stockBajo, proximas, vencidas, citasHoy] = await Promise.all([
+  const [stockBajo, proximas, vencidas, citasHoy, comodatos] = await Promise.all([
     checkStockBajo(),
     checkMembresiasProximas(),
     checkMembresiasVencidas(),
     checkCitasHoy(),
+    checkComodatosPorVencer(),
   ]);
-  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}`);
-  return { stockBajo, proximas, vencidas, citasHoy };
+  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}, comodatos_por_vencer=${comodatos}`);
+  return { stockBajo, proximas, vencidas, citasHoy, comodatos };
 }
