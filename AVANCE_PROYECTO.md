@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-31 (Sábado) — Bug fix ORA-01400 resuelto, rediseño tabla servicios, nomenclatura unificada, insumos médicos, notificaciones préstamos por vencer, cobertura 96%+
+**Actualización:** 2026-05-31 (Sábado) — Bug fix ORA-01400, limpieza E2E notificaciones e inventario, reporte inventario corregido, dashboard alertas sin stock, motivo obligatorio en inventario, devolución muestra nombre beneficiario
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -144,6 +144,32 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Job nocturno detecta préstamos con `FECHA_DEVOLUCION_ESPERADA ≤ hoy + 5 días`
 - Panel muestra cards individuales: beneficiario, equipo, días restantes o "Vencido hace N días"
 - Colores: ámbar para por vencer, rojo para vencidos
+
+### Cambios adicionales 2026-05-31 — Calidad y UX
+
+**Reporte de inventario corregido:**
+- `getArticulosStock()` filtra artículos inactivos (`NVL(ACTIVO,'S')='S'`) — el total ya no incluye artículos dados de baja
+- `STOCK_MINIMO` incluido en el SELECT — la alerta de stock bajo usa el mínimo real por artículo en lugar de threshold fijo ≤5
+- PDF y XLSX de inventario ahora muestran números correctos
+
+**Dashboard — alertas de stock:**
+- Panel "Alertas de stock" ahora muestra también artículos con stock 0 (agotados), no solo los de stock bajo
+- Los agotados aparecen primero en la lista (más críticos), en rojo; stock bajo en ámbar
+
+**Inventario — motivo obligatorio:**
+- Al registrar un movimiento de stock (ENTRADA o SALIDA) el campo Motivo es ahora obligatorio
+- El historial ya no muestra "No se especificó" — solo motivos reales ingresados por el usuario
+
+**Devolución de préstamos — motivo humanizado:**
+- El movimiento de ENTRADA en inventario al confirmar devolución muestra `Devolución de préstamo — [Nombre Beneficiario]` en lugar del número de servicio
+
+**Limpieza E2E de notificaciones e inventario:**
+- `DELETE /notificaciones/e2e-cleanup` — borra notificaciones donde `CURP LIKE 'PLAW%'` o `MENSAJE LIKE '%PLAW%'`
+- `DELETE /inventario/e2e-cleanup` — borra movimientos donde `MOTIVO LIKE '%E2E%'`
+- Ambos endpoints bloqueados en `NODE_ENV=production`; llamados automáticamente en `afterAll` de los specs correspondientes
+
+**Fix `deleteById` en servicios:**
+- Corregido `outFormat: 2304` hardcodeado → `oracledb.OUT_FORMAT_OBJECT`; eliminar servicios ya no falla con error 500
 
 ---
 
