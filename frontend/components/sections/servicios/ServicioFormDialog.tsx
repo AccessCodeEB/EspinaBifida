@@ -28,11 +28,7 @@ import {
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import {
-  TIPOS_SERVICIO_SUGERIDOS,
-  getMontoSugeridoPorTipoServicio,
-  type TipoServicioCompleto,
-} from "@/services/servicios"
+import type { TipoServicioCompleto } from "@/services/servicios"
 import type { Beneficiario } from "@/services/beneficiarios"
 import type { ArticuloInventario } from "@/services/inventario"
 
@@ -248,7 +244,8 @@ export function ServicioFormDialog({
                 setTipoServicioSeleccionado(value)
                 setRegistroError("")
                 setIdArticuloSeleccionado("")
-                const nuevoMonto = getMontoSugeridoPorTipoServicio(Number(value))
+                const tipo = catalogoServicios.find(t => t.idTipoServicio === Number(value))
+                const nuevoMonto = tipo?.montoSugerido ?? null
                 if (nuevoMonto !== null) {
                   setMontoServicio(String(nuevoMonto.toFixed(2)))
                 } else {
@@ -260,7 +257,7 @@ export function ServicioFormDialog({
                 <SelectValue placeholder="Seleccionar servicio" />
               </SelectTrigger>
               <SelectContent>
-                {(catalogoServicios.length > 0 ? catalogoServicios : TIPOS_SERVICIO_SUGERIDOS).map((tipo) => (
+                {catalogoServicios.map((tipo) => (
                   <SelectItem key={tipo.idTipoServicio} value={String(tipo.idTipoServicio)}>
                     {tipo.nombre}
                   </SelectItem>
@@ -278,13 +275,15 @@ export function ServicioFormDialog({
           {requiereArticulo && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                {esComodato ? "Equipo a prestar *" : "Artículo a entregar *"}
+                {esComodato ? "Equipo a prestar *" : "Artículo a entregar (opcional)"}
               </label>
               {loadingArticulos ? (
                 <p className="text-xs text-muted-foreground">Cargando inventario...</p>
               ) : articulosFiltrados.length === 0 ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                  Sin stock disponible para este tipo de {tipoLabel}.
+                <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  {esComodato
+                    ? "Sin equipos disponibles en inventario."
+                    : "Sin artículos disponibles en inventario — el servicio se registrará sin descuento de stock."}
                 </p>
               ) : (
                 <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
