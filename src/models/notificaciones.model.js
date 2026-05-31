@@ -224,6 +224,57 @@ export const insertPreregistroNuevo = (curp, nombre) =>
  * Crea notificación de membresía solo si no existe una PENDIENTE del mismo tipo para esa CURP.
  * Idempotente por (TIPO, CURP, ESTATUS='PENDIENTE').
  */
+export const findComodatosPorVencer = () =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT s.ID_SERVICIO,
+              s.CURP,
+              b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS NOMBRE,
+              s.FECHA_DEVOLUCION_ESPERADA,
+              TRUNC(s.FECHA_DEVOLUCION_ESPERADA) - TRUNC(SYSDATE) AS DIAS_RESTANTES,
+              (SELECT a.DESCRIPCION FROM SERVICIO_ARTICULOS sa
+               JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
+               WHERE sa.ID_SERVICIO = s.ID_SERVICIO AND ROWNUM = 1) AS ARTICULO
+       FROM SERVICIOS s
+       JOIN BENEFICIARIOS b ON b.CURP = s.CURP
+       WHERE NVL(s.ESTATUS, 'COMPLETADO') = 'PRESTADO'
+         AND s.FECHA_DEVOLUCION_ESPERADA IS NOT NULL
+         AND TRUNC(s.FECHA_DEVOLUCION_ESPERADA) <= TRUNC(SYSDATE) + 5
+       ORDER BY s.FECHA_DEVOLUCION_ESPERADA`
+    ).then(r => r.rows)
+  );
+
+export const syncComodatosPorVencer = (mensaje) =>
+  withConnection(async conn => {
+    const { rows } = await conn.execute(
+      `SELECT ID_NOTIFICACION FROM NOTIFICACIONES
+       WHERE TIPO = 'COMODATO_POR_VENCER' AND ESTATUS = 'PENDIENTE'
+       FETCH FIRST 1 ROWS ONLY`
+    );
+    if (rows.length > 0) {
+      if (mensaje) {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES
+           SET MENSAJE = :msg, FECHA_CREACION = SYSDATE
+           WHERE ID_NOTIFICACION = :id`,
+          { msg: mensaje, id: rows[0].ID_NOTIFICACION }
+        );
+      } else {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+           WHERE TIPO = 'COMODATO_POR_VENCER' AND ESTATUS = 'PENDIENTE'`
+        );
+      }
+    } else if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('COMODATO_POR_VENCER', 'SERVICIO', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
+
 export const upsertMembresia = (curp, tipo, mensaje) =>
   withConnection(async conn => {
     const { rows } = await conn.execute(
