@@ -1,46 +1,59 @@
 /**
  * Seed de inventario — uso: node src/seeds/seed-inventario.js
  *
- * Si ya hay artículos en ARTICULOS, les asigna stocks variados
- * (normal / bajo / sin stock). Si no hay ninguno, inserta artículos
- * de demo representativos de la asociación.
+ * Si ya hay artículos en ARTICULOS:
+ *   - Actualiza stocks a distribución de demo (normal/bajo/sin stock)
+ *   - Corrige categorías basándose en la descripción
+ * Si no hay ninguno:
+ *   - Inserta artículos de demo con categorías correctas
  */
 
 import "dotenv/config";
 import { createPool, getConnection, closePool } from "../config/db.js";
 
-// ──────────────────────────────────────────────
-// Artículos de demo a insertar si la tabla está vacía
-// ──────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// Artículos de demo — campo `cat`: "equipos" | "insumos" | "medicamentos"
+// ──────────────────────────────────────────────────────────────────────────────
 const DEMO_ARTICULOS = [
-  // Con stock normal (mayoría)
-  { descripcion: "Silla de ruedas plegable",       unidad: "Pieza",   cuota: 0,   stock: 18, stockMin: 3, manejaInv: "S" },
-  { descripcion: "Andadera ajustable",             unidad: "Pieza",   cuota: 0,   stock: 12, stockMin: 2, manejaInv: "S" },
-  { descripcion: "Colchón antiescaras",            unidad: "Pieza",   cuota: 50,  stock: 10, stockMin: 2, manejaInv: "S" },
-  { descripcion: "Cateteres intermitentes (caja)", unidad: "Caja",    cuota: 120, stock: 30, stockMin: 5, manejaInv: "S" },
-  { descripcion: "Pañales para adulto (paquete)",  unidad: "Paquete", cuota: 80,  stock: 25, stockMin: 5, manejaInv: "S" },
-  { descripcion: "Férulas de tobillo-pie",         unidad: "Par",     cuota: 0,   stock: 9,  stockMin: 2, manejaInv: "S" },
-  { descripcion: "Cojín antiescaras",              unidad: "Pieza",   cuota: 40,  stock: 14, stockMin: 3, manejaInv: "S" },
-  { descripcion: "Cinturón de transferencia",      unidad: "Pieza",   cuota: 0,   stock: 8,  stockMin: 2, manejaInv: "S" },
-  { descripcion: "Guantes de exploración (caja)",  unidad: "Caja",    cuota: 0,   stock: 11, stockMin: 4, manejaInv: "S" },
+  // Equipos Médicos — se prestan (comodatos) y se devuelven
+  { descripcion: "Silla de ruedas plegable",       unidad: "Pieza",    cuota: 0,   stock: 18, stockMin: 3, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Andadera ajustable",             unidad: "Pieza",    cuota: 0,   stock: 12, stockMin: 2, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Colchón antiescaras",            unidad: "Pieza",    cuota: 50,  stock: 10, stockMin: 2, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Férulas de tobillo-pie",         unidad: "Par",      cuota: 0,   stock: 9,  stockMin: 2, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Cojín antiescaras",              unidad: "Pieza",    cuota: 40,  stock: 14, stockMin: 3, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Cinturón de transferencia",      unidad: "Pieza",    cuota: 0,   stock: 8,  stockMin: 2, manejaInv: "S", cat: "equipos" },
+  { descripcion: "Bastones canadienses",           unidad: "Par",      cuota: 0,   stock: 0,  stockMin: 2, manejaInv: "S", cat: "equipos" },
 
-  // Con stock bajo (pocos — solo 2)
-  { descripcion: "Bolsas de drenaje urinario",     unidad: "Pieza",   cuota: 30,  stock: 2,  stockMin: 5, manejaInv: "S" },
-  { descripcion: "Crema hidratante especializada", unidad: "Frasco",  cuota: 45,  stock: 1,  stockMin: 4, manejaInv: "S" },
+  // Insumos Médicos — consumibles, no se devuelven
+  { descripcion: "Cateteres intermitentes (caja)", unidad: "Caja",     cuota: 120, stock: 30, stockMin: 5, manejaInv: "S", cat: "insumos" },
+  { descripcion: "Pañales para adulto (paquete)",  unidad: "Paquete",  cuota: 80,  stock: 25, stockMin: 5, manejaInv: "S", cat: "insumos" },
+  { descripcion: "Guantes de exploración (caja)",  unidad: "Caja",     cuota: 0,   stock: 11, stockMin: 4, manejaInv: "S", cat: "insumos" },
+  { descripcion: "Bolsas de drenaje urinario",     unidad: "Pieza",    cuota: 30,  stock: 2,  stockMin: 5, manejaInv: "S", cat: "insumos" },
+  { descripcion: "Crema hidratante especializada", unidad: "Frasco",   cuota: 45,  stock: 1,  stockMin: 4, manejaInv: "S", cat: "insumos" },
 
-  // Sin stock (muy pocos — solo 1)
-  { descripcion: "Bastones canadienses",           unidad: "Par",     cuota: 0,   stock: 0,  stockMin: 2, manejaInv: "S" },
-
-  // No maneja inventario (servicios / sin stock tracking)
-  { descripcion: "Consulta de fisioterapia",       unidad: "Sesión",  cuota: 150, stock: 0,  stockMin: 0, manejaInv: "N" },
-  { descripcion: "Valoración médica",              unidad: "Sesión",  cuota: 0,   stock: 0,  stockMin: 0, manejaInv: "N" },
+  // Medicamentos — comunes en pacientes con espina bífida
+  { descripcion: "Solución de Cloruro de Sodio 0.9% 500ml", unidad: "Frasco",  cuota: 35,  stock: 40, stockMin: 10, manejaInv: "S", cat: "medicamentos" },
+  { descripcion: "Vitamina B12 1000mcg",                    unidad: "Ampolleta", cuota: 20, stock: 50, stockMin: 10, manejaInv: "S", cat: "medicamentos" },
+  { descripcion: "Baclofen 10mg",                           unidad: "Tableta",  cuota: 5,   stock: 3,  stockMin: 10, manejaInv: "S", cat: "medicamentos" },
+  { descripcion: "Oxibutinina 5mg",                         unidad: "Tableta",  cuota: 8,   stock: 20, stockMin: 10, manejaInv: "S", cat: "medicamentos" },
+  { descripcion: "Trimetoprima/Sulfametoxazol 160/800mg",   unidad: "Tableta",  cuota: 6,   stock: 15, stockMin: 10, manejaInv: "S", cat: "medicamentos" },
 ];
 
-// Distribución de stocks cuando hay artículos existentes.
-// Conteos fijos para garantizar "muy pocos" con problemas:
-//   - 2 con stock bajo  (1 si el total es ≤ 4)
-//   - 1 sin stock       (siempre)
-//   - el resto → stock normal
+// Palabras clave para reclasificar artículos existentes por descripción
+const KEYWORDS_CATEGORIA = {
+  equipos: ["silla", "andadera", "colchón", "ferula", "férula", "cojín", "cinturon", "cinturón", "baston", "bastón", "muleta", "ortesis"],
+  insumos: ["cateter", "catéter", "pañal", "guante", "bolsa", "drenaje", "crema", "gasa", "vendaje", "torunda"],
+  medicamentos: ["mg", "mcg", "ml", "solucion", "solución", "vitamina", "baclofen", "oxibutinina", "trimetoprima", "capsula", "cápsula", "tableta", "ampolleta", "jarabe"],
+};
+
+function detectarCategoria(descripcion) {
+  const lower = descripcion.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  for (const [cat, keywords] of Object.entries(KEYWORDS_CATEGORIA)) {
+    if (keywords.some(k => lower.includes(k))) return cat;
+  }
+  return null;
+}
+
 function stockDistribution(total) {
   const sinStock = 1;
   const low      = total <= 4 ? 1 : 2;
@@ -48,8 +61,44 @@ function stockDistribution(total) {
   return { normal: Math.max(normal, 0), low, sinStock };
 }
 
+// Resuelve los IDs de las 3 categorías principales por nombre
+async function resolverCategorias(conn) {
+  const { rows } = await conn.execute(
+    `SELECT ID_CATEGORIA, NOMBRE FROM CATEGORIAS_ARTICULO`
+  );
+  const mapa = {};
+  for (const r of rows) {
+    const nombre = String(r.NOMBRE ?? "").toLowerCase().trim();
+    if (nombre.includes("equipo"))      mapa.equipos      = r.ID_CATEGORIA;
+    if (nombre.includes("insumo"))      mapa.insumos      = r.ID_CATEGORIA;
+    if (nombre.includes("medicamento")) mapa.medicamentos = r.ID_CATEGORIA;
+  }
+
+  // Crear las que falten
+  for (const [key, nombreOficial] of [
+    ["equipos",      "Equipos Médicos"],
+    ["insumos",      "Insumos Médicos"],
+    ["medicamentos", "Medicamentos"],
+  ]) {
+    if (!mapa[key]) {
+      await conn.execute(
+        `INSERT INTO CATEGORIAS_ARTICULO (NOMBRE) VALUES (:n)`,
+        { n: nombreOficial }, { autoCommit: false }
+      );
+      const { rows: nr } = await conn.execute(
+        `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE NOMBRE = :n AND ROWNUM = 1`,
+        { n: nombreOficial }
+      );
+      mapa[key] = nr[0].ID_CATEGORIA;
+      console.log(`  Categoría '${nombreOficial}' creada: ID=${mapa[key]}`);
+    }
+  }
+
+  console.log(`  Categorías → equipos:${mapa.equipos} insumos:${mapa.insumos} medicamentos:${mapa.medicamentos}`);
+  return mapa;
+}
+
 async function syncNotificacionesStockBajo(conn) {
-  // Obtener artículos que siguen con stock bajo tras el seed
   const { rows: bajos } = await conn.execute(
     `SELECT DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
        FROM ARTICULOS
@@ -58,14 +107,12 @@ async function syncNotificacionesStockBajo(conn) {
          AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
   );
 
-  // Marcar todas las notificaciones STOCK_BAJO pendientes como leídas
   const { rowsAffected } = await conn.execute(
     `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
        WHERE TIPO = 'STOCK_BAJO' AND ESTATUS = 'PENDIENTE'`
   );
   console.log(`  Notificaciones STOCK_BAJO antiguas limpiadas: ${rowsAffected ?? 0}`);
 
-  // Insertar una sola notificación consolidada si aún hay artículos con stock bajo
   if (bajos.length > 0) {
     let msg;
     if (bajos.length === 1) {
@@ -90,31 +137,11 @@ async function syncNotificacionesStockBajo(conn) {
   await conn.commit();
 }
 
-async function resolverCategoria(conn) {
-  const { rows: cats } = await conn.execute(
-    `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
-  );
-  if (cats.length > 0) {
-    console.log(`  Usando categoría existente: ID_CATEGORIA = ${cats[0].ID_CATEGORIA}`);
-    return cats[0].ID_CATEGORIA;
-  }
-  await conn.execute(
-    `INSERT INTO CATEGORIAS_ARTICULO (NOMBRE) VALUES ('General')`,
-    {},
-    { autoCommit: false }
-  );
-  const { rows: newCat } = await conn.execute(
-    `SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO WHERE ROWNUM = 1`
-  );
-  console.log(`  Categoría 'General' creada: ID_CATEGORIA = ${newCat[0].ID_CATEGORIA}`);
-  return newCat[0].ID_CATEGORIA;
-}
-
-async function insertarDemos(conn) {
+async function insertarDemos(conn, cats) {
   console.log("No se encontraron artículos. Insertando datos de demo...\n");
-  const idCat = await resolverCategoria(conn);
 
   for (const a of DEMO_ARTICULOS) {
+    const idCat = cats[a.cat] ?? cats.insumos;
     await conn.execute(
       `INSERT INTO ARTICULOS (
          ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
@@ -126,63 +153,73 @@ async function insertarDemos(conn) {
       { desc: a.descripcion, unidad: a.unidad, cuota: a.cuota, stock: a.stock, manejaInv: a.manejaInv, idCat, stockMin: a.stockMin }
     );
     let tag;
-    if (a.manejaInv === "N")       tag = "sin tracking";
-    else if (a.stock === 0)        tag = "SIN STOCK    ";
+    if (a.stock === 0)        tag = "SIN STOCK    ";
     else if (a.stock < a.stockMin) tag = "STOCK BAJO   ";
-    else                           tag = "stock normal  ";
-    console.log(`  [${tag}] ${a.descripcion} (${a.stock} ${a.unidad})`);
+    else                           tag = "stock normal ";
+    console.log(`  [${tag}] [${a.cat.padEnd(12)}] ${a.descripcion}`);
   }
 }
 
-async function actualizarStocks(conn, existentes) {
-  console.log(`Se encontraron ${existentes.length} artículo(s). Actualizando stocks...\n`);
+async function actualizarStocks(conn, existentes, cats) {
+  console.log(`Se encontraron ${existentes.length} artículo(s). Actualizando stocks y categorías...\n`);
   const { normal, low } = stockDistribution(existentes.length);
 
   for (let i = 0; i < existentes.length; i++) {
     const art = existentes[i];
     const minimo = Number(art.STOCK_MINIMO ?? 5);
-    let nuevoStock;
-    let label;
+    let nuevoStock, label;
 
     if (art.MANEJA_INVENTARIO !== "S") {
-      label = "sin tracking — sin cambio";
+      label = "sin tracking";
       nuevoStock = 0;
     } else if (i < normal) {
       nuevoStock = Math.max(minimo * 3, 10);
       label = "stock normal";
     } else if (i < normal + low) {
       nuevoStock = Math.max(1, minimo - 1);
-      label = "STOCK BAJO";
+      label = "STOCK BAJO  ";
     } else {
       nuevoStock = 0;
-      label = "SIN STOCK";
+      label = "SIN STOCK   ";
     }
 
+    // Detectar categoría correcta por descripción
+    const catKey = detectarCategoria(art.DESCRIPCION);
+    const idCat  = catKey ? cats[catKey] : null;
+
     await conn.execute(
-      `UPDATE ARTICULOS SET INVENTARIO_ACTUAL = :stock WHERE ID_ARTICULO = :id`,
-      { stock: nuevoStock, id: art.ID_ARTICULO }
+      `UPDATE ARTICULOS SET INVENTARIO_ACTUAL = :stock
+       ${idCat ? ", ID_CATEGORIA = :idCat" : ""}
+       WHERE ID_ARTICULO = :id`,
+      idCat ? { stock: nuevoStock, idCat, id: art.ID_ARTICULO }
+            : { stock: nuevoStock,        id: art.ID_ARTICULO }
     );
+
+    const catLabel = catKey ?? "sin clasificar";
     console.log(
-      `  [${label.padEnd(14)}] ID=${String(art.ID_ARTICULO).padEnd(4)} ` +
-      `${art.DESCRIPCION.substring(0, 40).padEnd(42)} → ${nuevoStock}`
+      `  [${label.padEnd(12)}] [${catLabel.padEnd(12)}] ` +
+      `${art.DESCRIPCION.substring(0, 38).padEnd(40)} → ${nuevoStock}`
     );
   }
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 await createPool();
 const conn = await getConnection();
 
 try {
+  const cats = await resolverCategorias(conn);
+
   const { rows: existentes } = await conn.execute(
-    `SELECT ID_ARTICULO, DESCRIPCION, STOCK_MINIMO, MANEJA_INVENTARIO
+    `SELECT ID_ARTICULO, DESCRIPCION, STOCK_MINIMO, MANEJA_INVENTARIO, ID_CATEGORIA
        FROM ARTICULOS WHERE NVL(ACTIVO,'S') = 'S'
        ORDER BY ID_ARTICULO`
   );
 
   if (existentes.length === 0) {
-    await insertarDemos(conn);
+    await insertarDemos(conn, cats);
   } else {
-    await actualizarStocks(conn, existentes);
+    await actualizarStocks(conn, existentes, cats);
   }
 
   await conn.commit();

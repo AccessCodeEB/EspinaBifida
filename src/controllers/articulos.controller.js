@@ -1,5 +1,14 @@
 import * as ArticulosService from "../services/articulos.service.js";
 
+export async function getCategorias(req, res, next) {
+  try {
+    const rows = await ArticulosService.getAllCategorias();
+    res.json(rows.map(r => ({ id: r.ID_CATEGORIA, nombre: r.NOMBRE })));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getAll(req, res, next) {
   try {
     const data = await ArticulosService.getAll();

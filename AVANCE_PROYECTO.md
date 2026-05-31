@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-29 (Jueves) — SDD + Documento de Calidad entregados, manuales de usuario completados
+**Actualización:** 2026-05-29 (Jueves) — SDD + Documento de Calidad entregados, manuales de usuario completados; Rediseño inventario+servicios: categorías, comodatos, safety net, historial mejorado
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -17,7 +17,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (ramas) | **100%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 12 / 12 |
+| Migraciones de BD | 15 / 15 |
 | Archivos de prueba Jest (suites) | 50 |
 | Tests Jest | 1080 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
@@ -36,15 +36,15 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|---|
 | **Beneficiarios** | CRUD completo, pre-registro, aprobación/rechazo, foto de perfil, baja | 100% |
 | **Membresías** | Alta, validación de vigencia, métodos de pago, sincronización de estados | 100% |
-| **Servicios** | Registro con validación de membresía activa, filtros, paginación, notas | 100% |
+| **Servicios** | Registro con validación de membresía activa, clasificación SERVICIO/CONSUMIBLE/COMODATO, comodatos con fecha devolución y tracking PRESTADO/DEVUELTO, filtros, paginación | 100% |
 | **Citas** | CRUD completo, filtros por fecha/estatus | 100% |
-| **Inventario** | Artículos, movimientos (entradas/salidas), alertas de stock mínimo, filtro activo/inactivo | 100% |
+| **Inventario** | Artículos + categorías (Medicamentos, Insumos Médicos, Equipos Médicos), movimientos, alertas de stock mínimo, safety net comodatos | 100% |
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
 | **Notificaciones** | Alertas automáticas de stock bajo y membresías próximas/vencidas, job nocturno cron, panel en dashboard | 100% |
 | **Auditoría** | Registro de operaciones sensibles en `AUDITORIA_OPERACIONES` (fire-and-forget) | 100% |
-| **Migraciones BD** | 12 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Migraciones BD** | 15 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting, validación Zod | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -54,9 +54,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Dashboard** | ✅ Completo |
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo |
-| **Servicios** | ✅ Completo |
+| **Servicios** | ✅ Completo — tab Comodatos activos, confirmar devolución atómica, form con selector de artículo buscable, badges COMPLETADO/PRESTADO/DEVUELTO |
 | **Citas** | ✅ Completo |
-| **Inventario** | ✅ Completo — incluye filtro por estado de stock |
+| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), safety net comodatos, selector de categoría al agregar artículo |
 | **Reportes** | ✅ Completo |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
@@ -92,6 +92,26 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Manuales de usuario: `docs/manual-usuario-interno.md` (personal de la asociación, 13 secciones) y `docs/manual-usuario-publico.md` (pacientes y familias, 5 secciones)
 - Documentación académica: `docs/SDD.md` (Documento de Diseño de Software, 1175 líneas) y `docs/documento-calidad.md` (Plan de Calidad con casos de prueba, métricas y lecciones aprendidas)
 
+### Cambios 2026-05-29 — Rediseño Inventario + Servicios
+
+**Inventario:**
+- 3 categorías en `CATEGORIAS_ARTICULO`: Medicamentos, Insumos Médicos, Equipos Médicos (migración 013)
+- Filtro por categoría en la UI — mismo Popover "Filtrar" que el filtro de stock
+- Safety net para Equipos Médicos: al intentar modificar un equipo desde inventario, pregunta si es préstamo a beneficiario o ajuste de stock. Si es préstamo, redirige a Servicios.
+- Selector de categoría obligatorio al agregar artículo nuevo
+- Endpoint `GET /articulos/categorias` para cargar categorías dinámicamente
+- Migración 015: categoriza automáticamente todos los artículos existentes por keywords en descripción
+
+**Servicios:**
+- Columnas `ESTATUS` (VARCHAR2 20, default COMPLETADO) y `FECHA_DEVOLUCION_ESPERADA` (DATE) en tabla SERVICIOS (migración 014)
+- Columna `TIPO_SERVICIO` en `SERVICIOS_CATALOGO`: SERVICIO / CONSUMIBLE / COMODATO (migración 014)
+- Catálogo limpio: "Silla de Ruedas" renombrada a "Prestamo de Equipo", genérico "Comodato" eliminado (migración 014)
+- Tab **Comodatos activos** en la página de Servicios: muestra equipos prestados, días restantes/retraso, filas en ámbar si hay retraso
+- Botón **Confirmar devolución**: transacción atómica (ESTATUS='DEVUELTO' + ENTRADA en inventario)
+- Formulario nuevo servicio: selector de artículo con búsqueda (Combobox) filtrado por categoría; campo fecha devolución para comodatos
+- Historial de servicios: badges COMPLETADO/PRESTADO/DEVUELTO con color; filas PRESTADO destacadas en ámbar
+- Endpoints: `GET /servicios/comodatos`, `PATCH /servicios/:id/devolucion`
+
 ---
 
 ## 🔄 En progreso / Parcialmente terminado
@@ -99,10 +119,17 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
+| **Registro servicio con comodato** | El flujo completo (selección de artículo + descuento de inventario) falla con ORA-01400 al hacer INSERT en la transacción. Diagnóstico pendiente con logging granular agregado. | Alta |
 
 ---
 
 ## ❌ Lo que falta por hacer
+
+### Prioridad alta
+
+| Tarea | Descripción |
+|---|---|
+| **Bug: registro de comodato con artículo** | ORA-01400 al registrar servicio de tipo COMODATO con consumo de artículo. Logging granular ya agregado en `createWithInventarioTransaction`. Requiere diagnóstico al reiniciar servidor y observar logs `[createWithInventario]`. |
 
 ### Prioridad baja (nice-to-have)
 

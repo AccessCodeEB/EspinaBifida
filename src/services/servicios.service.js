@@ -106,7 +106,9 @@ export async function createConValidacion(data) {
     montoPagado,
     referenciaId,
     referenciaTipo,
-    notas: data.notas ?? null,
+    notas:                   data.notas ?? null,
+    estatus:                 data.estatus ?? "COMPLETADO",
+    fechaDevolucionEsperada: data.fechaDevolucionEsperada ?? null,
   };
 
   let idServicio;
@@ -211,3 +213,9 @@ export async function getDetailed(filters) {
 
 export const deleteById = (idServicio) =>
   ServiciosModel.deleteById(idServicio);
+
+export const getComodatosActivos = () =>
+  ServiciosModel.findComodatosActivos();
+
+export const confirmarDevolucion = (idServicio) =>
+  ServiciosModel.confirmarDevolucion(idServicio);

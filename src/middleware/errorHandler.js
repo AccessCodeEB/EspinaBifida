@@ -39,6 +39,9 @@ export function errorHandler(err, req, res, _next) {
     }
   }
 
+  if (statusCode >= 400) {
+    console.error(`[${new Date().toISOString()}] ${statusCode} error — ${message}`, err?.errorNum ? `ORA-${err.errorNum}` : err?.message ?? "");
+  }
   if (statusCode >= 500) {
     console.error(`[${new Date().toISOString()}] Internal server error`, err);
     /* istanbul ignore else */

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, Eye, Search, Trash2 } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, Eye, RotateCcw, Search, Trash2 } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
 
 function formatMoney(value: number): string {
@@ -219,28 +219,33 @@ export function ServiciosTable({
                 </td>
               </tr>
             ) : (
-              paginated.map((s) => (
-                <tr key={s.id} className="transition-colors hover:bg-muted/20">
+              paginated.map((s) => {
+                const esPrestado = s.estatus === "PRESTADO"
+                const esDevuelto = s.estatus === "DEVUELTO"
+                return (
+                <tr key={s.id} className={`transition-colors hover:bg-muted/20 ${esPrestado ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}`}>
                   <td className="py-3 pl-5 font-mono text-[11px] text-foreground">{s.folio}</td>
                   <td className="py-3 text-xs font-medium text-foreground">{s.nombre}</td>
                   <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
                   <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
                   <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
                   <td className="py-3 text-center">
-                    {(() => {
-                      const cfg: Record<string, { dot: string; text: string }> = {
-                        Activo:   { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
-                        Inactivo: { dot: "bg-amber-500",   text: "text-amber-700 dark:text-amber-400" },
-                        Baja:     { dot: "bg-red-500",     text: "text-red-600 dark:text-red-400" },
-                      }
-                      const c = cfg[s.estatus] ?? { dot: "bg-slate-400", text: "text-slate-500 dark:text-slate-400" }
-                      return (
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${c.text}`}>
-                          <span className={`size-1.5 rounded-full ${c.dot}`} />
-                          {s.estatus}
-                        </span>
-                      )
-                    })()}
+                    {esPrestado ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        <RotateCcw className="size-3" />
+                        Prestado
+                      </span>
+                    ) : esDevuelto ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        Devuelto
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <span className="size-1.5 rounded-full bg-slate-400" />
+                        Completado
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 pr-5 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -259,7 +264,8 @@ export function ServiciosTable({
                     </div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>

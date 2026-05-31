@@ -59,16 +59,22 @@ export const findInventarioActual = () =>
   withConnection(async conn => {
     try {
       return (await conn.execute(
-        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
-                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
-         FROM ARTICULOS WHERE NVL(ACTIVO, 'S') = 'S' ORDER BY DESCRIPCION`
+        `SELECT A.ID_ARTICULO, A.DESCRIPCION, A.UNIDAD,
+                A.CUOTA_RECUPERACION, A.INVENTARIO_ACTUAL, NVL(A.STOCK_MINIMO, 5) AS STOCK_MINIMO,
+                A.ID_CATEGORIA, C.NOMBRE AS NOMBRE_CATEGORIA
+         FROM ARTICULOS A
+         LEFT JOIN CATEGORIAS_ARTICULO C ON C.ID_CATEGORIA = A.ID_CATEGORIA
+         WHERE NVL(A.ACTIVO, 'S') = 'S' ORDER BY A.DESCRIPCION`
       ))?.rows ?? [];
     } catch (err) {
       if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
       return (await conn.execute(
-        `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD,
-                CUOTA_RECUPERACION, INVENTARIO_ACTUAL, NVL(STOCK_MINIMO, 5) AS STOCK_MINIMO
-         FROM ARTICULOS ORDER BY DESCRIPCION`
+        `SELECT A.ID_ARTICULO, A.DESCRIPCION, A.UNIDAD,
+                A.CUOTA_RECUPERACION, A.INVENTARIO_ACTUAL, NVL(A.STOCK_MINIMO, 5) AS STOCK_MINIMO,
+                A.ID_CATEGORIA, C.NOMBRE AS NOMBRE_CATEGORIA
+         FROM ARTICULOS A
+         LEFT JOIN CATEGORIAS_ARTICULO C ON C.ID_CATEGORIA = A.ID_CATEGORIA
+         ORDER BY A.DESCRIPCION`
       ))?.rows ?? [];
     }
   });

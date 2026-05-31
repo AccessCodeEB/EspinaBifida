@@ -97,6 +97,13 @@ export async function update(id, data) {
   });
 }
 
+export const findAllCategorias = () =>
+  withConnection(async conn =>
+    (await conn.execute(
+      `SELECT ID_CATEGORIA, NOMBRE FROM CATEGORIAS_ARTICULO ORDER BY NOMBRE`
+    )).rows
+  );
+
 export const deleteById = (id) =>
   withConnection(async conn => {
     try {

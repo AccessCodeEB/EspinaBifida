@@ -14,7 +14,13 @@ export const findAll = () =>
               s.COSTO,
               s.MONTO_PAGADO,
               s.NOTAS,
-              NVL(b.ESTATUS, 'Activo') AS ESTATUS,
+              NVL(s.ESTATUS, 'COMPLETADO') AS ESTATUS_SERVICIO,
+              NVL(b.ESTATUS, 'Activo') AS ESTATUS_BENEFICIARIO,
+              (SELECT a.DESCRIPCION
+               FROM SERVICIO_ARTICULOS sa
+               JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
+               WHERE sa.ID_SERVICIO = s.ID_SERVICIO
+               AND ROWNUM = 1) AS ARTICULO_ENTREGADO,
               CASE
                 WHEN EXISTS (
                   SELECT 1 FROM CREDENCIALES c
@@ -110,24 +116,31 @@ export async function create(data) {
       throw internal("No se pudo generar ID_SERVICIO");
     }
 
+    const fechaSQL = data.fechaDevolucionEsperada
+      ? `TO_DATE(:fechaDevolucion, 'YYYY-MM-DD')`
+      : `NULL`;
+    const insertBinds = {
+      idServicio,
+      curp:           data.curp,
+      idTipoServicio: data.idTipoServicio,
+      costo:          data.costo,
+      montoPagado:    data.montoPagado,
+      referenciaId:   data.referenciaId,
+      referenciaTipo: data.referenciaTipo,
+      notas:          data.notas,
+      estatus:        data.estatus ?? "COMPLETADO",
+    };
+    if (data.fechaDevolucionEsperada) insertBinds.fechaDevolucion = data.fechaDevolucionEsperada;
+
     await conn.execute(
       `INSERT INTO SERVICIOS (
          ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO, MONTO_PAGADO,
-         REFERENCIA_ID, REFERENCIA_TIPO, NOTAS
+         REFERENCIA_ID, REFERENCIA_TIPO, NOTAS, ESTATUS, FECHA_DEVOLUCION_ESPERADA
        ) VALUES (
          :idServicio, :curp, :idTipoServicio, SYSDATE, :costo, :montoPagado,
-         :referenciaId, :referenciaTipo, :notas
+         :referenciaId, :referenciaTipo, :notas, :estatus, ${fechaSQL}
        )`,
-      {
-        idServicio,
-        curp: data.curp,
-        idTipoServicio: data.idTipoServicio,
-        costo: data.costo,
-        montoPagado: data.montoPagado,
-        referenciaId: data.referenciaId,
-        referenciaTipo: data.referenciaTipo,
-        notas: data.notas,
-      },
+      insertBinds,
       { autoCommit: true }
     );
 
@@ -143,30 +156,46 @@ function normalizeConsumoMotivo(consumo, idServicio) {
 export async function createWithInventarioTransaction(data, consumos) {
   const conn = await getConnection();
   try {
-    const result = await conn.execute(
-      `BEGIN
-         SP_REGISTRAR_SERVICIO(:curp, :tipo, :costo, :monto, :notas,
-                               :refId, :refTipo, :art, :cant, :id_out);
-       END;`,
-      {
-        curp:    data.curp,
-        tipo:    data.idTipoServicio,
-        costo:   data.costo,
-        monto:   data.montoPagado,
-        notas:   data.notas    ?? null,
-        refId:   data.referenciaId   ?? null,
-        refTipo: data.referenciaTipo ?? null,
-        art:     { val: null, type: oracledb.NUMBER },
-        cant:    { val: null, type: oracledb.NUMBER },
-        id_out:  { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
-      }
+    // 1. Obtener ID_SERVICIO de la secuencia (igual que create() — no dependemos del trigger TRG_SERVICIOS_BI)
+    const idResult = await conn.execute(
+      `SELECT SEQ_SERVICIOS.NEXTVAL AS NEXT_ID FROM DUAL`
     );
-
-    const idServicio = Number(result.outBinds?.id_out ?? 0);
+    const idServicio = Number(idResult.rows?.[0]?.NEXT_ID ?? idResult.rows?.[0]?.[0] ?? 0);
     if (!Number.isInteger(idServicio) || idServicio <= 0) {
       throw internal("No se pudo generar ID_SERVICIO");
     }
+    console.log(`[createWithInventario] STEP 1: idServicio=${idServicio}`);
 
+    // 2. INSERT directo en SERVICIOS (mismo patrón que create(), sin SP)
+    const fechaSQL = data.fechaDevolucionEsperada
+      ? `TO_DATE(:fechaDevolucion, 'YYYY-MM-DD')`
+      : `NULL`;
+    const insertBinds = {
+      idServicio,
+      curp:           data.curp,
+      idTipoServicio: data.idTipoServicio,
+      costo:          data.costo,
+      montoPagado:    data.montoPagado,
+      referenciaId:   data.referenciaId   ?? null,
+      referenciaTipo: data.referenciaTipo  ?? null,
+      notas:          data.notas           ?? null,
+      estatus:        data.estatus         ?? "COMPLETADO",
+    };
+    if (data.fechaDevolucionEsperada) insertBinds.fechaDevolucion = data.fechaDevolucionEsperada;
+
+    await conn.execute(
+      `INSERT INTO SERVICIOS (
+         ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO, MONTO_PAGADO,
+         REFERENCIA_ID, REFERENCIA_TIPO, NOTAS, ESTATUS, FECHA_DEVOLUCION_ESPERADA
+       ) VALUES (
+         :idServicio, :curp, :idTipoServicio, SYSDATE, :costo, :montoPagado,
+         :referenciaId, :referenciaTipo, :notas, :estatus, ${fechaSQL}
+       )`,
+      insertBinds
+    );
+    console.log(`[createWithInventario] STEP 2: SERVICIOS insert OK`);
+
+    // 3. Procesar consumos: movimiento de inventario + SERVICIO_ARTICULOS con ID explícito
     for (const consumo of consumos) {
       await applyMovimientoConConexion(conn, {
         idArticulo: consumo.idProducto,
@@ -174,16 +203,25 @@ export async function createWithInventarioTransaction(data, consumos) {
         cantidad:   consumo.cantidad,
         motivo:     normalizeConsumoMotivo(consumo, idServicio),
       });
-      await conn.execute(
-        `INSERT INTO SERVICIO_ARTICULOS (ID_SERVICIO, ID_ARTICULO, CANTIDAD)
-         VALUES (:idServicio, :idArticulo, :cantidad)`,
-        { idServicio, idArticulo: consumo.idProducto, cantidad: consumo.cantidad }
+      console.log(`[createWithInventario] STEP 3a: movimiento inventario OK (artículo ${consumo.idProducto})`);
+
+      const idSaResult = await conn.execute(
+        `SELECT SEQ_SERVICIO_ARTICULOS.NEXTVAL AS NEXT_ID FROM DUAL`
       );
+      const idSA = Number(idSaResult.rows?.[0]?.NEXT_ID ?? idSaResult.rows?.[0]?.[0] ?? 0);
+      await conn.execute(
+        `INSERT INTO SERVICIO_ARTICULOS (ID, ID_SERVICIO, ID_ARTICULO, CANTIDAD)
+         VALUES (:id, :idServicio, :idArticulo, :cantidad)`,
+        { id: idSA, idServicio, idArticulo: consumo.idProducto, cantidad: consumo.cantidad }
+      );
+      console.log(`[createWithInventario] STEP 3b: SERVICIO_ARTICULOS OK (id=${idSA})`);
     }
 
     await conn.commit();
+    console.log("[createWithInventario] commit OK");
     return { idServicio };
   } catch (err) {
+    console.error("[createWithInventario] ERROR:", err?.message ?? err);
     await conn.rollback();
     throw err;
   } finally {
@@ -373,5 +411,65 @@ export async function deleteById(idServicio) {
     throw err;
   } finally {
     await conn.close();
+  }
+}
+
+export const findComodatosActivos = () =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT s.ID_SERVICIO,
+              s.CURP,
+              TRIM(b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'')) AS NOMBRE_BENEFICIARIO,
+              NVL(cat.NOMBRE, 'Equipo Médico') AS TIPO_SERVICIO,
+              a.DESCRIPCION AS NOMBRE_ARTICULO,
+              sa.ID_ARTICULO,
+              NVL(sa.CANTIDAD, 1) AS CANTIDAD,
+              s.FECHA,
+              s.FECHA_DEVOLUCION_ESPERADA
+       FROM SERVICIOS s
+       LEFT JOIN BENEFICIARIOS b ON b.CURP = s.CURP
+       LEFT JOIN SERVICIOS_CATALOGO cat ON cat.ID_TIPO_SERVICIO = s.ID_TIPO_SERVICIO
+       LEFT JOIN (
+         SELECT ID_SERVICIO, MIN(ID_ARTICULO) AS ID_ARTICULO, MIN(CANTIDAD) AS CANTIDAD
+         FROM SERVICIO_ARTICULOS GROUP BY ID_SERVICIO
+       ) sa ON sa.ID_SERVICIO = s.ID_SERVICIO
+       LEFT JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
+       WHERE NVL(cat.TIPO_SERVICIO, 'SERVICIO') = 'COMODATO'
+         AND NVL(s.ESTATUS, 'PRESTADO') != 'DEVUELTO'
+       ORDER BY s.FECHA DESC`
+    ).then(r => r.rows)
+  );
+
+export async function confirmarDevolucion(idServicio) {
+  let conn;
+  try {
+    conn = await getConnection();
+
+    const { rows: articulos } = await conn.execute(
+      `SELECT ID_ARTICULO, CANTIDAD FROM SERVICIO_ARTICULOS WHERE ID_SERVICIO = :id`,
+      { id: idServicio },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    for (const art of articulos) {
+      await applyMovimientoConConexion(conn, {
+        idArticulo: art.ID_ARTICULO,
+        tipo:       "ENTRADA",
+        cantidad:   art.CANTIDAD,
+        motivo:     `Devolución de comodato — Servicio #${idServicio}`,
+      });
+    }
+
+    await conn.execute(
+      `UPDATE SERVICIOS SET ESTATUS = 'DEVUELTO' WHERE ID_SERVICIO = :id`,
+      { id: idServicio }
+    );
+
+    await conn.commit();
+  } catch (err) {
+    if (conn) await conn.rollback();
+    throw err;
+  } finally {
+    if (conn) await conn.close();
   }
 }

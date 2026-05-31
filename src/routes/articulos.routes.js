@@ -59,6 +59,8 @@ const router = Router();
  */
 router.get("/",    verifyToken,                  ArticulosController.getAll);
 
+router.get("/categorias", verifyToken,            ArticulosController.getCategorias);
+
 /**
  * @openapi
  * /articulos/{id}:

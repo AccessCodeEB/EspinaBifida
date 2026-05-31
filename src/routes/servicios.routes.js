@@ -344,6 +344,9 @@ router.get("/detalle", verifyToken, ServiciosController.getDetailed);
  *             schema:
  *               $ref: '#/components/schemas/Error500'
  */
+router.get("/comodatos",                   verifyToken,              ServiciosController.getComodatos);
+router.patch("/:idServicio/devolucion",    verifyToken, checkRole(1,2), ServiciosController.confirmarDevolucion);
+
 router.get("/:curp", verifyToken, ServiciosController.getByCurp);
 
 /**

@@ -22,8 +22,8 @@ function mapServicio(row) {
     servicio:  r.tipoServicio ?? "Servicio",
     fecha:     fechaStr,
     monto:     formatMonto(r.costo),
-      estatus:   r.estatus ?? "Activo",
-      membresia: r.membresiaEstatus ?? "Sin membresia",
+    estatus:   r.estatusServicio ?? "COMPLETADO",
+    membresia: r.membresiaEstatus ?? "Sin membresia",
     notas:     safeClobString(r.notas),
   };
 }
@@ -96,6 +96,8 @@ export async function create(req, res, next) {
       referenciaTipo,
       notas,
       consumos,
+      estatus,
+      fechaDevolucionEsperada,
     } = req.body;
 
     // Validar campos requeridos
@@ -112,6 +114,8 @@ export async function create(req, res, next) {
       referenciaTipo: referenciaTipo || null,
       notas: notas || null,
       consumos: consumos ?? [],
+      estatus,
+      fechaDevolucionEsperada,
     });
 
     res.status(201).json(resultado);
@@ -157,6 +161,39 @@ export async function update(req, res, next) {
     });
 
     res.json({ message: "Servicio actualizado exitosamente" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getComodatos(req, res, next) {
+  try {
+    const rows = await ServiciosService.getComodatosActivos();
+    res.json(rows.map(r => ({
+      idServicio:            r.ID_SERVICIO,
+      curp:                  r.CURP,
+      nombreBeneficiario:    r.NOMBRE_BENEFICIARIO?.trim() ?? r.CURP,
+      tipoServicio:          r.TIPO_SERVICIO,
+      nombreArticulo:        r.NOMBRE_ARTICULO ?? null,
+      idArticulo:            r.ID_ARTICULO ?? null,
+      cantidad:              Number(r.CANTIDAD ?? 1),
+      fecha:                 r.FECHA ? new Date(r.FECHA).toISOString().slice(0, 10) : null,
+      fechaDevolucionEsperada: r.FECHA_DEVOLUCION_ESPERADA
+        ? new Date(r.FECHA_DEVOLUCION_ESPERADA).toISOString().slice(0, 10)
+        : null,
+    })));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function confirmarDevolucion(req, res, next) {
+  try {
+    const idServicio = parseIdServicio(req.params.idServicio);
+    const servicio = await ServiciosService.getById(idServicio);
+    if (!servicio) throw notFound("Servicio no encontrado");
+    await ServiciosService.confirmarDevolucion(idServicio);
+    res.json({ message: "Devolución confirmada. Inventario actualizado." });
   } catch (err) {
     next(err);
   }

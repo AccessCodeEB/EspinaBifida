@@ -1,6 +1,7 @@
 "use client"
 
-import { Search } from "lucide-react"
+import { useState } from "react"
+import { Search, Check, ChevronsUpDown } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -18,10 +19,22 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import {
   TIPOS_SERVICIO_SUGERIDOS,
   getMontoSugeridoPorTipoServicio,
+  type TipoServicioCompleto,
 } from "@/services/servicios"
 import type { Beneficiario } from "@/services/beneficiarios"
+import type { ArticuloInventario } from "@/services/inventario"
 
 const NAVY = "#0f4c81"
 
@@ -74,6 +87,17 @@ interface ServicioFormDialogProps {
   requiereDescripcionOtro: boolean
   expedienteBloqueado: boolean
 
+  // Catálogo dinámico + artículo específico
+  catalogoServicios: TipoServicioCompleto[]
+  esComodato: boolean
+  requiereArticulo: boolean
+  articulosFiltrados: ArticuloInventario[]
+  loadingArticulos: boolean
+  idArticuloSeleccionado: string
+  setIdArticuloSeleccionado: (v: string) => void
+  fechaDevolucionEsperada: string
+  setFechaDevolucionEsperada: (v: string) => void
+
   onRegistrar: () => void
 }
 
@@ -112,11 +136,30 @@ export function ServicioFormDialog({
   tipoServicioSeleccionadoLabel,
   requiereDescripcionOtro,
   expedienteBloqueado,
+  catalogoServicios,
+  esComodato,
+  requiereArticulo,
+  articulosFiltrados,
+  loadingArticulos,
+  idArticuloSeleccionado,
+  setIdArticuloSeleccionado,
+  fechaDevolucionEsperada,
+  setFechaDevolucionEsperada,
   onRegistrar,
 }: ServicioFormDialogProps) {
+  const [articuloPickerOpen, setArticuloPickerOpen] = useState(false)
+  const [intentoEnvio, setIntentoEnvio] = useState(false)
+  const tipoLabel = esComodato ? "comodato" : "consumible"
+
+  const normalizeForSearch = (v: string) =>
+    String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+
+  const articuloLabel = idArticuloSeleccionado
+    ? articulosFiltrados.find(a => String(a.clave) === idArticuloSeleccionado)?.descripcion ?? "Seleccionar"
+    : esComodato ? "Seleccionar equipo..." : "Seleccionar artículo..."
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold">Registrar Nuevo Servicio</DialogTitle>
           <DialogDescription className="text-xs">Busca al beneficiario y completa los datos del servicio</DialogDescription>
@@ -204,6 +247,7 @@ export function ServicioFormDialog({
               onValueChange={(value) => {
                 setTipoServicioSeleccionado(value)
                 setRegistroError("")
+                setIdArticuloSeleccionado("")
                 const nuevoMonto = getMontoSugeridoPorTipoServicio(Number(value))
                 if (nuevoMonto !== null) {
                   setMontoServicio(String(nuevoMonto.toFixed(2)))
@@ -216,7 +260,7 @@ export function ServicioFormDialog({
                 <SelectValue placeholder="Seleccionar servicio" />
               </SelectTrigger>
               <SelectContent>
-                {TIPOS_SERVICIO_SUGERIDOS.map((tipo) => (
+                {(catalogoServicios.length > 0 ? catalogoServicios : TIPOS_SERVICIO_SUGERIDOS).map((tipo) => (
                   <SelectItem key={tipo.idTipoServicio} value={String(tipo.idTipoServicio)}>
                     {tipo.nombre}
                   </SelectItem>
@@ -228,10 +272,86 @@ export function ServicioFormDialog({
                 Monto sugerido para {tipoServicioSeleccionadoLabel}: ${montoSugerido.toFixed(2)}
               </p>
             )}
-            {tipoServicioSeleccionadoLabel === "Otros" && (
-              <p className="text-sm text-muted-foreground">Este servicio no tiene monto sugerido automatico.</p>
-            )}
           </div>
+
+          {/* Selector de artículo con búsqueda — COMODATO y CONSUMIBLE */}
+          {requiereArticulo && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                {esComodato ? "Equipo a prestar *" : "Artículo a entregar *"}
+              </label>
+              {loadingArticulos ? (
+                <p className="text-xs text-muted-foreground">Cargando inventario...</p>
+              ) : articulosFiltrados.length === 0 ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                  Sin stock disponible para este tipo de {tipoLabel}.
+                </p>
+              ) : (
+                <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      className={`flex h-10 w-full items-center justify-between rounded-lg border px-3 text-sm text-foreground hover:bg-muted transition-colors ${
+                        intentoEnvio && !idArticuloSeleccionado
+                          ? "border-red-400 bg-red-50/50 dark:bg-red-950/10"
+                          : "border-border/70 bg-background"
+                      }`}
+                    >
+                      <span className="truncate text-left">{articuloLabel}</span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[440px] max-h-[280px] p-0 overflow-hidden" align="start">
+                    <Command shouldFilter>
+                      <CommandInput placeholder="Buscar por nombre..." />
+                      <CommandList className="max-h-[240px] overflow-y-auto">
+                        <CommandEmpty>No se encontraron artículos.</CommandEmpty>
+                        <CommandGroup>
+                          {articulosFiltrados.map(a => (
+                            <CommandItem
+                              key={String(a.clave)}
+                              value={normalizeForSearch(a.descripcion)}
+                              keywords={[normalizeForSearch(a.descripcion)]}
+                              onSelect={() => {
+                                setIdArticuloSeleccionado(String(a.clave))
+                                setArticuloPickerOpen(false)
+                              }}
+                            >
+                              <Check className={cn("mr-2 size-4", idArticuloSeleccionado === String(a.clave) ? "opacity-100" : "opacity-0")} />
+                              <span className="flex-1">{a.descripcion}</span>
+                              <span className="ml-3 text-[10px] text-muted-foreground">{a.cantidad} disp.</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          )}
+
+          {/* Fecha de devolución esperada — solo para COMODATO */}
+          {esComodato && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Fecha esperada de devolución *
+              </label>
+              <input
+                type="date"
+                min={hoy}
+                value={fechaDevolucionEsperada}
+                onChange={e => setFechaDevolucionEsperada(e.target.value)}
+                className={`h-10 rounded-lg border px-3 text-sm outline-none focus:ring-2 ${
+                  intentoEnvio && !fechaDevolucionEsperada
+                    ? "border-red-400 bg-red-50/50 focus:border-red-400 focus:ring-red-100"
+                    : "border-border/70 bg-background focus:border-[#0f4c81] focus:ring-[#0f4c81]/10"
+                }`}
+              />
+              <p className="text-[11px] text-muted-foreground">¿Cuándo se espera que regrese el equipo?</p>
+            </div>
+          )}
 
           {/* Descripción para "Otros" */}
           {requiereDescripcionOtro && (
@@ -311,7 +431,7 @@ export function ServicioFormDialog({
                 idTipoServicioNumerico <= 0 ||
                 !montoEsValido
               }
-              onClick={onRegistrar}
+              onClick={() => { setIntentoEnvio(true); onRegistrar() }}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: NAVY }}
             >

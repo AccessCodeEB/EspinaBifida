@@ -110,9 +110,8 @@ describe('create — rama idServicio inválido', () => {
 // ── createWithInventarioTransaction — ramas de error ─────────────────────────
 
 describe('createWithInventarioTransaction — ramas de error', () => {
-  it('lanza error y hace rollback cuando SP_REGISTRAR_SERVICIO retorna id_out=0', async () => {
-    // SP_REGISTRAR_SERVICIO — id_out=0 indica fallo en trigger de secuencia
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 0 } });
+  it('lanza error y hace rollback cuando la secuencia retorna 0', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 0 }] }); // SEQ_SERVICIOS.NEXTVAL
 
     await expect(ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -124,7 +123,8 @@ describe('createWithInventarioTransaction — ramas de error', () => {
   });
 
   it('hace rollback cuando applyMovimiento falla', async () => {
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 99 } }); // SP_REGISTRAR_SERVICIO
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 99 }] }); // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
     mockApplyMovimiento.mockRejectedValueOnce(new Error('Stock insuficiente'));
 
     await expect(ServiciosModel.createWithInventarioTransaction(
@@ -137,9 +137,11 @@ describe('createWithInventarioTransaction — ramas de error', () => {
   });
 
   it('commit y retorna idServicio cuando todo sale bien', async () => {
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 77 } }); // SP_REGISTRAR_SERVICIO
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 77 }] }); // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 10 });
-    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 5 }] });  // SEQ_SERVICIO_ARTICULOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 50, montoPagado: 25 },
@@ -242,9 +244,11 @@ describe('create — idServicio ?? 0 (L106)', () => {
 
 describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
   it('consumo sin motivo → usa default "Consumo por servicio N"', async () => {
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 55 } }); // SP_REGISTRAR_SERVICIO
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 55 }] }); // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 5 });
-    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });  // SEQ_SERVICIO_ARTICULOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -257,9 +261,11 @@ describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
   });
 
   it('consumo con motivo → usa el motivo proporcionado', async () => {
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: 66 } }); // SP_REGISTRAR_SERVICIO
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 66 }] }); // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 8 });
-    mockExecute.mockResolvedValueOnce({});                            // INSERT SERVICIO_ARTICULOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 2 }] });  // SEQ_SERVICIO_ARTICULOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -271,8 +277,8 @@ describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
     expect(data.motivo).toBe('Comodato #12');
   });
 
-  it('SP retorna id_out null → lanza error', async () => {
-    mockExecute.mockResolvedValueOnce({ outBinds: { id_out: null } }); // SP_REGISTRAR_SERVICIO
+  it('secuencia retorna null → lanza error', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: null }] }); // SEQ_SERVICIOS.NEXTVAL
 
     await expect(ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 }, []
@@ -348,5 +354,66 @@ describe('findDetailed — normalizeDetailedFilters y SQL (L194-294)', () => {
 
     expect(result.page).toBe(1);
     expect(result.limit).toBe(10);
+  });
+});
+
+// ── findComodatosActivos ──────────────────────────────────────────────────────
+
+describe('findComodatosActivos', () => {
+  it('retorna las filas de comodatos activos', async () => {
+    const rows = [{ ID_SERVICIO: 1, CURP: 'X', NOMBRE_BENEFICIARIO: 'Juan', TIPO_SERVICIO: 'Préstamo de equipo', NOMBRE_ARTICULO: 'Silla', ID_ARTICULO: 5, CANTIDAD: 1, FECHA: new Date(), FECHA_DEVOLUCION_ESPERADA: new Date() }];
+    mockExecute.mockResolvedValueOnce({ rows });
+
+    const result = await ServiciosModel.findComodatosActivos();
+
+    expect(result).toBe(rows);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('retorna arreglo vacío cuando no hay comodatos', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const result = await ServiciosModel.findComodatosActivos();
+
+    expect(result).toEqual([]);
+  });
+});
+
+// ── confirmarDevolucion ───────────────────────────────────────────────────────
+
+describe('confirmarDevolucion', () => {
+  it('actualiza ESTATUS a DEVUELTO y hace commit', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 3, CANTIDAD: 1 }] }); // SELECT SERVICIO_ARTICULOS
+    mockApplyMovimiento.mockResolvedValueOnce({});                                   // ENTRADA inventario
+    mockExecute.mockResolvedValueOnce({});                                           // UPDATE SERVICIOS
+
+    await ServiciosModel.confirmarDevolucion(10);
+
+    expect(mockApplyMovimiento).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ tipo: 'ENTRADA', cantidad: 1 })
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('hace rollback cuando applyMovimiento falla en devolucion', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 2, CANTIDAD: 1 }] });
+    mockApplyMovimiento.mockRejectedValueOnce(new Error('ORA-fail'));
+
+    await expect(ServiciosModel.confirmarDevolucion(5)).rejects.toThrow('ORA-fail');
+
+    expect(mockRollback).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('funciona sin artículos (servicio sin consumo registrado)', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // sin artículos
+    mockExecute.mockResolvedValueOnce({});           // UPDATE SERVICIOS
+
+    await ServiciosModel.confirmarDevolucion(99);
+
+    expect(mockApplyMovimiento).not.toHaveBeenCalled();
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

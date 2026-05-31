@@ -39,10 +39,12 @@ function SectionContent({
   section,
   openEditBeneficiarioCurp,
   onConsumedOpenEditBeneficiario,
+  onNavigate,
 }: {
   section: string
   openEditBeneficiarioCurp?: string | null
   onConsumedOpenEditBeneficiario?: () => void
+  onNavigate?: (section: string) => void
 }) {
   switch (section) {
     case "dashboard": return <DashboardSection />
@@ -55,7 +57,7 @@ function SectionContent({
       )
     case "membresias": return <MembresiasSection />
     case "servicios": return <ServiciosSection />
-    case "inventario": return <InventarioSection />
+    case "inventario": return <InventarioSection onNavigate={onNavigate} />
     case "citas": return <CitasSection />
     case "reportes": return <ReportesSection />
     case "preregistro": return <PreregistroSection />
@@ -229,6 +231,7 @@ function PanelHomeContent() {
               section={activeSection}
               openEditBeneficiarioCurp={activeSection === "beneficiarios" ? editBeneficiarioParam : null}
               onConsumedOpenEditBeneficiario={clearEditBeneficiarioParam}
+              onNavigate={handleSectionChange}
             />
           </main>
 

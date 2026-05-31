@@ -42,10 +42,14 @@ describe("Criterios de aceptación - inventario", () => {
       .mockResolvedValueOnce({
         rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001" }],
       })
-      // SP_REGISTRAR_SERVICIO — crea servicio y retorna ID via OUT
-      .mockResolvedValueOnce({ outBinds: { id_out: 10 } })
-      // SP_REGISTRAR_MOVIMIENTO_INVENTARIO — consumo del artículo
+      // SEQ_SERVICIOS.NEXTVAL — ID para el nuevo servicio
+      .mockResolvedValueOnce({ rows: [{ NEXT_ID: 10 }] })
+      // INSERT INTO SERVICIOS
+      .mockResolvedValueOnce({})
+      // SP_REGISTRAR_MOVIMIENTO_INVENTARIO — consumo del artículo (via applyMovimientoConConexion)
       .mockResolvedValueOnce({ outBinds: { stock_out: 47 } })
+      // SEQ_SERVICIO_ARTICULOS.NEXTVAL — ID para SERVICIO_ARTICULOS
+      .mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] })
       // INSERT INTO SERVICIO_ARTICULOS
       .mockResolvedValueOnce({ rowsAffected: 1 });
 

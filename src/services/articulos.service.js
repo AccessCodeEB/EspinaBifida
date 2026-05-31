@@ -63,6 +63,9 @@ function normalizeData(data = {}) {
 export const getAll = () =>
   ArticulosModel.findAll();
 
+export const getAllCategorias = () =>
+  ArticulosModel.findAllCategorias();
+
 export const getById = (id) =>
   ArticulosModel.findById(id);
 

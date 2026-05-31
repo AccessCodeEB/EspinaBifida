@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
-  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock,
+  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock, Tag,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,8 +22,8 @@ import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import {
   getInventario, registrarMovimiento, crearArticulo, eliminarArticulo, actualizarArticulo,
-  getMovimientos,
-  type ArticuloInventario, type MovimientoInventario,
+  getMovimientos, getCategorias,
+  type ArticuloInventario, type MovimientoInventario, type CategoriaArticulo,
 } from "@/services/inventario"
 
 const MOVIMIENTOS_DIAS_DEFAULT = 30
@@ -32,7 +32,6 @@ type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
 type SortDirection = "asc" | "desc"
 const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 const NAVY  = "#0f4c81"
-const DEFAULT_CATEGORIA_ID = 1
 
 function field<T extends object>(label: string, children: React.ReactNode) {
   return (
@@ -43,12 +42,13 @@ function field<T extends object>(label: string, children: React.ReactNode) {
   )
 }
 
-export function InventarioSection() {
+export function InventarioSection({ onNavigate }: { onNavigate?: (section: string) => void }) {
   const [inventario, setInventario] = useState<ArticuloInventario[]>([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [safetyNetItem, setSafetyNetItem] = useState<ArticuloInventario | null>(null)
   const [showMovimientoDialog, setShowMovimientoDialog] = useState(false)
   const [selectedItem, setSelectedItem]       = useState<ArticuloInventario | null>(null)
   const [selectedArticuloId, setSelectedArticuloId] = useState<string>("")
@@ -63,7 +63,7 @@ export function InventarioSection() {
   const [showEliminarDialog, setShowEliminarDialog] = useState(false)
   const [articuloForm, setArticuloForm] = useState({
     idArticulo: "", descripcion: "", unidad: "PZA.",
-    cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5",
+    cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5", idCategoria: "",
   })
   const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>("PZA.")
   const [unidadNueva, setUnidadNueva]   = useState<string>("")
@@ -76,7 +76,9 @@ export function InventarioSection() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [unidadFilterIndex, setUnidadFilterIndex] = useState<number>(-1)
   const [stockFilter, setStockFilter] = useState<"bajo" | "sin" | null>(null)
+  const [categoriaFilter, setCategoriaFilter] = useState<number | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [categorias, setCategorias] = useState<CategoriaArticulo[]>([])
 
   const [activeTab, setActiveTab] = useState<"articulos" | "historial">("articulos")
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([])
@@ -89,7 +91,10 @@ export function InventarioSection() {
       .catch(err => setError(friendlyError(err, "No se pudo cargar el inventario")))
       .finally(() => setLoading(false))
   }
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    getCategorias().then(setCategorias).catch(() => {})
+  }, [])
 
   
 
@@ -122,11 +127,14 @@ export function InventarioSection() {
     String(item.clave).toLowerCase().includes(searchTerm.toLowerCase())
   )
   const filteredByUnidad = activeUnidadFilter ? filtered.filter(i => i.unidad === activeUnidadFilter) : filtered
-  const filteredByStock = stockFilter === "sin"
-    ? filteredByUnidad.filter(i => i.cantidad === 0)
-    : stockFilter === "bajo"
-    ? filteredByUnidad.filter(i => i.cantidad > 0 && i.cantidad < i.minimo)
+  const filteredByCategoria = categoriaFilter != null
+    ? filteredByUnidad.filter(i => i.idCategoria === categoriaFilter)
     : filteredByUnidad
+  const filteredByStock = stockFilter === "sin"
+    ? filteredByCategoria.filter(i => i.cantidad === 0)
+    : stockFilter === "bajo"
+    ? filteredByCategoria.filter(i => i.cantidad > 0 && i.cantidad < i.minimo)
+    : filteredByCategoria
   const sortedFiltered = [...filteredByStock].sort((a, b) => {
     if (!sortField) return 0
     const f = sortDirection === "asc" ? 1 : -1
@@ -164,6 +172,20 @@ export function InventarioSection() {
   }
 
   function openMovimiento(item: ArticuloInventario | null = null) {
+    // Safety net: Equipos Médicos son comodatos — preguntar intención primero
+    if (item && item.nombreCategoria === "Equipos Médicos") {
+      setSafetyNetItem(item)
+      return
+    }
+    setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
+    setCantidadMovimiento("0"); setMotivoMovimiento(""); setMovimientoError(null)
+    setStockMinimoEditar(item ? String(item.minimo) : "0")
+    setShowMovimientoDialog(true)
+  }
+
+  function confirmarAjusteStock() {
+    const item = safetyNetItem
+    setSafetyNetItem(null)
     setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
     setCantidadMovimiento("0"); setMotivoMovimiento(""); setMovimientoError(null)
     setStockMinimoEditar(item ? String(item.minimo) : "0")
@@ -214,7 +236,7 @@ export function InventarioSection() {
 
   function openAgregarArticulo() {
     setArticuloError(null); setSavingArticulo(false)
-    setArticuloForm({ idArticulo: "", descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5" })
+    setArticuloForm({ idArticulo: "", descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", inventarioActual: "0", stockMinimo: "5", idCategoria: "" })
     setUnidadSeleccionada("PZA."); setUnidadNueva(""); setShowAgregarDialog(true)
   }
   function handleUnidadSeleccion(value: string) {
@@ -230,8 +252,10 @@ export function InventarioSection() {
   async function handleAgregarArticulo() {
     const id = Number(articuloForm.idArticulo), cuota = Number(articuloForm.cuotaRecuperacion)
     const inv = Number(articuloForm.inventarioActual), minimo = Number(articuloForm.stockMinimo)
+    const idCat = Number(articuloForm.idCategoria)
     if (isNaN(id)) { setArticuloError("La clave debe ser numérica."); return }
     if (!articuloForm.descripcion.trim()) { setArticuloError("La descripción es obligatoria."); return }
+    if (!articuloForm.idCategoria || isNaN(idCat)) { setArticuloError("Selecciona una categoría."); return }
     const unidadFinal = unidadSeleccionada === OTRA_UNIDAD_VALUE ? unidadNueva.trim() : articuloForm.unidad.trim()
     if (!unidadFinal) { setArticuloError("La unidad es obligatoria."); return }
     if (isNaN(cuota) || cuota < 0) { setArticuloError("La cuota debe ser ≥ 0."); return }
@@ -246,7 +270,7 @@ export function InventarioSection() {
         cuotaRecuperacion: cuota,
         inventarioActual: inv,
         manejaInventario: "S",
-        idCategoria: DEFAULT_CATEGORIA_ID,
+        idCategoria: idCat,
         stockMinimo: minimo,
       })
       await refreshInventario(); setShowAgregarDialog(false)
@@ -352,6 +376,7 @@ export function InventarioSection() {
             <p className="text-[11px] text-muted-foreground">
               {sortedFiltered.length} de {inventario.length} artículos
               {activeUnidadFilter && <> · Unidad: <span className="font-medium">{activeUnidadFilter}</span></>}
+              {categoriaFilter != null && <> · <span className="font-medium" style={{ color: NAVY }}>{categorias.find(c => c.id === categoriaFilter)?.nombre ?? "Categoría"}</span></>}
               {stockFilter === "bajo" && <> · <span className="font-medium text-amber-600">Stock bajo</span></>}
               {stockFilter === "sin"  && <> · <span className="font-medium text-red-600">Sin stock</span></>}
             </p>
@@ -368,23 +393,25 @@ export function InventarioSection() {
                 className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
               />
             </div>
-            {/* Filtro de stock */}
+            {/* Filtros */}
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger asChild>
                 <button
                   className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                    stockFilter
-                      ? stockFilter === "sin"
-                        ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
-                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                    stockFilter === "sin"
+                      ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
+                      : stockFilter === "bajo"
+                      ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                      : categoriaFilter != null
+                      ? "border-[#0f4c81]/40 bg-[#0f4c81]/5 text-[#0f4c81]"
                       : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   <Filter className="size-3.5" />
                   Filtrar
-                  {stockFilter && (
+                  {(stockFilter != null || categoriaFilter != null) && (
                     <span
-                      onClick={e => { e.stopPropagation(); setStockFilter(null) }}
+                      onClick={e => { e.stopPropagation(); setStockFilter(null); setCategoriaFilter(null) }}
                       className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10"
                     >
                       <X className="size-2.5" />
@@ -392,8 +419,38 @@ export function InventarioSection() {
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-52 p-1.5">
-                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Filtrar por stock</p>
+              <PopoverContent align="end" className="w-56 p-1.5">
+                {/* Sección: Categoría */}
+                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</p>
+                <button
+                  onClick={() => { setCategoriaFilter(null); setFilterOpen(false) }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Tag className="size-3.5" />
+                  Todas las categorías
+                </button>
+                {categorias.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => { setCategoriaFilter(cat.id); setFilterOpen(false) }}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                      categoriaFilter === cat.id
+                        ? "bg-[#0f4c81]/5 font-medium text-[#0f4c81]"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Tag className="size-3.5" />
+                    {cat.nombre}
+                  </button>
+                ))}
+
+                {/* Divisor */}
+                <div className="my-1.5 border-t border-border/50" />
+
+                {/* Sección: Stock */}
+                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stock</p>
                 <button
                   onClick={() => { setStockFilter(null); setFilterOpen(false) }}
                   className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
@@ -599,6 +656,35 @@ export function InventarioSection() {
         </div>
       )}
 
+      {/* ── Dialog: Safety net Equipos Médicos ── */}
+      <Dialog open={safetyNetItem != null} onOpenChange={open => { if (!open) setSafetyNetItem(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">¿Qué deseas hacer?</DialogTitle>
+            <DialogDescription className="text-xs">
+              <span className="font-medium text-foreground">{safetyNetItem?.descripcion}</span>
+              {" "}es un equipo médico que normalmente se presta a beneficiarios y se devuelve.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              onClick={() => { setSafetyNetItem(null); onNavigate?.("servicios") }}
+              className="flex flex-col items-start gap-0.5 rounded-xl border-2 border-[#0f4c81]/30 bg-[#0f4c81]/5 px-4 py-3 text-left transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/10"
+            >
+              <span className="text-sm font-semibold text-[#0f4c81]">Registrar préstamo a un beneficiario</span>
+              <span className="text-[11px] text-muted-foreground">Se registra el servicio bajo el nombre de la persona y se descuenta del inventario automáticamente.</span>
+            </button>
+            <button
+              onClick={confirmarAjusteStock}
+              className="flex flex-col items-start gap-0.5 rounded-xl border-2 border-border/60 bg-muted/30 px-4 py-3 text-left transition-colors hover:border-border hover:bg-muted/60"
+            >
+              <span className="text-sm font-semibold text-foreground">Ajustar stock</span>
+              <span className="text-[11px] text-muted-foreground">Llegaron equipos nuevos, se dañó uno, corrección de inventario. No se asigna a ninguna persona.</span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog: Movimiento ── */}
       <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>
         <DialogContent className="max-w-md">
@@ -699,8 +785,19 @@ export function InventarioSection() {
             </div>
 
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Clasificación automática</p>
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Clasificación</p>
               <div className="grid grid-cols-1 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Categoría *</label>
+                  <Select value={articuloForm.idCategoria} onValueChange={v => setArticuloForm(p => ({ ...p, idCategoria: v }))}>
+                    <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                    <SelectContent>
+                      {categorias.map(cat => (
+                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Unidad de medida</label>
                   <Select value={unidadSeleccionada} onValueChange={handleUnidadSeleccion}>
