@@ -55,6 +55,14 @@ export async function createMovimientoConTransaccion(data) {
   }
 }
 
+export const deleteE2EMovimientos = () =>
+  withConnection(async conn => {
+    await conn.execute(
+      `DELETE FROM MOVIMIENTOS_INVENTARIO WHERE UPPER(MOTIVO) LIKE '%E2E%'`
+    );
+    await conn.commit();
+  });
+
 export const findInventarioActual = () =>
   withConnection(async conn => {
     try {

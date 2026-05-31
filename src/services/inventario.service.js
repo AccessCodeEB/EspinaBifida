@@ -82,6 +82,9 @@ export async function getMovimientos(days = null) {
   return rows.map(mapMovimientoRow);
 }
 
+/* istanbul ignore next */
+export const deleteE2EMovimientos = () => InventarioModel.deleteE2EMovimientos();
+
 export async function assertArticuloSinMovimientos(idArticulo) {
   const total = await InventarioModel.countMovimientosByArticulo(idArticulo);
   if (total > 0) {

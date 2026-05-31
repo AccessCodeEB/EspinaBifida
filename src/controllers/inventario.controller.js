@@ -27,3 +27,16 @@ export async function getMovimientos(req, res, next) {
     next(err);
   }
 }
+
+
+export async function e2eCleanup(req, res, next) {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "No disponible en producción" });
+  }
+  try {
+    await InventarioService.deleteE2EMovimientos();
+    res.json({ message: "Movimientos E2E eliminados del historial" });
+  } catch (err) {
+    next(err);
+  }
+}

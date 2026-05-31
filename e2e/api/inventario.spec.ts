@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/auth';
+import { cleanupMovimientosInventario } from '../helpers/cleanup';
 import { qase } from 'playwright-qase-reporter';
 
 test(qase(8, 'Rechazar inventario negativo'), async ({ apiContext }) => {
@@ -49,4 +50,9 @@ test(qase(9, 'Descontar inventario al usar insumo'), async ({ apiContext }) => {
   await apiContext.post('/inventario/movimientos', {
     data: { idArticulo, tipo: 'SALIDA', cantidad: 9, motivo: 'E2E cleanup - revertir setup' },
   }).catch(() => {});
+});
+
+
+test.afterAll(async () => {
+  await cleanupMovimientosInventario();
 });

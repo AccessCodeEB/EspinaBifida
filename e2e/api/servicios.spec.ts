@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
+import { cleanupMovimientosInventario } from '../helpers/cleanup';
 
 const TEST_CURP = 'AUSD050124MDFGNYA8';
 const createdServicioIds: number[] = [];
@@ -70,4 +71,9 @@ test(qase(7, 'Registro de insumo y actualización de inventario'), async ({ apiC
       motivo: 'E2E cleanup - revertir entrada de prueba',
     },
   }).catch(() => {});
+});
+
+
+test.afterAll(async () => {
+  await cleanupMovimientosInventario();
 });

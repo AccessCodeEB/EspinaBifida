@@ -209,4 +209,7 @@ router.get("/movimientos",  verifyToken, InventarioController.getMovimientos);
  */
 router.post("/movimientos", verifyToken, checkRole(1, 2), validate(crearMovimientoSchema), InventarioController.createMovimiento);
 
+// Solo disponible fuera de producción — limpia movimientos E2E del historial
+router.delete("/e2e-cleanup", verifyToken, InventarioController.e2eCleanup);
+
 export default router;
