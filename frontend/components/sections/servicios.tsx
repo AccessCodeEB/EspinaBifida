@@ -672,7 +672,7 @@ export function ServiciosSection() {
           }`}
         >
           <ClipboardList className="size-3.5" />
-          Historial de servicios
+          Historial
         </button>
         <button
           onClick={() => setActiveTab("comodatos")}
@@ -692,8 +692,8 @@ export function ServiciosSection() {
         </button>
       </div>
 
-      {/* KPIs + Charts — siempre visibles independientemente del tab activo */}
-      <ServiciosChartsKpis
+      {/* KPIs + Charts */}
+      {activeTab === "historial" && <ServiciosChartsKpis
         selectedMonth={selectedMonth}
         monthInputToLabel={monthInputToLabel}
         totalMes={serviciosMes.length}
@@ -703,7 +703,7 @@ export function ServiciosSection() {
         topTipoMes={topTipoMes}
         monthlyBarData={monthlyBarData}
         donutData={donutData}
-      />
+      />}
 
       {/* Table — Historial */}
       {activeTab === "historial" && <ServiciosTable
