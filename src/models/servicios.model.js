@@ -382,7 +382,7 @@ export async function deleteById(idServicio) {
          FROM SERVICIO_ARTICULOS
         WHERE ID_SERVICIO = :idServicio`,
       { idServicio },
-      { outFormat: 2304 } // oracledb.OUT_FORMAT_OBJECT
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
 
     // 2. Revertir cada descuento de inventario (ENTRADA)
