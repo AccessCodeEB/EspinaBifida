@@ -350,12 +350,16 @@ function generarHTMLServicios({ filas }, { fechaInicio, fechaFin }) {
 function generarHTMLInventario({ articulos, movimientos }, { fechaInicio, fechaFin }) {
   const conInventario = articulos.filter(a => a.MANEJA_INVENTARIO === 'S');
   const sinStock      = conInventario.filter(a => a.INVENTARIO_ACTUAL <= 0).length;
-  const bajoStock     = conInventario.filter(a => a.INVENTARIO_ACTUAL > 0 && a.INVENTARIO_ACTUAL <= 5).length;
+  const bajoStock     = conInventario.filter(a => {
+    const minimo = Number(a.STOCK_MINIMO ?? 5);
+    return a.INVENTARIO_ACTUAL > 0 && a.INVENTARIO_ACTUAL <= minimo;
+  }).length;
 
   const stockStyle = (a) => {
     if (a.MANEJA_INVENTARIO !== 'S') return '';
-    if (a.INVENTARIO_ACTUAL <= 0)  return 'color:#c0392b;font-weight:bold';
-    if (a.INVENTARIO_ACTUAL <= 5)  return 'color:#b87c00;font-weight:bold';
+    const minimo = Number(a.STOCK_MINIMO ?? 5);
+    if (a.INVENTARIO_ACTUAL <= 0)      return 'color:#c0392b;font-weight:bold';
+    if (a.INVENTARIO_ACTUAL <= minimo) return 'color:#b87c00;font-weight:bold';
     return 'color:#2a7a2a';
   };
 
@@ -389,9 +393,9 @@ function generarHTMLInventario({ articulos, movimientos }, { fechaInicio, fechaF
 
   <h3>Alertas de Stock</h3>
   <div class="resumen-grid">
-    <div class="stat"><div class="stat-n">${esc(articulos.length)}</div><div class="stat-l">Total artículos</div></div>
+    <div class="stat"><div class="stat-n">${esc(conInventario.length)}</div><div class="stat-l">Total rastreados</div></div>
     <div class="stat"><div class="stat-n" style="color:#c0392b">${esc(sinStock)}</div><div class="stat-l">Sin stock</div></div>
-    <div class="stat"><div class="stat-n" style="color:#b87c00">${esc(bajoStock)}</div><div class="stat-l">Stock bajo (≤5)</div></div>
+    <div class="stat"><div class="stat-n" style="color:#b87c00">${esc(bajoStock)}</div><div class="stat-l">Stock bajo (≤ mínimo)</div></div>
   </div>
 
   <h3>Stock Actual</h3>

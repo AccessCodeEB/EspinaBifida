@@ -237,8 +237,10 @@ export const getArticulosStock = () =>
         A.UNIDAD,
         A.INVENTARIO_ACTUAL,
         A.CUOTA_RECUPERACION,
-        A.MANEJA_INVENTARIO
+        A.MANEJA_INVENTARIO,
+        NVL(A.STOCK_MINIMO, 5) AS STOCK_MINIMO
       FROM ARTICULOS A
+      WHERE NVL(A.ACTIVO, 'S') = 'S'
       ORDER BY A.DESCRIPCION
     `,
     {},
