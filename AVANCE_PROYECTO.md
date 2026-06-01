@@ -244,6 +244,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
 | **Mejorar UI de Comodatos** | El módulo de comodatos fue integrado por el equipo pero la UI puede mejorar: hacerla más friendly, consistente con el estilo del resto del sistema (KPIs, tabs, encabezados con íconos, etc.). |
+| **Mejorar UI del filtro de categorías en Inventario** | El dropdown del filtro de categorías actualmente se ve diferente al de stock. Unificar el estilo del popover de categorías para que sea igual de bonito y consistente que el filtro de stock (mismo diseño de cards, íconos, hover states, etc.). |
 
 ### Prioridad media — Servicios
 

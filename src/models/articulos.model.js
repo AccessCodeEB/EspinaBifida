@@ -100,7 +100,14 @@ export async function update(id, data) {
 export const findAllCategorias = () =>
   withConnection(async conn =>
     (await conn.execute(
-      `SELECT ID_CATEGORIA, NOMBRE FROM CATEGORIAS_ARTICULO ORDER BY NOMBRE`
+      `SELECT c.ID_CATEGORIA, c.NOMBRE
+       FROM CATEGORIAS_ARTICULO c
+       WHERE EXISTS (
+         SELECT 1 FROM ARTICULOS a
+         WHERE a.ID_CATEGORIA = c.ID_CATEGORIA
+           AND NVL(a.ACTIVO, 'S') = 'S'
+       )
+       ORDER BY c.NOMBRE`
     )).rows
   );
 
