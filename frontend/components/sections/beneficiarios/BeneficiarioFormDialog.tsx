@@ -351,7 +351,7 @@ export function BeneficiarioFormDialog({
           </div>
 
           {/* ── Cuerpo ── */}
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide divide-y divide-border/40">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/40">
 
             {saveError && (
               <div className="px-6 py-3 flex items-center gap-2 bg-red-50 border-b border-red-200 text-xs text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
