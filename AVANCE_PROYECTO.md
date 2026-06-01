@@ -292,9 +292,9 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | # | Tarea | Estado |
 |---|---|---|
-| 2a | Servicios → tipo Medicamentos: Popover+Command buscable filtrado solo a categoría Medicamentos | ⏳ Pendiente |
-| 2b | Servicios → tipo Insumos médicos: Popover+Command buscable filtrado solo a categoría Insumos Médicos | ⏳ Pendiente |
-| 2c | Verificar y corregir que el filtro por categoría funcione correctamente en ambos casos | ⏳ Pendiente |
+| 2a | Servicios → tipo Medicamentos: Popover+Command buscable filtrado solo a categoría Medicamentos | ✅ Listo |
+| 2b | Servicios → tipo Insumos médicos: Popover+Command buscable filtrado solo a categoría Insumos Médicos | ✅ Listo |
+| 2c | Verificar y corregir que el filtro por categoría funcione correctamente en ambos casos | ✅ Listo |
 
 ### Fase 3 — Tabs en Servicios
 

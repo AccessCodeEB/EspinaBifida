@@ -209,6 +209,7 @@ export function ServiciosSection() {
 
   // Cargar inventario SIEMPRE que se selecciona un tipo que requiere artículo
   useEffect(() => {
+    setIdArticuloSeleccionado("")
     if (!tipoServicioSeleccionado || !showRegistroDialog) return
     const tipo = catalogoServicios.find(t => String(t.idTipoServicio) === tipoServicioSeleccionado)
     if (!tipo || tipo.tipoServicio === "SERVICIO") return
@@ -233,8 +234,13 @@ export function ServiciosSection() {
   const requiereArticulo = tipoServicioClasificacion === "CONSUMIBLE"
   const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros"
 
+  const categoriaArticulo =
+    tipoServicioSeleccionadoLabel.toLowerCase().includes("insumo") ? "Insumos Médicos" :
+    tipoServicioSeleccionadoLabel.toLowerCase().includes("medicamento") ? "Medicamentos" :
+    null
+
   const articulosFiltrados = articulosInventario.filter(a =>
-    (a.nombreCategoria === "Insumos Médicos" || a.nombreCategoria === "Medicamentos") && a.cantidad > 0
+    (categoriaArticulo ? a.nombreCategoria === categoriaArticulo : true) && a.cantidad > 0
   )
 
   // Catálogo filtrado: excluir tipos de equipo médico (van por Comodatos)
