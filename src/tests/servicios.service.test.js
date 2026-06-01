@@ -35,7 +35,7 @@ const Service = await import('../services/servicios.service.js');
 
 const CURP = 'GAEJ900101HMNRRL09';
 const BENEFICIARIO_ACTIVO = {
-  CURP, ESTATUS: 'Activo', NOMBRES: 'Juan', MEMBRESIA_ACTIVA: 1,
+  CURP, ESTATUS: 'Activo', NOMBRES: 'Juan', MEMBRESIA_ACTIVA: 1, TIPO_CUOTA: 'A',
 };
 
 beforeEach(() => jest.resetAllMocks());
@@ -347,5 +347,66 @@ describe('update — servicio.COSTO undefined → ?? 0 (L151)', () => {
 
     await expect(Service.update(1, { montoPagado: 1 }))
       .rejects.toMatchObject({ statusCode: 400, message: /costo/ });
+  });
+});
+
+// ── TIPO_CUOTA — validación en createConValidacion ────────────────────────────
+
+describe('createConValidacion — TIPO_CUOTA obligatoria', () => {
+  it('400 cuando beneficiario tiene TIPO_CUOTA null', async () => {
+    mockFindBeneficiario.mockResolvedValueOnce({ ...BENEFICIARIO_ACTIVO, TIPO_CUOTA: null });
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, code: 'CUOTA_NO_ASIGNADA' });
+  });
+
+  it('400 cuando beneficiario tiene TIPO_CUOTA undefined (falsy)', async () => {
+    mockFindBeneficiario.mockResolvedValueOnce({ ...BENEFICIARIO_ACTIVO, TIPO_CUOTA: undefined });
+    await expect(Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, costo: 0,
+    })).rejects.toMatchObject({ statusCode: 400, code: 'CUOTA_NO_ASIGNADA' });
+  });
+
+  it('acepta servicio cuando TIPO_CUOTA es B', async () => {
+    mockFindBeneficiario.mockResolvedValueOnce({ ...BENEFICIARIO_ACTIVO, TIPO_CUOTA: 'B' });
+    mockCreate.mockResolvedValueOnce(77);
+
+    const result = await Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, costo: 200,
+    });
+
+    expect(result.idServicio).toBe(77);
+  });
+});
+
+// ── precioSegunCuota — comportamiento ─────────────────────────────────────────
+
+describe('precioSegunCuota', () => {
+  const articuloConCuotaB = { CUOTA_RECUPERACION: 100, CUOTA_B: 200 };
+  const articuloSinCuotaB = { CUOTA_RECUPERACION: 100, CUOTA_B: null };
+  const articuloCuotaBCero = { CUOTA_RECUPERACION: 100, CUOTA_B: 0 };
+
+  it('devuelve CUOTA_B para tipoCuota B cuando existe', () => {
+    expect(Service.precioSegunCuota(articuloConCuotaB, 'B')).toBe(200);
+  });
+
+  it('devuelve CUOTA_RECUPERACION para tipoCuota B cuando CUOTA_B es null (fallback)', () => {
+    expect(Service.precioSegunCuota(articuloSinCuotaB, 'B')).toBe(100);
+  });
+
+  it('devuelve CUOTA_RECUPERACION para tipoCuota A aunque CUOTA_B exista', () => {
+    expect(Service.precioSegunCuota(articuloConCuotaB, 'A')).toBe(100);
+  });
+
+  it('devuelve CUOTA_RECUPERACION para tipoCuota null', () => {
+    expect(Service.precioSegunCuota(articuloConCuotaB, null)).toBe(100);
+  });
+
+  it('CUOTA_B = 0 (no null) se aplica para tipoCuota B', () => {
+    expect(Service.precioSegunCuota(articuloCuotaBCero, 'B')).toBe(0);
+  });
+
+  it('devuelve 0 cuando CUOTA_RECUPERACION es undefined', () => {
+    expect(Service.precioSegunCuota({ CUOTA_RECUPERACION: undefined, CUOTA_B: null }, 'A')).toBe(0);
   });
 });

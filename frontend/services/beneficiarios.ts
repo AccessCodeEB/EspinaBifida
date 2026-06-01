@@ -33,6 +33,8 @@ export interface Beneficiario {
   activo?: boolean
   /** Ruta o URL devuelta por el backend (p. ej. /uploads/profiles/...) */
   fotoPerfilUrl?: string | null
+  /** Cuota de pago interna (A = menor, B = mayor). Solo visible para admins. */
+  tipoCuota?: "A" | "B" | null
 }
 
 /** GET /beneficiarios */

@@ -5,6 +5,7 @@ export interface ArticuloInventario {
   descripcion: string
   unidad: string
   cuota: string
+  cuotaB?: number | null
   cantidad: number
   minimo: number
   idCategoria?: number
@@ -39,6 +40,7 @@ export interface NuevoArticuloPayload {
   descripcion: string
   unidad: string
   cuotaRecuperacion: number
+  cuotaB?: number | null
   inventarioActual: number
   manejaInventario: "S" | "N"
   idCategoria: number
@@ -69,10 +71,11 @@ function toArticuloInventario(row: Record<string, unknown>): ArticuloInventario 
   const cantidad = Number(cantidadRaw || 0);
 
   const minimo = Number(row.minimo ?? 0);
+  const cuotaB = row.cuotaB != null ? Number(row.cuotaB) : null;
   const idCategoria = row.idCategoria != null ? Number(row.idCategoria) : undefined;
   const nombreCategoria = typeof row.nombreCategoria === "string" ? row.nombreCategoria : undefined;
 
-  return { clave, descripcion, unidad, cuota, cantidad, minimo, idCategoria, nombreCategoria };
+  return { clave, descripcion, unidad, cuota, cuotaB, cantidad, minimo, idCategoria, nombreCategoria };
 }
 
 /** GET /articulos/categorias */

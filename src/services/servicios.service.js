@@ -99,6 +99,13 @@ export async function createConValidacion(data) {
     );
   }
 
+  if (!beneficiario.TIPO_CUOTA) {
+    throw badRequest(
+      "El beneficiario no tiene cuota asignada (A o B). Asígnale la cuota antes de registrar un servicio.",
+      "CUOTA_NO_ASIGNADA"
+    );
+  }
+
   const payload = {
     curp,
     idTipoServicio,
@@ -213,4 +220,16 @@ export async function getDetailed(filters) {
 
 export const deleteById = (idServicio) =>
   ServiciosModel.deleteById(idServicio);
+
+/**
+ * Selects the article price based on the beneficiary's cuota type.
+ * - tipoCuota 'B' and cuotaB != null → returns cuotaB
+ * - otherwise → returns cuotaRecuperacion (cuota A / default)
+ */
+export function precioSegunCuota(articulo, tipoCuota) {
+  if (tipoCuota === "B" && articulo.CUOTA_B != null) {
+    return Number(articulo.CUOTA_B);
+  }
+  return Number(articulo.CUOTA_RECUPERACION ?? 0);
+}
 

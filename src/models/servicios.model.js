@@ -63,7 +63,7 @@ export const findBeneficiarioActivo = (curp) =>
 export const findBeneficiarioActivoConMembresia = (curp) =>
   withConnection(conn =>
     conn.execute(
-      `SELECT b.ESTATUS, b.NOMBRES, b.APELLIDO_PATERNO,
+      `SELECT b.ESTATUS, b.NOMBRES, b.APELLIDO_PATERNO, b.TIPO_CUOTA,
               c.ID_CREDENCIAL, c.NUMERO_CREDENCIAL
        FROM BENEFICIARIOS b
        LEFT JOIN CREDENCIALES c

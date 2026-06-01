@@ -12,6 +12,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Settings2,
   Stethoscope,
   Trash2,
   User,
@@ -560,6 +561,32 @@ export function BeneficiariosEditDialog({
                     />
                   </IconInput>
                 </FieldWrap>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Control Interno" icon={Settings2}>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-tipo-cuota">Tipo de cuota</Label>
+                  <Select
+                    value={editForm.tipoCuota ?? "__none__"}
+                    onValueChange={(v) => handleEditChange("tipoCuota", v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger id="edit-tipo-cuota" className="bg-background">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-muted-foreground">
+                        Sin asignar
+                      </SelectItem>
+                      <SelectItem value="A">Cuota A (menor)</SelectItem>
+                      <SelectItem value="B">Cuota B (mayor)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Solo visible para administradores. Determina el precio aplicado en servicios.
+                  </p>
+                </div>
               </div>
             </SectionCard>
           </div>

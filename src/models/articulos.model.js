@@ -10,7 +10,7 @@ export const findAll = () =>
     try {
       return (await conn.execute(
         `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
-                INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA,
+                CUOTA_B, INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA,
                 STOCK_MINIMO, NVL(ACTIVO, 'S') AS ACTIVO
          FROM ARTICULOS WHERE NVL(ACTIVO, 'S') = 'S' ORDER BY DESCRIPCION`
       )).rows;
@@ -29,7 +29,7 @@ export const findById = (id) =>
     try {
       return (await conn.execute(
         `SELECT ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
-                INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA,
+                CUOTA_B, INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA,
                 STOCK_MINIMO, NVL(ACTIVO, 'S') AS ACTIVO
          FROM ARTICULOS WHERE ID_ARTICULO = :id AND NVL(ACTIVO, 'S') = 'S'`,
         { id }
@@ -50,14 +50,15 @@ export const create = (data) =>
     const result = await conn.execute(
       `INSERT INTO ARTICULOS (
          ID_ARTICULO, DESCRIPCION, UNIDAD, CUOTA_RECUPERACION,
-         INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO
+         CUOTA_B, INVENTARIO_ACTUAL, MANEJA_INVENTARIO, ID_CATEGORIA, STOCK_MINIMO
        ) VALUES (
          SEQ_ARTICULOS.NEXTVAL, :descripcion, :unidad, :cuotaRecuperacion,
-         :inventarioActual, :manejaInventario, :idCategoria, :stockMinimo
+         :cuotaB, :inventarioActual, :manejaInventario, :idCategoria, :stockMinimo
        ) RETURNING ID_ARTICULO INTO :newId`,
       {
         descripcion: data.descripcion, unidad: data.unidad,
-        cuotaRecuperacion: data.cuotaRecuperacion, inventarioActual: data.inventarioActual,
+        cuotaRecuperacion: data.cuotaRecuperacion, cuotaB: data.cuotaB ?? null,
+        inventarioActual: data.inventarioActual,
         manejaInventario: data.manejaInventario, idCategoria: data.idCategoria,
         stockMinimo: data.stockMinimo,
         newId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
@@ -78,13 +79,17 @@ export async function update(id, data) {
     );
     const dbColumnMap = {
       descripcion: "DESCRIPCION", unidad: "UNIDAD",
-      cuotaRecuperacion: "CUOTA_RECUPERACION", inventarioActual: "INVENTARIO_ACTUAL",
+      cuotaRecuperacion: "CUOTA_RECUPERACION", cuotaB: "CUOTA_B",
+      inventarioActual: "INVENTARIO_ACTUAL",
       manejaInventario: "MANEJA_INVENTARIO", idCategoria: "ID_CATEGORIA",
       stockMinimo: "STOCK_MINIMO", activo: "ACTIVO",
     };
+    // cuotaB is nullable — allow null to clear it; other unknown/undefined fields are skipped.
+    const nullableFields = new Set(["cuotaB"]);
     const setClause = Object.entries(updateData)
       .filter(([key, value]) => {
-        if (value === null || value === undefined) return false;
+        if (value === undefined) return false;
+        if (value === null && !nullableFields.has(key)) return false;
         if (!(key in dbColumnMap)) { console.warn(`Campo desconocido en update: ${key}`); return false; }
         return true;
       })

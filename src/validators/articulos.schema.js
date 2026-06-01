@@ -9,6 +9,7 @@ export const crearArticuloSchema = z.object({
   manejaInventario:  z.enum(["S", "N"]).optional(),
   idCategoria:       z.number({ coerce: true }).int().positive().optional(),
   stockMinimo:       z.number({ coerce: true }).nonnegative("stockMinimo debe ser >= 0").optional(),
+  cuotaB:            z.number({ coerce: true }).nonnegative("cuotaB debe ser >= 0").nullable().optional(),
 });
 
 export const actualizarArticuloSchema = z.object({
@@ -19,6 +20,7 @@ export const actualizarArticuloSchema = z.object({
   manejaInventario:  z.enum(["S", "N"]).optional(),
   idCategoria:       z.number({ coerce: true }).int().positive().optional(),
   stockMinimo:       z.number({ coerce: true }).nonnegative().optional(),
+  cuotaB:            z.number({ coerce: true }).nonnegative().nullable().optional(),
 }).refine((d) => Object.keys(d).length > 0, {
   message: "Envía al menos un campo para actualizar",
 });

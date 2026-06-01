@@ -10,7 +10,7 @@ export const findAll = () =>
               b.TELEFONO_CASA, b.TELEFONO_CELULAR, b.CORREO_ELECTRONICO,
               b.CONTACTO_EMERGENCIA, b.TELEFONO_EMERGENCIA,
               b.HOSPITAL_NACIMIENTO,
-              b.USA_VALVULA, b.TIPO, b.NOTAS, b.ESTATUS, b.FECHA_ALTA,
+              b.USA_VALVULA, b.TIPO, b.NOTAS, b.ESTATUS, b.FECHA_ALTA, b.TIPO_CUOTA,
               CASE
                 WHEN EXISTS (SELECT 1 FROM CREDENCIALES c WHERE c.CURP = b.CURP
                   AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
@@ -45,7 +45,7 @@ function buildBindings(data, curp) {
     nombrePadreMadre, calle, colonia, ciudad, municipio, estado, cp,
     telefonoCasa, telefonoCelular, correoElectronico,
     contactoEmergencia, telefonoEmergencia, hospitalNacimiento,
-    tipoSangre, tipo, usaValvula, notas, estatus,
+    tipoSangre, tipo, usaValvula, notas, estatus, tipoCuota,
   } = data;
   return {
     nombres: nombres ?? null, apellidoPaterno: apellidoPaterno ?? null,
@@ -62,6 +62,7 @@ function buildBindings(data, curp) {
     tipoSangre: tipoSangre ?? null, tipo: tipo ?? null,
     usaValvula: usaValvula ?? "N", notas: notas ?? null,
     estatus: estatus ?? "Activo",
+    tipoCuota: tipoCuota ?? null,
   };
 }
 
@@ -75,14 +76,14 @@ export async function create(data) {
          CALLE, COLONIA, CIUDAD, MUNICIPIO, ESTADO, CP,
          TELEFONO_CASA, TELEFONO_CELULAR, CORREO_ELECTRONICO,
          CONTACTO_EMERGENCIA, TELEFONO_EMERGENCIA, HOSPITAL_NACIMIENTO,
-         TIPOS_SANGRE, TIPO, USA_VALVULA, NOTAS, ESTATUS
+         TIPOS_SANGRE, TIPO, USA_VALVULA, NOTAS, ESTATUS, TIPO_CUOTA
        ) VALUES (
          :nombres, :apellidoPaterno, :apellidoMaterno, :curp,
          TO_DATE(:fechaNacimiento, 'YYYY-MM-DD'), :genero, :nombrePadreMadre,
          :calle, :colonia, :ciudad, :municipio, :estado, :cp,
          :telefonoCasa, :telefonoCelular, :correoElectronico,
          :contactoEmergencia, :telefonoEmergencia, :hospitalNacimiento,
-         :tipoSangre, :tipo, :usaValvula, :notas, :estatus
+         :tipoSangre, :tipo, :usaValvula, :notas, :estatus, :tipoCuota
        )`,
       buildBindings(data, curp),
       { autoCommit: true }
@@ -106,7 +107,8 @@ export async function update(curp, data) {
          TELEFONO_EMERGENCIA = :telefonoEmergencia,
          HOSPITAL_NACIMIENTO = :hospitalNacimiento,
          TIPOS_SANGRE = :tipoSangre, TIPO = :tipo,
-         USA_VALVULA = :usaValvula, NOTAS = :notas, ESTATUS = :estatus
+         USA_VALVULA = :usaValvula, NOTAS = :notas, ESTATUS = :estatus,
+         TIPO_CUOTA = :tipoCuota
        WHERE CURP = :curp`,
       buildBindings(data, curp),
       { autoCommit: true }

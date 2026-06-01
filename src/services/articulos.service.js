@@ -45,6 +45,13 @@ function normalizeData(data = {}) {
       const num = Number(val);
       if (Number.isNaN(num) || num < 0) throw badRequest("stockMinimo debe ser un numero >= 0");
       return num;
+    },
+    cuotaB: (val) => {
+      if (val === null) return null;
+      if (val === undefined) return null;
+      const num = Number(val);
+      if (Number.isNaN(num) || num < 0) throw badRequest("cuotaB debe ser un numero >= 0");
+      return num;
     }
   };
   
@@ -75,7 +82,7 @@ export const create = (data) => {
   // para que el trigger TRG_ARTICULOS_BI asigne SEQ_ARTICULOS.NEXTVAL cuando idArticulo=null
   const bindings = {
     idArticulo: null, descripcion: null, unidad: null,
-    cuotaRecuperacion: null, inventarioActual: null,
+    cuotaRecuperacion: null, cuotaB: null, inventarioActual: null,
     manejaInventario: null, idCategoria: null, stockMinimo: null,
     ...normalized,
   };

@@ -32,6 +32,8 @@ const camposPersona = {
   usaValvula:        z.union([z.boolean(), z.enum(["S", "N", "1", "0"])]).optional(),
   notas:             z.string().max(500).nullable().optional(),
   tipo:              z.string().max(50).nullable().optional(),
+  // Control interno: cuota A (menor) o B (mayor). NULL = sin asignar.
+  tipoCuota:         z.enum(["A", "B"]).nullable().optional(),
 };
 
 export const crearBeneficiarioSchema = z.object({
