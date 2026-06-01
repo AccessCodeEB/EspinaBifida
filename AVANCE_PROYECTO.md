@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — QA: verifyToken citas, fix KPI servicios, módulo Comodatos; UX/UI: búsqueda beneficiarios, rediseño membresías/reportes/citas, limpieza E2E/UAT, menú perfil header, tablas con íconos, notificación SIN_STOCK
+**Actualización:** 2026-06-01 (Domingo) — Sesión completa: notificación SIN_STOCK, migración 024 limpieza inventario, filtro categorías Popover, alertas de stock separadas, 1168 tests 100% verde, 5 commits de tests separados
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -12,14 +12,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Indicador | Estado |
 |---|---|
-| Cobertura de pruebas (statements) | **98.29%** |
-| Cobertura de pruebas (funciones) | **96.33%** |
-| Cobertura de pruebas (ramas) | **96.99%** |
+| Cobertura de pruebas (statements) | **96.84%** |
+| Cobertura de pruebas (funciones) | **94.79%** |
+| Cobertura de pruebas (ramas) | **96.09%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 21 / 21 |
-| Archivos de prueba Jest (suites) | 52 |
-| Tests Jest | 1153 |
+| Migraciones de BD | 24 / 24 |
+| Archivos de prueba Jest (suites) | 53 |
+| Tests Jest | 1168 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -225,6 +225,32 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Flechas dinámicas de sort en Inventario y Servicios: `↕` cuando inactivo, `↑↓` cuando activo
 - Servicios: ciclo de filtro por estatus (TODOS → COMPLETADO → PRESTADO → DEVUELTO)
 - Servicios: columna Beneficiario sin sort (solo visual)
+
+### Cambios 2026-06-01 — Inventario, notificaciones y calidad
+
+**Notificación SIN_STOCK:**
+- Nueva notificación separada para artículos con stock = 0 (migración 023)
+- `checkSinStock()` en el scheduler nocturno, `findArticulosSinStock()` en el modelo
+- Panel de notificaciones muestra cards rojas con detalle de artículos agotados
+- Criterio unificado en inventario, dashboard y notificaciones: stock bajo = `cantidad > 0 && cantidad <= minimo`, agotado = `cantidad = 0`
+
+**Inventario — limpieza de artículos mal clasificados (migración 024):**
+- Desactivados artículos que eran estudios/diagnósticos (biometría, cistograma, TAC, etc.)
+- Desactivados artículos administrativos (aportaciones, credenciales, tarjetas)
+- Reclasificados artículos físicos sin categoría a Medicamentos/Insumos/Equipos
+- Eliminada categoría "Servicios y Estudios" de `CATEGORIAS_ARTICULO` (vaciada, no borrada por FK)
+- Endpoint `GET /articulos/categorias` ahora solo devuelve categorías con artículos activos
+- Filtro de categorías en inventario rediseñado como Popover estilo stock (reemplaza `<select>` nativo)
+
+**Dashboard — alertas de stock:**
+- Panel "Alertas de stock" muestra tanto agotados (rojo) como stock bajo (ámbar) en la misma lista
+- Agotados primero (más críticos), con subtítulo dinámico "X sin stock · Y stock bajo"
+
+**Tests de cobertura (1168 tests, 5 commits separados):**
+- `test(membresias)`: observaciones obligatorias + pagosRecientes sin limit
+- `test(notificaciones)`: mocks SIN_STOCK en runJob, tests de checkSinStock, findArticulosSinStock, syncSinStockConsolidado, e2eCleanup controller
+- `test(inventario)`: deleteE2EMovimientos en modelo
+- `test(e2e-cleanup)`: nuevo archivo con tests de e2eCleanup para citas, inventario y administradores
 
 ---
 
