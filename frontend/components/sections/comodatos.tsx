@@ -395,6 +395,9 @@ export function ComodatosSection() {
 
   const [showAlta, setShowAlta]         = useState(false)
   const [pagandoComodato, setPagandoComodato] = useState<Comodato | null>(null)
+  const [selectedComodato, setSelectedComodato] = useState<Comodato | null>(null)
+  const [detalle, setDetalle]           = useState<ComodatoDetalle | null>(null)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
 
   // Reporte exenciones
   const [fechaInicio, setFechaInicio]   = useState("")
@@ -434,19 +437,30 @@ export function ComodatosSection() {
     else { setSortField(field); setSortDir("asc") }
   }
 
+  const saldo = (c: Comodato) => (c.montoTotal ?? 0) - c.montoPagado - c.montoExento
+
   const sorted = [...filtered].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1
     switch (sortField) {
-      case "idComodato":  return (a.idComodato - b.idComodato) * dir
+      case "idComodato":   return (a.idComodato - b.idComodato) * dir
       case "beneficiario": return (a.beneficiario ?? "").localeCompare(b.beneficiario ?? "") * dir
-      case "equipo":      return (a.articulo ?? "").localeCompare(b.articulo ?? "") * dir
-      case "total":       return ((a.montoTotal ?? 0) - (b.montoTotal ?? 0)) * dir
-      case "pagado":      return (a.montoPagado - b.montoPagado) * dir
-      case "exento":      return (a.montoExento - b.montoExento) * dir
-      case "estatus":     return a.estatus.localeCompare(b.estatus) * dir
-      default:            return 0
+      case "equipo":       return (a.articulo ?? "").localeCompare(b.articulo ?? "") * dir
+      case "saldo":        return (saldo(a) - saldo(b)) * dir
+      case "estatus":      return a.estatus.localeCompare(b.estatus) * dir
+      default:             return 0
     }
   })
+
+  async function openDetalle(c: Comodato) {
+    setSelectedComodato(c)
+    setDetalle(null)
+    setLoadingDetalle(true)
+    try {
+      const res = await getComodatoById(c.idComodato)
+      setDetalle(res.data)
+    } catch { /* muestra lo que ya tenemos */ }
+    finally { setLoadingDetalle(false) }
+  }
 
   function SortIcon({ f }: { f: string }) {
     if (sortField !== f) return <ArrowUpDown className="inline size-3 opacity-40" />
@@ -603,18 +617,8 @@ export function ComodatosSection() {
                     </button>
                   </th>
                   <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                    <button onClick={() => handleSort("total")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
-                      <DollarSign className="size-3" />TOTAL <SortIcon f="total" />
-                    </button>
-                  </th>
-                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                    <button onClick={() => handleSort("pagado")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
-                      <Banknote className="size-3" />PAGADO <SortIcon f="pagado" />
-                    </button>
-                  </th>
-                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                    <button onClick={() => handleSort("exento")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
-                      <Gift className="size-3" />EXENTO <SortIcon f="exento" />
+                    <button onClick={() => handleSort("saldo")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <DollarSign className="size-3" />SALDO <SortIcon f="saldo" />
                     </button>
                   </th>
                   <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
@@ -628,12 +632,16 @@ export function ComodatosSection() {
               <tbody className="divide-y divide-border/30">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                    <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
                       No se encontraron comodatos.
                     </td>
                   </tr>
                 ) : sorted.map(c => (
-                  <tr key={c.idComodato} className="transition-colors hover:bg-muted/20">
+                  <tr
+                    key={c.idComodato}
+                    onClick={() => openDetalle(c)}
+                    className="cursor-pointer transition-colors hover:bg-muted/20"
+                  >
                     <td className="py-3 pl-5 pr-3 font-mono text-[11px] text-foreground">{c.idComodato}</td>
                     <td className="py-3 max-w-[12rem]">
                       <p className="truncate text-xs font-medium text-foreground">{c.beneficiario ?? c.curp}</p>
@@ -642,21 +650,23 @@ export function ComodatosSection() {
                     <td className="hidden py-3 max-w-[12rem] md:table-cell">
                       <p className="truncate text-xs text-foreground">{c.articulo}</p>
                     </td>
-                    <td className="hidden py-3 pr-4 text-right text-xs tabular-nums text-foreground lg:table-cell">{fmt(c.montoTotal)}</td>
-                    <td className="hidden py-3 pr-4 text-right text-xs tabular-nums text-emerald-700 dark:text-emerald-400 lg:table-cell">{fmt(c.montoPagado)}</td>
-                    <td className="hidden py-3 pr-4 text-right text-xs tabular-nums text-amber-700 dark:text-amber-400 lg:table-cell">{fmt(c.montoExento)}</td>
+                    <td className="hidden py-3 pr-4 text-right lg:table-cell">
+                      <span className={`text-xs tabular-nums font-medium ${saldo(c) <= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+                        {saldo(c) <= 0 ? "Liquidado" : fmt(saldo(c))}
+                      </span>
+                    </td>
                     <td className="py-3 text-center">
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge(c.estatus)}`}>
                         {c.estatus}
                       </span>
                     </td>
-                    <td className="py-3 pr-5 text-center">
+                    <td className="py-3 pr-5 text-center" onClick={e => e.stopPropagation()}>
                       {c.estatus === "Activo" && (
                         <button
                           onClick={() => setPagandoComodato(c)}
                           className="rounded-lg border border-[#0f4c81]/30 bg-[#0f4c81]/5 px-2.5 py-1.5 text-[10px] font-semibold text-[#0f4c81] transition-colors hover:bg-[#0f4c81]/10 dark:text-blue-400"
                         >
-                          Pagar / Exentar
+                          Pagar
                         </button>
                       )}
                     </td>
@@ -760,6 +770,188 @@ export function ComodatosSection() {
         onClose={() => setPagandoComodato(null)}
         onPaid={() => { setPagandoComodato(null); loadData() }}
       />
+      <DetalleComodatoDialog
+        comodato={selectedComodato}
+        detalle={detalle}
+        loading={loadingDetalle}
+        open={!!selectedComodato}
+        onClose={() => { setSelectedComodato(null); setDetalle(null) }}
+        onPagar={c => { setSelectedComodato(null); setDetalle(null); setPagandoComodato(c) }}
+        onReload={() => { loadData(); if (selectedComodato) openDetalle(selectedComodato) }}
+      />
     </div>
+  )
+}
+
+// ── Dialog detalle comodato ───────────────────────────────────────────────────
+function DetalleComodatoDialog({
+  comodato, detalle, loading, open, onClose, onPagar, onReload,
+}: {
+  comodato: Comodato | null
+  detalle: ComodatoDetalle | null
+  loading: boolean
+  open: boolean
+  onClose: () => void
+  onPagar: (c: Comodato) => void
+  onReload: () => void
+}) {
+  if (!comodato) return null
+
+  const data = detalle ?? comodato
+  const saldoPendiente = (data.montoTotal ?? 0) - data.montoPagado - data.montoExento
+
+  const fechaDev = data.fechaDevolucionEsperada ? new Date(data.fechaDevolucionEsperada) : null
+  const diasDev = fechaDev
+    ? Math.ceil((fechaDev.getTime() - Date.now()) / 86400000)
+    : null
+
+  async function handleCancelar() {
+    try {
+      await cancelarComodato(comodato.idComodato)
+      toast.success("Comodato cancelado")
+      onClose()
+      onReload()
+    } catch (e) {
+      toast.error(friendlyError(e, "No se pudo cancelar"))
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="size-4 text-[#0f4c81]" />
+            Detalle del comodato #{comodato.idComodato}
+          </DialogTitle>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex h-32 items-center justify-center">
+            <p className="text-sm text-muted-foreground">Cargando...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 py-1">
+            {/* Beneficiario + Equipo */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Beneficiario</p>
+                <p className="text-sm font-medium text-foreground">{data.beneficiario ?? data.curp}</p>
+                <p className="font-mono text-[10px] text-muted-foreground">{data.curp}</p>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Equipo</p>
+                <p className="text-sm font-medium text-foreground">{data.articulo ?? "—"}</p>
+              </div>
+            </div>
+
+            {/* Fecha devolución */}
+            {fechaDev && (
+              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                diasDev !== null && diasDev < 0
+                  ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400"
+                  : diasDev !== null && diasDev <= 5
+                  ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
+                  : "border-border/70 bg-muted/20 text-foreground"
+              }`}>
+                <AlertCircle className="size-3.5 shrink-0" />
+                <span>
+                  Devolución esperada: <strong>{fechaDev.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                  {diasDev !== null && (
+                    diasDev < 0
+                      ? ` — vencido hace ${Math.abs(diasDev)} días`
+                      : diasDev === 0
+                      ? " — vence hoy"
+                      : ` — ${diasDev} días restantes`
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Montos */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Total", value: fmt(data.montoTotal), color: "text-foreground" },
+                { label: "Pagado", value: fmt(data.montoPagado), color: "text-emerald-600 dark:text-emerald-400" },
+                { label: "Exento", value: fmt(data.montoExento), color: "text-amber-600 dark:text-amber-400" },
+                { label: "Saldo", value: saldoPendiente <= 0 ? "Liquidado" : fmt(saldoPendiente), color: saldoPendiente <= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground font-bold" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex flex-col gap-0.5 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                  <p className={`text-sm tabular-nums ${color}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Notas */}
+            {data.notas && (
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{data.notas}</p>
+              </div>
+            )}
+
+            {/* Historial de pagos */}
+            {detalle && detalle.pagos.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Historial de pagos</p>
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-border/70">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border/40 bg-muted/30">
+                        <th className="py-1.5 pl-3 text-left text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</th>
+                        <th className="py-1.5 text-right text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Monto</th>
+                        <th className="py-1.5 pr-3 text-center text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {detalle.pagos.map(p => (
+                        <tr key={p.idPago} className="hover:bg-muted/10">
+                          <td className="py-2 pl-3 text-muted-foreground">{new Date(p.fecha).toLocaleDateString("es-MX")}</td>
+                          <td className={`py-2 text-right tabular-nums ${p.esExento === "S" ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>{fmt(p.monto)}</td>
+                          <td className="py-2 pr-3 text-center">
+                            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${p.esExento === "S" ? "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"}`}>
+                              {p.esExento === "S" ? "Exento" : "Pago"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Acciones */}
+            <div className="flex justify-between gap-2 border-t border-border/40 pt-2">
+              <div>
+                {data.estatus === "Activo" && (
+                  <button
+                    onClick={handleCancelar}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400"
+                  >
+                    Cancelar comodato
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={onClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
+                  Cerrar
+                </button>
+                {data.estatus === "Activo" && (
+                  <button
+                    onClick={() => onPagar(comodato)}
+                    className="rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: "#0f4c81" }}
+                  >
+                    Registrar pago
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }

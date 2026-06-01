@@ -276,7 +276,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 | 0d | Remover `PRESTADO`/`DEVUELTO` del ciclo de estatus en UI de servicios y del schema Zod | ✅ Listo |
 | 0e | Eliminar "Préstamo de equipo" del catálogo de servicios (migración 026) | ✅ Listo |
 
-### Fase 1 — UI Comodatos
+### Fase 1 — UI Comodatos ✅
 
 | # | Tarea | Estado |
 |---|---|---|
