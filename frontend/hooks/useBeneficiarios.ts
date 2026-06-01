@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import {
@@ -225,8 +229,8 @@ export function useBeneficiarios() {
     .filter((b) => {
       if (esSolicitudPublicaPendiente(b)) return false
       const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`
-      const term   = searchTerm.toLowerCase()
-      const matchesSearch  = nombre.toLowerCase().includes(term) || b.folio.toLowerCase().includes(term) || b.ciudad.toLowerCase().includes(term)
+      const term   = norm(searchTerm)
+      const matchesSearch  = norm(nombre).includes(term) || norm(b.folio).includes(term) || norm(b.ciudad).includes(term) || norm(b.estado ?? "").includes(term)
       const matchesEstatus = filtroEstatus === "Todos" || b.estatus === filtroEstatus
       return matchesSearch && matchesEstatus
     })
