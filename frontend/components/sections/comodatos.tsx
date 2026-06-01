@@ -427,20 +427,27 @@ export function ComodatosSection() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-border/70 bg-muted/30 p-1 w-fit">
-        {(["lista", "reporte"] as Tab[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-colors border ${
-              tab === t
-                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-                : "bg-card text-muted-foreground border-border/70 hover:text-foreground"
-            }`}
-          >
-            {t === "lista" ? <><Package className="size-3.5" />Lista</> : <><FileText className="size-3.5" />Reporte de exenciones</>}
-          </button>
-        ))}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab("lista")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+            tab === "lista"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <Package className="size-3.5" />Lista
+        </button>
+        <button
+          onClick={() => setTab("reporte")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+            tab === "reporte"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <FileText className="size-3.5" />Reporte de exenciones
+        </button>
       </div>
 
       {/* KPIs — solo en lista */}
