@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import {
   Package, Plus, CreditCard, CheckCircle2, XCircle,
   Search, RefreshCw, ChevronDown, FileText, AlertCircle,
+  Hash, User, DollarSign, Banknote, Gift, Tag,
+  ArrowUpDown, ChevronUp,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -311,6 +313,8 @@ export function ComodatosSection() {
   const [tab, setTab]                   = useState<Tab>("lista")
   const [search, setSearch]             = useState("")
   const [estatusFiltro, setEstatusFiltro] = useState<string>("todos")
+  const [sortField, setSortField]       = useState<string>("idComodato")
+  const [sortDir, setSortDir]           = useState<"asc" | "desc">("desc")
 
   const [showAlta, setShowAlta]         = useState(false)
   const [pagandoComodato, setPagandoComodato] = useState<Comodato | null>(null)
@@ -347,6 +351,30 @@ export function ComodatosSection() {
     const matchEstatus = estatusFiltro === "todos" || c.estatus === estatusFiltro
     return matchSearch && matchEstatus
   })
+
+  function handleSort(field: string) {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc")
+    else { setSortField(field); setSortDir("asc") }
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1
+    switch (sortField) {
+      case "idComodato":  return (a.idComodato - b.idComodato) * dir
+      case "beneficiario": return (a.beneficiario ?? "").localeCompare(b.beneficiario ?? "") * dir
+      case "equipo":      return (a.articulo ?? "").localeCompare(b.articulo ?? "") * dir
+      case "total":       return ((a.montoTotal ?? 0) - (b.montoTotal ?? 0)) * dir
+      case "pagado":      return (a.montoPagado - b.montoPagado) * dir
+      case "exento":      return (a.montoExento - b.montoExento) * dir
+      case "estatus":     return a.estatus.localeCompare(b.estatus) * dir
+      default:            return 0
+    }
+  })
+
+  function SortIcon({ f }: { f: string }) {
+    if (sortField !== f) return <ArrowUpDown className="inline size-3 opacity-40" />
+    return sortDir === "asc" ? <ChevronUp className="inline size-3" /> : <ChevronDown className="inline size-3" />
+  }
 
   const activos   = comodatos.filter(c => c.estatus === "Activo").length
   const pagados   = comodatos.filter(c => c.estatus === "Pagado").length
@@ -388,9 +416,10 @@ export function ComodatosSection() {
           </button>
           <button
             onClick={() => setShowAlta(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#0f4c81" }}
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
             Nuevo comodato
           </button>
         </div>
@@ -473,24 +502,52 @@ export function ComodatosSection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/20">
-                  <th className="py-2.5 pl-5 pr-3 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">ID</th>
-                  <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Beneficiario</th>
-                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">Equipo</th>
-                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Total</th>
-                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Pagado</th>
-                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Exento</th>
-                  <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Estatus</th>
-                  <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Acción</th>
+                  <th className="py-2.5 pl-5 pr-3 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                    <button onClick={() => handleSort("idComodato")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <Hash className="size-3" />ID <SortIcon f="idComodato" />
+                    </button>
+                  </th>
+                  <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                    <button onClick={() => handleSort("beneficiario")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <User className="size-3" />BENEFICIARIO <SortIcon f="beneficiario" />
+                    </button>
+                  </th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
+                    <button onClick={() => handleSort("equipo")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <Package className="size-3" />EQUIPO <SortIcon f="equipo" />
+                    </button>
+                  </th>
+                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                    <button onClick={() => handleSort("total")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <DollarSign className="size-3" />TOTAL <SortIcon f="total" />
+                    </button>
+                  </th>
+                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                    <button onClick={() => handleSort("pagado")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <Banknote className="size-3" />PAGADO <SortIcon f="pagado" />
+                    </button>
+                  </th>
+                  <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                    <button onClick={() => handleSort("exento")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <Gift className="size-3" />EXENTO <SortIcon f="exento" />
+                    </button>
+                  </th>
+                  <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
+                    <button onClick={() => handleSort("estatus")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                      <Tag className="size-3" />ESTATUS <SortIcon f="estatus" />
+                    </button>
+                  </th>
+                  <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">ACCIÓN</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {filtered.length === 0 ? (
+                {sorted.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                       No se encontraron comodatos.
                     </td>
                   </tr>
-                ) : filtered.map(c => (
+                ) : sorted.map(c => (
                   <tr key={c.idComodato} className="transition-colors hover:bg-muted/20">
                     <td className="py-3 pl-5 pr-3 font-mono text-[11px] text-foreground">{c.idComodato}</td>
                     <td className="py-3 max-w-[12rem]">

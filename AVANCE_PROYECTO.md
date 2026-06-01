@@ -270,18 +270,18 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | # | Tarea | Estado |
 |---|---|---|
-| 0a | Agregar `FECHA_DEVOLUCION_ESPERADA DATE` a tabla `COMODATOS` (migración 025) | ⏳ Pendiente |
-| 0b | Actualizar scheduler de notificaciones para leer `COMODATOS` en lugar de `SERVICIOS` | ⏳ Pendiente |
-| 0c | Eliminar `GET /servicios/comodatos`, `PATCH /servicios/:id/devolucion` y sus modelos/services/tests | ⏳ Pendiente |
-| 0d | Remover `PRESTADO`/`DEVUELTO` del ciclo de estatus en UI de servicios y del schema Zod | ⏳ Pendiente |
-| 0e | Decidir qué pasa con "Préstamo de equipo" en el catálogo de servicios (eliminar o dejar genérico) | ⏳ Pendiente |
+| 0a | Agregar `FECHA_DEVOLUCION_ESPERADA DATE` a tabla `COMODATOS` (migración 025) | ✅ Listo |
+| 0b | Actualizar scheduler de notificaciones para leer `COMODATOS` en lugar de `SERVICIOS` | ✅ Listo |
+| 0c | Eliminar `GET /servicios/comodatos`, `PATCH /servicios/:id/devolucion` y sus modelos/services/tests | ✅ Listo |
+| 0d | Remover `PRESTADO`/`DEVUELTO` del ciclo de estatus en UI de servicios y del schema Zod | ✅ Listo |
+| 0e | Eliminar "Préstamo de equipo" del catálogo de servicios (migración 026) | ✅ Listo |
 
 ### Fase 1 — UI Comodatos
 
 | # | Tarea | Estado |
 |---|---|---|
-| 1a | Botón "Nuevo comodato" → azul (`bg-[#0f4c81]`) | ⏳ Pendiente |
-| 1b | Tabla: headers con íconos + UPPERCASE + flechas sort (igual al resto del sistema) | ⏳ Pendiente |
+| 1a | Botón "Nuevo comodato" → azul (`bg-[#0f4c81]`) | ✅ Listo |
+| 1b | Tabla: headers con íconos + UPPERCASE + flechas sort (igual al resto del sistema) | ✅ Listo |
 | 1c | Botón actualizar: agregar texto "Actualizar" junto al emoji | ⏳ Pendiente |
 | 1d | Tabs "Lista" / "Reporte de exenciones" → rediseño estilo citas/inventario (navy azul activo, fade 180ms) | ⏳ Pendiente |
 | 1e | Búsqueda de beneficiario → texto libre con filtro en tiempo real (igual que servicios) | ⏳ Pendiente |
