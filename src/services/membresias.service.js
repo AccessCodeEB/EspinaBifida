@@ -120,12 +120,13 @@ function parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr) {
   return { fechaEmision, fechaVigenciaInicio, fechaUltimoPago };
 }
 
-function validarMontoYMetodo(data, tipo) {
+function validarMontoYMetodo(data, tipo, anios = 1) {
+  const montoBase = tipo === "reinscripcion" ? MONTO_REINSCRIPCION : MONTO_NUEVO_INGRESO;
   let monto;
   if (data?.monto != null) {
     monto = Number(data.monto);
   } else {
-    monto = tipo === "reinscripcion" ? MONTO_REINSCRIPCION : MONTO_NUEVO_INGRESO;
+    monto = anios * montoBase;
   }
   if (Number.isNaN(monto) || monto < 0) {
     throw badRequest("monto debe ser un número positivo");
@@ -174,10 +175,11 @@ export async function registrarMembresia(data) {
   const { fechaEmision, fechaVigenciaInicio, fechaUltimoPago } =
     parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr);
 
-  // Vigencia: siempre 1 año (membresía anual)
-  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, 12);
+  // Vigencia: anios × 12 meses (por defecto 1 año)
+  const anios = Math.max(1, Math.round(Number(data?.anios ?? 1)) || 1);
+  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, anios * 12);
 
-  const { monto, metodoPago } = validarMontoYMetodo(data, tipoFinal);
+  const { monto, metodoPago } = validarMontoYMetodo(data, tipoFinal, anios);
   const referencia = data?.referencia ?? null;
 
   return await MembresiasModel.create({

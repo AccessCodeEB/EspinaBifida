@@ -34,6 +34,7 @@ export interface PagoReciente {
 
 export interface RegistroPagoPayload {
   curp: string
+  anios?: number
   monto?: number
   metodo_pago: "efectivo" | "transferencia" | "tarjeta"
   referencia?: string

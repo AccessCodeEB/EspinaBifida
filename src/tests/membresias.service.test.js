@@ -179,6 +179,50 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     );
   });
 
+  test("anios=2 → monto duplicado ($400 nuevo_ingreso) y vigencia 24 meses", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      fecha_vigencia_inicio: "2026-01-01",
+      anios: 2,
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        monto: 400,
+        fechaVigenciaFin: "2028-01-01",
+      })
+    );
+  });
+
+  test("anios=3 + reinscripcion → monto $450 y vigencia 36 meses", async () => {
+    mockCountCredenciales.mockResolvedValue(1);
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      fecha_vigencia_inicio: "2026-01-01",
+      anios: 3,
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        monto: 450,
+        fechaVigenciaFin: "2029-01-01",
+      })
+    );
+  });
+
+  test("anios no provisto → default 1 año", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      fecha_vigencia_inicio: "2026-01-01",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ fechaVigenciaFin: "2027-01-01" })
+    );
+  });
+
   test("sin fecha_ultimo_pago → usa hoy como fecha_ultimo_pago (L165 false-branch: null)", async () => {
     // No se pasa fecha_ultimo_pago → fechaUltimoPago = hoy (no null)
     const result = await Service.registrarMembresia({

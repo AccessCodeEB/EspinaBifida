@@ -88,28 +88,25 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   const tipoLabel = esNuevo ? "Nuevo ingreso" : "Re-inscripción"
   const montoBase = esNuevo ? MONTO_NUEVO_INGRESO : MONTO_REINSCRIPCION
 
-  const [monto, setMonto]           = useState(String(montoBase))
+  const [anios, setAnios]           = useState(1)
   const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("")
   const [observaciones, setObs]     = useState("")
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
 
+  const montoTotal = anios * montoBase
+
   useEffect(() => {
     if (open) {
-      setMonto(String(esNuevo ? MONTO_NUEVO_INGRESO : MONTO_REINSCRIPCION))
+      setAnios(1)
       setMetodoPago("")
       setObs("")
       setError(null)
     }
-  }, [open, esNuevo])
+  }, [open])
 
   const handleConfirm = async () => {
     if (!beneficiario) return
-    const montoNum = parseFloat(monto)
-    if (monto.trim() === "" || isNaN(montoNum) || montoNum < 0) {
-      setError("Ingresa un monto válido (puede ser $0 para donativos)")
-      return
-    }
     if (!metodoPago) {
       setError("Selecciona el método de pago")
       return
@@ -122,12 +119,12 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
     try {
       await registrarPago({
         curp: beneficiario.curp ?? beneficiario.folio,
-        monto: montoNum,
+        anios,
         metodo_pago: metodoPago,
         observaciones: observaciones.trim(),
       })
       toast.success("Membresía registrada correctamente", {
-        description: `${tipoLabel} · 1 año · $${montoNum.toLocaleString("es-MX", { minimumFractionDigits: 2 })} · ${labelMetodo(metodoPago)}`,
+        description: `${tipoLabel} · ${anios} año${anios > 1 ? "s" : ""} · $${montoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} · ${labelMetodo(metodoPago)}`,
       })
       onSuccess(); onClose()
     } catch (e: unknown) {
@@ -151,35 +148,45 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Tipo auto-detectado (solo lectura) */}
+          {/* Tipo auto-detectado + Años + Monto calculado (solo lectura) */}
           <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-4 py-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</p>
               <p className="mt-0.5 text-sm font-semibold text-foreground">{tipoLabel}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vigencia</p>
-              <p className="mt-0.5 text-sm font-semibold text-foreground">1 año</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Monto</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
+                ${montoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
 
-          {/* Monto + Método de pago */}
+          {/* Años a renovar + Método de pago */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Monto <span className="text-red-500">*</span>
+                Años a renovar
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                <Input
-                  className="h-10 pl-6 text-sm"
-                  placeholder="0.00"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                />
+              <div className="flex h-10 items-center rounded-lg border border-input bg-background overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAnios(a => Math.max(1, a - 1))}
+                  disabled={anios <= 1}
+                  className="flex h-full w-9 items-center justify-center text-muted-foreground hover:bg-muted transition-colors disabled:opacity-30"
+                >
+                  −
+                </button>
+                <span className="flex-1 text-center text-sm font-semibold">
+                  {anios} año{anios > 1 ? "s" : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAnios(a => a + 1)}
+                  className="flex h-full w-9 items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  +
+                </button>
               </div>
             </div>
             <div>
@@ -221,7 +228,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
             <button type="button" onClick={handleConfirm} disabled={loading}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: NAVY }}>
-              {loading ? "Registrando..." : `Confirmar · $${parseFloat(monto || "0").toLocaleString("es-MX", { minimumFractionDigits: 0 })}`}
+              {loading ? "Registrando..." : `Confirmar · $${montoTotal.toLocaleString("es-MX", { minimumFractionDigits: 0 })}`}
             </button>
           </div>
         </div>
