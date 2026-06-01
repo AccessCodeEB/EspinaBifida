@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — Sesión completa: notificación SIN_STOCK, migración 024 limpieza inventario, filtro categorías Popover, alertas de stock separadas, 1168 tests 100% verde, 5 commits de tests separados
+**Actualización:** 2026-06-01 (Domingo) — Refactor completo comodatos + UI (Fases 0–3): migración arquitectural, panel detalle con historial pagos, tabs servicios, filtro artículos por categoría, migración 026 eliminar Préstamo de equipo, 1157 tests 100% verde
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -12,12 +12,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Indicador | Estado |
 |---|---|
-| Cobertura de pruebas (statements) | **96.84%** |
-| Cobertura de pruebas (funciones) | **94.79%** |
-| Cobertura de pruebas (ramas) | **96.09%** |
+| Cobertura de pruebas (statements) | **97.24%** |
+| Cobertura de pruebas (funciones) | **95.2%** |
+| Cobertura de pruebas (ramas) | **96.75%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 24 / 24 |
+| Migraciones de BD | 26 / 26 |
 | Archivos de prueba Jest (suites) | 53 |
 | Tests Jest | 1157 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
@@ -259,6 +259,35 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
+
+### Cambios 2026-06-01 — Refactor Comodatos + UI (Fases 0–3)
+
+**Fase 0 — Migración arquitectural:**
+- Migración 025: `FECHA_DEVOLUCION_ESPERADA DATE` agregada a tabla `COMODATOS`
+- Scheduler de notificaciones `checkComodatosPorVencer` migrado a leer de `COMODATOS` (ya no `SERVICIOS`)
+- Eliminados `GET /servicios/comodatos` y `PATCH /servicios/:id/devolucion` con sus modelos/services/tests
+- Removidos `PRESTADO`/`DEVUELTO` del ciclo de estatus en UI de servicios y schema Zod
+- Migración 026: elimina "Préstamo de equipo" de `SERVICIOS_CATALOGO` (redirige servicios existentes a "Otros")
+
+**Fase 1 — UI Comodatos:**
+- Botón "Nuevo comodato" → azul `#0f4c81`
+- Headers tabla: íconos + UPPERCASE + flechas sort dinámicas
+- Botón "Actualizar" con texto
+- Tabs "Lista" / "Reporte de exenciones" → estilo navy rounded-xl, fade 180ms
+- Búsqueda de beneficiario → texto libre con sugerencias en tiempo real (`startsWith`)
+- Selector de equipo médico → Popover+Command buscable filtrado a Equipos Médicos
+- Campo `FECHA_DEVOLUCION_ESPERADA` en formulario de nuevo comodato
+- Tabla simplificada: 6 columnas (ID, Beneficiario, Equipo, Saldo, Estatus, Acción)
+- Panel de detalle al hacer click en fila: montos desglosados, fecha devolución con días restantes, notas, historial de pagos, botones Registrar pago / Cancelar
+
+**Fase 2 — Selector de artículos en Servicios:**
+- Tipo Medicamentos → Popover+Command filtrado solo a categoría Medicamentos
+- Tipo Insumos médicos → Popover+Command filtrado solo a categoría Insumos Médicos
+- Reset automático del artículo seleccionado al cambiar tipo de servicio
+
+**Fase 3 — Tabs en Servicios:**
+- Tab "Resumen": KPIs + gráfica de barras (monto por mes) + donut (servicios por tipo)
+- Tab "Servicios registrados": tabla con filtros, sort y paginación
 
 ---
 
