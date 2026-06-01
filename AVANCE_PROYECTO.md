@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — Membresías anuales: vigencia 12 meses, nuevo ingreso $200 / re-inscripción $150, tipo auto-detectado desde BD, método de pago y observaciones obligatorios; 1160 tests 100% verde
+**Actualización:** 2026-06-01 (Domingo) — Inventario: edición de precios (cuota de recuperación + precio real) con diálogo de confirmación, rediseño del diálogo "Modificar artículo", ambas cuotas obligatorias; hallazgo: `precioSegunCuota` implementada pero sin usar en producción
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -57,7 +57,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
 | **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus, flechas de sort dinámicas, ciclo filtro por estatus |
 | **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm |
-| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort |
+| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort; **edición de precios** (cuota de recuperación + precio real) con diálogo de confirmación al cambiar precio base; **rediseño diálogo "Modificar artículo"**: card de estado actual (stock/precio/mínimo), toggle ENTRADA/SALIDA, secciones agrupadas con tarjeta; ambas cuotas obligatorias al crear y editar |
 | **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
@@ -259,6 +259,29 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Área | Detalle | Prioridad |
 |---|---|---|
 | **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
+
+### Cambios 2026-06-01 — Inventario: edición de precios + rediseño diálogo
+
+**Edición de precios en inventario:**
+- Campo **"Cuota de recuperación"** (precio subsidiado, `CUOTA_RECUPERACION`) editable desde el diálogo "Modificar artículo"
+- Campo **"Precio real"** (`CUOTA_B`) editable en el mismo diálogo — antes solo existía en el formulario de alta
+- Diálogo de confirmación al cambiar cuota de recuperación: muestra precio actual → precio nuevo antes de guardar
+- Ambas cuotas **obligatorias** al crear artículo nuevo y al editar — validación en frontend y backend ya lo soportaba
+- Labels correctos en toda la UI: "Cuota de recuperación" (subsidiada) y "Precio real" (precio completo)
+
+**Rediseño diálogo "Modificar artículo":**
+- **Card de estado** al tope: stock actual (coloreado rojo/ámbar/normal), cuota de recuperación, stock mínimo — de un vistazo
+- **Toggle ENTRADA / SALIDA** reemplaza el campo de cantidad con signo negativo — más claro para usuarios no técnicos
+- Secciones agrupadas con tarjeta (`bg-muted/20 rounded-xl border`): "Movimiento de stock" separado de "Configuración del artículo"
+- Precios arriba del stock mínimo (más importante visualmente)
+- Símbolo `$` como prefijo visual en campos de precio
+- Scroll habilitado en el diálogo (`max-h-[90vh] overflow-y-auto`)
+
+**Hallazgo técnico — `precioSegunCuota` sin conectar:**
+- La función `precioSegunCuota(articulo, tipoCuota)` en `src/services/servicios.service.js` está implementada, exportada y probada, pero **nunca se llama en producción**
+- El campo `TIPO_CUOTA` en `BENEFICIARIOS` (A = subsidiado, B = precio real) es editable en el formulario de beneficiario pero tampoco afecta ningún cálculo automático
+- Al registrar un servicio con artículo (medicamento/insumo), el costo se ingresa **manualmente** — el sistema no auto-rellena desde el precio del artículo
+- **Oportunidad identificada**: conectar `precioSegunCuota` al formulario de registro de servicios para que al seleccionar un artículo y un beneficiario, el monto se pre-rellene automáticamente según su clasificación A/B
 
 ### Cambios 2026-06-01 — Refactor Comodatos + UI (Fases 0–3)
 
@@ -500,6 +523,8 @@ Ver: https://github.com/AccessCodeEB/EspinaBifida/security/dependabot
 - SMS OTP para cambio de contraseña: `src/utils/otpStore.js` (Map en memoria, TTL 5 min)
 - Sin Twilio configurado: modo dev activo — código visible en consola del servidor (nunca en prod)
 - Auditoría de operaciones sensibles: fire-and-forget post-response, no bloquea al cliente si falla
+- `precioSegunCuota(articulo, tipoCuota)` en `src/services/servicios.service.js` — implementada y con tests, pero **nunca llamada en producción**. Diseñada para auto-seleccionar precio según `TIPO_CUOTA` del beneficiario (A = cuota de recuperación, B = precio real). Candidata a conectar al formulario de registro de servicios.
+- `BENEFICIARIOS.TIPO_CUOTA` — campo A/B editable en el formulario de beneficiario, pero actualmente no afecta ningún cálculo automático en el sistema
 
 ---
 
