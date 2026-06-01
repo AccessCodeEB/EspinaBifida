@@ -243,6 +243,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
+| **Mejorar UI de Comodatos** | El módulo de comodatos fue integrado por el equipo pero la UI puede mejorar: hacerla más friendly, consistente con el estilo del resto del sistema (KPIs, tabs, encabezados con íconos, etc.). |
 
 ### Prioridad media — Servicios
 
