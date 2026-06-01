@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-31 (Sábado) — QA audit: verifyToken en citas, fix TS comodatos, fix KPI pendientes servicios, terminología comodatos vs préstamo, Comodatos integrado al panel
+**Actualización:** 2026-05-31 (Sábado) — QA: verifyToken citas, fix KPI servicios, terminología comodatos; UX/UI: búsqueda beneficiarios ciudad+estado, membresías completas, tabs inventario, historial pagos
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -54,8 +54,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | **Dashboard** | ✅ Completo |
 | **Beneficiarios** | ✅ Completo |
-| **Membresías** | ✅ Completo |
-| **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode (COMODATO excluido — va por módulo Comodatos), badges de estatus |
+| **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
+| **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus |
 | **Citas** | ✅ Completo |
 | **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), safety net comodatos, selector de categoría al agregar artículo |
 | **Reportes** | ✅ Completo |
@@ -189,8 +189,6 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Tarea | Descripción |
 |---|---|
-| **Búsqueda por ciudad incluir estado** | Al usar el filtro de búsqueda (beneficiarios), que buscar por ciudad también filtre por estado simultáneamente — actualmente solo busca en el campo CIUDAD. |
-| **Observaciones obligatorias en membresías** | Al registrar o renovar una membresía, el campo Observaciones debe ser obligatorio para que quede registro del motivo/contexto en el historial. |
 | **Búsqueda al eliminar artículo no actualizada** | Al eliminar un artículo desde inventario, la búsqueda/lista no se refresca automáticamente — el artículo sigue apareciendo hasta que el usuario recarga manualmente. |
 | **Limpieza E2E — historial de citas** | Las citas creadas por Playwright (`Dr. E2E Playwright`, paciente `Dayana Aguirre Santeliz`) quedan visibles en el historial de citas después de ejecutar los tests. Agregar limpieza `afterAll` similar a la de notificaciones e inventario. |
 | **Limpieza E2E — usuario administrador de prueba** | El usuario `E2E Admin Actualizado` (correo `e2e-admin-test@espina.com`, Inactivo) queda visible en la sección de Administración tras los tests. Eliminarlo en `afterAll` a menos que sea imprescindible para la ejecución (no tocar `prueba1`). |
