@@ -292,7 +292,7 @@ describe("GET /api/v1/citas — listar citas", () => {
   test("devuelve lista de citas (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
@@ -301,7 +301,7 @@ describe("GET /api/v1/citas — listar citas", () => {
   test("devuelve arreglo vacío si no hay citas (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
   });
@@ -311,7 +311,7 @@ describe("GET /api/v1/citas — listar citas", () => {
       rows: [{ ...citaRow, ESTATUS: null }],
     });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     // estatusRaw="" → ESTATUS_MAP[""] undefined → r.estatus null → "Pendiente"
@@ -323,7 +323,7 @@ describe("GET /api/v1/citas — listar citas", () => {
       rows: [{ ...citaRow, ESTATUS: "OTRO_ESTADO" }],
     });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     // ESTATUS_MAP["OTRO_ESTADO"] undefined → ?? r.estatus = "OTRO_ESTADO"
@@ -335,7 +335,7 @@ describe("GET /api/v1/citas/:id — obtener cita por ID", () => {
   test("devuelve la cita cuando existe (200)", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
 
-    const res = await request(app).get("/api/v1/citas/1");
+    const res = await request(app).get("/api/v1/citas/1").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
   });
@@ -343,7 +343,7 @@ describe("GET /api/v1/citas/:id — obtener cita por ID", () => {
   test("devuelve 404 si la cita no existe", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).get("/api/v1/citas/999");
+    const res = await request(app).get("/api/v1/citas/999").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
   });
@@ -355,6 +355,7 @@ describe("POST /api/v1/citas — crear cita", () => {
 
     const res = await request(app)
       .post("/api/v1/citas")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({
         curp:            CURP_VALIDA,
         especialista:    "Dr. Test",
@@ -370,6 +371,7 @@ describe("POST /api/v1/citas — crear cita", () => {
   test("devuelve 400 si faltan campos obligatorios", async () => {
     const res = await request(app)
       .post("/api/v1/citas")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ notas: "solo notas" });
 
     expect(res.status).toBe(400);
@@ -378,6 +380,7 @@ describe("POST /api/v1/citas — crear cita", () => {
   test("devuelve 400 si estatus es inválido", async () => {
     const res = await request(app)
       .post("/api/v1/citas")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ curp: CURP_VALIDA, idTipoServicio: 1, fecha: "2026-07-01", estatus: "INVALIDO" });
 
     expect(res.status).toBe(400);
@@ -393,6 +396,7 @@ describe("PUT /api/v1/citas/:id — actualizar cita", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "COMPLETADA" });
 
     expect(res.status).toBe(200);
@@ -404,6 +408,7 @@ describe("PUT /api/v1/citas/:id — actualizar cita", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/999")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "COMPLETADA" });
 
     expect(res.status).toBe(404);
@@ -414,6 +419,7 @@ describe("PUT /api/v1/citas/:id — actualizar cita", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "INVALIDO" });
 
     expect(res.status).toBe(400);
@@ -427,7 +433,7 @@ describe("DELETE /api/v1/citas/:id — cancelar cita", () => {
     // UPDATE ESTATUS='CANCELADA'
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
-    const res = await request(app).delete("/api/v1/citas/1");
+    const res = await request(app).delete("/api/v1/citas/1").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/cancelada/i);
@@ -436,7 +442,7 @@ describe("DELETE /api/v1/citas/:id — cancelar cita", () => {
   test("devuelve 404 si la cita no existe", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
-    const res = await request(app).delete("/api/v1/citas/999");
+    const res = await request(app).delete("/api/v1/citas/999").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(404);
   });
@@ -453,7 +459,7 @@ describe("GET /api/v1/citas — ramas de mapCita no cubiertas", () => {
       rows: [{ ...citaRow, FECHA: "2026-07-15", HORA: "10:30" }],
     });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body[0].fecha).toBe("2026-07-15");
@@ -466,7 +472,7 @@ describe("GET /api/v1/citas — ramas de mapCita no cubiertas", () => {
       rows: [{ ...citaRow, FECHA: null, HORA: null }],
     });
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(200);
     expect(res.body[0].fecha).toBe("");
@@ -476,7 +482,7 @@ describe("GET /api/v1/citas — ramas de mapCita no cubiertas", () => {
   test("error de DB en getCitas → next(error) → 500", async () => {
     mockExecute.mockRejectedValueOnce(new Error("DB timeout"));
 
-    const res = await request(app).get("/api/v1/citas");
+    const res = await request(app).get("/api/v1/citas").set("Authorization", `Bearer ${tokenAdmin}`);
 
     expect(res.status).toBe(500);
   });
@@ -806,6 +812,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ fecha: "2026-08-01", hora: "14:30", estatus: "CONFIRMADA" });
 
     expect(res.status).toBe(200);
@@ -817,6 +824,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ fecha: "2026-08-01" });
 
     expect(res.status).toBe(200);
@@ -831,6 +839,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
     // No enviamos fecha → usa la de la cita (cita.FECHA)
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "CONFIRMADA" });
 
     expect(res.status).toBe(200);
@@ -844,6 +853,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ estatus: "CONFIRMADA" });
 
     expect(res.status).toBe(200);
@@ -857,6 +867,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
     // No enviamos estatus → usa cita.ESTATUS
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({});
 
     expect(res.status).toBe(200);
@@ -870,6 +881,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
     // No enviamos estatus → usa cita.ESTATUS ?? "PROGRAMADA"
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({});
 
     expect(res.status).toBe(200);
@@ -881,6 +893,7 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
     const res = await request(app)
       .put("/api/v1/citas/1")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ curp: "gaej900101hmnrrl09" }); // curp en minúsculas → se convierte a mayúsculas
 
     expect(res.status).toBe(200);
@@ -893,6 +906,7 @@ describe("POST /api/v1/citas — createCita sin estatus (usa PROGRAMADA)", () =>
 
     const res = await request(app)
       .post("/api/v1/citas")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
       .send({ curp: CURP_VALIDA, idTipoServicio: 1, fecha: "2026-09-01" });
     // No se envía estatus → estatus = "" o undefined → || "PROGRAMADA" se usa
 
