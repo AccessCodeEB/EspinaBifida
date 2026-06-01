@@ -249,6 +249,33 @@ export function NotificacionesPanel() {
                     })}
                   </div>
                 )
+              ) : detailNotif.tipo === "SIN_STOCK" ? (
+                loadingDetail ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : detailArticulos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No hay artículos sin stock en este momento.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      {detailArticulos.length} artículo{detailArticulos.length !== 1 ? "s" : ""} sin stock
+                    </p>
+                    {detailArticulos.map((a, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2.5 bg-red-50 dark:bg-red-950/30">
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-xs font-medium text-foreground">{a.descripcion}</p>
+                          <p className="text-[10px] text-muted-foreground">{a.unidad}</p>
+                        </div>
+                        <span className="ml-3 shrink-0 text-sm font-bold tabular-nums text-red-600 dark:text-red-400">
+                          0 <span className="text-[10px] font-normal text-muted-foreground">{a.unidad}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : detailNotif.tipo === "COMODATO_POR_VENCER" ? (
                 loadingDetail ? (
                   <div className="flex items-center justify-center py-8">

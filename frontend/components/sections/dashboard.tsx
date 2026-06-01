@@ -85,42 +85,49 @@ function KpiCard({ label, value, sub, icon: Icon, color, trend, loading }: {
 }
 
 /* ── Artículos bajos con paginación ── */
-function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
-  stockBajo: ArticuloInventario[]; loading: boolean; umbral: number
+function ArticulosBajosPanel({ sinStock, stockBajo, loading }: {
+  sinStock: ArticuloInventario[]; stockBajo: ArticuloInventario[]; loading: boolean
 }) {
+  // Agotados primero (más críticos), luego stock bajo
+  const todos = [...sinStock, ...stockBajo]
   const [page, setPage] = useState(0)
-  const totalPages = Math.max(1, Math.ceil(stockBajo.length / PAGE_SIZE))
-  const paginated  = stockBajo.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
-  useEffect(() => { setPage(0) }, [stockBajo])
+  const totalPages = Math.max(1, Math.ceil(todos.length / PAGE_SIZE))
+  const paginated  = todos.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+  useEffect(() => { setPage(0) }, [sinStock, stockBajo])
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
         <div>
           <p className="text-sm font-semibold text-foreground">Alertas de stock</p>
-          <p className="text-[11px] text-muted-foreground">Sin stock o por debajo del mínimo</p>
+          <p className="text-[11px] text-muted-foreground">
+            {sinStock.length > 0 && <span className="text-red-500 font-medium">{sinStock.length} sin stock</span>}
+            {sinStock.length > 0 && stockBajo.length > 0 && <span className="text-muted-foreground"> · </span>}
+            {stockBajo.length > 0 && <span className="text-amber-500 font-medium">{stockBajo.length} stock bajo</span>}
+            {todos.length === 0 && "Sin alertas"}
+          </p>
         </div>
         {!loading && (
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-            stockBajo.length === 0
+            todos.length === 0
               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-              : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+              : sinStock.length > 0
+                ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
           }`}>
-            {stockBajo.length === 0 ? "Sin alertas" : `${stockBajo.length} alerta${stockBajo.length !== 1 ? "s" : ""}`}
+            {todos.length === 0 ? "Todo bien" : `${todos.length} alerta${todos.length !== 1 ? "s" : ""}`}
           </span>
         )}
       </div>
-      <div className="flex-1 divide-y divide-border/40">
+
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
-          Array.from({ length: PAGE_SIZE }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-5 py-3">
-              <div className="size-1.5 rounded-full bg-muted animate-pulse" />
-              <div className="flex-1 h-2.5 rounded bg-muted animate-pulse" />
-              <div className="h-2.5 w-8 rounded bg-muted animate-pulse" />
-              <div className="h-4 w-5 rounded bg-muted animate-pulse" />
-            </div>
-          ))
-        ) : stockBajo.length === 0 ? (
+          <div className="space-y-2 px-4 py-3">
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : todos.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
             <div className="flex size-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
               <Package className="size-4 text-emerald-600 dark:text-emerald-400" />
@@ -128,26 +135,34 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
             <p className="text-xs font-medium text-foreground">Inventario en orden</p>
           </div>
         ) : (
-          paginated.map((item) => {
-            const qty    = Number(item.cantidad ?? 0)
-            const isZero = qty === 0
-            return (
-              <div key={item.clave} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
-                <div className={`size-1.5 shrink-0 rounded-full ${isZero ? "bg-red-500" : "bg-amber-500"}`} />
-                <p className="flex-1 truncate text-xs text-foreground">{item.descripcion}</p>
-                <span className="shrink-0 text-[11px] text-muted-foreground">{item.unidad}</span>
-                <span className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${isZero ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-                  {qty}
-                </span>
-              </div>
-            )
-          })
+          <div className="divide-y divide-border/30">
+            {paginated.map((item) => {
+              const qty    = Number(item.cantidad ?? 0)
+              const isZero = qty === 0
+              return (
+                <div key={item.clave} className="flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-muted/20">
+                  <div className={`size-1.5 shrink-0 rounded-full ${isZero ? "bg-red-500" : "bg-amber-500"}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-foreground">{item.descripcion}</p>
+                    {!isZero && item.minimo > 0 && (
+                      <p className="text-[10px] text-muted-foreground">Mín: {item.minimo} {item.unidad}</p>
+                    )}
+                  </div>
+                  <span className={`shrink-0 text-sm font-bold tabular-nums ${
+                    isZero ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
+                  }`}>{qty}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">{item.unidad}</span>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
-      {!loading && (
-        <div className="mt-auto flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+
+      {!loading && todos.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between border-t border-border/40 px-5 py-2.5">
           <span className="text-[11px] text-muted-foreground">
-            {stockBajo.length === 0 ? "0" : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, stockBajo.length)}`} de {stockBajo.length}
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, todos.length)} de {todos.length}
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(p => p - 1)} disabled={page === 0}
@@ -170,6 +185,7 @@ function ArticulosBajosPanel({ stockBajo, loading, umbral }: {
 export function DashboardSection() {
   const [inventarioBajoCount, setInventarioBajoCount] = useState<number | null>(null)
   const [agotadosCount, setAgotadosCount]             = useState<number | null>(null)
+  const [sinStock, setSinStock]                       = useState<ArticuloInventario[]>([])
   const [stockBajo, setStockBajo]                     = useState<ArticuloInventario[]>([])
   const [loadingStock, setLoadingStock]               = useState(true)
   const [activosMembresia, setActivosMembresia]       = useState<number | null>(null)
@@ -206,6 +222,7 @@ export function DashboardSection() {
         setInventarioBajoCount(bajos.length)
         setAgotadosCount(agotados.length)
         setStockBajo(bajos)
+        setSinStock(agotados)
       })
       .catch(() => { setInventarioBajoCount(null); setStockBajo([]) })
       .finally(() => setLoadingStock(false))
@@ -637,7 +654,7 @@ export function DashboardSection() {
         })()}
 
         {/* Artículos bajos */}
-        <ArticulosBajosPanel stockBajo={stockBajo} loading={loadingStock} umbral={INVENTARIO_BAJO_UMBRAL} />
+        <ArticulosBajosPanel sinStock={sinStock} stockBajo={stockBajo} loading={loadingStock} />
       </div>
 
       {/* ── Gráfica de rendimiento mensual ── */}

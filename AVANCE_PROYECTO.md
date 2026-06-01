@@ -249,6 +249,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | **Especificar tipo de consulta y estudio al registrar servicio** | Al registrar un servicio de tipo "Consulta médica" o "Estudio médico", actualmente es muy genérico. Agregar campo para especificar qué consulta (dental, neurología, urología…) o qué estudio, y opcionalmente con qué doctor. Evaluar si agregar sub-tipos al catálogo o un campo libre de texto. |
+| **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento, Insumos médicos o Préstamo de equipo, el formulario debe guiar mejor al usuario: por ejemplo mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre, para que Lupita no tenga que inventar qué escribir cada vez. |
 
 ### Prioridad media — Membresías
 
