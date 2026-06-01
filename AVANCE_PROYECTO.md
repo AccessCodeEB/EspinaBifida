@@ -265,6 +265,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Notificación: beneficiario sin membresía activa** | Avisar cuando un beneficiario activo lleva más de X días sin membresía vigente. |
 | **Notificación: reporte automático generado** | Confirmar en el panel cuando el scheduler nocturno generó el reporte mensual exitosamente. |
 
+### Prioridad media — Calidad de código
+
+| Tarea | Descripción |
+|---|---|
+| **Auditar y corregir valores hardcodeados** | Revisar todo el código (frontend y backend) en busca de valores que deberían ser configurables o dinámicos pero están escritos fijos: precios, umbrales, límites de paginación, textos de estado, emails de prueba, colores, etc. Centralizar en constantes o en la tabla `CONFIGURACION` según corresponda. |
+
 ### Prioridad baja (nice-to-have)
 
 | Tarea | Descripción |
