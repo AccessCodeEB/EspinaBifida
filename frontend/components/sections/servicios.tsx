@@ -274,7 +274,7 @@ export function ServiciosSection() {
 
   const montoMes = useMemo(() => serviciosMes.reduce((acc, s) => acc + s.montoNumero, 0), [serviciosMes])
   const pendientesMes = useMemo(
-    () => serviciosMes.filter((s) => s.estatus === "PRESTADO").length,
+    () => serviciosMes.filter((s) => s.estatus !== "COMPLETADO").length,
     [serviciosMes]
   )
 
