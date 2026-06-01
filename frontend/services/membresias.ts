@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 
-export const MONTO_PREDETERMINADO = 500
+export const MONTO_NUEVO_INGRESO = 200
+export const MONTO_REINSCRIPCION = 150
 
 export interface Membresia {
   folio: string
@@ -33,8 +34,7 @@ export interface PagoReciente {
 
 export interface RegistroPagoPayload {
   curp: string
-  meses: number
-  monto: number
+  monto?: number
   metodo_pago: "efectivo" | "transferencia" | "tarjeta"
   referencia?: string
   observaciones: string
@@ -60,7 +60,7 @@ export function syncEstados() {
   return apiClient.post<{ message: string }>("/membresias/sync-estados", {})
 }
 
-/** POST /membresias — registra pago y renueva vigencia por 1 mes */
+/** POST /membresias — registra membresía anual (nuevo_ingreso: $200, reinscripcion: $150) */
 export function registrarPago(payload: RegistroPagoPayload) {
   return apiClient.post<{ message: string; result: unknown }>("/membresias", payload)
 }

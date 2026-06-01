@@ -130,13 +130,36 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     );
   });
 
-  test("con meses=undefined → usa default 1 mes (L128: ?? 1 branch)", async () => {
-    const result = await Service.registrarMembresia({
+  test("sin tipo → usa monto de nuevo ingreso por defecto ($200)", async () => {
+    await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
-      // meses no provisto → default 1
     });
-    expect(mockCreate).toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ monto: 200 })
+    );
+  });
+
+  test("con tipo=reinscripcion → usa monto $150", async () => {
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      tipo: "reinscripcion",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ monto: 150 })
+    );
+  });
+
+  test("con tipo=nuevo_ingreso → usa monto $200", async () => {
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      tipo: "nuevo_ingreso",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ monto: 200 })
+    );
   });
 
   test("sin fecha_ultimo_pago → usa hoy como fecha_ultimo_pago (L165 false-branch: null)", async () => {

@@ -5,6 +5,7 @@ const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export const crearMembresiaSchema = z.object({
   curp: z.string().regex(CURP_REGEX, "CURP inválida"),
+  tipo: z.enum(["nuevo_ingreso", "reinscripcion"]).optional(),
   monto: z.number({ coerce: true }).nonnegative("monto debe ser >= 0").optional(),
   metodo_pago: z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
   metodoPago:  z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
@@ -14,5 +15,4 @@ export const crearMembresiaSchema = z.object({
   fecha_emision:          z.string().regex(FECHA_REGEX, "fecha_emision debe ser YYYY-MM-DD").optional(),
   fecha_vigencia_inicio:  z.string().regex(FECHA_REGEX, "fecha_vigencia_inicio debe ser YYYY-MM-DD").optional(),
   fecha_ultimo_pago:      z.string().regex(FECHA_REGEX, "fecha_ultimo_pago debe ser YYYY-MM-DD").optional(),
-  meses: z.number({ coerce: true }).int().positive().optional(),
 });

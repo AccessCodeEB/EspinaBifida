@@ -19,13 +19,12 @@ import {
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import {
   getPagosRecientes, registrarPago, syncEstados,
-  type PagoReciente,
+  MONTO_NUEVO_INGRESO, MONTO_REINSCRIPCION, type PagoReciente,
 } from "@/services/membresias"
 import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
-const PAGOS_RECIENTES_LIMIT = 20
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -84,16 +83,25 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   open: boolean; beneficiario: Beneficiario | null
   onClose: () => void; onSuccess: () => void
 }) {
-  const [meses, setMeses]           = useState(1)
-  const [monto, setMonto]           = useState("")
+  // Tipo auto-detectado: sin membresía previa → nuevo ingreso, con historial → re-inscripción
+  const esNuevo   = beneficiario?.membresiaEstatus === "Sin membresia"
+  const tipoLabel = esNuevo ? "Nuevo ingreso" : "Re-inscripción"
+  const montoBase = esNuevo ? MONTO_NUEVO_INGRESO : MONTO_REINSCRIPCION
+
+  const [monto, setMonto]           = useState(String(montoBase))
   const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("")
   const [observaciones, setObs]     = useState("")
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
 
   useEffect(() => {
-    if (open) { setMeses(1); setMonto(""); setMetodoPago(""); setObs(""); setError(null) }
-  }, [open])
+    if (open) {
+      setMonto(String(esNuevo ? MONTO_NUEVO_INGRESO : MONTO_REINSCRIPCION))
+      setMetodoPago("")
+      setObs("")
+      setError(null)
+    }
+  }, [open, esNuevo])
 
   const handleConfirm = async () => {
     if (!beneficiario) return
@@ -114,13 +122,12 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
     try {
       await registrarPago({
         curp: beneficiario.curp ?? beneficiario.folio,
-        meses,
         monto: montoNum,
         metodo_pago: metodoPago,
         observaciones: observaciones.trim(),
       })
       toast.success("Membresía registrada correctamente", {
-        description: `${meses} ${meses === 1 ? "mes" : "meses"} · $${montoNum.toLocaleString("es-MX", { minimumFractionDigits: 2 })} · ${metodoPago}`,
+        description: `${tipoLabel} · 1 año · $${montoNum.toLocaleString("es-MX", { minimumFractionDigits: 2 })} · ${labelMetodo(metodoPago)}`,
       })
       onSuccess(); onClose()
     } catch (e: unknown) {
@@ -136,7 +143,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold">Registrar membresía</DialogTitle>
+          <DialogTitle className="text-base font-bold">Registrar membresía anual</DialogTitle>
           <DialogDescription className="text-xs">
             <span className="font-semibold text-foreground">{nombre}</span>
             {" · "}{beneficiario?.curp ?? beneficiario?.folio}
@@ -144,19 +151,15 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Meses */}
-          <div>
-            <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              Meses de vigencia
-            </Label>
-            <div className="flex items-center overflow-hidden rounded-lg border border-border w-fit">
-              <button type="button" onClick={() => setMeses(m => Math.max(1, m - 1))} disabled={meses <= 1}
-                className="flex size-10 items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors">−</button>
-              <span className="min-w-[6rem] px-2 text-center text-sm font-semibold tabular-nums">
-                {meses} {meses === 1 ? "mes" : "meses"}
-              </span>
-              <button type="button" onClick={() => setMeses(m => Math.min(12, m + 1))} disabled={meses >= 12}
-                className="flex size-10 items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors">+</button>
+          {/* Tipo auto-detectado (solo lectura) */}
+          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-4 py-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{tipoLabel}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vigencia</p>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">1 año</p>
             </div>
           </div>
 
@@ -218,7 +221,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
             <button type="button" onClick={handleConfirm} disabled={loading}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: NAVY }}>
-              {loading ? "Registrando..." : "Confirmar membresía"}
+              {loading ? "Registrando..." : `Confirmar · $${parseFloat(monto || "0").toLocaleString("es-MX", { minimumFractionDigits: 0 })}`}
             </button>
           </div>
         </div>
@@ -365,7 +368,7 @@ export function MembresiasSection() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Membresías</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Control de pagos y renovaciones de membresías
+            Membresía anual · Nuevo ingreso ${MONTO_NUEVO_INGRESO} · Re-inscripción ${MONTO_REINSCRIPCION}
           </p>
         </div>
         <div className="flex items-center gap-2">

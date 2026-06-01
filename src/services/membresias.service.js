@@ -2,7 +2,8 @@ import * as MembresiasModel from "../models/membresias.model.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
-const MONTO_DEFAULT = 500;
+const MONTO_NUEVO_INGRESO = 200;
+const MONTO_REINSCRIPCION = 150;
 
 function formatISODateUTC(date) {
   const y = date.getUTCFullYear();
@@ -119,8 +120,13 @@ function parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr) {
   return { fechaEmision, fechaVigenciaInicio, fechaUltimoPago };
 }
 
-function validarMontoYMetodo(data, meses) {
-  const monto = data?.monto == null ? MONTO_DEFAULT * meses : Number(data.monto);
+function validarMontoYMetodo(data) {
+  let monto;
+  if (data?.monto != null) {
+    monto = Number(data.monto);
+  } else {
+    monto = data?.tipo === "reinscripcion" ? MONTO_REINSCRIPCION : MONTO_NUEVO_INGRESO;
+  }
   if (Number.isNaN(monto) || monto < 0) {
     throw badRequest("monto debe ser un número positivo");
   }
@@ -161,14 +167,10 @@ export async function registrarMembresia(data) {
   const { fechaEmision, fechaVigenciaInicio, fechaUltimoPago } =
     parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr);
 
-  // Meses: cuántos meses se pagan (mínimo 1, máximo 12)
-  /* istanbul ignore next */
-  const meses = Math.max(1, Math.min(12, Math.round(Number(data?.meses ?? 1)) || 1));
+  // Vigencia: siempre 1 año (membresía anual)
+  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, 12);
 
-  // Vigencia: N meses desde la fecha de inicio
-  const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, meses);
-
-  const { monto, metodoPago } = validarMontoYMetodo(data, meses);
+  const { monto, metodoPago } = validarMontoYMetodo(data);
   const referencia = data?.referencia ?? null;
 
   return await MembresiasModel.create({
