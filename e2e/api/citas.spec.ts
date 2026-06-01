@@ -1,7 +1,8 @@
 import { test, expect } from '../fixtures/auth';
 import { qase } from 'playwright-qase-reporter';
 
-const TEST_CURP = 'AUSD050124MDFGNYA8';
+const TEST_CURP        = 'AUSD050124MDFGNYA8';
+const E2E_ESPECIALISTA = 'Dr. E2E Playwright';
 
 test.beforeAll(async ({ apiContext }) => {
   await apiContext.delete('/citas/e2e-cleanup').catch(() => {});
