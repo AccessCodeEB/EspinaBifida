@@ -186,7 +186,7 @@ export function ReportesSection() {
   const NAVY = "#0f4c81"
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="flex flex-col gap-6 pb-8" data-section="reportes">
 
       {/* Header */}
       <div>
@@ -318,7 +318,7 @@ export function ReportesSection() {
                   style={{ backgroundColor: NAVY }}
                 >
                   {isDownloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-                  {isDownloading ? "Descargando..." : `Descargar ${selectedFormat.toUpperCase()}`}
+                  {isDownloading ? "Generando..." : `Generar ${selectedFormat.toUpperCase()}`}
                 </button>
               </div>
             </div>
