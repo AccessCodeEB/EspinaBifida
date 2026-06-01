@@ -106,7 +106,7 @@ function AltaComodatoDialog({
               </SelectTrigger>
               <SelectContent>
                 {beneficiarios.filter(b => b.estatus === "Activo").map(b => (
-                  <SelectItem key={b.curp} value={b.curp} className="text-xs">
+                  <SelectItem key={b.curp ?? ""} value={b.curp ?? ""} className="text-xs">
                     {b.nombres} {b.apellidoPaterno} {b.apellidoMaterno ?? ""}
                   </SelectItem>
                 ))}
