@@ -19,7 +19,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 24 / 24 |
 | Archivos de prueba Jest (suites) | 53 |
-| Tests Jest | 1168 |
+| Tests Jest | 1157 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
