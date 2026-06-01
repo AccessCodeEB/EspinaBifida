@@ -215,3 +215,47 @@ describe("createCita — validación de horario de especialidad", () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Regresión ISSUE-003: updateCita debe re-validar slot al cambiar fecha/hora/especialista
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("regression ISSUE-003 — updateCita re-valida slot al editar cita", () => {
+  beforeEach(() => {
+    mockFindById.mockResolvedValue(citaBase);
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+    mockValidarSlot.mockResolvedValue(undefined);
+  });
+
+  test("PATCH con nueva fecha → llama validarSlotEspecialidad", async () => {
+    await Service.updateCita(1, { fecha: "2026-06-19", hora: "10:00" });
+    expect(mockValidarSlot).toHaveBeenCalledTimes(1);
+    expect(mockValidarSlot).toHaveBeenCalledWith(
+      citaBase.ESPECIALISTA, "2026-06-19", "10:00"
+    );
+  });
+
+  test("PATCH con nuevo especialista → llama validarSlotEspecialidad", async () => {
+    await Service.updateCita(1, { especialista: "Psicología" });
+    expect(mockValidarSlot).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH sin cambios de horario (solo estatus) → NO llama validarSlotEspecialidad", async () => {
+    await Service.updateCita(1, { estatus: "CONFIRMADA" });
+    expect(mockValidarSlot).not.toHaveBeenCalled();
+  });
+
+  test("PATCH con fecha bloqueada → lanza error y NO actualiza la cita", async () => {
+    mockValidarSlot.mockRejectedValue({ statusCode: 400, code: "FECHA_BLOQUEADA" });
+    await expect(Service.updateCita(1, { fecha: "2026-06-19", hora: "10:00" }))
+      .rejects.toMatchObject({ statusCode: 400, code: "FECHA_BLOQUEADA" });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("cita inexistente en PATCH → 404 sin llamar validarSlot", async () => {
+    mockFindById.mockResolvedValue(undefined);
+    await expect(Service.updateCita(999, { fecha: "2026-06-19" }))
+      .rejects.toMatchObject({ statusCode: 404 });
+    expect(mockValidarSlot).not.toHaveBeenCalled();
+  });
+});

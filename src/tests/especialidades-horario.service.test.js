@@ -219,3 +219,36 @@ describe("validarSlotEspecialidad", () => {
     expect(mockCountCitasActivas).not.toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Regresión ISSUE-001: updateEspecialidad debe persistir diaSemana correctamente
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("regression ISSUE-001 — updateEspecialidad persiste diaSemana", () => {
+  test("PATCH con diaSemana=1 debe llamar model.update con diaSemana=1 (no undefined)", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockUpdate.mockResolvedValue(undefined);
+    // Simular que findById después del update devuelve el objeto actualizado
+    mockFindById.mockResolvedValueOnce(ESP_PSICOLOGIA).mockResolvedValueOnce({
+      ...ESP_PSICOLOGIA, DIA_SEMANA: 1,
+    });
+
+    await Svc.updateEspecialidad(3, { diaSemana: 1 });
+
+    // El primer argumento de la segunda llamada a update debe incluir diaSemana=1
+    const [, payload] = mockUpdate.mock.calls[0];
+    expect(payload.diaSemana).toBe(1);
+  });
+
+  test("PATCH sin diaSemana no debe pasar undefined al model (sino undefined/null controlado)", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockUpdate.mockResolvedValue(undefined);
+    mockFindById.mockResolvedValueOnce(ESP_PSICOLOGIA).mockResolvedValueOnce(ESP_PSICOLOGIA);
+
+    await Svc.updateEspecialidad(3, { notas: "nueva nota" });
+
+    const [, payload] = mockUpdate.mock.calls[0];
+    // diaSemana debe llegar como undefined (NVL en Oracle mantendrá el valor actual)
+    expect(payload.diaSemana).toBeUndefined();
+  });
+});
