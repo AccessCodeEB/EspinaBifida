@@ -1,11 +1,11 @@
 # Documento de Diseño de Software (SDD)
 # Sistema de Gestión — Asociación de Espina Bífida de Nuevo León
 
-**Versión:** 1.0  
-**Fecha:** 2026-05-28  
+**Versión:** 1.1  
+**Fecha:** 2026-06-01  
 **Institución:** Tecnológico de Monterrey  
 **Equipo:** AccessCode EB  
-**Estado del sistema:** Producción — 9 módulos backend, 11 módulos frontend, 12 migraciones BD
+**Estado del sistema:** Producción — 9 módulos backend, 11 módulos frontend, 21 migraciones BD
 
 ---
 
@@ -135,7 +135,9 @@ La siguiente tabla lista los frameworks, librerías y estándares que conforman 
 | **CURP** | Clave Única de Registro de Población. Identificador alfanumérico de 18 caracteres asignado a cada ciudadano mexicano por el Registro Nacional de Población. Es la llave primaria de la tabla `BENEFICIARIOS`. |
 | **Beneficiario** | Persona con diagnóstico de Espina Bífida (o familiar directo) registrada en el sistema y atendida por la asociación. |
 | **Pre-registro** | Solicitud de ingreso al sistema enviada públicamente por un paciente o familiar, antes de ser aprobada o rechazada por el personal administrativo. |
-| **Membresía / Credencial** | Registro anual que acredita la vigencia del beneficiario como miembro activo de la asociación. Se materializa en una tarjeta CR-80 imprimible. Almacenada en la tabla `CREDENCIALES`. |
+| **Membresía / Credencial** | Registro **anual** (vigencia de 12 meses) que acredita la membresía activa del beneficiario. Dos tipos: **Nuevo ingreso** ($200, para beneficiarios sin credencial previa) y **Re-inscripción** ($150, para quienes ya tienen historial en `CREDENCIALES`). El tipo se determina automáticamente por el sistema. Se materializa en una tarjeta CR-80 imprimible. Almacenada en la tabla `CREDENCIALES`. |
+| **Nuevo ingreso** | Primer alta de membresía de un beneficiario. Costo: **$200**. Determinado por ausencia de registros previos en `CREDENCIALES` para esa CURP. |
+| **Re-inscripción** | Renovación o reactivación de membresía de un beneficiario con historial previo en `CREDENCIALES`. Costo: **$150**. |
 | **Vigencia** | Período de tiempo durante el cual una membresía está activa, definido por `FECHA_VIGENCIA_INICIO` y `FECHA_VIGENCIA_FIN` en `CREDENCIALES`. |
 | **Estatus Activo** | Estado de un beneficiario con membresía vigente y en regla con la asociación. |
 | **Estatus Inactivo** | Estado de un beneficiario cuya membresía ha expirado o no ha renovado. No puede recibir servicios. |
@@ -263,7 +265,13 @@ La seguridad es una preocupación transversal que afecta todos los módulos del 
 - Claves foráneas con `REFERENCES` previenen registros huérfanos.
 - La columna `CURP` tiene restricción `UNIQUE` implícita por ser PK.
 
-**Regla de negocio: membresía activa**
+**Reglas de negocio: membresías / credenciales**
+- Las membresías tienen **vigencia anual fija** (12 meses desde `FECHA_VIGENCIA_INICIO`). No existe vigencia mensual ni por número de meses variable.
+- El **tipo de membresía** se determina automáticamente consultando `COUNT(1)` en `CREDENCIALES` para la CURP:
+  - Sin registros previos → `nuevo_ingreso` → costo **$200**
+  - Con al menos un registro previo → `reinscripcion` → costo **$150**
+- El tipo puede ser sobreescrito por el personal administrativo si la situación lo requiere.
+- Los campos `OBSERVACIONES` y `METODO_PAGO` son **obligatorios** al registrar una membresía.
 - Antes de registrar cualquier servicio, el sistema verifica que el beneficiario tenga una membresía con `SYSDATE BETWEEN FECHA_VIGENCIA_INICIO AND FECHA_VIGENCIA_FIN`. Si no, retorna HTTP 403.
 
 #### 4.2.3 Mantenibilidad
@@ -884,9 +892,14 @@ Historial de membresías por beneficiario. PK generada por secuencia `SEQ_CREDEN
 | `NUMERO_CREDENCIAL` | `VARCHAR2(50)` | — | Número impreso en la tarjeta CR-80 |
 | `FECHA_VIGENCIA_INICIO` | `DATE` | NOT NULL | Inicio del período de vigencia |
 | `FECHA_VIGENCIA_FIN` | `DATE` | NOT NULL | Fin del período de vigencia |
+| `FECHA_EMISION` | `DATE` | — | Fecha de emisión de la credencial |
 | `FECHA_ULTIMO_PAGO` | `DATE` | — | Última fecha de pago registrada |
-| `METODO_PAGO` | `VARCHAR2(50)` | — | Efectivo, transferencia, etc. |
-| `MONTO` | `NUMBER(10,2)` | — | Monto pagado por la membresía |
+| `METODO_PAGO` | `VARCHAR2(50)` | NOT NULL en alta | `efectivo`, `transferencia` o `tarjeta` |
+| `MONTO` | `NUMBER(10,2)` | — | Monto pagado ($200 nuevo ingreso / $150 re-inscripción por defecto) |
+| `OBSERVACIONES` | `CLOB` | NOT NULL en alta | Motivo o contexto del registro (obligatorio) |
+| `REFERENCIA` | `VARCHAR2(200)` | — | Referencia de pago (número de transferencia, etc.) |
+
+> **Nota de negocio:** La vigencia siempre se calcula como `FECHA_VIGENCIA_INICIO + 12 meses`. El monto se determina automáticamente según el historial de la CURP en `CREDENCIALES`, pero puede ser ajustado por el personal.
 
 ---
 

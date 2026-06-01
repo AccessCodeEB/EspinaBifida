@@ -2,8 +2,8 @@
 
 **Proyecto:** Sistema de Gestión para la Asociación de Espina Bífida  
 **Institución:** Tecnológico de Monterrey  
-**Fecha de emisión:** 2026-05-29  
-**Versión:** 1.0  
+**Fecha de emisión:** 2026-06-01  
+**Versión:** 1.1  
 **Estado del sistema:** Producción activa — 100% verde en CI/CD
 
 ---
@@ -33,7 +33,7 @@ El sistema cubre nueve módulos de backend y once módulos de frontend. La sigui
 | Módulo | Funcionalidades cubiertas | Tipos de prueba |
 |---|---|---|
 | **Beneficiarios** | CRUD completo, pre-registro público, aprobación y rechazo de solicitudes, foto de perfil, baja lógica, validación de CURP, CURP duplicada | Unitaria, Integración, E2E API, UAT |
-| **Membresías** | Alta de membresía, validación de vigencia (activa/vencida), sincronización de estatus de beneficiario, historial de pagos, renovación | Unitaria, Integración, E2E API |
+| **Membresías** | Alta de membresía anual (12 meses), auto-detección de tipo (nuevo ingreso $200 / re-inscripción $150) desde historial en BD, validación de vigencia (activa/vencida), sincronización de estatus, historial de pagos, método de pago y observaciones obligatorios | Unitaria, Integración, E2E API |
 | **Servicios** | Registro de servicio con validación de membresía activa, bloqueo si membresía inactiva, tipos de servicio, artículos consumidos, paginación, filtros, notas | Unitaria, Integración, E2E API |
 | **Citas** | CRUD completo, filtros por fecha y estatus, especialista asignado | Unitaria, Integración, E2E API |
 | **Inventario** | Artículos, movimientos de stock (entradas/salidas), alertas de mínimo de stock, filtros activo/inactivo, trazabilidad de movimientos | Unitaria, Integración, E2E API |
@@ -51,7 +51,7 @@ El sistema cubre nueve módulos de backend y once módulos de frontend. La sigui
 |---|---|---|
 | **Dashboard** | Panel principal con KPIs, campana de notificaciones con badge, panel desplegable de alertas | E2E UI (indirecto) |
 | **Beneficiarios** | Lista paginada, búsqueda, detalle, creación, edición, cambio de estatus, baja, subida de foto | E2E API (CRUD), UAT |
-| **Membresías** | Alta de membresía, visualización de vigencia, indicador de estatus activo/inactivo | E2E API, UAT |
+| **Membresías** | Alta de membresía anual, tipo auto-detectado (Nuevo ingreso / Re-inscripción) con precio correspondiente, selector de método de pago, observaciones obligatorias, visualización de vigencia, indicador de estatus | E2E API, UAT |
 | **Servicios** | Registro de servicio con selección de tipo e insumos, validación de membresía activa antes de registro | E2E API |
 | **Citas** | CRUD de citas, selección de especialista, filtros por fecha | E2E API |
 | **Inventario** | Lista de artículos, registro de movimientos, indicadores de stock mínimo | E2E API |
@@ -142,12 +142,16 @@ Los siguientes casos de prueba están registrados y trazados en la plataforma **
 
 | ID | Nombre del caso | Tipo | Prioridad | Estado |
 |---|---|---|---|---|
-| QID-3 | Alta de membresía con datos válidos | Integración (API) | Alta | Pasando |
+| QID-3 | Alta de membresía con vigencia anual (12 meses) | Integración (API) | Alta | Pasando |
 | QID-4 | Validación de vigencia de membresía activa | Integración (API) | Alta | Pasando |
 | QID-5 | Membresía vencida marca beneficiario como Inactivo | Integración (API) | Alta | Pasando |
 | QID-9 | Renovación de membresía existente | Integración (API) | Media | Pasando |
 | QID-10 | Historial de membresías por beneficiario | Integración (API) | Baja | Pasando |
 | QID-11 | Expiración de credencial cambia estatus beneficiario | Integración (API) | Alta | Pasando |
+| QID-56 | Sin historial en BD → tipo auto-detectado `nuevo_ingreso` → monto $200 | Unitaria | Alta | Pasando |
+| QID-57 | Con historial en BD → tipo auto-detectado `reinscripcion` → monto $150 | Unitaria | Alta | Pasando |
+| QID-58 | Tipo explícito sobreescribe auto-detección (`nuevo_ingreso` fuerza $200 con historial) | Unitaria | Media | Pasando |
+| QID-59 | Tipo explícito sobreescribe auto-detección (`reinscripcion` fuerza $150 sin historial) | Unitaria | Media | Pasando |
 
 #### Servicios
 
@@ -293,10 +297,14 @@ Las pruebas funcionales manuales se ejecutan sobre el ambiente de staging (idén
 
 | | Detalle |
 |---|---|
-| **Precondición** | El beneficiario existe en el sistema con estatus `Activo` o `Inactivo` (sin membresía vigente). El admin tiene sesión activa. |
-| **Pasos** | 1. Navegar al módulo de Beneficiarios. 2. Buscar y abrir el perfil del beneficiario. 3. Acceder a la sección "Membresías". 4. Hacer clic en "Nueva membresía". 5. Ingresar número de credencial, fecha de inicio y fecha de vigencia fin. 6. Ingresar monto pagado. 7. Guardar la membresía. 8. Verificar que el estatus del beneficiario cambia a `Activo`. 9. Verificar la tarjeta CR80 generada en el frontend. |
-| **Resultado esperado** | Membresía creada con `FECHA_VIGENCIA_INICIO` y `FECHA_VIGENCIA_FIN` correctas; beneficiario con `ESTATUS='Activo'`; credencial CR80 imprimible disponible. |
-| **Criterio de éxito** | `CREDENCIALES` con `SYSDATE BETWEEN FECHA_VIGENCIA_INICIO AND FECHA_VIGENCIA_FIN`; estatus beneficiario actualizado. |
+| **Precondición** | El beneficiario existe en el sistema con estatus `Activo` o `Inactivo`. El admin tiene sesión activa. |
+| **Pasos** | 1. Navegar al módulo de Membresías. 2. Hacer clic en "Nueva membresía" y seleccionar al beneficiario. 3. El sistema muestra automáticamente el tipo (Nuevo ingreso $200 / Re-inscripción $150) según historial en BD. 4. Verificar que el monto precargado es correcto. 5. Seleccionar método de pago (Efectivo / Transferencia / Tarjeta). 6. Ingresar observaciones (obligatorio). 7. Confirmar la membresía. 8. Verificar que el estatus del beneficiario cambia a `Activo`. 9. Verificar la tarjeta CR80 generada en el frontend. |
+| **Resultado esperado** | Membresía creada con vigencia de exactamente 12 meses (`FECHA_VIGENCIA_FIN = FECHA_VIGENCIA_INICIO + 12 meses`); monto correcto según tipo auto-detectado; beneficiario con `ESTATUS='Activo'`; credencial CR80 disponible. |
+| **Criterio de éxito** | `CREDENCIALES` con `SYSDATE BETWEEN FECHA_VIGENCIA_INICIO AND FECHA_VIGENCIA_FIN`; `MONTO` = 200 (nuevo ingreso) o 150 (re-inscripción); `OBSERVACIONES` y `METODO_PAGO` no nulos; estatus beneficiario actualizado. |
+
+**Variante nuevo ingreso:** Beneficiario sin registros en `CREDENCIALES` → tipo = `nuevo_ingreso` → monto $200.
+
+**Variante re-inscripción:** Beneficiario con al menos una credencial previa (activa o vencida) → tipo = `reinscripcion` → monto $150.
 
 #### Flujo 4: Registro de servicio con descuento de inventario
 
