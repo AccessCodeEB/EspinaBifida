@@ -245,12 +245,12 @@ export function NotificacionesPanel() {
                   </div>
                 ) : detailComodatos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    No hay préstamos por vencer en los próximos 5 días.
+                    No hay comodatos por vencer en los próximos 5 días.
                   </p>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
-                      {detailComodatos.length} préstamo{detailComodatos.length !== 1 ? "s" : ""} por vencer o vencido{detailComodatos.length !== 1 ? "s" : ""}
+                      {detailComodatos.length} comodato{detailComodatos.length !== 1 ? "s" : ""} por vencer o vencido{detailComodatos.length !== 1 ? "s" : ""}
                     </p>
                     {detailComodatos.map((c) => {
                       const hoy = new Date()

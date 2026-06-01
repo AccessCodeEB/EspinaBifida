@@ -662,8 +662,8 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               onClick={() => { setSafetyNetItem(null); onNavigate?.("servicios") }}
               className="flex flex-col items-start gap-0.5 rounded-xl border-2 border-[#0f4c81]/30 bg-[#0f4c81]/5 px-4 py-3 text-left transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/10"
             >
-              <span className="text-sm font-semibold text-[#0f4c81]">Registrar préstamo a un beneficiario</span>
-              <span className="text-[11px] text-muted-foreground">Se registra el servicio bajo el nombre de la persona y se descuenta del inventario automáticamente.</span>
+              <span className="text-sm font-semibold text-[#0f4c81]">Registrar comodato a un beneficiario</span>
+              <span className="text-[11px] text-muted-foreground">Se registra el comodato bajo el nombre de la persona y se descuenta del inventario automáticamente.</span>
             </button>
             <button
               onClick={confirmarAjusteStock}
