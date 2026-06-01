@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles } from "lucide-react"
+import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
   const h = 8 + Math.floor(i / 2), m = i % 2 === 0 ? "00" : "30"
   return `${String(h).padStart(2,"0")}:${m}`
 }).filter(t => {
-  const [h] = t.split(":").map(Number); return h < 20
+  const [h] = t.split(":").map(Number); return h < 17
 })
 
 function startOfDayLocal(d: Date): Date {
@@ -247,56 +247,67 @@ export function CitasSection() {
   const NAVY = "#0f4c81"
 
   return (
-    <div className="flex flex-col gap-6 flex-1 min-h-0">
+    <div className="flex flex-col gap-6 pb-8">
+
       {/* ── Header ── */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Citas</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Gestión y agenda de citas con especialistas</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* KPIs integrados */}
-          {!loading && [
-            { label: "Hoy",      value: stats.hoy,       color: NAVY },
-            { label: "Semana",   value: stats.semana,    color: "#10b981" },
-            { label: "Pendientes",value: stats.pendientes, color: "#f59e0b" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-card px-3 shadow-sm">
-              <div className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-              <p className="text-xs font-semibold text-foreground">
-                {value} <span className="font-medium text-muted-foreground ml-0.5">{label}</span>
-              </p>
+        <button
+          onClick={openDialog}
+          className="flex h-10 shrink-0 items-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+          style={{ backgroundColor: NAVY }}
+        >
+          <Plus className="size-4" />Nueva Cita
+        </button>
+      </div>
+
+      {/* ── Toggle Agenda / Historial ── */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => switchView("calendar")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+            activeView === "calendar"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <CalendarDays className="size-3.5" />Agenda
+        </button>
+        <button
+          onClick={() => switchView("list")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+            activeView === "list"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <List className="size-3.5" />Historial
+        </button>
+      </div>
+
+      {/* ── KPI cards ── */}
+      {!loading && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Hoy",        value: stats.hoy,        icon: CalendarDays, color: NAVY,       bg: "#0f4c8115" },
+            { label: "Esta semana",value: stats.semana,     icon: Users,        color: "#6FD6A8",  bg: "#6FD6A815" },
+            { label: "Pendientes", value: stats.pendientes, icon: Clock,        color: "#FFD97A",  bg: "#FFD97A15" },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div key={label} className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{label}</span>
+                <div className="flex size-7 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
+                  <Icon className="size-3.5" style={{ color }} />
+                </div>
+              </div>
+              <span className="text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</span>
             </div>
           ))}
-
-          <div className="hidden md:block w-px h-6 bg-border/40 mx-1" />
-
-          {/* Toggle vista */}
-          <div className="flex h-9 items-center rounded-lg border border-border/70 bg-card p-0.5 shadow-sm shrink-0">
-            {(["calendar", "list"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => switchView(v)}
-                className={`flex h-full items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-all ${
-                  activeView === v
-                    ? "bg-[#0f4c81] text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {v === "calendar" ? <><CalendarDays className="size-3.5" />Agenda</> : <><List className="size-3.5" />Historial</>}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={openDialog}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
-            style={{ backgroundColor: NAVY }}
-          >
-            <Plus className="size-3.5" />Nueva Cita
-          </button>
         </div>
-      </div>
+      )}
 
       {/* ── Main view (con fade) ── */}
       {loading ? (
@@ -310,7 +321,7 @@ export function CitasSection() {
       ) : (
         <div
           style={{ transition: "opacity 180ms ease, transform 180ms ease" }}
-          className={`flex-1 min-h-0 flex flex-col ${viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
+          className={`flex flex-col ${viewVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
         >
           {activeView === "calendar" ? (
             <CitasCalendarView
@@ -327,12 +338,27 @@ export function CitasSection() {
 
       {/* ── Dialog Nueva Cita ── */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
-          <div className="border-b border-border/40 px-6 py-4">
-            <DialogTitle className="text-base font-bold">Agendar nueva cita</DialogTitle>
-            <DialogDescription className="text-xs mt-0.5">Programa una visita con un especialista médico</DialogDescription>
+        <DialogContent showCloseButton={false} className="max-w-lg p-0 gap-0 overflow-hidden">
+
+          {/* Banner navy */}
+          <div className="relative shrink-0 overflow-hidden" style={{ background: NAVY }}>
+            <div className="absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+            <div className="relative flex items-center justify-between gap-3 px-6 py-4">
+              <div>
+                <DialogTitle className="text-base font-bold text-white">Agendar nueva cita</DialogTitle>
+                <DialogDescription className="mt-0.5 text-[11px] text-white/60">
+                  Programa una visita con un especialista médico
+                </DialogDescription>
+              </div>
+              <button onClick={() => setShowDialog(false)}
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors">
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
 
+          <div className="max-h-[70vh] overflow-y-auto">
           <div className="space-y-4 px-6 py-5">
             {/* Beneficiario */}
             <div className="relative space-y-1.5">
@@ -500,6 +526,8 @@ export function CitasSection() {
             )}
           </div>
 
+          </div>
+
           <div className="flex justify-end gap-2 border-t border-border/40 px-6 py-4">
             <button type="button" onClick={() => setShowDialog(false)} disabled={saving}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
@@ -509,7 +537,8 @@ export function CitasSection() {
               type="button"
               onClick={handleGuardar}
               disabled={saving || !!saveError}
-              className="rounded-lg bg-[#0f4c81] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:bg-primary"
+              className="flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: NAVY }}
             >
               {saving ? "Guardando..." : "Guardar cita"}
             </button>

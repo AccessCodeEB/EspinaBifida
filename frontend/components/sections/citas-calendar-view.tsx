@@ -6,19 +6,32 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
 
-const GRID_START=7,GRID_END=22,WORK_START=8,WORK_END=20
+const GRID_START=7,GRID_END=17,WORK_START=8,WORK_END=17
 const CELL_H=64,TOTAL_H=GRID_END-GRID_START,GRID_H=CELL_H*TOTAL_H
 const HOURS=Array.from({length:TOTAL_H+1},(_,i)=>i+GRID_START)
 const DEFAULT_MINS=60
 const DIAS_S=["L","M","X","J","V","S","D"]
 const DIAS_L=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
+const DIAS_FULL=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-const BL:Record<string,string>={Confirmada:"border-l-emerald-500",Pendiente:"border-l-yellow-400",Completada:"border-l-blue-500",Cancelada:"border-l-red-500"}
-const BG:Record<string,string>={Confirmada:"bg-emerald-500/10",Pendiente:"bg-yellow-400/10",Completada:"bg-blue-500/10",Cancelada:"bg-red-500/10"}
-const DC:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-yellow-400",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
-const TC:Record<string,string>={Confirmada:"text-emerald-600 dark:text-emerald-400",Pendiente:"text-yellow-500 dark:text-yellow-400",Completada:"text-blue-600 dark:text-blue-400",Cancelada:"text-red-600 dark:text-red-400"}
-const POPUP_BG:Record<string,string>={Confirmada:"bg-emerald-500",Pendiente:"bg-yellow-500",Completada:"bg-blue-500",Cancelada:"bg-red-500"}
+function fmtCitaFecha(fecha:string,hora:string):string{
+  const d=new Date(fecha+"T12:00:00")
+  const dia=DIAS_FULL[d.getDay()]
+  const num=d.getDate()
+  const [h,m]=hora.split(":").map(Number)
+  const ampm=h<12?"am":"pm"
+  const h12=h===0?12:h>12?h-12:h
+  const minStr=m>0?`:${String(m).padStart(2,"0")}`:""
+  return`${dia} ${num} · ${h12}${minStr}${ampm}`
+}
+
+const BL:Record<string,string>={Confirmada:"border-l-[#6FD6A8]",Pendiente:"border-l-[#FFD97A]",Completada:"border-l-[#7FB6FF]",Cancelada:"border-l-[#ef4444]"}
+const BG:Record<string,string>={Confirmada:"bg-[#6FD6A8]/10",Pendiente:"bg-[#FFD97A]/10",Completada:"bg-[#7FB6FF]/10",Cancelada:"bg-[#ef4444]/10"}
+const DC:Record<string,string>={Confirmada:"bg-[#6FD6A8]",Pendiente:"bg-[#FFD97A]",Completada:"bg-[#7FB6FF]",Cancelada:"bg-[#ef4444]"}
+const TC:Record<string,string>={Confirmada:"text-[#6FD6A8]",Pendiente:"text-[#FFD97A]",Completada:"text-[#7FB6FF]",Cancelada:"text-[#ef4444]"}
+const POPUP_BG:Record<string,string>={Confirmada:"bg-[#6FD6A8]",Pendiente:"bg-[#FFD97A]",Completada:"bg-[#7FB6FF]",Cancelada:"bg-[#ef4444]"}
+const POPUP_TEXT:Record<string,string>={Confirmada:"text-gray-800",Pendiente:"text-gray-800",Completada:"text-gray-800",Cancelada:"text-white"}
 const POPUP_LABEL:Record<string,string>={Confirmada:"Confirmada",Pendiente:"Pendiente",Completada:"Completada",Cancelada:"Cancelada"}
 
 function sameDay(a:Date,b:Date){return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear()}
@@ -138,19 +151,19 @@ const CONFIRM_META: Record<string, { label: string; icon: React.ReactNode; btnCl
   Confirmada: {
     label: "Confirmar cita",
     icon: <Check className="size-4" />,
-    btnClass: "bg-yellow-500 hover:opacity-90 text-white",
+    btnClass: "bg-[#6FD6A8] hover:opacity-90 text-gray-800",
     hint: "La cita quedará marcada como Confirmada.",
   },
   Cancelada: {
     label: "Cancelar cita",
     icon: <X className="size-4" />,
-    btnClass: "bg-red-600 hover:opacity-90 text-white",
+    btnClass: "bg-[#ef4444] hover:opacity-90 text-white",
     hint: "La cita quedará marcada como Cancelada. Esta acción es difícil de deshacer.",
   },
   Completada: {
     label: "Completar cita",
     icon: <Check className="size-4" />,
-    btnClass: "bg-emerald-600 hover:opacity-90 text-white",
+    btnClass: "bg-[#7FB6FF] hover:opacity-90 text-gray-800",
     hint: "La cita quedará marcada como Completada.",
   },
 }
@@ -219,7 +232,8 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
     return r
   })()
 
-  const accentBg = POPUP_BG[cita.estatus] ?? "bg-slate-500"
+  const accentBg   = POPUP_BG[cita.estatus]   ?? "bg-slate-500"
+  const accentText = POPUP_TEXT[cita.estatus] ?? "text-white"
   const popW = 280
   const popH = 260
   const gap = 8
@@ -279,13 +293,13 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
         {/* Header coloreado según estatus */}
         <div className={`${accentBg} px-4 py-3 flex items-center justify-between`}>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-white/90 uppercase tracking-widest">
+            <span className={`text-xs font-bold uppercase tracking-widest ${accentText}`}>
               {POPUP_LABEL[cita.estatus] ?? cita.estatus}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-white">{cita.hora}</span>
-            <button onClick={onClose} className="rounded-full p-0.5 text-white/70 hover:text-white hover:bg-white/20 transition-colors">
+            <span className={`text-xs font-bold ${accentText}`}>{cita.hora}</span>
+            <button onClick={onClose} className={`rounded-full p-0.5 opacity-60 hover:opacity-100 hover:bg-black/10 transition-colors ${accentText}`}>
               <X className="size-3.5"/>
             </button>
           </div>
@@ -320,14 +334,14 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
                 <button
                   disabled={isUpdating}
                   onClick={() => requestAction(cita.id, "Confirmada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-yellow-500 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   <Check className="size-3.5"/>Confirmar
                 </button>
                 <button
                   disabled={isUpdating}
                   onClick={() => requestAction(cita.id, "Cancelada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   <X className="size-3.5"/>Cancelar
                 </button>
@@ -336,14 +350,14 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
                 <button
                   disabled={isUpdating}
                   onClick={() => requestAction(cita.id, "Completada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   <Check className="size-3.5"/>Completar
                 </button>
                 <button
                   disabled={isUpdating}
                   onClick={() => requestAction(cita.id, "Cancelada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   <X className="size-3.5"/>Cancelar
                 </button>
@@ -388,17 +402,17 @@ function ActionCenter({
   const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
 
   if(!pending.length)return(
-    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
+    <div className="flex-1 rounded-2xl border border-border/40 bg-card/60 p-4 flex flex-col items-center justify-center gap-1">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Por Atender</p>
       <p className="text-xs text-muted-foreground/50">Sin citas por atender ✓</p>
     </div>
   )
   return(
-    <div className="flex-1 min-h-0 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 flex flex-col gap-2">
+    <div className="flex-1 rounded-2xl border border-border/40 bg-card/60 px-4 py-3 flex flex-col gap-2">
       {/* Header */}
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 shrink-0">
-        <AlertCircle className="size-3 text-amber-400"/>Por Atender
-        <span className="ml-auto rounded-full bg-amber-400/20 px-1.5 py-px text-amber-400 font-bold">{pending.length}</span>
+        <AlertCircle className="size-3 text-[#FFD97A]"/>Por Atender
+        <span className="ml-auto rounded-full bg-[#FFD97A]/20 px-1.5 py-px text-[#FFD97A] font-bold">{pending.length}</span>
       </p>
 
       {/* Cards — flex-1, clipped with overflow-hidden so pagination is never pushed out */}
@@ -414,11 +428,11 @@ function ActionCenter({
             </p>
             <div className="flex items-center gap-2 mt-1">
               <span className={`size-1.5 rounded-full shrink-0 ${DC[c.estatus]??"bg-slate-400"}`}/>
-              <p className="text-[10px] text-muted-foreground whitespace-nowrap">{c.fecha} · {c.hora}</p>
+              <p className="text-[10px] text-muted-foreground whitespace-nowrap">{fmtCitaFecha(c.fecha,c.hora)}</p>
               <span className={`ml-auto shrink-0 flex items-center justify-center rounded-md border p-1 ${
                 c.estatus==="Confirmada"
-                  ?"border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                  :"border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  ?"border-[#6FD6A8]/40 bg-[#6FD6A8]/10 text-[#6FD6A8]"
+                  :"border-[#FFD97A]/40 bg-[#FFD97A]/10 text-[#FFD97A]"
               }`}>
                 {c.estatus==="Confirmada" ? <CheckCircle2 className="size-3.5" /> : <Clock className="size-3.5" />}
               </span>
@@ -515,21 +529,21 @@ function CitaDetailPanel({selected,onClose,onAction,updatingId}:{
           <div className="flex gap-2 pt-1 border-t border-border/40">
             {cita.estatus==="Pendiente"&&<>
               <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Confirmada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-yellow-500 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
                 <Check className="size-3.5"/>Confirmar
               </button>
               <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Cancelada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                 <X className="size-3.5"/>Cancelar
               </button>
             </>}
             {cita.estatus==="Confirmada"&&<>
               <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Completada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
                 <Check className="size-3.5"/>Completar
               </button>
               <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Cancelada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                 <X className="size-3.5"/>Cancelar
               </button>
             </>}
@@ -656,9 +670,9 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   return(
     <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr] flex-1 min-h-0">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr] lg:items-stretch">
         {/* LEFT */}
-      <div className="flex flex-col gap-4 min-h-0">
+      <div className="flex flex-col gap-4 h-full">
         {/* Mini-cal */}
         <div className="rounded-2xl border border-border/50 bg-card p-3 shrink-0">
           <div className="flex items-center justify-between mb-2">
@@ -710,9 +724,9 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
             <span className="text-sm font-semibold">{weekDates[0].getDate()} – {weekDates[6].getDate()} {MESES[weekDates[6].getMonth()]} {weekDates[6].getFullYear()}</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={()=>setWeekAnchor(w=>{const p=new Date(w);p.setDate(w.getDate()-7);return p})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
+            <button onClick={()=>setWeekAnchor(w=>{const p=new Date(w);p.setDate(w.getDate()-7);setCalYear(p.getFullYear());setCalMonth(p.getMonth());return p})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronLeft className="size-4"/></button>
             <button onClick={()=>{const m=getMon(new Date());setWeekAnchor(m);setCalYear(m.getFullYear());setCalMonth(m.getMonth())}} className="rounded-lg px-2.5 py-1 text-xs font-medium hover:bg-muted transition-colors">Hoy</button>
-            <button onClick={()=>setWeekAnchor(w=>{const n=new Date(w);n.setDate(w.getDate()+7);return n})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronRight className="size-4"/></button>
+            <button onClick={()=>setWeekAnchor(w=>{const n=new Date(w);n.setDate(w.getDate()+7);setCalYear(n.getFullYear());setCalMonth(n.getMonth());return n})} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><ChevronRight className="size-4"/></button>
           </div>
         </div>
         {/* Day headers */}
@@ -729,7 +743,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
           })}
         </div>
         {/* Scrollable grid */}
-        <div id="citas-grid" className="flex flex-1 overflow-y-auto relative">
+        <div id="citas-grid" className="flex relative">
           {/* Hours column — FIX #6: pt-0 + offset labels to align with grid lines */}
           <div className="w-14 shrink-0 relative border-r border-border/20" style={{height:`${GRID_H}px`}}>
             {HOURS.slice(0,-1).map((h,i)=>(
