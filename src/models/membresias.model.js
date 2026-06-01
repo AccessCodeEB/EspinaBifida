@@ -63,6 +63,14 @@ export const findBeneficiarioByCurp = (curp) =>
     ).then(r => r.rows[0] ?? null)
   );
 
+export const countCredencialesByCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT COUNT(1) AS TOTAL FROM CREDENCIALES WHERE CURP = :curp`,
+      { curp }
+    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
+  );
+
 export const findLastByCurp = (curp) =>
   withConnection(conn =>
     conn.execute(

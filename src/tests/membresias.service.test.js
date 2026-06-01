@@ -7,6 +7,7 @@ const mockHasPeriodOverlap          = jest.fn();
 const mockFindMembresiaActivaByCurp = jest.fn();
 const mockSetBeneficiarioInactivo   = jest.fn();
 const mockCreate                    = jest.fn();
+const mockCountCredenciales         = jest.fn();
 
 const mockSyncEstados       = jest.fn();
 const mockFindPagosRecientes = jest.fn();
@@ -23,6 +24,7 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
   syncEstados:               mockSyncEstados,
   findPagosRecientes:        mockFindPagosRecientes,
   findAll:                   mockFindAll,
+  countCredencialesByCurp:   mockCountCredenciales,
 }));
 
 // Importaciones después de los mocks (ESM)
@@ -97,6 +99,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
   beforeEach(() => {
     mockFindBeneficiarioByCurp.mockResolvedValue({ CURP });
     mockCreate.mockResolvedValue({ rowsAffected: 1 });
+    mockCountCredenciales.mockResolvedValue(0); // sin historial → nuevo_ingreso por defecto
   });
 
   test("sin numero_credencial ni fecha_emision → auto-genera ambos (ramas ?? del L99 y L104)", async () => {
@@ -130,7 +133,8 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     );
   });
 
-  test("sin tipo → usa monto de nuevo ingreso por defecto ($200)", async () => {
+  test("sin tipo y sin historial en BD → auto-detecta nuevo_ingreso → monto $200", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
     await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
@@ -140,7 +144,19 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     );
   });
 
-  test("con tipo=reinscripcion → usa monto $150", async () => {
+  test("sin tipo pero con historial en BD → auto-detecta reinscripcion → monto $150", async () => {
+    mockCountCredenciales.mockResolvedValue(2);
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+    });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ monto: 150 })
+    );
+  });
+
+  test("tipo=reinscripcion explícito → monto $150 (ignora historial BD)", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
     await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
@@ -151,7 +167,8 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     );
   });
 
-  test("con tipo=nuevo_ingreso → usa monto $200", async () => {
+  test("tipo=nuevo_ingreso explícito → monto $200 (ignora historial BD)", async () => {
+    mockCountCredenciales.mockResolvedValue(5);
     await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
@@ -259,6 +276,7 @@ describe("registrarMembresia — validaciones de fechas", () => {
     // La mayoría de estos tests pasan la validación de beneficiario,
     // así que lo mockeamos como existente por defecto.
     mockFindBeneficiarioByCurp.mockResolvedValue({ CURP });
+    mockCountCredenciales.mockResolvedValue(0);
   });
 
   test("fecha_emision con formato inválido → BAD_REQUEST", async () => {
@@ -513,6 +531,7 @@ describe("getEstatusMembresia — credencial con campos opcionales nulos (mapMem
 describe("registrarMembresia — validación de monto y metodoPago", () => {
   beforeEach(() => {
     mockFindBeneficiarioByCurp.mockResolvedValue({ CURP });
+    mockCountCredenciales.mockResolvedValue(0);
   });
 
   test("monto negativo → BAD_REQUEST", async () => {
