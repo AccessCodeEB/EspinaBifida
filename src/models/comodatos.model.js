@@ -82,14 +82,16 @@ export function findByCurp(curp) {
  * Crea un nuevo comodato.
  * Si montoTotal es null → donación total, se crea directamente como Pagado.
  */
-export function create({ curp, idArticulo, montoTotal, notas }) {
+export function create({ curp, idArticulo, montoTotal, notas, fechaDevolucionEsperada }) {
   const estatus = montoTotal == null ? "Pagado" : "Activo";
   return withConnection(async (conn) => {
     const result = await conn.execute(
       `INSERT INTO COMODATOS (ID_COMODATO, CURP, ID_ARTICULO, MONTO_TOTAL,
-                              MONTO_PAGADO, MONTO_EXENTO, ESTATUS, NOTAS)
+                              MONTO_PAGADO, MONTO_EXENTO, ESTATUS, NOTAS,
+                              FECHA_DEVOLUCION_ESPERADA)
        VALUES (SEQ_COMODATOS.NEXTVAL, :curp, :idArticulo, :montoTotal,
-               0, 0, :estatus, :notas)
+               0, 0, :estatus, :notas,
+               :fechaDevolucionEsperada)
        RETURNING ID_COMODATO INTO :newId`,
       {
         curp,
@@ -97,6 +99,7 @@ export function create({ curp, idArticulo, montoTotal, notas }) {
         montoTotal: montoTotal ?? null,
         estatus,
         notas: notas ?? null,
+        fechaDevolucionEsperada: fechaDevolucionEsperada ? new Date(fechaDevolucionEsperada) : null,
         newId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       },
       { autoCommit: true }

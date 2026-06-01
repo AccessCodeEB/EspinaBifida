@@ -46,7 +46,7 @@ export async function getById(req, res, next) {
 // ─── POST /comodatos ──────────────────────────────────────────────────────────
 export async function create(req, res, next) {
   try {
-    const { curp, idArticulo, montoTotal, notas } = req.body;
+    const { curp, idArticulo, montoTotal, notas, fechaDevolucionEsperada } = req.body;
 
     if (!curp || !idArticulo) {
       return res.status(400).json({ error: "curp e idArticulo son requeridos" });
@@ -58,7 +58,7 @@ export async function create(req, res, next) {
       return res.status(403).json({ error: "El beneficiario no tiene membresía activa" });
     }
 
-    const data = await ComodatosModel.create({ curp, idArticulo, montoTotal, notas });
+    const data = await ComodatosModel.create({ curp, idArticulo, montoTotal, notas, fechaDevolucionEsperada });
     res.status(201).json({ message: "Comodato registrado exitosamente", data });
   } catch (err) { next(err); }
 }

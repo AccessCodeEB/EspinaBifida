@@ -65,6 +65,7 @@ function AltaComodatoDialog({
   const inputRef                      = useRef<HTMLInputElement>(null)
   const [idArticulo, setIdArticulo]   = useState("")
   const [equipoOpen, setEquipoOpen]   = useState(false)
+  const [fechaDevolucion, setFechaDevolucion] = useState("")
   const [montoTotal, setMontoTotal]   = useState("")
   const [esGratis, setEsGratis]       = useState(false)
   const [notas, setNotas]             = useState("")
@@ -86,7 +87,7 @@ function AltaComodatoDialog({
     setShowSug(false)
   }
 
-  const reset = () => { setCurp(""); setBusqueda(""); setShowSug(false); setIdArticulo(""); setMontoTotal(""); setEsGratis(false); setNotas(""); setError(null) }
+  const reset = () => { setCurp(""); setBusqueda(""); setShowSug(false); setIdArticulo(""); setEquipoOpen(false); setFechaDevolucion(""); setMontoTotal(""); setEsGratis(false); setNotas(""); setError(null) }
   const handleClose = () => { reset(); onClose() }
 
   async function handleSubmit() {
@@ -101,6 +102,7 @@ function AltaComodatoDialog({
         idArticulo: Number(idArticulo),
         montoTotal: esGratis ? null : Number(montoTotal),
         notas: notas || undefined,
+        fechaDevolucionEsperada: fechaDevolucion || null,
       })
       toast.success("Comodato registrado exitosamente")
       reset(); onCreated()
@@ -192,6 +194,20 @@ function AltaComodatoDialog({
                 </Command>
               </PopoverContent>
             </Popover>
+          </div>
+
+          {/* Fecha devolución esperada */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              Fecha de devolución esperada <span className="normal-case font-normal">(opcional)</span>
+            </Label>
+            <input
+              type="date"
+              value={fechaDevolucion}
+              min={new Date().toISOString().split("T")[0]}
+              onChange={e => setFechaDevolucion(e.target.value)}
+              className="h-9 w-full rounded-lg border border-border/70 bg-background px-3 text-xs outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+            />
           </div>
 
           {/* Monto */}

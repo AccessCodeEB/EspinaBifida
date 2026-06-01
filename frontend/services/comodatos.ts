@@ -41,6 +41,7 @@ export interface NuevoComodatoPayload {
   idArticulo: number
   montoTotal: number | null
   notas?: string
+  fechaDevolucionEsperada?: string | null
 }
 
 export interface NuevoPagoPayload {
