@@ -288,6 +288,8 @@ export async function deactivate(idAdmin) {
   await AdminModel.deactivate(idAdmin);
 }
 
+export const deleteE2EAdmins = () => AdminModel.deleteE2EAdmins();
+
 /**
  * Tras multer: convierte el archivo a data URL y lo guarda en Oracle (misma estrategia que beneficiarios).
  * Así la foto viaja con la BD compartida y se ve en cualquier instancia del backend.

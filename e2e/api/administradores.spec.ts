@@ -35,9 +35,7 @@ test.beforeAll(async ({ apiContext }) => {
 });
 
 test.afterAll(async ({ apiContext }) => {
-  if (testAdminId) {
-    await apiContext.delete(`/administradores/${testAdminId}`).catch(() => {});
-  }
+  await apiContext.delete('/administradores/e2e-cleanup').catch(() => {});
 });
 
 test(qase(49, 'GET /administradores retorna lista con paginación'), async ({ apiContext }) => {

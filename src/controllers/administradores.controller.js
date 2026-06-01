@@ -118,6 +118,18 @@ export async function deactivate(req, res, next) {
   }
 }
 
+export async function e2eCleanup(req, res, next) {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "No disponible en producción" });
+  }
+  try {
+    await AdminService.deleteE2EAdmins();
+    res.json({ message: "Administradores E2E eliminados" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function solicitarCodigo(req, res, next) {
   try {
     const result = await AdminService.solicitarCodigo(

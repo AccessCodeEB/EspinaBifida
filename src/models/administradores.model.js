@@ -89,3 +89,11 @@ export const deactivate = (idAdmin) =>
       { autoCommit: true }
     )
   );
+
+export const deleteE2EAdmins = () =>
+  withConnection(async conn => {
+    await conn.execute(
+      `DELETE FROM ADMINISTRADORES WHERE EMAIL = 'e2e-admin-test@espina.com'`
+    );
+    await conn.commit();
+  });
