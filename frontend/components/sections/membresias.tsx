@@ -89,6 +89,10 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
 
   const handleConfirm = async () => {
     if (!beneficiario) return
+    if (!observaciones.trim()) {
+      setError("Las observaciones son obligatorias")
+      return
+    }
     setLoading(true); setError(null)
     try {
       await registrarPago({
@@ -96,7 +100,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
         meses,
         monto: 0,
         metodo_pago: null as unknown as "efectivo",
-        observaciones: observaciones.trim() || undefined,
+        observaciones: observaciones.trim(),
       })
       toast.success("Membresía registrada correctamente", {
         description: `Vigencia: ${meses} ${meses === 1 ? "mes" : "meses"}`,
@@ -141,8 +145,10 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
 
           {/* Observaciones */}
           <div>
-            <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Observaciones</Label>
-            <Input className="h-10 text-sm" placeholder="Notas adicionales (opcional)" value={observaciones} onChange={(e) => setObs(e.target.value)} />
+            <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              Observaciones <span className="text-red-500">*</span>
+            </Label>
+            <Input className="h-10 text-sm" placeholder="Ej. Alta inicial, renovación anual, donativo…" value={observaciones} onChange={(e) => setObs(e.target.value)} />
           </div>
 
           {error && (

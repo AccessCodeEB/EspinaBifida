@@ -37,7 +37,7 @@ export interface RegistroPagoPayload {
   monto: number
   metodo_pago: "efectivo" | "transferencia" | "tarjeta"
   referencia?: string
-  observaciones?: string
+  observaciones: string
 }
 
 /** GET /membresias — lista con membresía más reciente por beneficiario */

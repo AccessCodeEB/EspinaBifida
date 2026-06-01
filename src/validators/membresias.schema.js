@@ -9,7 +9,7 @@ export const crearMembresiaSchema = z.object({
   metodo_pago: z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
   metodoPago:  z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
   referencia:       z.string().max(200).nullable().optional(),
-  observaciones:    z.string().max(500).nullable().optional(),
+  observaciones:    z.string().trim().min(1, "Las observaciones son obligatorias").max(500),
   numero_credencial: z.string().max(50).optional(),
   fecha_emision:          z.string().regex(FECHA_REGEX, "fecha_emision debe ser YYYY-MM-DD").optional(),
   fecha_vigencia_inicio:  z.string().regex(FECHA_REGEX, "fecha_vigencia_inicio debe ser YYYY-MM-DD").optional(),
