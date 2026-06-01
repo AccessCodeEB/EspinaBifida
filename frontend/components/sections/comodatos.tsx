@@ -5,15 +5,20 @@ import {
   Package, Plus, CreditCard, CheckCircle2, XCircle,
   Search, RefreshCw, ChevronDown, FileText, AlertCircle,
   Hash, User, DollarSign, Banknote, Gift, Tag,
-  ArrowUpDown, ChevronUp,
+  ArrowUpDown, ChevronUp, Check, ChevronsUpDown,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
 import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 
@@ -59,6 +64,7 @@ function AltaComodatoDialog({
   const [showSug, setShowSug]         = useState(false)
   const inputRef                      = useRef<HTMLInputElement>(null)
   const [idArticulo, setIdArticulo]   = useState("")
+  const [equipoOpen, setEquipoOpen]   = useState(false)
   const [montoTotal, setMontoTotal]   = useState("")
   const [esGratis, setEsGratis]       = useState(false)
   const [notas, setNotas]             = useState("")
@@ -103,8 +109,9 @@ function AltaComodatoDialog({
     } finally { setSaving(false) }
   }
 
-  // Filtrar solo artículos de Equipos Médicos (idCategoria = 4) o todos si no hay categoría
+  const normalize = (v: string | number) => String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
   const articulosFiltrados = articulos.filter(a => !a.idCategoria || a.idCategoria === 4)
+  const equipoLabel = idArticulo ? (articulosFiltrados.find(a => String(a.clave) === idArticulo)?.descripcion ?? "Seleccionar equipo...") : "Seleccionar equipo..."
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) handleClose() }}>
@@ -155,18 +162,36 @@ function AltaComodatoDialog({
           {/* Artículo */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Equipo médico</Label>
-            <Select value={idArticulo} onValueChange={setIdArticulo}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Seleccionar equipo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {articulos.map(a => (
-                  <SelectItem key={String(a.clave)} value={String(a.clave)} className="text-xs">
-                    {a.descripcion}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={equipoOpen} onOpenChange={setEquipoOpen}>
+              <PopoverTrigger asChild>
+                <button type="button" role="combobox"
+                  className="flex h-9 w-full items-center justify-between rounded-lg border border-border/70 bg-background px-3 text-xs text-foreground hover:bg-muted transition-colors">
+                  <span className={cn("truncate text-left", !idArticulo && "text-muted-foreground")}>{equipoLabel}</span>
+                  <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[420px] max-h-[280px] p-0 overflow-hidden" align="start">
+                <Command shouldFilter>
+                  <CommandInput placeholder="Buscar equipo médico..." />
+                  <CommandList className="max-h-[240px] overflow-y-auto">
+                    <CommandEmpty>No se encontraron equipos.</CommandEmpty>
+                    <CommandGroup>
+                      {articulosFiltrados.map(a => (
+                        <CommandItem
+                          key={String(a.clave)}
+                          value={normalize(a.descripcion)}
+                          keywords={[normalize(a.descripcion)]}
+                          onSelect={() => { setIdArticulo(String(a.clave)); setEquipoOpen(false) }}
+                        >
+                          <Check className={cn("mr-2 size-4", idArticulo === String(a.clave) ? "opacity-100" : "opacity-0")} />
+                          {a.descripcion}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Monto */}
