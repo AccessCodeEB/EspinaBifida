@@ -75,7 +75,11 @@ export const findInventarioActual = () =>
          WHERE NVL(A.ACTIVO, 'S') = 'S' ORDER BY A.DESCRIPCION`
       ))?.rows ?? [];
     } catch (err) {
-      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      // ORA-00904 = columna ACTIVO no existe; ORA-01722 = ACTIVO es NUMBER (NVL con 'S' falla)
+      const isKnown = err?.errorNum === 904 || err?.errorNum === 1722
+        || /ORA-00904/i.test(String(err?.message ?? ""))
+        || /ORA-01722/i.test(String(err?.message ?? ""));
+      if (!isKnown) throw err;
       return (await conn.execute(
         `SELECT A.ID_ARTICULO, A.DESCRIPCION, A.UNIDAD,
                 A.CUOTA_RECUPERACION, A.INVENTARIO_ACTUAL, NVL(A.STOCK_MINIMO, 5) AS STOCK_MINIMO,
