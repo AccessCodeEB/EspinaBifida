@@ -413,6 +413,7 @@ export function ComodatosSection() {
         <div className="flex items-center gap-2">
           <button onClick={loadData} className="flex items-center gap-1.5 rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground hover:bg-muted">
             <RefreshCw className="size-3.5" />
+            Actualizar
           </button>
           <button
             onClick={() => setShowAlta(true)}
