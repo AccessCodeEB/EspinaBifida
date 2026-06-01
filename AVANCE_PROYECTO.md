@@ -262,6 +262,48 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ---
 
+## 🗓️ Plan activo — Refactor Comodatos + UI (2026-06-01)
+
+Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño completo de la UI de Comodatos y Servicios. **Regla: no avanzar al siguiente inciso sin visto bueno. No hacer push hasta autorización.**
+
+### Fase 0 — Migración arquitectural (prerequisito)
+
+| # | Tarea | Estado |
+|---|---|---|
+| 0a | Agregar `FECHA_DEVOLUCION_ESPERADA DATE` a tabla `COMODATOS` (migración 025) | ⏳ Pendiente |
+| 0b | Actualizar scheduler de notificaciones para leer `COMODATOS` en lugar de `SERVICIOS` | ⏳ Pendiente |
+| 0c | Eliminar `GET /servicios/comodatos`, `PATCH /servicios/:id/devolucion` y sus modelos/services/tests | ⏳ Pendiente |
+| 0d | Remover `PRESTADO`/`DEVUELTO` del ciclo de estatus en UI de servicios y del schema Zod | ⏳ Pendiente |
+| 0e | Decidir qué pasa con "Préstamo de equipo" en el catálogo de servicios (eliminar o dejar genérico) | ⏳ Pendiente |
+
+### Fase 1 — UI Comodatos
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1a | Botón "Nuevo comodato" → azul (`bg-[#0f4c81]`) | ⏳ Pendiente |
+| 1b | Tabla: headers con íconos + UPPERCASE + flechas sort (igual al resto del sistema) | ⏳ Pendiente |
+| 1c | Botón actualizar: agregar texto "Actualizar" junto al emoji | ⏳ Pendiente |
+| 1d | Tabs "Lista" / "Reporte de exenciones" → rediseño estilo citas/inventario (navy azul activo, fade 180ms) | ⏳ Pendiente |
+| 1e | Búsqueda de beneficiario → texto libre con filtro en tiempo real (igual que servicios) | ⏳ Pendiente |
+| 1f | Selector de equipo médico → Popover+Command buscable, filtrado solo a categoría Equipos Médicos | ⏳ Pendiente |
+| 1g | Agregar `FECHA_DEVOLUCION_ESPERADA` en el formulario de nuevo comodato (depende de 0a) | ⏳ Pendiente |
+
+### Fase 2 — Selector de artículos buscable en Servicios
+
+| # | Tarea | Estado |
+|---|---|---|
+| 2a | Servicios → tipo Medicamentos: Popover+Command buscable filtrado solo a categoría Medicamentos | ⏳ Pendiente |
+| 2b | Servicios → tipo Insumos médicos: Popover+Command buscable filtrado solo a categoría Insumos Médicos | ⏳ Pendiente |
+| 2c | Verificar y corregir que el filtro por categoría funcione correctamente en ambos casos | ⏳ Pendiente |
+
+### Fase 3 — Tabs en Servicios
+
+| # | Tarea | Estado |
+|---|---|---|
+| 3a | Dos tabs: "Resumen" (dashboard con KPIs y gráficas) + "Servicios Registrados" (tabla) | ⏳ Pendiente |
+
+---
+
 ## ❌ Lo que falta por hacer
 
 ### Prioridad media — UX / UI
@@ -269,7 +311,6 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Tarea | Descripción |
 |---|---|
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
-| **Mejorar UI de Comodatos** | El módulo de comodatos fue integrado por el equipo pero la UI puede mejorar: hacerla más friendly, consistente con el estilo del resto del sistema (KPIs, tabs, encabezados con íconos, etc.). |
 | **Mejorar UI del filtro de categorías en Inventario** | El dropdown del filtro de categorías actualmente se ve diferente al de stock. Unificar el estilo del popover de categorías para que sea igual de bonito y consistente que el filtro de stock (mismo diseño de cards, íconos, hover states, etc.). |
 
 ### Prioridad media — Servicios
