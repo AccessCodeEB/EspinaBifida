@@ -96,6 +96,7 @@ describe("Flujo feliz: beneficiario → membresía → servicio", () => {
         APELLIDO_PATERNO: "García",
         ID_CREDENCIAL:    1,
         NUMERO_CREDENCIAL:"CRED-001",
+        TIPO_CUOTA:       "A",
       }],
     });
     // SEQ_SERVICIOS.NEXTVAL → ID atómico del sequence de Oracle

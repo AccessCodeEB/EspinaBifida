@@ -324,7 +324,7 @@ describe("POST /api/v1/servicios — validación del controlador", () => {
   test("crea servicio exitosamente (201)", async () => {
     // findBeneficiarioActivoConMembresia → beneficiario activo con membresía
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", MEMBRESIA_ACTIVA: 1, ID_CREDENCIAL: 1 }],
+      rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", MEMBRESIA_ACTIVA: 1, ID_CREDENCIAL: 1, TIPO_CUOTA: "A" }],
     });
     // SEQ_SERVICIOS.NEXTVAL
     mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 42 }] });
@@ -342,7 +342,7 @@ describe("POST /api/v1/servicios — validación del controlador", () => {
 
   test("crea servicio sin montoPagado → usa 0 por defecto (L109 ?? 0)", async () => {
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", MEMBRESIA_ACTIVA: 1, ID_CREDENCIAL: 1 }],
+      rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", MEMBRESIA_ACTIVA: 1, ID_CREDENCIAL: 1, TIPO_CUOTA: "A" }],
     });
     mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 43 }] });
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });

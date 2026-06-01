@@ -40,7 +40,7 @@ describe("Criterios de aceptación - inventario", () => {
     mockExecute
       // findBeneficiarioActivoConMembresia — consulta JOIN atómica (beneficiario + membresía)
       .mockResolvedValueOnce({
-        rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001" }],
+        rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001", TIPO_CUOTA: "A" }],
       })
       // SEQ_SERVICIOS.NEXTVAL — ID para el nuevo servicio
       .mockResolvedValueOnce({ rows: [{ NEXT_ID: 10 }] })
