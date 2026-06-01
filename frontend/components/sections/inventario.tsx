@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
   Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock, Tag,
+  Hash, Ruler, DollarSign, Layers, ArrowUpDown,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -162,7 +163,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     setSortDirection(f === "cantidad" || f === "cuota" ? "desc" : "asc")
   }
   function SortIcon({ f }: { f: SortField }) {
-    if (sortField !== f) return null
+    if (sortField !== f) return <ArrowUpDown className="inline size-3 opacity-40" />
     return sortDirection === "asc" ? <ChevronUp className="inline size-3" /> : <ChevronDown className="inline size-3" />
   }
 
@@ -442,7 +443,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-1.5">
                 {/* Sección: Stock */}
-                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stock</p>
+                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-foreground">Stock</p>
                 <button
                   onClick={() => { setStockFilter(null); setFilterOpen(false) }}
                   className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
@@ -497,29 +498,31 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
                 <th className="py-2.5 pl-5 pr-3 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
-                  <button onClick={() => handleSort("clave")} className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Clave <SortIcon f="clave" />
+                  <button onClick={() => handleSort("clave")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <Hash className="size-3" />CLAVE <SortIcon f="clave" />
                   </button>
                 </th>
                 <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
-                  <button onClick={() => handleSort("descripcion")} className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Artículo <SortIcon f="descripcion" />
+                  <button onClick={() => handleSort("descripcion")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <Package className="size-3" />ARTÍCULO <SortIcon f="descripcion" />
                   </button>
                 </th>
                 <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
-                  <button onClick={handleUnidadCycle} className="hover:text-foreground transition-colors">Unidad</button>
+                  <button onClick={handleUnidadCycle} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <Ruler className="size-3" />UNIDAD <ArrowUpDown className="inline size-3 opacity-40" />
+                  </button>
                 </th>
                 <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                  <button onClick={() => handleSort("cuota")} className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Cuota <SortIcon f="cuota" />
+                  <button onClick={() => handleSort("cuota")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <DollarSign className="size-3" />CUOTA <SortIcon f="cuota" />
                   </button>
                 </th>
                 <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
-                  <button onClick={() => handleSort("cantidad")} className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors">
-                    Cantidad <SortIcon f="cantidad" />
+                  <button onClick={() => handleSort("cantidad")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <Layers className="size-3" />CANTIDAD <SortIcon f="cantidad" />
                   </button>
                 </th>
-                <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Acción</th>
+                <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">ACCIÓN</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -595,12 +598,12 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border/40 bg-muted/20">
-                    <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Fecha</th>
-                    <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Artículo</th>
-                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Tipo</th>
-                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Cantidad</th>
-                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground hidden md:table-cell">Stock final</th>
-                    <th className="py-2.5 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Motivo</th>
+                    <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Clock className="size-3" />FECHA</span></th>
+                    <th className="py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Package className="size-3" />ARTÍCULO</span></th>
+                    <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Tag className="size-3" />TIPO</span></th>
+                    <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Layers className="size-3" />CANTIDAD</span></th>
+                    <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground hidden md:table-cell"><span className="inline-flex items-center gap-1"><Hash className="size-3" />STOCK FINAL</span></th>
+                    <th className="py-2.5 pr-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Filter className="size-3" />MOTIVO</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -740,7 +743,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
             {/* Divisor */}
             <div className="border-t border-border/40 pt-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Stock mínimo</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-foreground mb-3">Stock mínimo</p>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Nuevo mínimo</label>
                 <Input className="h-10 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
