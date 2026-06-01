@@ -170,7 +170,7 @@ test(qase(42, 'UAT-002: Generación y descarga de reporte de membresías en PDF'
 
   // Click download button and capture the file
   const downloadPromise = page.waitForEvent('download', { timeout: 30000 });
-  await page.getByRole('button', { name: /descargar/i }).click();
+  await page.getByRole('button', { name: /generar/i }).click();
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toMatch(/pdf|xlsx/i);
