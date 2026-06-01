@@ -62,9 +62,8 @@ export async function syncEstados() {
   await MembresiasModel.syncEstados();
 }
 
-export async function getPagosRecientes(limit = 20) {
-  const n = Math.min(Math.max(Number(limit) || 20, 1), 100);
-  return MembresiasModel.findPagosRecientes(n);
+export async function getPagosRecientes() {
+  return MembresiasModel.findPagosRecientes();
 }
 
 export async function validarMembresiaActivaPorCurp(curpParam) {

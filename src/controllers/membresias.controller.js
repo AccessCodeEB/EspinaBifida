@@ -64,8 +64,7 @@ export const postSyncEstados = async (req, res, next) => {
 
 export const getPagosRecientes = async (req, res, next) => {
   try {
-    const limit = req.query.limit ?? 20;
-    const rows = await membresiasService.getPagosRecientes(limit);
+    const rows = await membresiasService.getPagosRecientes();
     res.json(rows.map(mapPago));
   } catch (error) {
     next(error);

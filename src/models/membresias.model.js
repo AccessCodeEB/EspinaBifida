@@ -32,7 +32,7 @@ export const findAll = () =>
     ).then(r => r.rows)
   );
 
-export const findPagosRecientes = (limit = 20) =>
+export const findPagosRecientes = () =>
   withConnection(conn =>
     conn.execute(
       `SELECT c.ID_CREDENCIAL,
@@ -48,9 +48,8 @@ export const findPagosRecientes = (limit = 20) =>
               c.OBSERVACIONES
        FROM CREDENCIALES c
        JOIN BENEFICIARIOS b ON b.CURP = c.CURP
-       ORDER BY c.FECHA_EMISION DESC, c.ID_CREDENCIAL DESC
-       FETCH FIRST :limit ROWS ONLY`,
-      { limit }
+       WHERE c.FECHA_EMISION >= TRUNC(SYSDATE) - 30
+       ORDER BY c.FECHA_EMISION DESC, c.ID_CREDENCIAL DESC`
     ).then(r => r.rows)
   );
 

@@ -196,6 +196,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Limpieza E2E — usuario administrador de prueba** | El usuario `E2E Admin Actualizado` (correo `e2e-admin-test@espina.com`, Inactivo) queda visible en la sección de Administración tras los tests. Eliminarlo en `afterAll` a menos que sea imprescindible para la ejecución (no tocar `prueba1`). |
 | **Limpieza UAT — notificaciones de test** | La notificación "Nuevo pre-registro de Test UAT (CURP: UAFT000310MNLTLS03)" queda visible en el panel de notificaciones del usuario real. Agregar limpieza en el `afterAll` del spec UAT para borrar notificaciones generadas por pre-registros de prueba. |
 
+### Prioridad media — Membresías
+
+| Tarea | Descripción |
+|---|---|
+| **Investigar precio fijo de membresía** | Confirmar con la asociación cuánto cobran por mes de membresía, si hay precio diferente por tipo de beneficiario, y si aplican descuentos al renovar varios meses a la vez. Una vez confirmado, precargarlo como valor sugerido en el campo Monto del form de membresía. |
+
 ### Prioridad media — UX / UI
 
 | Tarea | Descripción |

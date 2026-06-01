@@ -45,9 +45,9 @@ export function getMembresias() {
   return apiClient.get<Membresia[]>("/membresias")
 }
 
-/** GET /membresias/pagos/recientes?limit=N */
-export function getPagosRecientes(limit = 20) {
-  return apiClient.get<PagoReciente[]>(`/membresias/pagos/recientes?limit=${limit}`)
+/** GET /membresias/pagos/recientes — últimos 30 días */
+export function getPagosRecientes() {
+  return apiClient.get<PagoReciente[]>("/membresias/pagos/recientes")
 }
 
 /** GET /membresias/:folio */

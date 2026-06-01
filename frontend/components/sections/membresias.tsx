@@ -6,6 +6,7 @@ import { friendlyError } from "@/lib/friendly-error"
 import {
   Search, CreditCard, Building2, RefreshCw,
   Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Plus,
+  Banknote, History,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -313,12 +314,13 @@ export function MembresiasSection() {
   const [showPagoDialog, setShowPagoDialog]   = useState(false)
   const [selectedBenef, setSelectedBenef]     = useState<Beneficiario | null>(null)
   const [showNuevaDialog, setShowNuevaDialog] = useState(false)
+  const [activeTab, setActiveTab]             = useState<"membresias" | "historial">("membresias")
 
   const cargarDatos = useCallback(async () => {
     setLoading(true); setError(null)
     try {
       await syncEstados().catch(() => {})
-      const [benef, pagosData] = await Promise.all([getBeneficiarios(), getPagosRecientes(PAGOS_RECIENTES_LIMIT)])
+      const [benef, pagosData] = await Promise.all([getBeneficiarios(), getPagosRecientes()])
       setTodosBeneficiarios(benef)
       setPagos(pagosData)
     } catch (err: unknown) {
@@ -384,7 +386,34 @@ export function MembresiasSection() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab("membresias")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+            activeTab === "membresias"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <Users className="size-3.5" />
+          Membresías
+        </button>
+        <button
+          onClick={() => setActiveTab("historial")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+            activeTab === "historial"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <History className="size-3.5" />
+          Historial de pagos
+        </button>
+      </div>
+
+      {/* KPIs — solo en tab Membresías */}
+      {activeTab === "membresias" && (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: "Activas",         value: conteos.Activo,   icon: Users,         color: "#10b981" },
@@ -405,8 +434,10 @@ export function MembresiasSection() {
           </div>
         ))}
       </div>
+      )}
 
-      {/* Tabla de membresías */}
+      {/* ── Tab: Membresías ── */}
+      {activeTab === "membresias" && (
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-border/40 px-5 py-3">
@@ -501,35 +532,35 @@ export function MembresiasSection() {
           </table>
         </div>
       </div>
+      )}
 
-      {/* Últimos pagos */}
+      {/* ── Tab: Historial de pagos ── */}
+      {activeTab === "historial" && (
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
         <div className="border-b border-border/40 px-5 py-4">
-          <p className="text-sm font-semibold text-foreground">Últimos pagos</p>
-          <p className="text-[11px] text-muted-foreground">Movimientos recientes de membresía</p>
+          <p className="text-sm font-semibold text-foreground">Historial de pagos</p>
+          <p className="text-[11px] text-muted-foreground">
+            {pagos.length === 0
+              ? "Sin movimientos en los últimos 30 días"
+              : `${pagos.length} movimiento${pagos.length !== 1 ? "s" : ""} en los últimos 30 días`}
+          </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm">
-            <colgroup>
-              <col className="w-[14%]" />
-              <col className="w-[28%]" />
-              <col className="w-[30%]" />
-              <col className="w-[14%]" />
-              <col className="w-[14%]" />
-            </colgroup>
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
-                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Fecha</th>
-                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Beneficiario</th>
-                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground sm:table-cell">Período</th>
-                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Monto</th>
-                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">Método</th>
+                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-[12%]">Fecha</th>
+                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-[20%]">Beneficiario</th>
+                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground sm:table-cell w-[18%]">Período</th>
+                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground w-[10%]">Monto</th>
+                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell w-[13%]">Método</th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell w-[27%]">Observaciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
               {pagos.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-xs text-muted-foreground">No hay pagos registrados aún.</td>
+                  <td colSpan={6} className="py-10 text-center text-xs text-muted-foreground">No hay pagos registrados en los últimos 30 días.</td>
                 </tr>
               ) : (
                 pagos.map((p) => (
@@ -542,10 +573,14 @@ export function MembresiasSection() {
                     <td className="py-3 text-center text-xs font-bold text-foreground">{formatMonto(p.monto)}</td>
                     <td className="hidden py-3 text-center text-xs text-foreground md:table-cell">
                       <span className="inline-flex items-center justify-center gap-1.5">
+                        {p.metodoPago === "efectivo"      && <Banknote  className="size-3.5 text-emerald-600" />}
                         {p.metodoPago === "transferencia" && <Building2 className="size-3.5" style={{ color: NAVY }} />}
-                        {p.metodoPago === "tarjeta" && <CreditCard className="size-3.5" style={{ color: AMBER }} />}
+                        {p.metodoPago === "tarjeta"       && <CreditCard className="size-3.5" style={{ color: AMBER }} />}
                         {labelMetodo(p.metodoPago)}
                       </span>
+                    </td>
+                    <td className="hidden py-3 pr-5 text-xs text-muted-foreground lg:table-cell">
+                      {p.observaciones ?? <span className="italic opacity-50">—</span>}
                     </td>
                   </tr>
                 ))
@@ -554,6 +589,7 @@ export function MembresiasSection() {
           </table>
         </div>
       </div>
+      )}
 
       <NuevaMembresiaDialog
         open={showNuevaDialog}
