@@ -6,7 +6,7 @@ import { friendlyError } from "@/lib/friendly-error"
 import {
   Search, CreditCard, Building2, RefreshCw,
   Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Plus,
-  Banknote, History,
+  Banknote, History, Hash, MapPin, Clock, DollarSign, FileText,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -462,20 +462,17 @@ export function MembresiasSection() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
-                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">CURP</th>
-                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Nombre</th>
-                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">Ciudad</th>
-                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Estatus</th>
-                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
-                  <button
-                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                    onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}
-                  >
-                    Tiempo restante
+                <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Hash className="size-3" />CURP</span></th>
+                <th className="py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Users className="size-3" />NOMBRE</span></th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground md:table-cell"><span className="inline-flex items-center gap-1"><MapPin className="size-3" />CIUDAD</span></th>
+                <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><AlertTriangle className="size-3" />ESTATUS</span></th>
+                <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground">
+                  <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}>
+                    <Clock className="size-3" />TIEMPO RESTANTE
                     {sortDir === "asc" ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                   </button>
                 </th>
-                <th className="py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground">Acción</th>
+                <th className="py-2.5 pr-5 text-right text-[10px] font-bold tracking-widest text-foreground">ACCIÓN</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -549,12 +546,12 @@ export function MembresiasSection() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
-                <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-[12%]">Fecha</th>
-                <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground w-[20%]">Beneficiario</th>
-                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground sm:table-cell w-[18%]">Período</th>
-                <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground w-[10%]">Monto</th>
-                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell w-[13%]">Método</th>
-                <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell w-[27%]">Observaciones</th>
+                <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground w-[12%]"><span className="inline-flex items-center gap-1"><Clock className="size-3" />FECHA</span></th>
+                <th className="py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground w-[20%]"><span className="inline-flex items-center gap-1"><Users className="size-3" />BENEFICIARIO</span></th>
+                <th className="hidden py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground sm:table-cell w-[18%]"><span className="inline-flex items-center gap-1"><History className="size-3" />PERÍODO</span></th>
+                <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground w-[10%]"><span className="inline-flex items-center gap-1"><DollarSign className="size-3" />MONTO</span></th>
+                <th className="hidden py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground md:table-cell w-[13%]"><span className="inline-flex items-center gap-1"><CreditCard className="size-3" />MÉTODO</span></th>
+                <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell w-[27%]"><span className="inline-flex items-center gap-1"><FileText className="size-3" />OBSERVACIONES</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">

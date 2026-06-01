@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Search, X, Loader2, RefreshCw, Plus, ShieldCheck, ShieldOff,
-  Pencil, UserCog, Inbox, KeyRound, Eye, EyeOff, Users,
+  Pencil, UserCog, Inbox, KeyRound, Eye, EyeOff, Users, Mail, Shield,
 } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
@@ -369,12 +369,12 @@ export function AdministradoresSection() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/40 bg-muted/30">
-                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Administrador</th>
-                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:table-cell">Correo</th>
-                  <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Rol</th>
-                  <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estatus</th>
-                  <th className="py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Acciones</th>
+                <tr className="border-b border-border/40 bg-muted/20">
+                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Users className="size-3" />ADMINISTRADOR</span></th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground md:table-cell"><span className="inline-flex items-center gap-1"><Mail className="size-3" />CORREO</span></th>
+                  <th className="py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Shield className="size-3" />ROL</span></th>
+                  <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><ShieldCheck className="size-3" />ESTATUS</span></th>
+                  <th className="py-2.5 pr-5 text-right text-[10px] font-bold tracking-widest text-foreground">ACCIONES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
-import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle } from "lucide-react"
+import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle, Hash, Stethoscope } from "lucide-react"
 import type { Cita } from "@/services/citas"
 import type { Beneficiario } from "@/services/beneficiarios"
 
@@ -226,25 +226,25 @@ export function CitasListView({ citas, beneficiarios }: Props) {
             </colgroup>
             <thead>
               <tr className="border-b border-border/40 bg-muted/20">
-                <th className="py-2.5 pl-5 pr-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Folio</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <button className="group inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("beneficiario")}>
-                    <User className="size-3" />Paciente <SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
+                <th className="py-2.5 pl-5 pr-2 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Hash className="size-3" />FOLIO</span></th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold tracking-widest text-foreground">
+                  <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => toggleSort("beneficiario")}>
+                    <User className="size-3" />PACIENTE <SortIndicator field="beneficiario" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <button className="group inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("especialista")}>
-                    Doctor <SortIndicator field="especialista" current={sortField} dir={sortDir} />
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold tracking-widest text-foreground">
+                  <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => toggleSort("especialista")}>
+                    <Stethoscope className="size-3" />DOCTOR <SortIndicator field="especialista" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <button className="group inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("fecha")}>
-                    <Calendar className="size-3" />Fecha <SortIndicator field="fecha" current={sortField} dir={sortDir} />
+                <th className="py-2.5 px-2 text-left text-[10px] font-bold tracking-widest text-foreground">
+                  <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => toggleSort("fecha")}>
+                    <Calendar className="size-3" />FECHA <SortIndicator field="fecha" current={sortField} dir={sortDir} />
                   </button>
                 </th>
-                <th className="py-2.5 pl-2 pr-5 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <button className="group inline-flex items-center gap-1 hover:opacity-70" onClick={() => toggleSort("estatus")}>
-                    Estatus <SortIndicator field="estatus" current={sortField} dir={sortDir} />
+                <th className="py-2.5 pl-2 pr-5 text-left text-[10px] font-bold tracking-widest text-foreground">
+                  <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => toggleSort("estatus")}>
+                    <CheckCircle2 className="size-3" />ESTATUS <SortIndicator field="estatus" current={sortField} dir={sortDir} />
                   </button>
                 </th>
               </tr>

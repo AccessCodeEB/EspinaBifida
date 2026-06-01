@@ -16,7 +16,7 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  ArrowUp,
+  ArrowUp, Hash, Mail, Phone,
 } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
@@ -510,11 +510,11 @@ export function PreregistroSection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/40 bg-muted/20">
-                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Nombre</th>
-                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">CURP</th>
-                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Correo</th>
-                  <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">Teléfono</th>
-                  <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Acciones</th>
+                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><User className="size-3" />NOMBRE</span></th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground md:table-cell"><span className="inline-flex items-center gap-1"><Hash className="size-3" />CURP</span></th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell"><span className="inline-flex items-center gap-1"><Mail className="size-3" />CORREO</span></th>
+                  <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell"><span className="inline-flex items-center gap-1"><Phone className="size-3" />TELÉFONO</span></th>
+                  <th className="py-2.5 pr-5 text-center text-[10px] font-bold tracking-widest text-foreground">ACCIONES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
