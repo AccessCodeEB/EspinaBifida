@@ -192,6 +192,17 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Búsqueda por ciudad incluir estado** | Al usar el filtro de búsqueda (beneficiarios), que buscar por ciudad también filtre por estado simultáneamente — actualmente solo busca en el campo CIUDAD. |
 | **Observaciones obligatorias en membresías** | Al registrar o renovar una membresía, el campo Observaciones debe ser obligatorio para que quede registro del motivo/contexto en el historial. |
 | **Búsqueda al eliminar artículo no actualizada** | Al eliminar un artículo desde inventario, la búsqueda/lista no se refresca automáticamente — el artículo sigue apareciendo hasta que el usuario recarga manualmente. |
+| **Limpieza E2E — historial de citas** | Las citas creadas por Playwright (`Dr. E2E Playwright`, paciente `Dayana Aguirre Santeliz`) quedan visibles en el historial de citas después de ejecutar los tests. Agregar limpieza `afterAll` similar a la de notificaciones e inventario. |
+| **Limpieza E2E — usuario administrador de prueba** | El usuario `E2E Admin Actualizado` (correo `e2e-admin-test@espina.com`, Inactivo) queda visible en la sección de Administración tras los tests. Eliminarlo en `afterAll` a menos que sea imprescindible para la ejecución (no tocar `prueba1`). |
+| **Limpieza UAT — notificaciones de test** | La notificación "Nuevo pre-registro de Test UAT (CURP: UAFT000310MNLTLS03)" queda visible en el panel de notificaciones del usuario real. Agregar limpieza en el `afterAll` del spec UAT para borrar notificaciones generadas por pre-registros de prueba. |
+
+### Prioridad media — UX / UI
+
+| Tarea | Descripción |
+|---|---|
+| **Mejorar UI — sección Reportes** | La vista previa del PDF de inventario y la sección de reportes en general luce densa y técnica. Rediseñar para que sea más amigable y estética para usuarios con poco dominio tecnológico (mejor jerarquía visual, labels más claros, menos ruido). |
+| **Mejorar UI — sección Citas** | La vista de agenda y el calendario de citas puede mejorar en usabilidad y estética: más friendly, mejor uso del espacio, consistencia visual con el resto del sistema. |
+| **Barra de paciente estilo historial** | La barra de encabezado de columnas del historial de citas (FOLIO / Paciente / Doctor / Fecha / Estatus con íconos) se ve muy bien. Replicar ese patrón de diseño en las tablas de otras secciones, empezando por Inventario. |
 
 ### Prioridad media — Notificaciones futuras
 
