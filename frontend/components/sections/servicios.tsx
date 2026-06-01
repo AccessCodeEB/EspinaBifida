@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronDown,
   Plus,
+  User, Package, Clock,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -149,6 +150,10 @@ export function ServiciosSection() {
   const [fechaFinFiltro, setFechaFinFiltro] = useState("")
   const [sortField, setSortField] = useState<SortField>("fecha")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const ESTATUS_CICLO = [null, "COMPLETADO", "PRESTADO", "DEVUELTO"] as const
+  type EstatusCiclo = typeof ESTATUS_CICLO[number]
+  const [estatusCicloIdx, setEstatusCicloIdx] = useState(0)
+  const estatusCicloFiltro: EstatusCiclo = ESTATUS_CICLO[estatusCicloIdx]
   const [page, setPage] = useState(1)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
 
@@ -200,7 +205,7 @@ export function ServiciosSection() {
 
   useEffect(() => {
     setPage(1)
-  }, [selectedMonth, tipoServicioFiltro, fechaInicioFiltro, fechaFinFiltro, searchTerm, sortField, sortDirection])
+  }, [selectedMonth, tipoServicioFiltro, fechaInicioFiltro, fechaFinFiltro, searchTerm, sortField, sortDirection, estatusCicloIdx])
 
   // Cargar inventario SIEMPRE que se selecciona un tipo que requiere artículo
   useEffect(() => {
@@ -326,6 +331,7 @@ export function ServiciosSection() {
     return serviciosConFecha.filter((s) => {
       if (s.mesClave !== selectedMonth) return false
       if (tipoServicioFiltro && s.servicio !== tipoServicioFiltro) return false
+      if (estatusCicloFiltro && s.estatus !== estatusCicloFiltro) return false
       if (fechaInicioFiltro && s.fechaDate && s.fechaDate < new Date(`${fechaInicioFiltro}T00:00:00`)) return false
       if (fechaFinFiltro && s.fechaDate && s.fechaDate > new Date(`${fechaFinFiltro}T23:59:59`)) return false
       if (!search) return true
@@ -640,6 +646,8 @@ export function ServiciosSection() {
         sortDirection={sortDirection}
         onSortBy={handleSortBy}
         onSortPreset={applySortPreset}
+        estatusCicloIdx={estatusCicloIdx}
+        onCicloEstatus={() => setEstatusCicloIdx(i => (i + 1) % 4)}
 
         onRowClick={setServicioDetalle}
         setPage={setPage}

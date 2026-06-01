@@ -1,7 +1,12 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, RotateCcw, Search } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, RotateCcw, Search, User, Package, Calendar, DollarSign, Tag } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
+
+function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
+  if (active !== f) return <ArrowUpDown className="inline size-3 opacity-40" />
+  return dir === "asc" ? <ChevronUp className="inline size-3" /> : <ChevronDown className="inline size-3" />
+}
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("es-MX", {
@@ -44,6 +49,8 @@ interface ServiciosTableProps {
 
   pendingDeleteFolio: string | null
   onUndoDelete: () => void
+  estatusCicloIdx: number
+  onCicloEstatus: () => void
 }
 
 export function ServiciosTable({
@@ -66,13 +73,18 @@ export function ServiciosTable({
   setFechaFinFiltro,
   selectedMonth,
   monthInputToLabel,
+  sortField,
+  sortDirection,
   onSortBy,
   onSortPreset,
   onRowClick,
   setPage,
   pendingDeleteFolio,
   onUndoDelete,
+  estatusCicloIdx,
+  onCicloEstatus,
 }: ServiciosTableProps) {
+  const CICLO_LABELS = ["TODOS", "COMPLETADO", "PRESTADO", "DEVUELTO"] as const
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
@@ -159,23 +171,33 @@ export function ServiciosTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40 bg-muted/20">
-              <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
-                <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => onSortBy("nombre")}>Beneficiario <ArrowUpDown className="size-3" /></button>
+              <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground">
+                <span className="inline-flex items-center gap-1"><User className="size-3" />BENEFICIARIO</span>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">
-                <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => onSortBy("servicio")}>Servicio <ArrowUpDown className="size-3" /></button>
+              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground md:table-cell">
+                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("servicio")}><Tag className="size-3" />SERVICIO {sortIcon("servicio", sortField, sortDirection)}</button>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                Artículo entregado
+              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
+                <span className="inline-flex items-center gap-1"><Package className="size-3" />ARTÍCULO ENTREGADO</span>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => onSortBy("fecha")}>Fecha <ArrowUpDown className="size-3" /></button>
+              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
+                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("fecha")}><Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}</button>
               </th>
-              <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
-                <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => onSortBy("monto")}>Monto <ArrowUpDown className="size-3" /></button>
+              <th className="hidden py-2.5 text-right text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
+                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}><DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}</button>
               </th>
-              <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
-                <button className="inline-flex items-center gap-1 hover:text-foreground/70" onClick={() => onSortBy("estatus")}>Estatus <ArrowUpDown className="size-3" /></button>
+              <th className="py-2.5 pr-5 text-center text-[10px] font-bold tracking-widest text-foreground">
+                <button
+                  className={`group inline-flex items-center gap-1 hover:opacity-70 transition-opacity ${estatusCicloIdx > 0 ? "text-primary" : ""}`}
+                  onClick={onCicloEstatus}
+                >
+                  <AlertTriangle className="size-3" />
+                  {CICLO_LABELS[estatusCicloIdx]}
+                  {estatusCicloIdx > 0
+                    ? <span className="ml-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">{estatusCicloIdx}</span>
+                    : <ArrowUpDown className="inline size-3 opacity-40" />
+                  }
+                </button>
               </th>
             </tr>
           </thead>
