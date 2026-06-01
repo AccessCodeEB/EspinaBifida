@@ -244,6 +244,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
 
+### Prioridad media — Servicios
+
+| Tarea | Descripción |
+|---|---|
+| **Especificar tipo de consulta y estudio al registrar servicio** | Al registrar un servicio de tipo "Consulta médica" o "Estudio médico", actualmente es muy genérico. Agregar campo para especificar qué consulta (dental, neurología, urología…) o qué estudio, y opcionalmente con qué doctor. Evaluar si agregar sub-tipos al catálogo o un campo libre de texto. |
+
 ### Prioridad media — Membresías
 
 | Tarea | Descripción |
