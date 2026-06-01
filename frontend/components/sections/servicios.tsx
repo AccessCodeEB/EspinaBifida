@@ -7,9 +7,6 @@ import {
   CalendarDays,
   ChevronDown,
   Plus,
-  RotateCcw,
-  ClipboardList,
-  AlertCircle,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -38,11 +35,8 @@ import {
   createServicio,
   deleteServicio,
   getServicios,
-  getComodatos,
   getCatalogoServicios,
-  confirmarDevolucion,
   type Servicio,
-  type ComodatoActivo,
   type TipoServicioCompleto,
 } from "@/services/servicios"
 import { getInventario, type ArticuloInventario } from "@/services/inventario"
@@ -141,21 +135,11 @@ export function ServiciosSection() {
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [loadingBeneficiarios, setLoadingBeneficiarios] = useState(false)
 
-  // ── Tabs ──
-  const [activeTab, setActiveTab] = useState<"historial" | "comodatos">("historial")
-
-  // ── Comodatos ──
-  const [comodatos, setComodatos] = useState<ComodatoActivo[]>([])
-  const [loadingComodatos, setLoadingComodatos] = useState(false)
-  const [comodatoADevolver, setComodatoADevolver] = useState<ComodatoActivo | null>(null)
-  const [confirmandoDevolucion, setConfirmandoDevolucion] = useState(false)
-
   // ── Catálogo dinámico + inventario para el form ──
   const [catalogoServicios, setCatalogoServicios] = useState<TipoServicioCompleto[]>([])
   const [articulosInventario, setArticulosInventario] = useState<ArticuloInventario[]>([])
   const [loadingArticulos, setLoadingArticulos] = useState(false)
   const [idArticuloSeleccionado, setIdArticuloSeleccionado] = useState("")
-  const [fechaDevolucionEsperada, setFechaDevolucionEsperada] = useState("")
 
   // ── Table UI ──
   const [searchTerm, setSearchTerm] = useState("")
@@ -197,15 +181,6 @@ export function ServiciosSection() {
       .then(setCatalogoServicios)
       .catch(() => {})
   }, [])
-
-  useEffect(() => {
-    if (activeTab !== "comodatos") return
-    setLoadingComodatos(true)
-    getComodatos()
-      .then(setComodatos)
-      .catch(() => setComodatos([]))
-      .finally(() => setLoadingComodatos(false))
-  }, [activeTab])
 
   useEffect(() => {
     if (!showRegistroDialog) return
@@ -250,15 +225,15 @@ export function ServiciosSection() {
   const tipoServicioSeleccionadoLabel = tipoSeleccionado?.nombre ?? ""
   const tipoServicioClasificacion =
     catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)?.tipoServicio ?? "SERVICIO"
-  const requiereArticulo = tipoServicioClasificacion === "COMODATO" || tipoServicioClasificacion === "CONSUMIBLE"
-  const esComodato       = tipoServicioClasificacion === "COMODATO"
-  const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros" || tipoServicioSeleccionadoLabel === "Otros"
+  const requiereArticulo = tipoServicioClasificacion === "CONSUMIBLE"
+  const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros"
 
-  const articulosFiltrados = esComodato
-    ? articulosInventario.filter(a => a.nombreCategoria === "Equipos Médicos" && a.cantidad > 0)
-    : articulosInventario.filter(a =>
-        (a.nombreCategoria === "Insumos Médicos" || a.nombreCategoria === "Medicamentos") && a.cantidad > 0
-      )
+  const articulosFiltrados = articulosInventario.filter(a =>
+    (a.nombreCategoria === "Insumos Médicos" || a.nombreCategoria === "Medicamentos") && a.cantidad > 0
+  )
+
+  // Catálogo filtrado: excluir tipos de equipo médico (van por Comodatos)
+  const catalogoFiltrado = catalogoServicios.filter(t => t.tipoServicio !== "COMODATO")
   const expedienteBloqueado = beneficiarioEncontrado
     ? beneficiarioEncontrado.estatus === "Inactivo" || beneficiarioEncontrado.estatus === "Baja"
     : false
@@ -414,8 +389,6 @@ export function ServiciosSection() {
     if (!Number.isInteger(idTipoServicioNumerico) || idTipoServicioNumerico <= 0) { setRegistroError("Seleccione un tipo de servicio"); return }
     if (!montoEsValido) { setRegistroError("Ingrese un monto valido"); return }
     if (requiereDescripcionOtro && !descripcionOtro.trim()) { setRegistroError("Debe especificar en que consiste el servicio para la opcion 'Otros'"); return }
-    if (esComodato && !idArticuloSeleccionado) { setRegistroError("Selecciona el equipo específico a prestar."); return }
-    if (esComodato && !fechaDevolucionEsperada) { setRegistroError("Indica la fecha esperada de devolución."); return }
     if (fechaEsFutura) { setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores."); return }
 
     try {
@@ -428,8 +401,8 @@ export function ServiciosSection() {
         costo:          montoNum,
         montoPagado:    0,
         notas:          requiereDescripcionOtro ? `Servicio otros: ${descripcionOtro.trim()}` : undefined,
-        estatus:        esComodato ? "PRESTADO" : "COMPLETADO",
-        fechaDevolucionEsperada: esComodato ? fechaDevolucionEsperada : null,
+        estatus:        "COMPLETADO",
+        fechaDevolucionEsperada: null,
         consumos: requiereArticulo && idArticuloSeleccionado
           ? [{ idProducto: Number(idArticuloSeleccionado), cantidad: 1 }]
           : undefined,
@@ -444,14 +417,8 @@ export function ServiciosSection() {
       setDescripcionOtro("")
       setFechaServicio(hoy)
       setIdArticuloSeleccionado("")
-      setFechaDevolucionEsperada("")
       setArticulosInventario([])
-      if (esComodato) {
-        setComodatos(prev => [...prev]) // fuerza recarga lazy si tab comodatos está abierta
-        setActiveTab("comodatos")
-        getComodatos().then(setComodatos).catch(() => {})
-      }
-      toast.success(esComodato ? "Préstamo registrado. Aparece en Préstamos activos." : "Servicio registrado correctamente")
+      toast.success("Servicio registrado correctamente")
     } catch (err) {
       setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
     } finally {
@@ -536,33 +503,7 @@ export function ServiciosSection() {
     setFechaError("")
     setRegistroError("")
     setIdArticuloSeleccionado("")
-    setFechaDevolucionEsperada("")
     setArticulosInventario([])
-  }
-
-  const handleConfirmarDevolucion = async () => {
-    if (!comodatoADevolver) return
-    setConfirmandoDevolucion(true)
-    try {
-      await confirmarDevolucion(comodatoADevolver.idServicio)
-      setComodatos(prev => prev.filter(c => c.idServicio !== comodatoADevolver.idServicio))
-      setComodatoADevolver(null)
-      toast.success(`Devolución confirmada. Inventario y servicio actualizados.`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al confirmar la devolución")
-    } finally {
-      setConfirmandoDevolucion(false)
-    }
-  }
-
-  function diasDevolucion(fechaEsperada: string | null): { texto: string; color: string } {
-    if (!fechaEsperada) return { texto: "Sin fecha definida", color: "text-muted-foreground" }
-    const hoyMs = new Date().setHours(0, 0, 0, 0)
-    const espMs  = new Date(fechaEsperada + "T00:00:00").getTime()
-    const dias   = Math.round((espMs - hoyMs) / 86_400_000)
-    if (dias > 7)  return { texto: `${dias} días restantes`,  color: "text-emerald-600 dark:text-emerald-400" }
-    if (dias >= 0) return { texto: `${dias} días restantes`,  color: "text-amber-600 dark:text-amber-400" }
-    return { texto: `${Math.abs(dias)} días de retraso`, color: "text-red-600 dark:text-red-400" }
   }
 
   // ── Loading / error states ──
@@ -661,39 +602,8 @@ export function ServiciosSection() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab("historial")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "historial"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <ClipboardList className="size-3.5" />
-          Historial
-        </button>
-        <button
-          onClick={() => setActiveTab("comodatos")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "comodatos"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <RotateCcw className="size-3.5" />
-          Préstamos activos
-          {comodatos.length > 0 && activeTab !== "comodatos" && (
-            <span className="ml-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
-              {comodatos.length}
-            </span>
-          )}
-        </button>
-      </div>
-
       {/* KPIs + Charts */}
-      {activeTab === "historial" && <ServiciosChartsKpis
+      <ServiciosChartsKpis
         selectedMonth={selectedMonth}
         monthInputToLabel={monthInputToLabel}
         totalMes={serviciosMes.length}
@@ -703,10 +613,10 @@ export function ServiciosSection() {
         topTipoMes={topTipoMes}
         monthlyBarData={monthlyBarData}
         donutData={donutData}
-      />}
+      />
 
-      {/* Table — Historial */}
-      {activeTab === "historial" && <ServiciosTable
+      {/* Table */}
+      <ServiciosTable
         filtered={filtered}
         sortedFiltered={sortedFiltered}
         paginated={paginated}
@@ -735,147 +645,7 @@ export function ServiciosSection() {
         setPage={setPage}
         pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
         onUndoDelete={handleUndoDelete}
-      />}
-
-      {/* ── Tab: Comodatos activos ── */}
-      {activeTab === "comodatos" && (
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Préstamos activos</p>
-              <p className="text-[11px] text-muted-foreground">
-                Equipos médicos prestados pendientes de devolución · {comodatos.length} registro{comodatos.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-            <button
-              onClick={() => { setLoadingComodatos(true); getComodatos().then(setComodatos).catch(() => {}).finally(() => setLoadingComodatos(false)) }}
-              disabled={loadingComodatos}
-              className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-            >
-              <RotateCcw className={`size-3.5 ${loadingComodatos ? "animate-spin" : ""}`} />
-              Actualizar
-            </button>
-          </div>
-
-          {loadingComodatos ? (
-            <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-muted-foreground">Cargando préstamos...</p>
-            </div>
-          ) : comodatos.length === 0 ? (
-            <div className="flex h-40 flex-col items-center justify-center gap-2">
-              <RotateCcw className="size-8 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">No hay equipos médicos prestados actualmente</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border/40 bg-muted/20">
-                    <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Beneficiario</th>
-                    <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Equipo</th>
-                    <th className="hidden py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground md:table-cell">Fecha préstamo</th>
-                    <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Devolución</th>
-                    <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {comodatos.map(c => {
-                    const dev = diasDevolucion(c.fechaDevolucionEsperada)
-                    const esRetraso = c.fechaDevolucionEsperada && new Date(c.fechaDevolucionEsperada + "T00:00:00") < new Date()
-                    return (
-                      <tr key={c.idServicio} className={`transition-colors hover:bg-muted/20 ${esRetraso ? "bg-red-50/40 dark:bg-red-950/10" : ""}`}>
-                        <td className="py-3 pl-5">
-                          <p className="font-medium text-foreground">{c.nombreBeneficiario}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">{c.curp}</p>
-                        </td>
-                        <td className="py-3 max-w-[14rem]">
-                          <p className="font-medium text-foreground truncate">{c.nombreArticulo ?? c.tipoServicio}</p>
-                          {c.cantidad > 1 && <p className="text-[10px] text-muted-foreground">Cantidad: {c.cantidad}</p>}
-                        </td>
-                        <td className="hidden py-3 text-muted-foreground md:table-cell">
-                          {c.fecha ? new Date(c.fecha + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                        </td>
-                        <td className="py-3 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            {c.fechaDevolucionEsperada && (
-                              <span className="text-[11px] text-muted-foreground">
-                                {new Date(c.fechaDevolucionEsperada + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
-                              </span>
-                            )}
-                            <span className={`text-[11px] font-semibold ${dev.color}`}>
-                              {esRetraso && <AlertCircle className="inline size-3 mr-0.5" />}
-                              {dev.texto}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 pr-5 text-center">
-                          <button
-                            onClick={() => setComodatoADevolver(c)}
-                            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                          >
-                            Confirmar devolución
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Dialog: Confirmar devolución */}
-      <Dialog open={comodatoADevolver != null} onOpenChange={open => { if (!open) setComodatoADevolver(null) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">Confirmar devolución</DialogTitle>
-            <DialogDescription className="text-xs">
-              Esta acción marcará el equipo como devuelto y actualizará el inventario automáticamente.
-            </DialogDescription>
-          </DialogHeader>
-          {comodatoADevolver && (
-            <div className="space-y-4 pt-1">
-              <div className="divide-y divide-border/40 rounded-xl border border-border/60">
-                {[
-                  { label: "Beneficiario", value: comodatoADevolver.nombreBeneficiario },
-                  { label: "Equipo",       value: comodatoADevolver.nombreArticulo ?? comodatoADevolver.tipoServicio },
-                  { label: "Prestado el",  value: comodatoADevolver.fecha
-                      ? new Date(comodatoADevolver.fecha + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
-                      : "—"
-                  },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
-                    <span className="text-xs font-medium text-foreground">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-muted-foreground rounded-lg bg-muted/40 px-3 py-2">
-                Al confirmar: el servicio se marcará como <strong>devuelto</strong> y el equipo se sumará automáticamente al inventario.
-              </p>
-              <div className="flex gap-2 border-t border-border/40 pt-3">
-                <button
-                  onClick={() => setComodatoADevolver(null)}
-                  disabled={confirmandoDevolucion}
-                  className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleConfirmarDevolucion}
-                  disabled={confirmandoDevolucion}
-                  className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                  style={{ backgroundColor: "#0f4c81" }}
-                >
-                  {confirmandoDevolucion ? "Confirmando..." : "Sí, confirmar"}
-                </button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      />
 
       {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>
@@ -960,15 +730,12 @@ export function ServiciosSection() {
         requiereDescripcionOtro={requiereDescripcionOtro}
         expedienteBloqueado={expedienteBloqueado}
         onRegistrar={handleRegistrarServicio}
-        catalogoServicios={catalogoServicios}
-        esComodato={esComodato}
+        catalogoServicios={catalogoFiltrado}
         requiereArticulo={requiereArticulo}
         articulosFiltrados={articulosFiltrados}
         loadingArticulos={loadingArticulos}
         idArticuloSeleccionado={idArticuloSeleccionado}
         setIdArticuloSeleccionado={setIdArticuloSeleccionado}
-        fechaDevolucionEsperada={fechaDevolucionEsperada}
-        setFechaDevolucionEsperada={setFechaDevolucionEsperada}
       />
 
       {/* Dialog: Eliminar */}

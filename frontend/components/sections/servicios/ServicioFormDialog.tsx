@@ -85,14 +85,11 @@ interface ServicioFormDialogProps {
 
   // Catálogo dinámico + artículo específico
   catalogoServicios: TipoServicioCompleto[]
-  esComodato: boolean
   requiereArticulo: boolean
   articulosFiltrados: ArticuloInventario[]
   loadingArticulos: boolean
   idArticuloSeleccionado: string
   setIdArticuloSeleccionado: (v: string) => void
-  fechaDevolucionEsperada: string
-  setFechaDevolucionEsperada: (v: string) => void
 
   onRegistrar: () => void
 }
@@ -133,26 +130,22 @@ export function ServicioFormDialog({
   requiereDescripcionOtro,
   expedienteBloqueado,
   catalogoServicios,
-  esComodato,
   requiereArticulo,
   articulosFiltrados,
   loadingArticulos,
   idArticuloSeleccionado,
   setIdArticuloSeleccionado,
-  fechaDevolucionEsperada,
-  setFechaDevolucionEsperada,
   onRegistrar,
 }: ServicioFormDialogProps) {
   const [articuloPickerOpen, setArticuloPickerOpen] = useState(false)
   const [intentoEnvio, setIntentoEnvio] = useState(false)
-  const tipoLabel = esComodato ? "comodato" : "consumible"
 
   const normalizeForSearch = (v: string) =>
     String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
 
   const articuloLabel = idArticuloSeleccionado
     ? articulosFiltrados.find(a => String(a.clave) === idArticuloSeleccionado)?.descripcion ?? "Seleccionar"
-    : esComodato ? "Seleccionar equipo..." : "Seleccionar artículo..."
+    : "Seleccionar artículo..."
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -271,19 +264,17 @@ export function ServicioFormDialog({
             )}
           </div>
 
-          {/* Selector de artículo con búsqueda — COMODATO y CONSUMIBLE */}
+          {/* Selector de artículo con búsqueda — CONSUMIBLE */}
           {requiereArticulo && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                {esComodato ? "Equipo a prestar *" : "Artículo a entregar (opcional)"}
+                Artículo a entregar (opcional)
               </label>
               {loadingArticulos ? (
                 <p className="text-xs text-muted-foreground">Cargando inventario...</p>
               ) : articulosFiltrados.length === 0 ? (
                 <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  {esComodato
-                    ? "Sin equipos disponibles en inventario."
-                    : "Sin artículos disponibles en inventario — el servicio se registrará sin descuento de stock."}
+                  Sin artículos disponibles en inventario — el servicio se registrará sin descuento de stock.
                 </p>
               ) : (
                 <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
@@ -328,27 +319,6 @@ export function ServicioFormDialog({
                   </PopoverContent>
                 </Popover>
               )}
-            </div>
-          )}
-
-          {/* Fecha de devolución esperada — solo para COMODATO */}
-          {esComodato && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Fecha esperada de devolución *
-              </label>
-              <input
-                type="date"
-                min={hoy}
-                value={fechaDevolucionEsperada}
-                onChange={e => setFechaDevolucionEsperada(e.target.value)}
-                className={`h-10 rounded-lg border px-3 text-sm outline-none focus:ring-2 ${
-                  intentoEnvio && !fechaDevolucionEsperada
-                    ? "border-red-400 bg-red-50/50 focus:border-red-400 focus:ring-red-100"
-                    : "border-border/70 bg-background focus:border-[#0f4c81] focus:ring-[#0f4c81]/10"
-                }`}
-              />
-              <p className="text-[11px] text-muted-foreground">¿Cuándo se espera que regrese el equipo?</p>
             </div>
           )}
 
