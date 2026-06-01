@@ -298,7 +298,7 @@ describe("insertReporteGenerado", () => {
 
 describe("findComodatosPorVencer", () => {
   it("retorna las filas de comodatos por vencer", async () => {
-    const rows = [{ ID_SERVICIO: 1, CURP: "X", NOMBRE: "Juan", DIAS_RESTANTES: 2, ARTICULO: "Silla" }];
+    const rows = [{ ID_COMODATO: 1, CURP: "X", NOMBRE: "Juan", DIAS_RESTANTES: 2, ARTICULO: "Silla" }];
     mockExecute.mockResolvedValueOnce({ rows });
     const result = await findComodatosPorVencer();
     expect(result).toBe(rows);

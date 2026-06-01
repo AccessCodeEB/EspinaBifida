@@ -276,27 +276,22 @@ export const insertPreregistroNuevo = (curp, nombre) =>
     await conn.commit();
   });
 
-/**
- * Crea notificación de membresía solo si no existe una PENDIENTE del mismo tipo para esa CURP.
- * Idempotente por (TIPO, CURP, ESTATUS='PENDIENTE').
- */
 export const findComodatosPorVencer = () =>
   withConnection(conn =>
     conn.execute(
-      `SELECT s.ID_SERVICIO,
-              s.CURP,
+      `SELECT c.ID_COMODATO,
+              c.CURP,
               b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS NOMBRE,
-              s.FECHA_DEVOLUCION_ESPERADA,
-              TRUNC(s.FECHA_DEVOLUCION_ESPERADA) - TRUNC(SYSDATE) AS DIAS_RESTANTES,
-              (SELECT a.DESCRIPCION FROM SERVICIO_ARTICULOS sa
-               JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
-               WHERE sa.ID_SERVICIO = s.ID_SERVICIO AND ROWNUM = 1) AS ARTICULO
-       FROM SERVICIOS s
-       JOIN BENEFICIARIOS b ON b.CURP = s.CURP
-       WHERE NVL(s.ESTATUS, 'COMPLETADO') = 'PRESTADO'
-         AND s.FECHA_DEVOLUCION_ESPERADA IS NOT NULL
-         AND TRUNC(s.FECHA_DEVOLUCION_ESPERADA) <= TRUNC(SYSDATE) + 5
-       ORDER BY s.FECHA_DEVOLUCION_ESPERADA`
+              c.FECHA_DEVOLUCION_ESPERADA,
+              TRUNC(c.FECHA_DEVOLUCION_ESPERADA) - TRUNC(SYSDATE) AS DIAS_RESTANTES,
+              a.DESCRIPCION AS ARTICULO
+       FROM COMODATOS c
+       JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+       JOIN ARTICULOS a ON a.ID_ARTICULO = c.ID_ARTICULO
+       WHERE c.ESTATUS = 'Activo'
+         AND c.FECHA_DEVOLUCION_ESPERADA IS NOT NULL
+         AND TRUNC(c.FECHA_DEVOLUCION_ESPERADA) <= TRUNC(SYSDATE) + 5
+       ORDER BY c.FECHA_DEVOLUCION_ESPERADA`
     ).then(r => r.rows)
   );
 
@@ -324,7 +319,7 @@ export const syncComodatosPorVencer = (mensaje) =>
     } else if (mensaje) {
       await conn.execute(
         `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
-         VALUES ('COMODATO_POR_VENCER', 'SERVICIO', :msg)`,
+         VALUES ('COMODATO_POR_VENCER', 'COMODATO', :msg)`,
         { msg: mensaje }
       );
     }
