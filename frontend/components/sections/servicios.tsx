@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Plus,
   User, Package, Clock,
+  BarChart2, ClipboardList,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -143,6 +144,7 @@ export function ServiciosSection() {
   const [idArticuloSeleccionado, setIdArticuloSeleccionado] = useState("")
 
   // ── Table UI ──
+  const [activeTab, setActiveTab] = useState<"resumen" | "tabla">("resumen")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedMonth, setSelectedMonth] = useState(() => monthKey(new Date()))
   const [tipoServicioFiltro, setTipoServicioFiltro] = useState("")
@@ -613,8 +615,32 @@ export function ServiciosSection() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab("resumen")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+            activeTab === "resumen"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <BarChart2 className="size-3.5" />Resumen
+        </button>
+        <button
+          onClick={() => setActiveTab("tabla")}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+            activeTab === "tabla"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <ClipboardList className="size-3.5" />Servicios registrados
+        </button>
+      </div>
+
       {/* KPIs + Charts */}
-      <ServiciosChartsKpis
+      {activeTab === "resumen" && <ServiciosChartsKpis
         selectedMonth={selectedMonth}
         monthInputToLabel={monthInputToLabel}
         totalMes={serviciosMes.length}
@@ -624,10 +650,10 @@ export function ServiciosSection() {
         topTipoMes={topTipoMes}
         monthlyBarData={monthlyBarData}
         donutData={donutData}
-      />
+      />}
 
       {/* Table */}
-      <ServiciosTable
+      {activeTab === "tabla" && <ServiciosTable
         filtered={filtered}
         sortedFiltered={sortedFiltered}
         paginated={paginated}
@@ -658,7 +684,7 @@ export function ServiciosSection() {
         setPage={setPage}
         pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
         onUndoDelete={handleUndoDelete}
-      />
+      />}
 
       {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>

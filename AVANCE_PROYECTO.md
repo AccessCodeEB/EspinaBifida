@@ -300,7 +300,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | # | Tarea | Estado |
 |---|---|---|
-| 3a | Dos tabs: "Resumen" (dashboard con KPIs y gráficas) + "Servicios Registrados" (tabla) | ⏳ Pendiente |
+| 3a | Dos tabs: "Resumen" (dashboard con KPIs y gráficas) + "Servicios Registrados" (tabla) | ✅ Listo |
 
 ---
 
