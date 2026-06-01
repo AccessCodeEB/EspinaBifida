@@ -10,34 +10,26 @@ export function notFoundHandler(req, res, next) {
   next(err);
 }
 
-export function errorHandler(err, req, res, _next) {
-  let statusCode = 500;
-  let code       = "INTERNAL_ERROR";
-  let message    = "Error interno del servidor";
-  let details;
-  const isDevelopment = process.env.NODE_ENV !== "production";
-
+function classifyError(err) {
   if (isHttpError(err)) {
-    statusCode = err.statusCode;
-    code       = err.code;
-    message    = err.message;
-    details    = err.details;
-  } else if (err?.code === "LIMIT_FILE_SIZE") {
-    statusCode = 400;
-    code       = "FILE_TOO_LARGE";
-    message    = "El archivo supera el tamaño máximo permitido (2 MB).";
-  } else {
-    const mapped = mapOracleError(err);
-    if (mapped) {
-      statusCode = mapped.statusCode;
-      code       = mapped.code;
-      message    = mapped.message;
-    } else if (err?.code === "NJS-044") {
-      statusCode = 400;
-      code       = "BIND_ERROR";
-      message    = "Uno o más campos contienen un valor no aceptado. Revisa los datos e intenta de nuevo.";
-    }
+    return { statusCode: err.statusCode, code: err.code, message: err.message, details: err.details };
   }
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return { statusCode: 400, code: "FILE_TOO_LARGE", message: "El archivo supera el tamaño máximo permitido (2 MB)." };
+  }
+  const mapped = mapOracleError(err);
+  if (mapped) {
+    return { statusCode: mapped.statusCode, code: mapped.code, message: mapped.message };
+  }
+  if (err?.code === "NJS-044") {
+    return { statusCode: 400, code: "BIND_ERROR", message: "Uno o más campos contienen un valor no aceptado. Revisa los datos e intenta de nuevo." };
+  }
+  return { statusCode: 500, code: "INTERNAL_ERROR", message: "Error interno del servidor" };
+}
+
+export function errorHandler(err, req, res, _next) {
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  let { statusCode, code, message, details } = classifyError(err);
 
   if (statusCode >= 400) {
     console.error(`[${new Date().toISOString()}] ${statusCode} error — ${message}`, err?.errorNum ? `ORA-${err.errorNum}` : err?.message ?? "");

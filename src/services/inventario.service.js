@@ -41,7 +41,7 @@ function mapInventarioRow(row) {
     inventarioActual,
     stock:            inventarioActual,
     minimo:           Number(row.STOCK_MINIMO ?? 5),
-    idCategoria:      row.ID_CATEGORIA != null ? Number(row.ID_CATEGORIA) : undefined,
+    idCategoria:      row.ID_CATEGORIA == null ? undefined : Number(row.ID_CATEGORIA),
     nombreCategoria:  row.NOMBRE_CATEGORIA ?? undefined,
   };
 }
