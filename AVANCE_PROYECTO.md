@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-31 (Sábado) — QA: verifyToken citas, fix KPI servicios, terminología comodatos; UX/UI: búsqueda beneficiarios ciudad+estado, membresías completas, tabs inventario, historial pagos
+**Actualización:** 2026-06-01 (Domingo) — QA: verifyToken citas, fix KPI servicios, módulo Comodatos; UX/UI: búsqueda beneficiarios, rediseño membresías/reportes/citas, limpieza E2E/UAT, menú perfil header, tablas con íconos, notificación SIN_STOCK
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -55,10 +55,10 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Dashboard** | ✅ Completo |
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
-| **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus |
-| **Citas** | ✅ Completo |
-| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), safety net comodatos, selector de categoría al agregar artículo |
-| **Reportes** | ✅ Completo |
+| **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus, flechas de sort dinámicas, ciclo filtro por estatus |
+| **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm |
+| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort |
+| **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
 | **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
@@ -173,6 +173,52 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 **Fix `deleteById` en servicios:**
 - Corregido `outFormat: 2304` hardcodeado → `oracledb.OUT_FORMAT_OBJECT`; eliminar servicios ya no falla con error 500
 
+### Cambios 2026-05-31 — Sesión UX/UI y limpieza E2E
+
+**Beneficiarios:**
+- Búsqueda filtra por ciudad Y estado simultáneamente
+- Normalización de acentos — "Nuevo Leon" encuentra "Nuevo León" y viceversa
+- Scroll habilitado en el formulario de registro (se quitó `scrollbar-hide`)
+
+**Membresías:**
+- Campos Monto y Método de pago reales (antes hardcodeados a 0 y null)
+- Botón **+ Nueva Membresía** con selector de beneficiarios sin membresía activa
+- Tabs **Membresías** / **Historial de pagos** estilo inventario
+- Historial de pagos: últimos 30 días (en lugar de últimos 20 registros), columna Observaciones, ícono por método de pago
+- Observaciones obligatorias al registrar/renovar membresía
+
+**Inventario:**
+- Búsqueda se limpia automáticamente al eliminar un artículo
+
+**Limpieza E2E/UAT:**
+- `DELETE /citas/e2e-cleanup` — hard delete de citas de "Dr. E2E Playwright"
+- `DELETE /administradores/e2e-cleanup` — hard delete del admin `e2e-admin-test@espina.com`
+- Notificaciones UAT (`CURP LIKE 'UAFT%'`) incluidas en el cleanup de notificaciones
+- Limpieza inmediata ejecutada contra la BD (citas, admin y notificaciones ya borrados)
+
+**Rediseño Reportes:**
+- Barra de config en una sola fila con 3 secciones separadas por divisores
+- Panel izquierdo de tipos estira hasta el alto del preview (h-full)
+- Botones de tipo de reporte más altos (py-5)
+- Rango de fechas movido al subtítulo del preview (ya no en la config)
+- Fechas del historial formateadas correctamente
+
+**Rediseño Citas:**
+- KPI cards con número grande (Hoy / Esta semana / Pendientes)
+- Tabs Agenda/Historial estilo inventario/servicios
+- Horario del calendario reducido a 7am–5pm (eliminado espacio vacío)
+- Colores pasteles por estatus: Confirmada `#6FD6A8`, Completada `#7FB6FF`, Pendiente `#FFD97A`, Cancelada `#ef4444`
+- Fecha en "Citas Pendientes" humanizada: "Dom 31 · 8am" en lugar de "2026-05-31 · 08:00"
+- Mini-calendario se sincroniza al navegar semanas con las flechas del grid
+- Panel de Citas Pendientes a la misma altura que el grid del calendario
+- Texto del popup de cita usa color oscuro en pasteles para buen contraste
+
+**Header — menú de perfil:**
+- Avatar + nombre + rol + chevron como botón unificado clickeable
+- Dropdown con: info del usuario, Editar perfil, Modo oscuro (toggle), Cerrar sesión (con confirmación)
+- Cierra al hacer clic fuera
+- El botón Configuración del sidebar se mantiene también
+
 ---
 
 ## 🔄 En progreso / Parcialmente terminado
@@ -185,28 +231,18 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ## ❌ Lo que falta por hacer
 
-### Prioridad alta
+### Prioridad media — UX / UI
 
 | Tarea | Descripción |
 |---|---|
-| **Búsqueda al eliminar artículo no actualizada** | Al eliminar un artículo desde inventario, la búsqueda/lista no se refresca automáticamente — el artículo sigue apareciendo hasta que el usuario recarga manualmente. |
-| **Limpieza E2E — historial de citas** | Las citas creadas por Playwright (`Dr. E2E Playwright`, paciente `Dayana Aguirre Santeliz`) quedan visibles en el historial de citas después de ejecutar los tests. Agregar limpieza `afterAll` similar a la de notificaciones e inventario. |
-| **Limpieza E2E — usuario administrador de prueba** | El usuario `E2E Admin Actualizado` (correo `e2e-admin-test@espina.com`, Inactivo) queda visible en la sección de Administración tras los tests. Eliminarlo en `afterAll` a menos que sea imprescindible para la ejecución (no tocar `prueba1`). |
-| **Limpieza UAT — notificaciones de test** | La notificación "Nuevo pre-registro de Test UAT (CURP: UAFT000310MNLTLS03)" queda visible en el panel de notificaciones del usuario real. Agregar limpieza en el `afterAll` del spec UAT para borrar notificaciones generadas por pre-registros de prueba. |
+| **Barra estilo historial en Inventario** | La barra de encabezado de columnas del historial de citas (FOLIO / Paciente / Doctor / Fecha / Estatus con íconos) se ve muy bien. Replicar ese patrón en la tabla de Inventario. |
+| **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
 
 ### Prioridad media — Membresías
 
 | Tarea | Descripción |
 |---|---|
 | **Investigar precio fijo de membresía** | Confirmar con la asociación cuánto cobran por mes de membresía, si hay precio diferente por tipo de beneficiario, y si aplican descuentos al renovar varios meses a la vez. Una vez confirmado, precargarlo como valor sugerido en el campo Monto del form de membresía. |
-
-### Prioridad media — UX / UI
-
-| Tarea | Descripción |
-|---|---|
-| **Mejorar UI — sección Reportes** | La vista previa del PDF de inventario y la sección de reportes en general luce densa y técnica. Rediseñar para que sea más amigable y estética para usuarios con poco dominio tecnológico (mejor jerarquía visual, labels más claros, menos ruido). |
-| **Mejorar UI — sección Citas** | La vista de agenda y el calendario de citas puede mejorar en usabilidad y estética: más friendly, mejor uso del espacio, consistencia visual con el resto del sistema. |
-| **Barra de paciente estilo historial** | La barra de encabezado de columnas del historial de citas (FOLIO / Paciente / Doctor / Fecha / Estatus con íconos) se ve muy bien. Replicar ese patrón de diseño en las tablas de otras secciones, empezando por Inventario. |
 
 ### Prioridad media — Notificaciones futuras
 
