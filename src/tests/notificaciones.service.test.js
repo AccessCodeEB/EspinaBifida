@@ -384,3 +384,41 @@ describe('checkComodatosPorVencer (via runJob)', () => {
     expect(msg.length).toBeLessThanOrEqual(500);
   });
 });
+
+// ── checkSinStock ─────────────────────────────────────────────────────────────
+
+describe('checkSinStock', () => {
+  beforeEach(() => {
+    mockSyncSinStockConsolidado.mockResolvedValue(undefined);
+  });
+
+  it('sincroniza con null cuando no hay artículos sin stock', async () => {
+    mockFindArticulosSinStock.mockResolvedValueOnce([]);
+    const result = await Service.checkSinStock();
+    expect(result).toBe(0);
+    expect(mockSyncSinStockConsolidado).toHaveBeenCalledWith(null);
+  });
+
+  it('genera mensaje para un solo artículo sin stock', async () => {
+    mockFindArticulosSinStock.mockResolvedValueOnce([
+      { ID_ARTICULO: 1, DESCRIPCION: 'Pañales grandes', INVENTARIO_ACTUAL: 0 },
+    ]);
+    const result = await Service.checkSinStock();
+    expect(result).toBe(1);
+    expect(mockSyncSinStockConsolidado).toHaveBeenCalledWith(
+      expect.stringContaining('Pañales grandes')
+    );
+  });
+
+  it('genera mensaje consolidado para múltiples artículos sin stock', async () => {
+    const rows = Array.from({ length: 3 }, (_, i) => ({
+      ID_ARTICULO: i + 1, DESCRIPCION: `Art${i}`, INVENTARIO_ACTUAL: 0,
+    }));
+    mockFindArticulosSinStock.mockResolvedValueOnce(rows);
+    const result = await Service.checkSinStock();
+    expect(result).toBe(3);
+    expect(mockSyncSinStockConsolidado).toHaveBeenCalledWith(
+      expect.stringContaining('3 artículos sin stock')
+    );
+  });
+});
