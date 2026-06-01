@@ -1,3 +1,4 @@
+import oracledb from "oracledb";
 import { getConnection } from "../config/db.js";
 
 /**
@@ -35,7 +36,7 @@ export async function runMigration020() {
                  'Consultas médicas, terapias, estudios de laboratorio y diagnóstico')
          RETURNING ID_CATEGORIA INTO :newId`,
         {
-          newId: { dir: 3003 /* BIND_OUT */, type: 2010 /* NUMBER */ },
+          newId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
         }
       );
       idCategoriaServicios = Array.isArray(result.outBinds.newId)
