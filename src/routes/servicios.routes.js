@@ -74,9 +74,6 @@ router.get("/", ServiciosController.getAll);
  *       beneficiario tenga una membresía activa (SYSDATE entre FECHA_VIGENCIA_INICIO y
  *       FECHA_VIGENCIA_FIN en CREDENCIALES). Si la membresía está vencida o inexistente,
  *       la operación es rechazada con HTTP 403.
- *
- *       Para préstamos de equipo (comodatos), usar `referenciaTipo: "COMODATO"` junto con
- *       el `referenciaId` del comodato correspondiente.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -344,9 +341,6 @@ router.get("/detalle", verifyToken, ServiciosController.getDetailed);
  *             schema:
  *               $ref: '#/components/schemas/Error500'
  */
-router.get("/comodatos",                   verifyToken,              ServiciosController.getComodatos);
-router.patch("/:idServicio/devolucion",    verifyToken, checkRole(1,2), ServiciosController.confirmarDevolucion);
-
 router.get("/:curp", verifyToken, ServiciosController.getByCurp);
 
 /**

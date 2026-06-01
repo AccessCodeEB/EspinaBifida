@@ -9,6 +9,7 @@ export interface Comodato {
   montoExento: number
   estatus: "Activo" | "Pagado" | "Cancelado"
   fechaAlta: string
+  fechaDevolucionEsperada?: string | null
   notas: string | null
   beneficiario?: string
   articulo?: string

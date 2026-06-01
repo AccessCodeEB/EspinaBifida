@@ -12,7 +12,7 @@ import {
   marcarTodasLeidas,
 } from "@/services/notificaciones"
 import { getInventario, type ArticuloInventario } from "@/services/inventario"
-import { getComodatos, type ComodatoActivo } from "@/services/servicios"
+import { getComodatos, type Comodato } from "@/services/comodatos"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   STOCK_BAJO:         { label: "Stock bajo",           icon: Package,       color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -45,7 +45,7 @@ export function NotificacionesPanel() {
 
   const [detailNotif, setDetailNotif]           = useState<Notificacion | null>(null)
   const [detailArticulos, setDetailArticulos]   = useState<ArticuloInventario[]>([])
-  const [detailComodatos, setDetailComodatos]   = useState<ComodatoActivo[]>([])
+  const [detailComodatos, setDetailComodatos]   = useState<Comodato[]>([])
   const [loadingDetail, setLoadingDetail]       = useState(false)
 
   const fetchCount = useCallback(async () => {
@@ -152,8 +152,8 @@ export function NotificacionesPanel() {
       try {
         const hoy = new Date()
         const limite = new Date(hoy); limite.setDate(hoy.getDate() + 5)
-        const todos = await getComodatos()
-        const porVencer = todos.filter(c => {
+        const res = await getComodatos({ estatus: "Activo", limit: 200 })
+        const porVencer = (res.data ?? []).filter(c => {
           if (!c.fechaDevolucionEsperada) return false
           const fecha = new Date(c.fechaDevolucionEsperada)
           return fecha <= limite
@@ -298,13 +298,13 @@ export function NotificacionesPanel() {
                       const hoyMismo = dias === 0
                       return (
                         <div
-                          key={c.idServicio}
+                          key={c.idComodato}
                           className={`rounded-lg px-3 py-2.5 ${vencido ? "bg-red-50 dark:bg-red-950/30" : "bg-amber-50 dark:bg-amber-950/20"}`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">{c.nombreBeneficiario}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">{c.nombreArticulo ?? "Equipo médico"}</p>
+                              <p className="text-xs font-medium text-foreground truncate">{c.beneficiario ?? c.curp}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{c.articulo ?? "Equipo médico"}</p>
                             </div>
                             <span className={`shrink-0 text-[11px] font-bold tabular-nums ${vencido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                               {vencido

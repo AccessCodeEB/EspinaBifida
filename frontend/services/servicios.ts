@@ -55,24 +55,3 @@ export function deleteServicio(id: number) {
   return apiClient.delete<{ message: string }>(`/servicios/${id}`)
 }
 
-export interface ComodatoActivo {
-  idServicio: number
-  curp: string
-  nombreBeneficiario: string
-  tipoServicio: string
-  nombreArticulo: string | null
-  idArticulo: number | null
-  cantidad: number
-  fecha: string | null
-  fechaDevolucionEsperada: string | null
-}
-
-/** GET /servicios/comodatos */
-export function getComodatos() {
-  return apiClient.get<ComodatoActivo[]>("/servicios/comodatos")
-}
-
-/** PATCH /servicios/:id/devolucion */
-export function confirmarDevolucion(id: number) {
-  return apiClient.patch<{ message: string }>(`/servicios/${id}/devolucion`, {})
-}
