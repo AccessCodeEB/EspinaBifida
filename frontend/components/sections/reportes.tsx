@@ -185,23 +185,39 @@ export function ReportesSection() {
   const currentReport    = reportTypes.find(r => r.id === selectedReport)
   const NAVY = "#0f4c81"
 
+  // Helper descarga historial
+  async function descargarHistorico(id: number, formato: "pdf" | "xlsx", inicio: string, fin: string) {
+    try {
+      const token = (await import("@/lib/token")).tokenStorage.get()
+      const { resolveApiFetchUrl } = await import("@/lib/api-base")
+      const url = resolveApiFetchUrl(`/api/v1/reportes/${id}/descargar?formato=${formato}`)
+      const res = await fetch(url, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const a = document.createElement("a")
+      a.href = URL.createObjectURL(blob)
+      a.download = `reporte-${inicio}-${fin}.${formato}`
+      a.click(); URL.revokeObjectURL(a.href)
+    } catch { /* ignorar */ }
+  }
+
   return (
     <div className="flex flex-col gap-6 pb-8" data-section="reportes">
 
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Reportes</h1>
-        <p className="mt-0.5 text-xs text-muted-foreground">Vista previa automática · actualizada al momento</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Selecciona el tipo, periodo y formato — la vista previa se actualiza automáticamente</p>
       </div>
 
       {/* Layout: tipos | config + preview */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
 
-        {/* Tipos — 3 cols */}
-        <div className="lg:col-span-3">
-          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        {/* ── Panel izquierdo: tipo de reporte ── */}
+        <div className="lg:col-span-3 lg:flex lg:flex-col">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
             <div className="border-b border-border/40 px-4 py-3">
-              <p className="text-xs font-semibold text-foreground">Tipo de reporte</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de reporte</p>
             </div>
             <div className="divide-y divide-border/30">
               {reportTypes.map((report) => {
@@ -211,115 +227,118 @@ export function ReportesSection() {
                     key={report.id}
                     onClick={() => report.disponible && setSelectedReport(report.id)}
                     disabled={!report.disponible}
-                    className={`flex w-full items-center gap-2.5 px-4 py-3 text-left transition-colors
+                    className={`relative flex w-full items-center gap-3 px-4 py-5 text-left transition-colors
                       ${active ? "bg-[#0f4c81]/5" : "hover:bg-muted/30"}
                       ${!report.disponible ? "cursor-not-allowed opacity-40" : ""}`}
                   >
-                    <div className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors
-                      ${active ? "text-white" : "bg-muted text-muted-foreground"}`}
+                    {active && (
+                      <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full" style={{ backgroundColor: NAVY }} />
+                    )}
+                    <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors
+                      ${active ? "text-white shadow-sm" : "bg-muted text-muted-foreground"}`}
                       style={active ? { backgroundColor: NAVY } : {}}>
-                      <report.icon className="size-3.5" />
+                      <report.icon className="size-4.5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground">{report.title}</p>
-                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{report.description}</p>
+                      <p className={`text-sm font-semibold ${active ? "text-foreground" : "text-foreground/80"}`}>{report.title}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{report.description}</p>
                     </div>
-                    {active && <div className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: NAVY }} />}
                   </button>
                 )
               })}
             </div>
+
           </div>
         </div>
 
-        {/* Config + Preview — 9 cols */}
+        {/* ── Columna derecha: config + preview ── */}
         <div className="flex flex-col gap-4 lg:col-span-9">
 
-          {/* Barra de config */}
+          {/* Barra de configuración — una sola fila con 3 secciones */}
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-            <div className="flex flex-wrap items-end gap-3 px-5 py-4">
-              {/* Periodo */}
-              <div className="flex-1 min-w-[160px] space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Periodo</label>
-                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mes-actual">Mes Actual</SelectItem>
-                    <SelectItem value="mes-anterior">Mes Anterior</SelectItem>
-                    <SelectItem value="trimestre">Último Trimestre</SelectItem>
-                    <SelectItem value="semestre">Último Semestre</SelectItem>
-                    <SelectItem value="anual">Año Anterior</SelectItem>
-                    <SelectItem value="personalizado">Personalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex flex-wrap items-center gap-0 divide-x divide-border/50">
 
-              {/* Fechas personalizadas */}
-              {selectedPeriod === "personalizado" && (
-                <>
-                  <div className="min-w-[130px] space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Desde</label>
-                    <Input type="date" className="h-9 text-sm" value={customInicio} onChange={e => setCustomInicio(e.target.value)} />
-                  </div>
-                  <div className="min-w-[130px] space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Hasta</label>
-                    <Input type="date" className="h-9 text-sm" value={customFin} onChange={e => setCustomFin(e.target.value)} />
-                  </div>
-                </>
-              )}
-
-              {/* Formato */}
-              <div className="min-w-[130px] space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Formato</label>
-                <Select value={selectedFormat} onValueChange={v => setSelectedFormat(v as "pdf" | "xlsx")}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">
-                      <span className="flex items-center gap-2"><FileText className="size-4 text-red-500" />PDF</span>
-                    </SelectItem>
-                    <SelectItem value="xlsx">
-                      <span className="flex items-center gap-2"><FileSpreadsheet className="size-4 text-emerald-600" />Excel (.xlsx)</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Rango calculado */}
-              {fechasCalculadas && (
-                <div className="flex items-center gap-1.5 rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-[11px]">
-                  <span className="text-muted-foreground">Periodo:</span>
-                  <span className="font-semibold text-foreground">{fmtFecha(fechasCalculadas.fechaInicio)}</span>
-                  <span className="text-muted-foreground">—</span>
-                  <span className="font-semibold text-foreground">{fmtFecha(fechasCalculadas.fechaFin)}</span>
+              {/* Sección 1: Periodo */}
+              <div className="flex flex-1 items-center gap-3 px-5 py-4">
+                <div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
+                  <CalendarDays className="size-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Periodo</span>
                 </div>
-              )}
+                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                  <SelectTrigger className="h-9 min-w-[148px] text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mes-actual">Mes actual</SelectItem>
+                    <SelectItem value="mes-anterior">Mes anterior</SelectItem>
+                    <SelectItem value="trimestre">Último trimestre</SelectItem>
+                    <SelectItem value="semestre">Último semestre</SelectItem>
+                    <SelectItem value="anual">Año anterior</SelectItem>
+                    <SelectItem value="personalizado">Personalizado…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {selectedPeriod === "personalizado" ? (
+                  <>
+                    <Input type="date" className="h-9 w-32 text-sm" value={customInicio} onChange={e => setCustomInicio(e.target.value)} />
+                    <span className="text-xs text-muted-foreground">—</span>
+                    <Input type="date" className="h-9 w-32 text-sm" value={customFin} onChange={e => setCustomFin(e.target.value)} />
+                  </>
+                ) : fechasCalculadas ? (
+                  <span className="rounded-md bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground whitespace-nowrap">
+                    {fmtFecha(fechasCalculadas.fechaInicio)} — {fmtFecha(fechasCalculadas.fechaFin)}
+                  </span>
+                ) : null}
+              </div>
 
-              {/* Botón actualizar + descargar */}
-              <div className="flex items-end gap-2 ml-auto">
+              {/* Sección 2: Acciones */}
+              <div className="flex shrink-0 items-center gap-2 px-5 py-4">
                 <button
                   onClick={generarPreview}
                   disabled={isPreviewing}
-                  title="Actualizar vista previa"
                   className="flex h-9 items-center gap-1.5 rounded-lg border border-border/70 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
                 >
-                  {isPreviewing
-                    ? <Loader2 className="size-3.5 animate-spin" />
-                    : <RefreshCw className="size-3.5" />}
-                  {isPreviewing ? "Generando..." : "Actualizar"}
+                  {isPreviewing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                  {isPreviewing ? "Generando…" : "Actualizar"}
                 </button>
                 <button
                   onClick={handleDescargar}
-                  disabled={isDownloading || isPreviewing}
-                  className="flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  disabled={isDownloading || isPreviewing || !fechasCalculadas}
+                  className="flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
                   style={{ backgroundColor: NAVY }}
                 >
                   {isDownloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                   {isDownloading ? "Generando..." : `Generar ${selectedFormat.toUpperCase()}`}
                 </button>
+              </div>
+
+              {/* Sección 3: Formato */}
+              <div className="flex shrink-0 items-center gap-3 px-5 py-4">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <FileText className="size-3.5" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Formato</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedFormat("pdf")}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                      selectedFormat === "pdf"
+                        ? "border-red-300 bg-red-50 text-red-700 shadow-sm dark:border-red-700 dark:bg-red-950/40 dark:text-red-400"
+                        : "border-border/70 bg-background text-muted-foreground hover:border-red-200 hover:text-red-600"
+                    }`}
+                  >
+                    <FileText className="size-3.5" />PDF
+                  </button>
+                  <button
+                    onClick={() => setSelectedFormat("xlsx")}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                      selectedFormat === "xlsx"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "border-border/70 bg-background text-muted-foreground hover:border-emerald-200 hover:text-emerald-600"
+                    }`}
+                  >
+                    <FileSpreadsheet className="size-3.5" />Excel
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -331,23 +350,30 @@ export function ReportesSection() {
             )}
           </div>
 
-          {/* Vista previa inline */}
+          {/* Vista previa */}
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-            {/* Cabecera con título y tabs xlsx */}
             <div className="flex items-center justify-between border-b border-border/40 px-5 py-3">
-              <div className="flex items-center gap-2">
-                {selectedFormat === "xlsx"
-                  ? <FileSpreadsheet className="size-4 text-emerald-600" />
-                  : <FileText className="size-4 text-red-500" />}
-                <p className="text-sm font-semibold text-foreground">
-                  {currentReport?.title} — Vista previa
-                </p>
-                {isPreviewing && (
-                  <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
-                    <Loader2 className="size-2.5 animate-spin" />Actualizando...
-                  </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  {selectedFormat === "xlsx"
+                    ? <FileSpreadsheet className="size-4 text-emerald-600" />
+                    : <FileText className="size-4 text-red-500" />}
+                  <p className="text-sm font-semibold text-foreground">
+                    {currentReport?.title} — Vista previa
+                  </p>
+                  {isPreviewing && (
+                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                      <Loader2 className="size-2.5 animate-spin" />Actualizando…
+                    </span>
+                  )}
+                </div>
+                {fechasCalculadas && (
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {fmtFecha(fechasCalculadas.fechaInicio)} — {fmtFecha(fechasCalculadas.fechaFin)}
+                  </p>
                 )}
               </div>
+
               {/* Pestañas xlsx */}
               {previewSheets && previewSheets.length > 1 && (
                 <div className="flex gap-1 overflow-x-auto">
@@ -368,33 +394,22 @@ export function ReportesSection() {
             </div>
 
             {/* Área de preview */}
-            <div
-              className="relative bg-muted/10"
-              style={{ height: selectedFormat === "pdf" ? "calc(100vh - 360px)" : "auto", minHeight: 320 }}
-            >
-              {/* Estado: cargando (sin contenido aún) */}
+            <div className="relative bg-muted/10" style={{ height: selectedFormat === "pdf" ? "calc(100vh - 400px)" : "auto", minHeight: 320 }}>
               {isPreviewing && !previewUrl && !previewSheets && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                   <Loader2 className="size-8 animate-spin opacity-40" />
-                  <p className="text-xs">Generando reporte...</p>
+                  <p className="text-xs">Generando reporte…</p>
                 </div>
               )}
-
-              {/* Estado: error */}
               {previewError && !isPreviewing && (
                 <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                   <AlertCircle className="size-8 text-red-400 opacity-60" />
                   <p className="text-xs text-red-600 dark:text-red-400">{previewError}</p>
-                  <button
-                    onClick={generarPreview}
-                    className="mt-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                  >
+                  <button onClick={generarPreview} className="mt-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors">
                     Reintentar
                   </button>
                 </div>
               )}
-
-              {/* Vista PDF */}
               {previewUrl && (
                 <>
                   {isPreviewing && (
@@ -402,16 +417,9 @@ export function ReportesSection() {
                       <Loader2 className="size-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  <iframe
-                    src={previewUrl}
-                    className="h-full w-full border-0"
-                    style={{ height: "calc(100vh - 360px)", minHeight: 320 }}
-                    title="Vista previa del reporte"
-                  />
+                  <iframe src={previewUrl} className="h-full w-full border-0" style={{ height: "calc(100vh - 400px)", minHeight: 320 }} title="Vista previa del reporte" />
                 </>
               )}
-
-              {/* Vista tabla XLSX */}
               {previewSheets && (() => {
                 const sheet = previewSheets[previewActiveSheet]
                 if (!sheet) return null
@@ -426,19 +434,13 @@ export function ReportesSection() {
                       <thead className="sticky top-0 z-10 bg-muted/90">
                         <tr>
                           {sheet.headers.map((h, i) => (
-                            <th key={i} className="border border-border/40 px-3 py-2 text-left font-semibold text-foreground whitespace-nowrap">
-                              {h}
-                            </th>
+                            <th key={i} className="border border-border/40 px-3 py-2 text-left font-semibold text-foreground whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {sheet.rows.length === 0 ? (
-                          <tr>
-                            <td colSpan={sheet.headers.length} className="py-10 text-center text-muted-foreground">
-                              Sin datos en este periodo
-                            </td>
-                          </tr>
+                          <tr><td colSpan={sheet.headers.length} className="py-10 text-center text-muted-foreground">Sin datos en este periodo</td></tr>
                         ) : sheet.rows.map((row, ri) => (
                           <tr key={ri} className={ri % 2 === 0 ? "bg-background" : "bg-muted/20"}>
                             {sheet.headers.map((_, ci) => (
@@ -473,11 +475,11 @@ export function ReportesSection() {
         </div>
         {loadingHistorico ? (
           <div className="flex items-center justify-center gap-2 py-10 text-xs text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />Cargando historial...
+            <Loader2 className="size-4 animate-spin" />Cargando historial…
           </div>
         ) : historico.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10">
-            <FileText className="size-8 opacity-20 text-muted-foreground" />
+            <TrendingUp className="size-8 opacity-20 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">No hay reportes automáticos generados aún.</p>
           </div>
         ) : (
@@ -495,53 +497,29 @@ export function ReportesSection() {
                 {historico.map((r) => (
                   <tr key={r.ID_REPORTE} className="transition-colors hover:bg-muted/20">
                     <td className="py-3 pl-5">
-                      <span className="inline-flex items-center rounded border border-border/60 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
-                        {r.TIPO}
+                      <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold capitalize text-foreground">
+                        {r.TIPO?.toLowerCase() ?? "—"}
                       </span>
                     </td>
-                    <td className="py-3 text-xs text-foreground">{r.FECHA_INICIO} — {r.FECHA_FIN}</td>
+                    <td className="py-3 text-xs text-foreground">
+                      {r.FECHA_INICIO ? fmtFecha(r.FECHA_INICIO) : "—"} — {r.FECHA_FIN ? fmtFecha(r.FECHA_FIN) : "—"}
+                    </td>
                     <td className="py-3 text-xs text-muted-foreground">
-                      {r.FECHA_GENERACION ? new Date(r.FECHA_GENERACION).toLocaleDateString("es-MX") : "—"}
+                      {r.FECHA_GENERACION ? new Date(r.FECHA_GENERACION).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </td>
                     <td className="py-3 pr-5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {r.RUTA_PDF && (
                           <button title="Descargar PDF"
-                            className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
-                            onClick={async () => {
-                              try {
-                                const token = (await import("@/lib/token")).tokenStorage.get()
-                                const { resolveApiFetchUrl } = await import("@/lib/api-base")
-                                const url = resolveApiFetchUrl(`/api/v1/reportes/${r.ID_REPORTE}/descargar?formato=pdf`)
-                                const res = await fetch(url, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} })
-                                if (!res.ok) return
-                                const blob = await res.blob()
-                                const a = document.createElement("a")
-                                a.href = URL.createObjectURL(blob)
-                                a.download = `reporte-${r.FECHA_INICIO}-${r.FECHA_FIN}.pdf`
-                                a.click(); URL.revokeObjectURL(a.href)
-                              } catch { /* ignorar */ }
-                            }}>
+                            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                            onClick={() => descargarHistorico(r.ID_REPORTE, "pdf", r.FECHA_INICIO, r.FECHA_FIN)}>
                             <FileText className="size-3.5" />PDF
                           </button>
                         )}
                         {r.RUTA_XLSX && (
                           <button title="Descargar Excel"
-                            className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
-                            onClick={async () => {
-                              try {
-                                const token = (await import("@/lib/token")).tokenStorage.get()
-                                const { resolveApiFetchUrl } = await import("@/lib/api-base")
-                                const url = resolveApiFetchUrl(`/api/v1/reportes/${r.ID_REPORTE}/descargar?formato=xlsx`)
-                                const res = await fetch(url, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} })
-                                if (!res.ok) return
-                                const blob = await res.blob()
-                                const a = document.createElement("a")
-                                a.href = URL.createObjectURL(blob)
-                                a.download = `reporte-${r.FECHA_INICIO}-${r.FECHA_FIN}.xlsx`
-                                a.click(); URL.revokeObjectURL(a.href)
-                              } catch { /* ignorar */ }
-                            }}>
+                            className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+                            onClick={() => descargarHistorico(r.ID_REPORTE, "xlsx", r.FECHA_INICIO, r.FECHA_FIN)}>
                             <FileSpreadsheet className="size-3.5" />Excel
                           </button>
                         )}
