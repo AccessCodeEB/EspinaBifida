@@ -12,10 +12,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import {
   getPagosRecientes, registrarPago, syncEstados,
-  MONTO_PREDETERMINADO, type PagoReciente,
+  type PagoReciente,
 } from "@/services/membresias"
 import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
 
@@ -74,21 +77,34 @@ function estatusBadge(estatus: "Activa" | "Inactiva" | "Cancelada") {
 
 // ─── Dialog de membresía ─────────────────────────────────────────────────────
 
+type MetodoPago = "efectivo" | "transferencia" | "tarjeta"
+
 function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   open: boolean; beneficiario: Beneficiario | null
   onClose: () => void; onSuccess: () => void
 }) {
   const [meses, setMeses]           = useState(1)
+  const [monto, setMonto]           = useState("")
+  const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("")
   const [observaciones, setObs]     = useState("")
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
 
   useEffect(() => {
-    if (open) { setMeses(1); setObs(""); setError(null) }
+    if (open) { setMeses(1); setMonto(""); setMetodoPago(""); setObs(""); setError(null) }
   }, [open])
 
   const handleConfirm = async () => {
     if (!beneficiario) return
+    const montoNum = parseFloat(monto)
+    if (monto.trim() === "" || isNaN(montoNum) || montoNum < 0) {
+      setError("Ingresa un monto válido (puede ser $0 para donativos)")
+      return
+    }
+    if (!metodoPago) {
+      setError("Selecciona el método de pago")
+      return
+    }
     if (!observaciones.trim()) {
       setError("Las observaciones son obligatorias")
       return
@@ -98,12 +114,12 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
       await registrarPago({
         curp: beneficiario.curp ?? beneficiario.folio,
         meses,
-        monto: 0,
-        metodo_pago: null as unknown as "efectivo",
+        monto: montoNum,
+        metodo_pago: metodoPago,
         observaciones: observaciones.trim(),
       })
       toast.success("Membresía registrada correctamente", {
-        description: `Vigencia: ${meses} ${meses === 1 ? "mes" : "meses"}`,
+        description: `${meses} ${meses === 1 ? "mes" : "meses"} · $${montoNum.toLocaleString("es-MX", { minimumFractionDigits: 2 })} · ${metodoPago}`,
       })
       onSuccess(); onClose()
     } catch (e: unknown) {
@@ -117,7 +133,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-bold">Registrar membresía</DialogTitle>
           <DialogDescription className="text-xs">
@@ -140,6 +156,42 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
               </span>
               <button type="button" onClick={() => setMeses(m => Math.min(12, m + 1))} disabled={meses >= 12}
                 className="flex size-10 items-center justify-center text-base font-bold text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors">+</button>
+            </div>
+          </div>
+
+          {/* Monto + Método de pago */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Monto <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input
+                  className="h-10 pl-6 text-sm"
+                  placeholder="0.00"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={monto}
+                  onChange={(e) => setMonto(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="mb-2 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Método de pago <span className="text-red-500">*</span>
+              </Label>
+              <Select value={metodoPago} onValueChange={(v) => setMetodoPago(v as MetodoPago)}>
+                <SelectTrigger className="h-10 text-sm">
+                  <SelectValue placeholder="Seleccionar…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -234,7 +286,7 @@ export function MembresiasSection() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Membresías</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Control de pagos mensuales · ${MONTO_PREDETERMINADO}/mes por beneficiario
+            Control de pagos y renovaciones de membresías
           </p>
         </div>
         <button onClick={cargarDatos}
