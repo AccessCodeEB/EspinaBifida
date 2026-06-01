@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import {
   Search, CreditCard, Building2, RefreshCw,
-  Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp,
+  Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Plus,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -226,6 +226,81 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   )
 }
 
+// ─── Dialog selector: beneficiarios sin membresía ────────────────────────────
+
+function NuevaMembresiaDialog({ open, sinMembresia, onSelect, onClose }: {
+  open: boolean
+  sinMembresia: Beneficiario[]
+  onSelect: (b: Beneficiario) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState("")
+
+  useEffect(() => { if (open) setSearch("") }, [open])
+
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+
+  const filtrados = sinMembresia.filter(b => {
+    const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`
+    const t = norm(search)
+    return norm(nombre).includes(t) || norm(b.curp ?? b.folio ?? "").includes(t)
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold">Nueva membresía</DialogTitle>
+          <DialogDescription className="text-xs">
+            Selecciona el beneficiario al que deseas registrarle una membresía
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <Input
+            className="pl-9 h-9 text-sm"
+            placeholder="Buscar nombre o CURP…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div className="max-h-72 overflow-y-auto divide-y divide-border/40 rounded-lg border border-border/70">
+          {filtrados.length === 0 ? (
+            <p className="py-8 text-center text-xs text-muted-foreground">
+              {sinMembresia.length === 0
+                ? "Todos los beneficiarios ya tienen membresía activa"
+                : "No se encontraron resultados"}
+            </p>
+          ) : (
+            filtrados.map(b => {
+              const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`.trim()
+              return (
+                <button
+                  key={b.curp ?? b.folio}
+                  type="button"
+                  onClick={() => onSelect(b)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {nombre[0]?.toUpperCase() ?? "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{nombre}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{b.curp ?? b.folio}</p>
+                  </div>
+                </button>
+              )
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function MembresiasSection() {
@@ -235,8 +310,9 @@ export function MembresiasSection() {
   const [error, setError]         = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("asc")
-  const [showPagoDialog, setShowPagoDialog] = useState(false)
-  const [selectedBenef, setSelectedBenef]   = useState<Beneficiario | null>(null)
+  const [showPagoDialog, setShowPagoDialog]   = useState(false)
+  const [selectedBenef, setSelectedBenef]     = useState<Beneficiario | null>(null)
+  const [showNuevaDialog, setShowNuevaDialog] = useState(false)
 
   const cargarDatos = useCallback(async () => {
     setLoading(true); setError(null)
@@ -252,7 +328,8 @@ export function MembresiasSection() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
-  const beneficiarios = todosBeneficiarios.filter(b => b.estatus !== "Baja")
+  const beneficiarios  = todosBeneficiarios.filter(b => b.estatus !== "Baja")
+  const sinMembresia   = beneficiarios.filter(b => b.diasRestantes == null)
   const filtered = beneficiarios.filter(b => {
     const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno}`.toLowerCase()
     const folio  = (b.curp ?? b.folio ?? "").toLowerCase()
@@ -289,11 +366,22 @@ export function MembresiasSection() {
             Control de pagos y renovaciones de membresías
           </p>
         </div>
-        <button onClick={cargarDatos}
-          className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
-          <RefreshCw className="size-3.5" />
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={cargarDatos}
+            className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
+            <RefreshCw className="size-3.5" />
+            Actualizar
+          </button>
+          <button
+            onClick={() => setShowNuevaDialog(true)}
+            disabled={sinMembresia.length === 0}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ backgroundColor: NAVY }}
+          >
+            <Plus className="size-3.5" />
+            Nueva membresía
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -394,7 +482,7 @@ export function MembresiasSection() {
                         </span>
                       </td>
                       <td className="py-3 pr-5 text-right">
-                        {b.estatus !== "Baja" && (
+                        {b.estatus !== "Baja" && b.diasRestantes != null && (
                           <button
                             onClick={() => { setSelectedBenef(b); setShowPagoDialog(true) }}
                             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
@@ -466,6 +554,13 @@ export function MembresiasSection() {
           </table>
         </div>
       </div>
+
+      <NuevaMembresiaDialog
+        open={showNuevaDialog}
+        sinMembresia={sinMembresia}
+        onSelect={(b) => { setShowNuevaDialog(false); setSelectedBenef(b); setShowPagoDialog(true) }}
+        onClose={() => setShowNuevaDialog(false)}
+      />
 
       <PagoDialog
         open={showPagoDialog}
