@@ -54,6 +54,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [selectedItem, setSelectedItem]       = useState<ArticuloInventario | null>(null)
   const [selectedArticuloId, setSelectedArticuloId] = useState<string>("")
   const [cantidadMovimiento, setCantidadMovimiento] = useState<string>("0")
+  const [tipoMovimientoToggle, setTipoMovimientoToggle] = useState<"ENTRADA" | "SALIDA">("ENTRADA")
   const [motivoMovimiento, setMotivoMovimiento]   = useState<string>("")
   const [savingMovimiento, setSavingMovimiento]   = useState(false)
   const [movimientoError, setMovimientoError]     = useState<string | null>(null)
@@ -64,9 +65,11 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [showEliminarDialog, setShowEliminarDialog] = useState(false)
   const [articuloForm, setArticuloForm] = useState({
     idArticulo: "", descripcion: "", unidad: "PZA.",
-    cuotaRecuperacion: "0", cuotaB: "", inventarioActual: "0", stockMinimo: "5", idCategoria: "",
+    cuotaRecuperacion: "0", cuotaB: "0", inventarioActual: "0", stockMinimo: "5", idCategoria: "",
   })
   const [cuotaBEditar, setCuotaBEditar] = useState<string>("")
+  const [cuotaAEditar, setCuotaAEditar] = useState<string>("0")
+  const [showPrecioConfirmDialog, setShowPrecioConfirmDialog] = useState(false)
   const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>("PZA.")
   const [unidadNueva, setUnidadNueva]   = useState<string>("")
   const [deleteArticuloId, setDeleteArticuloId] = useState("")
@@ -181,9 +184,10 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       return
     }
     setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
-    setCantidadMovimiento("0"); setMotivoMovimiento(""); setMovimientoError(null)
+    setCantidadMovimiento(""); setTipoMovimientoToggle("ENTRADA"); setMotivoMovimiento(""); setMovimientoError(null)
     setStockMinimoEditar(item ? String(item.minimo) : "0")
-    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "")
+    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "0")
+    setCuotaAEditar(item ? String(Number(String(item.cuota).replace(/[^\d.-]/g, "")) || 0) : "0")
     setShowMovimientoDialog(true)
   }
 
@@ -191,12 +195,13 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     const item = safetyNetItem
     setSafetyNetItem(null)
     setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
-    setCantidadMovimiento("0"); setMotivoMovimiento(""); setMovimientoError(null)
+    setCantidadMovimiento(""); setTipoMovimientoToggle("ENTRADA"); setMotivoMovimiento(""); setMovimientoError(null)
     setStockMinimoEditar(item ? String(item.minimo) : "0")
-    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "")
+    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "0")
+    setCuotaAEditar(item ? String(Number(String(item.cuota).replace(/[^\d.-]/g, "")) || 0) : "0")
     setShowMovimientoDialog(true)
   }
-  function closeMovimientoDialog() { setShowMovimientoDialog(false); setSavingMovimiento(false); setSavingStockMinimo(false); setMovimientoError(null); setStockMinimoEditar("0"); setCuotaBEditar("") }
+  function closeMovimientoDialog() { setShowMovimientoDialog(false); setSavingMovimiento(false); setSavingStockMinimo(false); setMovimientoError(null); setStockMinimoEditar("0"); setCuotaBEditar(""); setCuotaAEditar("0"); setTipoMovimientoToggle("ENTRADA"); setShowPrecioConfirmDialog(false) }
 
   const normQty = (v: string) => { const p = Math.trunc(Number(v)); return isNaN(p) ? 0 : p }
 
@@ -204,39 +209,57 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     const id = Number(selectedItem ? selectedItem.clave : selectedArticuloId)
     const qty = normQty(cantidadMovimiento)
     const minimo = Number(stockMinimoEditar)
-    const cuotaBNew = cuotaBEditar.trim() !== "" ? Number(cuotaBEditar) : null
-    const cuotaBOld = selectedItem?.cuotaB ?? null
+    const cuotaANew = Number(cuotaAEditar)
+    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
+    const cuotaAChanged = cuotaANew !== cuotaAOld
+    const cuotaBNew = Number(cuotaBEditar)
+    const cuotaBOld = selectedItem?.cuotaB ?? 0
     const cuotaBChanged = cuotaBNew !== cuotaBOld
 
     if (!id || isNaN(id)) { setMovimientoError("Selecciona un artículo válido."); return }
     if (isNaN(minimo) || minimo < 0) { setMovimientoError("Stock mínimo debe ser ≥ 0."); return }
-    if (cuotaBNew !== null && (isNaN(cuotaBNew) || cuotaBNew < 0)) { setMovimientoError("Cuota B debe ser ≥ 0."); return }
-    if (qty === 0 && minimo === (selectedItem?.minimo ?? 5) && !cuotaBChanged) { setMovimientoError("Sin cambios para guardar."); return }
+    if (isNaN(cuotaANew) || cuotaANew < 0) { setMovimientoError("El precio base debe ser ≥ 0."); return }
+    if (cuotaBEditar.trim() === "" || isNaN(cuotaBNew as number) || (cuotaBNew as number) < 0) { setMovimientoError("La Cuota B es obligatoria y debe ser ≥ 0."); return }
+    if (qty === 0 && minimo === (selectedItem?.minimo ?? 5) && !cuotaBChanged && !cuotaAChanged) { setMovimientoError("Sin cambios para guardar."); return }
     if (qty !== 0 && !motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio para registrar un movimiento."); return }
 
+    setMovimientoError(null)
+    if (cuotaAChanged) { setShowPrecioConfirmDialog(true); return }
+    await executeSave()
+  }
+
+  async function executeSave() {
+    const id = Number(selectedItem ? selectedItem.clave : selectedArticuloId)
+    const qty = normQty(cantidadMovimiento)
+    const minimo = Number(stockMinimoEditar)
+    const cuotaANew = Number(cuotaAEditar)
+    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
+    const cuotaAChanged = cuotaANew !== cuotaAOld
+    const cuotaBNew = Number(cuotaBEditar)
+    const cuotaBOld = selectedItem?.cuotaB ?? 0
+    const cuotaBChanged = cuotaBNew !== cuotaBOld
+
+    setShowPrecioConfirmDialog(false)
     setSavingMovimiento(true); setSavingStockMinimo(true); setMovimientoError(null)
     try {
-      // 1. Guardar stock mínimo y/o cuota B si cambiaron
       const updatePayload: Record<string, unknown> = {}
       if (minimo !== (selectedItem?.minimo ?? 5)) updatePayload.stockMinimo = minimo
       if (cuotaBChanged) updatePayload.cuotaB = cuotaBNew
+      if (cuotaAChanged) updatePayload.cuotaRecuperacion = cuotaANew
       if (Object.keys(updatePayload).length > 0) {
         await actualizarArticulo(id, updatePayload as Parameters<typeof actualizarArticulo>[1])
       }
-
-      // 2. Registrar movimiento si hay cantidad
       if (qty !== 0) {
-        await registrarMovimiento({ idArticulo: id, tipo: qty > 0 ? "ENTRADA" : "SALIDA", cantidad: Math.abs(qty), motivo: motivoMovimiento.trim() })
+        await registrarMovimiento({ idArticulo: id, tipo: tipoMovimientoToggle, cantidad: qty, motivo: motivoMovimiento.trim() })
       }
-
       await refreshInventario()
       closeMovimientoDialog()
 
       const updates: string[] = []
-      if (minimo !== (selectedItem?.minimo ?? 5)) updates.push("Stock mínimo actualizado")
+      if (cuotaAChanged) updates.push("Precio base actualizado")
       if (cuotaBChanged) updates.push("Cuota B actualizada")
-      if (qty !== 0) updates.push(qty > 0 ? "Entrada registrada" : "Salida registrada")
-
+      if (minimo !== (selectedItem?.minimo ?? 5)) updates.push("Stock mínimo actualizado")
+      if (qty !== 0) updates.push(tipoMovimientoToggle === "ENTRADA" ? "Entrada registrada" : "Salida registrada")
       toast.success(updates.length > 0 ? updates.join(" • ") : "Cambios guardados")
     } catch (err: unknown) {
       const msg = friendlyError(err, "No se pudo guardar los cambios")
@@ -267,14 +290,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     const id = Number(articuloForm.idArticulo), cuota = Number(articuloForm.cuotaRecuperacion)
     const inv = Number(articuloForm.inventarioActual), minimo = Number(articuloForm.stockMinimo)
     const idCat = Number(articuloForm.idCategoria)
-    const cuotaBVal = articuloForm.cuotaB.trim() !== "" ? Number(articuloForm.cuotaB) : null
+    const cuotaBVal = Number(articuloForm.cuotaB)
     if (isNaN(id)) { setArticuloError("La clave debe ser numérica."); return }
     if (!articuloForm.descripcion.trim()) { setArticuloError("La descripción es obligatoria."); return }
     if (!articuloForm.idCategoria || isNaN(idCat)) { setArticuloError("Selecciona una categoría."); return }
     const unidadFinal = unidadSeleccionada === OTRA_UNIDAD_VALUE ? unidadNueva.trim() : articuloForm.unidad.trim()
     if (!unidadFinal) { setArticuloError("La unidad es obligatoria."); return }
-    if (isNaN(cuota) || cuota < 0) { setArticuloError("La cuota debe ser ≥ 0."); return }
-    if (cuotaBVal !== null && (isNaN(cuotaBVal) || cuotaBVal < 0)) { setArticuloError("La cuota B debe ser ≥ 0."); return }
+    if (isNaN(cuota) || cuota < 0) { setArticuloError("La cuota A (precio base) debe ser ≥ 0."); return }
+    if (articuloForm.cuotaB.trim() === "" || isNaN(cuotaBVal) || cuotaBVal < 0) { setArticuloError("La Cuota B es obligatoria y debe ser ≥ 0."); return }
     if (isNaN(inv) || inv < 0) { setArticuloError("La cantidad inicial debe ser ≥ 0."); return }
     if (isNaN(minimo) || minimo < 0) { setArticuloError("El stock mínimo debe ser ≥ 0."); return }
     setSavingArticulo(true); setArticuloError(null)
@@ -323,7 +346,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   }
 
   const qty = normQty(cantidadMovimiento)
-  const qtyColor = qty > 0 ? "text-emerald-600 dark:text-emerald-400" : qty < 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -728,21 +750,73 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog: Movimiento ── */}
-      <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>
-        <DialogContent className="max-w-md">
+      {/* ── Dialog: Confirmación de cambio de precio ── */}
+      <Dialog open={showPrecioConfirmDialog} onOpenChange={open => { if (!open) setShowPrecioConfirmDialog(false) }}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Modificar inventario</DialogTitle>
+            <DialogTitle className="text-base font-bold">¿Cambiar el precio?</DialogTitle>
             <DialogDescription className="text-xs">
-              {selectedItem ? selectedItem.descripcion : "Selecciona el artículo y ajusta la cantidad."}
+              Estás a punto de modificar el precio base de <span className="font-medium text-foreground">{selectedItem?.descripcion}</span>.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-1">
+          <div className="flex flex-col gap-3 py-2">
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación actual</span>
+                  <span className="font-bold text-foreground">{selectedItem?.cuota ?? "$0.00"}</span>
+                </div>
+                <span className="text-lg text-muted-foreground">→</span>
+                <div className="flex flex-col gap-0.5 text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación nueva</span>
+                  <span className="font-bold text-[#0f4c81]">${Number(cuotaAEditar || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Este cambio afectará el precio que se cobra a los beneficiarios a partir de ahora.</p>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
+            <button
+              onClick={() => setShowPrecioConfirmDialog(false)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={executeSave}
+              disabled={savingMovimiento || savingStockMinimo}
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: NAVY }}
+            >
+              Sí, cambiar precio
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Movimiento ── */}
+      <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <Package className="size-4 text-[#0f4c81]" />
+              {selectedItem ? selectedItem.descripcion : "Modificar artículo"}
+            </DialogTitle>
+            {selectedItem && (
+              <DialogDescription className="text-xs text-muted-foreground">
+                Ajusta el stock, el precio o el mínimo del artículo.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-1">
+
+            {/* Selector de artículo (cuando se abre sin item) */}
             {!selectedItem && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Artículo</label>
                 <Select value={selectedArticuloId} onValueChange={setSelectedArticuloId}>
-                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar artículo" /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Seleccionar artículo" /></SelectTrigger>
                   <SelectContent>
                     {inventario.map((item, idx) => (
                       <SelectItem key={`sel-${item.clave}-${idx}`} value={String(item.clave)}>
@@ -754,53 +828,115 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setCantidadMovimiento(p => String(normQty(p) - 1))}
-                  className="flex size-10 items-center justify-center rounded-lg border border-border text-lg font-bold text-muted-foreground hover:bg-muted transition-colors">−</button>
-                <Input
-                  className={`h-10 flex-1 text-center text-lg font-bold tabular-nums ${qtyColor}`}
-                  type="number"
-                  step="1"
-                  placeholder="Ej. 500 o -500"
-                  value={cantidadMovimiento}
-                  onChange={e => setCantidadMovimiento(e.target.value)}
-                />
-                <button onClick={() => setCantidadMovimiento(p => String(normQty(p) + 1))}
-                  className="flex size-10 items-center justify-center rounded-lg border border-border text-lg font-bold text-muted-foreground hover:bg-muted transition-colors">+</button>
+            {/* Card de estado actual */}
+            {selectedItem && (
+              <div className="grid grid-cols-3 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
+                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Stock</span>
+                  <span className={`text-2xl font-bold tabular-nums ${
+                    selectedItem.cantidad === 0 ? "text-red-500 dark:text-red-400"
+                    : selectedItem.cantidad <= selectedItem.minimo ? "text-amber-500 dark:text-amber-400"
+                    : "text-foreground"
+                  }`}>{selectedItem.cantidad}</span>
+                  <span className="text-[9px] text-muted-foreground">{selectedItem.unidad}</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Recuperación</span>
+                  <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.cuota}</span>
+                  {selectedItem.cuotaB != null && (
+                    <span className="text-[9px] text-muted-foreground">Real: ${selectedItem.cuotaB.toFixed(2)}</span>
+                  )}
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Mínimo</span>
+                  <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.minimo}</span>
+                  <span className="text-[9px] text-muted-foreground">alerta</span>
+                </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">Escribe un número positivo para entrada o negativo para salida.</p>
-            </div>
+            )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Motivo {normQty(cantidadMovimiento) !== 0 && <span className="text-red-500 normal-case tracking-normal">*</span>}
-              </label>
-              <Input
-                className="h-10 text-sm"
-                placeholder="¿Por qué se modifica el stock?"
-                value={motivoMovimiento}
-                onChange={e => setMotivoMovimiento(e.target.value)}
-              />
-              {normQty(cantidadMovimiento) !== 0 && (
-                <p className="text-[11px] text-muted-foreground">Obligatorio cuando se registra un movimiento de stock.</p>
-              )}
-            </div>
-
-            {/* Divisor */}
-            <div className="border-t border-border/40 pt-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-foreground mb-3">Configuración del artículo</p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Sección: Movimiento de stock */}
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Movimiento de stock</p>
+              <div className="flex flex-col gap-3">
+                {/* Toggle ENTRADA / SALIDA */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTipoMovimientoToggle("ENTRADA")}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                      tipoMovimientoToggle === "ENTRADA"
+                        ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Plus className="size-3.5" /> Entrada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoMovimientoToggle("SALIDA")}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                      tipoMovimientoToggle === "SALIDA"
+                        ? "border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400"
+                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Minus className="size-3.5" /> Salida
+                  </button>
+                </div>
+                {/* Cantidad */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Stock mínimo</label>
-                  <Input className="h-10 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
-                  <p className="text-[11px] text-muted-foreground">Actual: <span className="font-medium">{selectedItem?.cantidad ?? 0}</span> · Mín: <span className="font-medium">{selectedItem?.minimo ?? 0}</span></p>
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
+                  <Input
+                    className="h-9 text-sm"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                    value={cantidadMovimiento}
+                    onChange={e => setCantidadMovimiento(e.target.value)}
+                  />
+                </div>
+                {/* Motivo */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Motivo {qty !== 0 && <span className="text-red-500 normal-case tracking-normal font-normal">*</span>}
+                  </label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="¿Por qué se modifica el stock?"
+                    value={motivoMovimiento}
+                    onChange={e => setMotivoMovimiento(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Sección: Configuración del artículo */}
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Configuración del artículo</p>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                      <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaAEditar} onChange={e => setCuotaAEditar(e.target.value)} disabled={savingMovimiento} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Precio subsidiado (recursos limitados)</p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio real</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                      <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaBEditar} onChange={e => setCuotaBEditar(e.target.value)} disabled={savingMovimiento} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Precio completo (cuota B)</p>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota B (precio mayor)</label>
-                  <Input className="h-10 text-sm" type="number" min="0" step="0.01" placeholder="Sin cuota B" value={cuotaBEditar} onChange={e => setCuotaBEditar(e.target.value)} disabled={savingMovimiento} />
-                  <p className="text-[11px] text-muted-foreground">Vacío = sin cuota B (todos pagan igual).</p>
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Stock mínimo (alerta)</label>
+                  <Input className="h-9 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
                 </div>
               </div>
             </div>
@@ -809,13 +945,15 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{movimientoError}</p>
             )}
 
-            <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
+            <div className="flex justify-end gap-2">
               <button onClick={closeMovimientoDialog} disabled={savingMovimiento || savingStockMinimo}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">Cancelar</button>
+                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                Cancelar
+              </button>
               <button onClick={handleConfirmMovimiento} disabled={savingMovimiento || savingStockMinimo}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: NAVY }}>
-                {savingMovimiento || savingStockMinimo ? "Guardando..." : "Confirmar y guardar"}
+                {savingMovimiento || savingStockMinimo ? "Guardando..." : "Guardar cambios"}
               </button>
             </div>
           </div>
@@ -879,14 +1017,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota A (precio base)</label>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</label>
                     <Input className="h-10 text-sm" type="number" min="0" step="0.01" value={articuloForm.cuotaRecuperacion} onChange={e => setArticuloForm(p => ({ ...p, cuotaRecuperacion: e.target.value }))} />
-                    <p className="text-[11px] text-muted-foreground">Precio para beneficiarios con cuota A.</p>
+                    <p className="text-[11px] text-muted-foreground">Precio subsidiado (recursos limitados).</p>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota B (precio mayor) — opcional</label>
-                    <Input className="h-10 text-sm" type="number" min="0" step="0.01" placeholder="Sin cuota B" value={articuloForm.cuotaB} onChange={e => setArticuloForm(p => ({ ...p, cuotaB: e.target.value }))} />
-                    <p className="text-[11px] text-muted-foreground">Dejar vacío si todos pagan lo mismo.</p>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio real</label>
+                    <Input className="h-10 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={articuloForm.cuotaB} onChange={e => setArticuloForm(p => ({ ...p, cuotaB: e.target.value }))} />
+                    <p className="text-[11px] text-muted-foreground">Precio completo (cuota B).</p>
                   </div>
                 </div>
 
