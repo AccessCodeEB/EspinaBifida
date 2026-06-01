@@ -14,6 +14,7 @@ import { MembresiasSection } from "@/components/sections/membresias"
 import { ServiciosSection } from "@/components/sections/servicios"
 import { InventarioSection } from "@/components/sections/inventario"
 import { CitasSection } from "@/components/sections/citas"
+import { ComodatosSection } from "@/components/sections/comodatos"
 import { PreregistroSection } from "@/components/sections/preregistro"
 import { ReportesSection } from "@/components/sections/reportes"
 import { AdministradoresSection } from "@/components/sections/administradores"
@@ -29,6 +30,7 @@ const VALID_SECTIONS = new Set([
   "membresias",
   "servicios",
   "inventario",
+  "comodatos",
   "citas",
   "reportes",
   "preregistro",
@@ -58,6 +60,7 @@ function SectionContent({
     case "membresias": return <MembresiasSection />
     case "servicios": return <ServiciosSection />
     case "inventario": return <InventarioSection onNavigate={onNavigate} />
+    case "comodatos": return <ComodatosSection />
     case "citas": return <CitasSection />
     case "reportes": return <ReportesSection />
     case "preregistro": return <PreregistroSection />
