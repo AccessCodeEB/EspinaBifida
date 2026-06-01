@@ -116,6 +116,7 @@ describe("POST /membresias — createMembresia", () => {
         numero_credencial: "CRED-002",
         fecha_emision:     "2026-01-01",
         fecha_vigencia_inicio: "2026-01-01",
+        observaciones:     "Alta inicial test",
       });
 
     expect(res.status).toBe(201);
@@ -128,7 +129,7 @@ describe("POST /membresias — createMembresia", () => {
     const res = await request(app)
       .post("/membresias")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send({ curp: CURP, numero_credencial: "X", fecha_emision: "2026-01-01" });
+      .send({ curp: CURP, numero_credencial: "X", fecha_emision: "2026-01-01", observaciones: "Test" });
 
     expect(res.status).toBe(404);
   });

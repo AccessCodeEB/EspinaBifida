@@ -8,17 +8,19 @@ const mockGetCount            = jest.fn();
 const mockMarcarLeida         = jest.fn();
 const mockMarcarTodasLeidas   = jest.fn();
 const mockRunJob              = jest.fn();
+const mockDeleteE2ENotif      = jest.fn();
 
 jest.unstable_mockModule('../services/notificaciones.service.js', () => ({
-  getAll:              mockGetAll,
-  getPendientes:       mockGetPendientes,
-  getCount:            mockGetCount,
-  marcarLeida:         mockMarcarLeida,
-  marcarTodasLeidas:   mockMarcarTodasLeidas,
-  runJob:              mockRunJob,
+  getAll:                   mockGetAll,
+  getPendientes:            mockGetPendientes,
+  getCount:                 mockGetCount,
+  marcarLeida:              mockMarcarLeida,
+  marcarTodasLeidas:        mockMarcarTodasLeidas,
+  runJob:                   mockRunJob,
+  deleteE2ENotificaciones:  mockDeleteE2ENotif,
 }));
 
-const { getAll, getPendientes, getCount, marcarLeida, marcarTodasLeidas, runJob } =
+const { getAll, getPendientes, getCount, marcarLeida, marcarTodasLeidas, runJob, e2eCleanup } =
   await import('../controllers/notificaciones.controller.js');
 
 function makeRes() {
@@ -150,5 +152,29 @@ describe('runJob', () => {
     const next = jest.fn();
     await runJob({}, makeRes(), next);
     expect(next).toHaveBeenCalledWith(err);
+  });
+});
+
+// ── e2eCleanup ────────────────────────────────────────────────────────────────
+
+describe('e2eCleanup', () => {
+  const OLD_ENV = process.env.NODE_ENV;
+  afterEach(() => { process.env.NODE_ENV = OLD_ENV; });
+
+  it('llama deleteE2ENotificaciones y devuelve mensaje', async () => {
+    process.env.NODE_ENV = 'test';
+    mockDeleteE2ENotif.mockResolvedValueOnce(undefined);
+    const res = makeRes();
+    await e2eCleanup({}, res, jest.fn());
+    expect(mockDeleteE2ENotif).toHaveBeenCalledTimes(1);
+    expect(res.json).toHaveBeenCalledWith({ message: 'Notificaciones E2E eliminadas' });
+  });
+
+  it('devuelve 403 en producción', async () => {
+    process.env.NODE_ENV = 'production';
+    const res = makeRes();
+    await e2eCleanup({}, res, jest.fn());
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockDeleteE2ENotif).not.toHaveBeenCalled();
   });
 });
