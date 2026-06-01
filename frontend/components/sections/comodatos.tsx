@@ -618,7 +618,7 @@ export function ComodatosSection() {
                   </th>
                   <th className="hidden py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
                     <button onClick={() => handleSort("saldo")} className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
-                      <DollarSign className="size-3" />SALDO <SortIcon f="saldo" />
+                      <DollarSign className="size-3" />ADEUDO <SortIcon f="saldo" />
                     </button>
                   </th>
                   <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
