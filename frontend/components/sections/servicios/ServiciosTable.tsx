@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, RotateCcw, Search, User, Package, Calendar, DollarSign, Tag } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
 
 function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
@@ -42,7 +42,7 @@ interface ServiciosTableProps {
   sortField: SortField
   sortDirection: "asc" | "desc"
   onSortBy: (field: SortField) => void
-  onSortPreset: (preset: "recent" | "highest" | "nameAZ" | "pendingFirst") => void
+  onSortPreset: (preset: "recent" | "highest" | "nameAZ") => void
 
   onRowClick: (s: ServicioDetallado) => void
   setPage: (fn: (p: number) => number) => void
@@ -84,7 +84,7 @@ export function ServiciosTable({
   estatusCicloIdx,
   onCicloEstatus,
 }: ServiciosTableProps) {
-  const CICLO_LABELS = ["TODOS", "COMPLETADO", "PRESTADO", "DEVUELTO"] as const
+  const CICLO_LABELS = ["TODOS", "COMPLETADO"] as const
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
@@ -148,14 +148,13 @@ export function ServiciosTable({
           </select>
           <select
             className="h-8 rounded-lg border border-border/70 bg-background px-2.5 text-xs text-foreground outline-none focus:border-[#0f4c81]"
-            onChange={(e) => onSortPreset(e.target.value as "recent" | "highest" | "nameAZ" | "pendingFirst")}
+            onChange={(e) => onSortPreset(e.target.value as "recent" | "highest" | "nameAZ")}
             defaultValue=""
           >
             <option value="" disabled>Ordenar por…</option>
             <option value="recent">Más reciente</option>
             <option value="highest">Mayor monto</option>
             <option value="nameAZ">Nombre A–Z</option>
-            <option value="pendingFirst">Préstamos primero</option>
           </select>
           <button
             onClick={() => { setFechaInicioFiltro(""); setFechaFinFiltro(""); setSearchTerm(""); setTipoServicioFiltro("") }}
@@ -209,14 +208,11 @@ export function ServiciosTable({
                 </td>
               </tr>
             ) : (
-              paginated.map((s) => {
-                const esPrestado = s.estatus === "PRESTADO"
-                const esDevuelto = s.estatus === "DEVUELTO"
-                return (
+              paginated.map((s) => (
                   <tr
                     key={s.id}
                     onClick={() => onRowClick(s)}
-                    className={`cursor-pointer transition-colors hover:bg-muted/30 ${esPrestado ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}`}
+                    className="cursor-pointer transition-colors hover:bg-muted/30"
                   >
                     <td className="py-3 pl-5">
                       <p className="text-xs font-medium text-foreground">{s.nombre}</p>
@@ -232,23 +228,12 @@ export function ServiciosTable({
                     <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
                     <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
                     <td className="py-3 pr-5 text-center">
-                      {esPrestado ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                          <RotateCcw className="size-3" />Préstamo
-                        </span>
-                      ) : esDevuelto ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                          <span className="size-1.5 rounded-full bg-emerald-500" />Devuelto
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                          <span className="size-1.5 rounded-full bg-slate-400" />Completado
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <span className="size-1.5 rounded-full bg-slate-400" />Completado
+                      </span>
                     </td>
                   </tr>
-                )
-              })
+                ))
             )}
           </tbody>
         </table>

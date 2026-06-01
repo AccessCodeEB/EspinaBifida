@@ -150,7 +150,7 @@ export function ServiciosSection() {
   const [fechaFinFiltro, setFechaFinFiltro] = useState("")
   const [sortField, setSortField] = useState<SortField>("fecha")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const ESTATUS_CICLO = [null, "COMPLETADO", "PRESTADO", "DEVUELTO"] as const
+  const ESTATUS_CICLO = [null, "COMPLETADO"] as const
   type EstatusCiclo = typeof ESTATUS_CICLO[number]
   const [estatusCicloIdx, setEstatusCicloIdx] = useState(0)
   const estatusCicloFiltro: EstatusCiclo = ESTATUS_CICLO[estatusCicloIdx]
@@ -491,11 +491,10 @@ export function ServiciosSection() {
     setSortDirection("asc")
   }
 
-  const applySortPreset = (preset: "recent" | "highest" | "nameAZ" | "pendingFirst") => {
+  const applySortPreset = (preset: "recent" | "highest" | "nameAZ") => {
     if (preset === "recent") { setSortField("fecha"); setSortDirection("desc"); return }
     if (preset === "highest") { setSortField("monto"); setSortDirection("desc"); return }
-    if (preset === "nameAZ") { setSortField("nombre"); setSortDirection("asc"); return }
-    setSortField("estatus"); setSortDirection("desc")
+    setSortField("nombre"); setSortDirection("asc")
   }
 
   const resetFormDialog = () => {
