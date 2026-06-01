@@ -144,27 +144,25 @@ export async function runMigration024() {
       console.log("[migration-024] ⚠️  No se encontraron las 3 categorías físicas — reclasificación omitida.");
     }
 
-    await conn.commit();
-
-    // ── 4. Eliminar categoría "Servicios y Estudios" ──────────────────────────
-    await conn.execute(
-      `UPDATE CATEGORIAS_ARTICULO SET ACTIVO = 0
-       WHERE UPPER(NOMBRE) LIKE '%SERVICIOS Y ESTUDIOS%'`
-    ).catch(() => {
-      // Si no tiene columna ACTIVO, intentar DELETE directo
-      return conn.execute(
-        `DELETE FROM CATEGORIAS_ARTICULO
-         WHERE UPPER(NOMBRE) LIKE '%SERVICIOS Y ESTUDIOS%'
-           AND NOT EXISTS (
-             SELECT 1 FROM ARTICULOS
-             WHERE ARTICULOS.ID_CATEGORIA = CATEGORIAS_ARTICULO.ID_CATEGORIA
-               AND NVL(ARTICULOS.ACTIVO,'S') = 'S'
-           )`
+    // ── 4. Catch-all: cualquier artículo activo que siga en "Servicios y Estudios"
+    //       lo movemos a Medicamentos para vaciar la categoría
+    if (catMap.medicamentos) {
+      await conn.execute(
+        `UPDATE ARTICULOS
+           SET ID_CATEGORIA = :cat
+         WHERE NVL(ACTIVO,'S') = 'S'
+           AND ID_CATEGORIA = (
+             SELECT ID_CATEGORIA FROM CATEGORIAS_ARTICULO
+             WHERE UPPER(NOMBRE) LIKE '%SERVICIOS Y ESTUDIOS%'
+             AND ROWNUM = 1
+           )`,
+        { cat: catMap.medicamentos }
       );
-    });
+    }
 
     await conn.commit();
-    console.log("[migration-024] ✅ Categoría 'Servicios y Estudios' eliminada.");
+    console.log("[migration-024] ✅ Categoría 'Servicios y Estudios' vaciada (artículos restantes → Medicamentos).");
+    console.log("[migration-024] ℹ️  La fila de CATEGORIAS_ARTICULO se deja en BD para respetar la FK; ya no aparecerá en filtros al estar vacía.");
 
   } catch (err) {
     console.error("[migration-024] ❌ Error:", err.message);
