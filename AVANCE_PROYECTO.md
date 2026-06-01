@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — Refactor completo comodatos + UI (Fases 0–3): migración arquitectural, panel detalle con historial pagos, tabs servicios, filtro artículos por categoría, migración 026 eliminar Préstamo de equipo, 1157 tests 100% verde
+**Actualización:** 2026-06-01 (Domingo) — Membresías anuales: vigencia 12 meses, nuevo ingreso $200 / re-inscripción $150, tipo auto-detectado desde BD, método de pago y observaciones obligatorios; 1160 tests 100% verde
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -19,7 +19,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 26 / 26 |
 | Archivos de prueba Jest (suites) | 53 |
-| Tests Jest | 1157 |
+| Tests Jest | 1160 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
