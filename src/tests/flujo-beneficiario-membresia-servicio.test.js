@@ -36,7 +36,6 @@ const membresiaBase = {
   numero_credencial: "CRED-001",
   fecha_emision:     "2026-01-01",
   fecha_vigencia_inicio: "2026-01-01",
-  observaciones:     "Alta inicial test",
 };
 
 const servicioBase = {

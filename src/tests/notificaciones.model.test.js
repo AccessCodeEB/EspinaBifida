@@ -11,8 +11,6 @@ jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
 const {
   findArticulosConStockBajo,
-  findArticulosSinStock,
-  syncSinStockConsolidado,
   findMembresiasProximas,
   findMembresiasVencidas,
   findCitasHoyProgramadas,
@@ -355,61 +353,6 @@ describe("syncComodatosPorVencer", () => {
     await syncComodatosPorVencer(null);
 
     expect(mockExecute).toHaveBeenCalledTimes(1); // solo el SELECT
-    expect(mockCommit).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── findArticulosSinStock ─────────────────────────────────────────────────────
-
-describe("findArticulosSinStock", () => {
-  it("retorna artículos sin stock", async () => {
-    const rows = [{ ID_ARTICULO: 1, DESCRIPCION: "Silla", INVENTARIO_ACTUAL: 0 }];
-    mockExecute.mockResolvedValueOnce({ rows });
-    const result = await findArticulosSinStock();
-    expect(result).toEqual(rows);
-    expect(mockClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("retorna [] cuando no hay artículos sin stock", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [] });
-    const result = await findArticulosSinStock();
-    expect(result).toEqual([]);
-  });
-
-  it("cierra la conexión aunque execute lance error", async () => {
-    mockExecute.mockRejectedValueOnce(new Error("ORA-01403"));
-    await expect(findArticulosSinStock()).rejects.toThrow("ORA-01403");
-    expect(mockClose).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── syncSinStockConsolidado ───────────────────────────────────────────────────
-
-describe("syncSinStockConsolidado", () => {
-  it("inserta notificación cuando hay artículos sin stock y no existía previa", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [] });  // SELECT PENDIENTE → vacío
-    mockExecute.mockResolvedValueOnce({});            // INSERT
-    await syncSinStockConsolidado("13 artículos sin stock");
-    expect(mockCommit).toHaveBeenCalledTimes(1);
-  });
-
-  it("actualiza notificación existente con nuevo mensaje", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 9 }] }); // SELECT
-    mockExecute.mockResolvedValueOnce({});  // UPDATE mensaje
-    await syncSinStockConsolidado("Nuevo mensaje");
-    expect(mockCommit).toHaveBeenCalledTimes(1);
-  });
-
-  it("cierra la notificación cuando mensaje es null y había una pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 5 }] }); // SELECT
-    mockExecute.mockResolvedValueOnce({});  // UPDATE LEIDA
-    await syncSinStockConsolidado(null);
-    expect(mockCommit).toHaveBeenCalledTimes(1);
-  });
-
-  it("no hace nada si mensaje es null y no había notificación pendiente", async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT → vacío
-    await syncSinStockConsolidado(null);
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

@@ -44,24 +44,33 @@ beforeEach(() => resetMocks());
 // ─── findPagosRecientes ───────────────────────────────────────────────────────
 
 describe("findPagosRecientes", () => {
-  it("retorna las filas de pagos recientes (últimos 30 días)", async () => {
+  it("retorna las filas de pagos recientes", async () => {
     const rows = [
       { ID_CREDENCIAL: 1, CURP, NOMBRE_COMPLETO: "Juan García", MONTO: 500 },
       { ID_CREDENCIAL: 2, CURP, NOMBRE_COMPLETO: "Ana Pérez",   MONTO: 300 },
     ];
     mockExecute.mockResolvedValueOnce({ rows });
 
-    const result = await findPagosRecientes();
+    const result = await findPagosRecientes(10);
 
     expect(result).toEqual(rows);
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
-    // Verifica que el SQL filtra por fecha (no por limit)
-    const sql = mockExecute.mock.calls[0][0];
-    expect(sql).toMatch(/SYSDATE.*-.*30/i);
+    // Verifica que el bind lleva el limit correcto
+    const binds = mockExecute.mock.calls[0][1];
+    expect(binds.limit).toBe(10);
   });
 
-  it("retorna [] cuando no hay pagos en los últimos 30 días", async () => {
+  it("usa limit=20 por defecto cuando no se pasa argumento", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    await findPagosRecientes();
+
+    const binds = mockExecute.mock.calls[0][1];
+    expect(binds.limit).toBe(20);
+  });
+
+  it("retorna [] cuando no hay pagos", async () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
 
     const result = await findPagosRecientes();

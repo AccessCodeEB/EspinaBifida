@@ -27,7 +27,7 @@ jest.unstable_mockModule("oracledb", () => ({
   BIND_OUT:          3003,
 }));
 
-const { findInventarioActual, findMovimientos, createMovimientoConTransaccion, deleteE2EMovimientos } = await import(
+const { findInventarioActual, findMovimientos, createMovimientoConTransaccion } = await import(
   "../models/inventario.model.js"
 );
 
@@ -143,18 +143,5 @@ describe("createMovimientoConTransaccion — getConnection falla → conn undefi
     // rollback y close NO deben haberse llamado (conn era undefined)
     expect(mockRollback).not.toHaveBeenCalled();
     expect(mockClose).not.toHaveBeenCalled();
-  });
-});
-
-// ── deleteE2EMovimientos ──────────────────────────────────────────────────────
-
-describe("deleteE2EMovimientos", () => {
-  it("borra movimientos con MOTIVO LIKE '%E2E%' y hace commit", async () => {
-    mockExecute.mockResolvedValueOnce({});
-    await deleteE2EMovimientos();
-    expect(mockExecute).toHaveBeenCalledTimes(1);
-    const sql = mockExecute.mock.calls[0][0];
-    expect(sql).toMatch(/E2E/i);
-    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

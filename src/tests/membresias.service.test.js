@@ -423,11 +423,29 @@ describe("syncEstados", () => {
 });
 
 describe("getPagosRecientes", () => {
-  test("devuelve los resultados del modelo (últimos 30 días)", async () => {
+  test("usa limit=20 por defecto y devuelve resultados del modelo", async () => {
     mockFindPagosRecientes.mockResolvedValueOnce([{ ID_CREDENCIAL: 5 }]);
     const result = await Service.getPagosRecientes();
     expect(result).toEqual([{ ID_CREDENCIAL: 5 }]);
-    expect(mockFindPagosRecientes).toHaveBeenCalledWith();
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(20);
+  });
+
+  test("clampea el limit mínimo a 1 cuando se pasa -5", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes(-5);
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(1);
+  });
+
+  test("clampea el limit máximo a 100 cuando se pasa 200", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes(200);
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(100);
+  });
+
+  test("valor no numérico usa default 20", async () => {
+    mockFindPagosRecientes.mockResolvedValue([]);
+    await Service.getPagosRecientes("abc");
+    expect(mockFindPagosRecientes).toHaveBeenCalledWith(20);
   });
 });
 
