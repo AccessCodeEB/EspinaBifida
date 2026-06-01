@@ -11,6 +11,8 @@ export const findArticulosConStockBajo = () =>
          FROM ARTICULOS
          WHERE MANEJA_INVENTARIO = 'S'
            AND NVL(ACTIVO, 'S') = 'S'
+           AND STOCK_MINIMO > 0
+           AND INVENTARIO_ACTUAL > 0
            AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
       )).rows;
     } catch (err) {
@@ -19,6 +21,8 @@ export const findArticulosConStockBajo = () =>
         `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
          FROM ARTICULOS
          WHERE MANEJA_INVENTARIO = 'S'
+           AND STOCK_MINIMO > 0
+           AND INVENTARIO_ACTUAL > 0
            AND INVENTARIO_ACTUAL <= STOCK_MINIMO`
       )).rows;
     }
@@ -177,6 +181,58 @@ export const syncStockBajoConsolidado = (mensaje) =>
       await conn.execute(
         `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
          VALUES ('STOCK_BAJO', 'ARTICULO', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
+
+export const findArticulosSinStock = () =>
+  withConnection(async conn => {
+    try {
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND NVL(ACTIVO, 'S') = 'S'
+           AND INVENTARIO_ACTUAL = 0`
+      )).rows;
+    } catch (err) {
+      if (err?.errorNum !== 904 && !/ORA-00904/i.test(String(err?.message ?? ""))) throw err;
+      return (await conn.execute(
+        `SELECT ID_ARTICULO, DESCRIPCION, INVENTARIO_ACTUAL, STOCK_MINIMO
+         FROM ARTICULOS
+         WHERE MANEJA_INVENTARIO = 'S'
+           AND INVENTARIO_ACTUAL = 0`
+      )).rows;
+    }
+  });
+
+export const syncSinStockConsolidado = (mensaje) =>
+  withConnection(async conn => {
+    const { rows } = await conn.execute(
+      `SELECT ID_NOTIFICACION FROM NOTIFICACIONES
+       WHERE TIPO = 'SIN_STOCK' AND ESTATUS = 'PENDIENTE'
+       FETCH FIRST 1 ROWS ONLY`
+    );
+    if (rows.length > 0) {
+      if (mensaje) {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES
+           SET MENSAJE = :msg, FECHA_CREACION = SYSDATE
+           WHERE ID_NOTIFICACION = :id`,
+          { msg: mensaje, id: rows[0].ID_NOTIFICACION }
+        );
+      } else {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+           WHERE TIPO = 'SIN_STOCK' AND ESTATUS = 'PENDIENTE'`
+        );
+      }
+    } else if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('SIN_STOCK', 'ARTICULO', :msg)`,
         { msg: mensaje }
       );
     }

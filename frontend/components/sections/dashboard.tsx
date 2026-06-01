@@ -193,12 +193,13 @@ export function DashboardSection() {
 
     getInventario()
       .then((items) => {
-        // Use per-item minimo when available; fallback to INVENTARIO_BAJO_UMBRAL
+        // Stock bajo: cantidad > 0 AND cantidad <= minimo (mismo criterio que backend)
+        // Agotado: cantidad = 0 (se muestra aparte, más crítico)
         const bajos = items
           .filter((i) => {
             const qty = Number(i.cantidad ?? 0)
-            const min = Number(i.minimo ?? INVENTARIO_BAJO_UMBRAL)
-            return qty <= min
+            const min = Number(i.minimo ?? 0)
+            return qty > 0 && min > 0 && qty <= min
           })
           .sort((a, b) => Number(a.cantidad ?? 0) - Number(b.cantidad ?? 0))
         const agotados = items.filter((i) => Number(i.cantidad ?? 0) <= 0)

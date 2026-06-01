@@ -16,6 +16,7 @@ import { getComodatos, type ComodatoActivo } from "@/services/servicios"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   STOCK_BAJO:         { label: "Stock bajo",           icon: Package,       color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
+  SIN_STOCK:          { label: "Sin stock",            icon: AlertTriangle, color: "text-red-500",    bg: "bg-red-50 dark:bg-red-950/30"      },
   MEMBRESIA_PROXIMA:  { label: "Membresía próxima",    icon: CreditCard,    color: "text-yellow-500", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
   MEMBRESIA_VENCIDA:  { label: "Membresía vencida",    icon: AlertTriangle, color: "text-red-500",    bg: "bg-red-50 dark:bg-red-950/30"     },
   PREREGISTRO_NUEVO:  { label: "Pre-registro nuevo",   icon: ClipboardList, color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30"   },
@@ -130,7 +131,17 @@ export function NotificacionesPanel() {
       setLoadingDetail(true)
       try {
         const inv = await getInventario()
-        setDetailArticulos(inv.filter(a => a.cantidad <= a.minimo))
+        setDetailArticulos(inv.filter(a => a.cantidad > 0 && a.minimo > 0 && a.cantidad <= a.minimo))
+      } catch {
+        setDetailArticulos([])
+      } finally {
+        setLoadingDetail(false)
+      }
+    } else if (n.tipo === "SIN_STOCK") {
+      setLoadingDetail(true)
+      try {
+        const inv = await getInventario()
+        setDetailArticulos(inv.filter(a => a.cantidad === 0))
       } catch {
         setDetailArticulos([])
       } finally {

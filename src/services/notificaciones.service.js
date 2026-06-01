@@ -35,6 +35,25 @@ export async function checkStockBajo() {
   return rows.length;
 }
 
+export async function checkSinStock() {
+  const rows = await Model.findArticulosSinStock();
+  if (rows.length === 0) {
+    await Model.syncSinStockConsolidado(null);
+    return 0;
+  }
+  let msg;
+  if (rows.length === 1) {
+    msg = `Sin stock: "${trimNombre(rows[0].DESCRIPCION)}" — no hay unidades disponibles.`;
+  } else {
+    const lista = rows.slice(0, 5).map(r => trimNombre(r.DESCRIPCION, 25)).join(", ");
+    const extra = rows.length > 5 ? ` y ${rows.length - 5} más` : "";
+    msg = `${rows.length} artículos sin stock: ${lista}${extra}.`;
+  }
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  await Model.syncSinStockConsolidado(msg);
+  return rows.length;
+}
+
 async function checkCitasHoy() {
   const rows = await Model.findCitasHoyProgramadas();
   if (rows.length === 0) {
@@ -108,13 +127,14 @@ async function checkComodatosPorVencer() {
 }
 
 export async function runJob() {
-  const [stockBajo, proximas, vencidas, citasHoy, comodatos] = await Promise.all([
+  const [stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos] = await Promise.all([
     checkStockBajo(),
+    checkSinStock(),
     checkMembresiasProximas(),
     checkMembresiasVencidas(),
     checkCitasHoy(),
     checkComodatosPorVencer(),
   ]);
-  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}, comodatos_por_vencer=${comodatos}`);
-  return { stockBajo, proximas, vencidas, citasHoy, comodatos };
+  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, sin_stock=${sinStock}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}, comodatos_por_vencer=${comodatos}`);
+  return { stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos };
 }

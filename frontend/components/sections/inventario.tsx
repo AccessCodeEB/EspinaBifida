@@ -134,7 +134,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const filteredByStock = stockFilter === "sin"
     ? filteredByCategoria.filter(i => i.cantidad === 0)
     : stockFilter === "bajo"
-    ? filteredByCategoria.filter(i => i.cantidad > 0 && i.cantidad < i.minimo)
+    ? filteredByCategoria.filter(i => i.cantidad > 0 && i.cantidad <= i.minimo)
     : filteredByCategoria
   const sortedFiltered = [...filteredByStock].sort((a, b) => {
     if (!sortField) return 0
@@ -154,7 +154,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   })
 
   const sinStock   = inventario.filter(i => i.cantidad === 0).length
-  const bajosStock = inventario.filter(i => i.cantidad > 0 && i.cantidad < i.minimo).length
+  const bajosStock = inventario.filter(i => i.cantidad > 0 && i.cantidad <= i.minimo).length
 
   function handleSort(f: SortField) {
     setUnidadFilterIndex(-1)
@@ -532,7 +532,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 </tr>
               ) : (
                 sortedFiltered.map((item, idx) => {
-                  const bajo = item.cantidad < item.minimo
+                  const bajo = item.cantidad <= item.minimo
                   const cero = item.cantidad === 0
                   return (
                     <tr key={`${item.clave}-${idx}`} className={`transition-colors hover:bg-muted/20 ${bajo ? "bg-red-50/40 dark:bg-red-950/10" : ""}`}>
