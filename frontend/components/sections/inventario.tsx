@@ -86,8 +86,8 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
   const loadData = () => {
     setLoading(true)
-    getInventario()
-      .then(setInventario)
+    Promise.all([getInventario(), getCategorias()])
+      .then(([items, cats]) => { setInventario(items); setCategorias(cats) })
       .catch(err => setError(friendlyError(err, "No se pudo cargar el inventario")))
       .finally(() => setLoading(false))
   }
@@ -404,7 +404,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                       : stockFilter === "bajo"
                       ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
                       : categoriaFilter != null
-                      ? "border-[#0f4c81]/40 bg-[#0f4c81]/5 text-[#0f4c81]"
+                      ? "border-[#0f4c81]/40 bg-[#0f4c81]/5 text-[#0f4c81] dark:border-[#0f4c81]/60 dark:text-blue-400"
                       : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
@@ -485,6 +485,29 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   Sin stock
                   <span className="ml-auto tabular-nums font-medium">{sinStock}</span>
                 </button>
+                {categorias.length > 0 && <>
+                  <div className="my-1.5 border-t border-border/40" />
+                  <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</p>
+                  <button
+                    onClick={() => { setCategoriaFilter(null); setFilterOpen(false) }}
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                      categoriaFilter === null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    Todas las categorías
+                  </button>
+                  {categorias.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => { setCategoriaFilter(cat.id); setFilterOpen(false) }}
+                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        categoriaFilter === cat.id ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {cat.nombre}
+                    </button>
+                  ))}
+                </>}
               </PopoverContent>
             </Popover>
             {/* Acciones */}

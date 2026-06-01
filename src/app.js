@@ -32,6 +32,7 @@ import configuracionRoutes    from "./routes/configuracion.routes.js";
 import especialistasRoutes    from "./routes/especialistas.routes.js";
 import catalogoRoutes           from "./routes/servicios-catalogo.routes.js";
 import notificacionesRoutes    from "./routes/notificaciones.routes.js";
+import categoriasArticuloRoutes from "./routes/categorias-articulo.routes.js";
 
 const app = express();
 
@@ -108,6 +109,8 @@ app.use("/especialistas",   especialistasRoutes);
 app.use("/servicios-catalogo",   catalogoRoutes);
 app.use("/notificaciones",       notificacionesRoutes);
 app.use("/api/v1/notificaciones", notificacionesRoutes);
+app.use("/categorias-articulo",       categoriasArticuloRoutes);
+app.use("/api/v1/categorias-articulo", categoriasArticuloRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
