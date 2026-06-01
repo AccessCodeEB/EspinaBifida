@@ -421,35 +421,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-1.5">
-                {/* Sección: Categoría */}
-                <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</p>
-                <button
-                  onClick={() => { setCategoriaFilter(null); setFilterOpen(false) }}
-                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                    categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Tag className="size-3.5" />
-                  Todas las categorías
-                </button>
-                {categorias.map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => { setCategoriaFilter(cat.id); setFilterOpen(false) }}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                      categoriaFilter === cat.id
-                        ? "bg-[#0f4c81]/5 font-medium text-[#0f4c81]"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Tag className="size-3.5" />
-                    {cat.nombre}
-                  </button>
-                ))}
-
-                {/* Divisor */}
-                <div className="my-1.5 border-t border-border/50" />
-
                 {/* Sección: Stock */}
                 <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stock</p>
                 <button
@@ -485,15 +456,18 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   Sin stock
                   <span className="ml-auto tabular-nums font-medium">{sinStock}</span>
                 </button>
+
+                {/* Sección: Categoría */}
                 {categorias.length > 0 && <>
-                  <div className="my-1.5 border-t border-border/40" />
+                  <div className="my-1.5 border-t border-border/50" />
                   <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</p>
                   <button
                     onClick={() => { setCategoriaFilter(null); setFilterOpen(false) }}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                      categoriaFilter === null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
+                    <Tag className="size-3.5" />
                     Todas las categorías
                   </button>
                   {categorias.map(cat => (
@@ -501,9 +475,12 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                       key={cat.id}
                       onClick={() => { setCategoriaFilter(cat.id); setFilterOpen(false) }}
                       className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                        categoriaFilter === cat.id ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        categoriaFilter === cat.id
+                          ? "bg-[#0f4c81]/5 font-medium text-[#0f4c81]"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
+                      <Tag className="size-3.5" />
                       {cat.nombre}
                     </button>
                   ))}
