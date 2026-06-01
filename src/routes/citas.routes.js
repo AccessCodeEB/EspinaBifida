@@ -8,8 +8,12 @@ import {
 } from "../controllers/citas.controller.js";
 import { validate } from "../middleware/validate.js";
 import { crearCitaSchema, actualizarCitaSchema } from "../validators/citas.schema.js";
+import { verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Todas las rutas requieren autenticación (datos médicos sensibles: CURP, especialista, fechas)
+router.use(verifyToken);
 
 /**
  * @openapi
