@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-05-31 (Sábado) — Bug fix ORA-01400, limpieza E2E notificaciones e inventario, reporte inventario corregido, dashboard alertas sin stock, motivo obligatorio en inventario, devolución muestra nombre beneficiario
+**Actualización:** 2026-05-31 (Sábado) — QA audit: verifyToken en citas, fix TS comodatos, fix KPI pendientes servicios, terminología comodatos vs préstamo, Comodatos integrado al panel
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -17,9 +17,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (ramas) | **96.99%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 19 / 19 |
-| Archivos de prueba Jest (suites) | 50 |
-| Tests Jest | 1113 |
+| Migraciones de BD | 21 / 21 |
+| Archivos de prueba Jest (suites) | 52 |
+| Tests Jest | 1153 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -42,9 +42,10 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
 | **Catálogos** | Servicios-catálogo, especialistas, configuración, roles | 100% |
-| **Notificaciones** | Alertas automáticas de stock bajo, membresías próximas/vencidas, citas del día y **préstamos de equipo por vencer/vencidos**, job nocturno cron, panel con cards por tipo | 100% |
+| **Notificaciones** | Alertas automáticas de stock bajo, membresías próximas/vencidas, citas del día y **comodatos por vencer/vencidos**, job nocturno cron, panel con cards por tipo | 100% |
+| **Comodatos** | Alta, seguimiento de pagos, reportes de exenciones, consulta por beneficiario | 100% |
 | **Auditoría** | Registro de operaciones sensibles en `AUDITORIA_OPERACIONES` (fire-and-forget) | 100% |
-| **Migraciones BD** | 19 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Migraciones BD** | 21 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting, validación Zod | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -54,18 +55,19 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Dashboard** | ✅ Completo |
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo |
-| **Servicios** | ✅ Completo — tab **Préstamos activos**, tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), confirmar devolución atómica, form con selector de artículo buscable (obligatorio solo para comodatos), catálogo 100% dinámico sin hardcode, badges COMPLETADO/PRÉSTAMO/DEVUELTO |
+| **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode (COMODATO excluido — va por módulo Comodatos), badges de estatus |
 | **Citas** | ✅ Completo |
 | **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), safety net comodatos, selector de categoría al agregar artículo |
 | **Reportes** | ✅ Completo |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
 | **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
-| **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas, **cards especiales para préstamos por vencer con días restantes** |
+| **Comodatos** | ✅ Completo — alta, seguimiento de pagos, reporte de exenciones, integrado en sidebar |
+| **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas, **cards especiales para comodatos por vencer con días restantes** |
 
 ### Seguridad (completado 2026-05-21 al 2026-05-22)
 
-- `verifyToken` agregado a todas las rutas que carecían de autenticación (beneficiarios, inventario, membresías)
+- `verifyToken` agregado a todas las rutas que carecían de autenticación (beneficiarios, inventario, membresías, **citas**)
 - CORS environment-aware: en producción solo permite `FRONTEND_URL` + `localhost:3001`
 - Rate limiting con `express-rate-limit`: `loginLimiter` (5/15 min), `publicLimiter` (10/h), `authLimiter` (120/min), `otpLimiter` (5/15 min por idAdmin)
 - OTP para cambio de contraseña generado con `crypto.randomInt` (seguro criptográficamente)
@@ -75,7 +77,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 50 archivos de prueba Jest, **1113 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
+- 52 archivos de prueba Jest, **1153 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
