@@ -33,11 +33,11 @@ export const findById = (id) =>
               CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS
        FROM ESPECIALIDADES_HORARIO WHERE ID_ESPECIALIDAD = :id`,
       { id }
-    ).then(r => r.rows[0] ?? null)
+    ).then(r => r.rows?.[0] ?? null)
   );
 
 /** Actualiza el horario base de una especialidad. */
-export const update = (id, { diaSemanA, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas }) =>
+export const update = (id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas }) =>
   withConnection(conn =>
     conn.execute(
       `UPDATE ESPECIALIDADES_HORARIO SET
@@ -49,7 +49,7 @@ export const update = (id, { diaSemanA, horaInicio, horaFin, capacidadMax, tipoF
         ACTIVO          = NVL(:activo,         ACTIVO),
         NOTAS           = :notas
        WHERE ID_ESPECIALIDAD = :id`,
-      { id, diaSemana: diaSemanA ?? null, horaInicio: horaInicio ?? null, horaFin: horaFin ?? null,
+      { id, diaSemana: diaSemana ?? null, horaInicio: horaInicio ?? null, horaFin: horaFin ?? null,
         capacidadMax: capacidadMax ?? null, tipoFrecuencia: tipoFrecuencia ?? null,
         activo: activo ?? null, notas: notas ?? null },
       { autoCommit: true }
@@ -94,7 +94,7 @@ export const findExcepcionByFecha = (idEspecialidad, fecha) =>
        WHERE ID_ESPECIALIDAD = :idEspecialidad
          AND TRUNC(FECHA)    = TO_DATE(:fecha, 'YYYY-MM-DD')`,
       { idEspecialidad, fecha }
-    ).then(r => r.rows[0] ?? null)
+    ).then(r => r.rows?.[0] ?? null)
   );
 
 /** Crea una excepción (fecha bloqueada). */

@@ -79,6 +79,14 @@ export const updateCita = async (id, data) => {
     fechaFinal = d.toISOString().replace("T", " ").slice(0, 19);
   }
 
+  // Re-validate slot when scheduling fields change
+  if (data.fecha || data.hora || data.especialista) {
+    const fechaPart = data.fecha ?? (fechaFinal ? fechaFinal.slice(0, 10) : null);
+    const horaPart  = (data.hora ?? (fechaFinal ? fechaFinal.slice(11, 16) : "00:00"));
+    const espFinal  = data.especialista ?? cita.ESPECIALISTA ?? null;
+    if (fechaPart) await validarSlotEspecialidad(espFinal, fechaPart, horaPart);
+  }
+
   const estatus = data.estatus
     ? data.estatus.toUpperCase()
     : String(cita.ESTATUS ?? "PROGRAMADA").toUpperCase();

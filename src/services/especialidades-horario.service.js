@@ -62,7 +62,7 @@ export const updateEspecialidad = async (id, data) => {
   const existing = await model.findById(id);
   if (!existing) throw notFound(`Especialidad con ID ${id} no encontrada`);
 
-  const { diaSemanA, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas } = data;
+  const { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas } = data;
 
   // Validación básica
   if (horaInicio !== undefined && !/^\d{2}:\d{2}$/.test(horaInicio)) {
@@ -75,7 +75,7 @@ export const updateEspecialidad = async (id, data) => {
     throw badRequest("tipoFrecuencia inválido. Valores permitidos: SEMANAL, MENSUAL_PRIMER_DIA");
   }
 
-  await model.update(id, { diaSemanA, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas });
+  await model.update(id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas });
   return model.findById(id).then(mapEspecialidad);
 };
 
