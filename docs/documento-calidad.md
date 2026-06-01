@@ -709,4 +709,123 @@ El flujo UAT-001 crea un beneficiario aprobado que tiene FKs en `CREDENCIALES`, 
 
 ---
 
-*Documento generado: 2026-05-29 | Versión 1.0 | Sistema de Gestión Espina Bífida — Tecnológico de Monterrey*
+---
+
+## 10. Casos de Prueba — Clasificación de Cuota A/B (2026-06-01)
+
+**Feature:** Clasificación de cuota A/B para beneficiarios e inventario  
+**Archivo de prueba:** `src/tests/servicios.service.test.js`  
+**Tests nuevos en este archivo:** 9 (total en el archivo: 45)
+
+### 10.1 Casos de prueba: CUOTA_NO_ASIGNADA (400)
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-AB-01 | Registrar servicio cuando `TIPO_CUOTA = null` devuelve 400 | Unitaria | `AppError` con código HTTP 400 y mensaje `CUOTA_NO_ASIGNADA` |
+| TC-AB-02 | Registrar servicio cuando `TIPO_CUOTA = undefined` devuelve 400 | Unitaria | Mismo comportamiento que `null` — campo falsy bloquea el registro |
+| TC-AB-03 | Registrar servicio cuando `TIPO_CUOTA = 'A'` pasa validación | Unitaria | No lanza `CUOTA_NO_ASIGNADA`; flujo continúa normalmente |
+| TC-AB-04 | Registrar servicio cuando `TIPO_CUOTA = 'B'` pasa validación | Unitaria | No lanza `CUOTA_NO_ASIGNADA`; flujo continúa normalmente |
+
+**Implementación:** El service verifica `if (!beneficiario.tipoCuota)` inmediatamente después de obtener el beneficiario activo con membresía. El mock `BENEFICIARIO_ACTIVO` fue actualizado para incluir `TIPO_CUOTA: 'A'` en todos los tests existentes de `servicios.service.test.js`.
+
+### 10.2 Casos de prueba: función `precioSegunCuota`
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-AB-05 | Beneficiario A + artículo sin `cuotaB` → retorna `cuotaRecuperacion` | Unitaria | Precio = `cuotaRecuperacion` del artículo |
+| TC-AB-06 | Beneficiario A + artículo con `cuotaB` → retorna `cuotaRecuperacion` (ignora B) | Unitaria | Precio = `cuotaRecuperacion`; `cuotaB` se ignora para cuota A |
+| TC-AB-07 | Beneficiario B + artículo con `cuotaB` definido → retorna `cuotaB` | Unitaria | Precio = `cuotaB` del artículo |
+| TC-AB-08 | Beneficiario B + artículo sin `cuotaB` (`null`) → retorna `cuotaRecuperacion` (fallback) | Unitaria | Precio = `cuotaRecuperacion`; fallback cuando B no tiene precio especial |
+| TC-AB-09 | Beneficiario B + artículo con `cuotaB = 0` → retorna `0` (precio válido) | Unitaria | Precio = `0`; cero es un valor explícito válido, distinto de `null` |
+
+**Función bajo prueba:** `precioSegunCuota(articulo, tipoCuota)` exportada de `src/services/servicios.service.js`.
+
+### 10.3 Estado de la suite
+
+| Métrica | Valor |
+|---|---|
+| Tests nuevos agregados | 9 |
+| Total tests en `servicios.service.test.js` | 45 |
+| Total tests Jest del proyecto | 1169 |
+| Tests fallidos | 0 |
+| Cobertura de `servicios.service.js` | 100% (statements, branches, functions) |
+
+---
+
+---
+
+## 11. Casos de Prueba — Horarios y Restricciones de Especialidades en Citas (2026-06-01)
+
+**Feature:** Restricciones de horario configurable por especialidad para el módulo de citas (SCRUM-212)
+**Archivos de prueba:** `src/tests/especialidades-horario.service.test.js` (nuevo), `src/tests/citas.service.test.js` (actualizado)
+**Tests nuevos:** 26 (20 + 6)
+
+### 11.1 Casos de prueba: `esFechaValida` — frecuencia SEMANAL
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-01 | Fecha en el día correcto (SEMANAL) devuelve `true` | Unitaria | `esFechaValida({DIA_SEMANA:4,TIPO_FRECUENCIA:'SEMANAL'}, jueves)` → `true` |
+| TC-ESH-02 | Fecha en día incorrecto (SEMANAL) devuelve `false` | Unitaria | `esFechaValida({DIA_SEMANA:4,TIPO_FRECUENCIA:'SEMANAL'}, lunes)` → `false` |
+
+### 11.2 Casos de prueba: `esFechaValida` — frecuencia MENSUAL_PRIMER_DIA
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-03 | Primer miércoles del mes devuelve `true` | Unitaria | Fecha con `getDay()===3` y `getDate()<=7` → `true` |
+| TC-ESH-04 | Miércoles del día 8 o posterior devuelve `false` | Unitaria | Fecha con `getDay()===3` y `getDate()>7` → `false` |
+| TC-ESH-05 | Día incorrecto aunque esté en la primera semana devuelve `false` | Unitaria | Fecha con `getDay()!==3` y `getDate()<=7` → `false` |
+
+### 11.3 Casos de prueba: `esDentroDeHorario`
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-06 | Hora dentro del rango devuelve `true` | Unitaria | `'10:00'` dentro de `['09:30','12:00']` → `true` |
+| TC-ESH-07 | Hora fuera del rango devuelve `false` | Unitaria | `'13:00'` dentro de `['09:30','12:00']` → `false` |
+| TC-ESH-08 | Sin `HORA_FIN` — hora mayor o igual a `HORA_INICIO` devuelve `true` | Unitaria | `HORA_FIN=null`, hora `'10:00'` ≥ `'09:30'` → `true` |
+| TC-ESH-09 | Sin `HORA_FIN` — hora anterior a `HORA_INICIO` devuelve `false` | Unitaria | `HORA_FIN=null`, hora `'08:00'` < `'09:30'` → `false` |
+| TC-ESH-10 | Hora `null` devuelve `false` | Unitaria | `esDentroDeHorario(esp, null)` → `false` |
+
+### 11.4 Casos de prueba: `validarSlotEspecialidad` — códigos de error
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-11 | Especialidad inexistente en BD — skip sin error | Unitaria | `findByNombre` devuelve `null` → no lanza error |
+| TC-ESH-12 | Especialidad `ACTIVO=0` lanza `ESPECIALIDAD_INACTIVA` (400) | Unitaria | `AppError` HTTP 400, código `ESPECIALIDAD_INACTIVA` |
+| TC-ESH-13 | Fecha fuera del día permitido lanza `DIA_NO_PERMITIDO` (400) | Unitaria | `AppError` HTTP 400, código `DIA_NO_PERMITIDO` |
+| TC-ESH-14 | Hora fuera del rango de atención lanza `HORARIO_NO_PERMITIDO` (400) | Unitaria | `AppError` HTTP 400, código `HORARIO_NO_PERMITIDO` |
+| TC-ESH-15 | Fecha en `ESPECIALIDADES_EXCEPCIONES` lanza `FECHA_BLOQUEADA` (400) | Unitaria | `AppError` HTTP 400, código `FECHA_BLOQUEADA` |
+| TC-ESH-16 | Citas activas ≥ `CAPACIDAD_MAX` lanza `CAPACIDAD_LLENA` (400) | Unitaria | `AppError` HTTP 400, código `CAPACIDAD_LLENA` |
+
+### 11.5 Casos de prueba: `validarSlotEspecialidad` — happy paths
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-17 | Slot válido — activa, día/hora correctos, sin excepción, bajo capacidad → sin error | Unitaria | `validarSlotEspecialidad` resuelve sin lanzar |
+| TC-ESH-18 | Slot válido con `CAPACIDAD_MAX=null` (sin límite) → sin error de capacidad | Unitaria | No evalúa capacidad cuando `CAPACIDAD_MAX` es null |
+| TC-ESH-19 | Citas activas < `CAPACIDAD_MAX` → sin error de capacidad | Unitaria | `countCitasActivasPorFecha` devuelve 1 con `CAPACIDAD_MAX=2` → sin error |
+
+### 11.6 Casos de prueba: integración con `citas.service.js` — bloqueo duro
+
+| ID | Nombre del caso | Tipo | Resultado esperado |
+|---|---|---|---|
+| TC-ESH-20 | `createCita` falla si `validarSlotEspecialidad` lanza `DIA_NO_PERMITIDO` | Unitaria | El error se propaga y la cita no se crea en BD |
+| TC-ESH-21 | `createCita` falla si `validarSlotEspecialidad` lanza `HORARIO_NO_PERMITIDO` | Unitaria | El error se propaga y la cita no se crea en BD |
+| TC-ESH-22 | `createCita` falla si `validarSlotEspecialidad` lanza `FECHA_BLOQUEADA` | Unitaria | El error se propaga y la cita no se crea en BD |
+| TC-ESH-23 | `createCita` falla si `validarSlotEspecialidad` lanza `CAPACIDAD_LLENA` | Unitaria | El error se propaga y la cita no se crea en BD |
+| TC-ESH-24 | `createCita` falla si `validarSlotEspecialidad` lanza `ESPECIALIDAD_INACTIVA` | Unitaria | El error se propaga y la cita no se crea en BD |
+| TC-ESH-25 | `createCita` pasa cuando `validarSlotEspecialidad` resuelve sin error | Unitaria | Se ejecuta el INSERT y la cita se crea correctamente |
+
+### 11.7 Estado de la suite
+
+| Métrica | Valor |
+|---|---|
+| Tests nuevos — `especialidades-horario.service.test.js` | 20 |
+| Tests nuevos — `citas.service.test.js` | 6 |
+| Total tests nuevos en esta feature | 26 |
+| Total tests Jest del proyecto | 1195 |
+| Tests fallidos | 0 |
+| Cobertura de `especialidades-horario.service.js` | 100% (statements, branches, functions) |
+
+---
+
+*Documento generado: 2026-05-29 | Versión 1.1 (actualizado 2026-06-01) | Sistema de Gestión Espina Bífida — Tecnológico de Monterrey*

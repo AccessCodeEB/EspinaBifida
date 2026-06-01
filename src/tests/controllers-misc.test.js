@@ -351,6 +351,11 @@ describe("GET /api/v1/citas/:id — obtener cita por ID", () => {
 
 describe("POST /api/v1/citas — crear cita", () => {
   test("crea cita exitosamente (201)", async () => {
+    // findByNombre (validarSlotEspecialidad) → especialidad no configurada = libre
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    // countCitasByCurp → 0 citas previas
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+    // INSERT cita
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)

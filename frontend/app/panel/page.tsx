@@ -18,6 +18,7 @@ import { ComodatosSection } from "@/components/sections/comodatos"
 import { PreregistroSection } from "@/components/sections/preregistro"
 import { ReportesSection } from "@/components/sections/reportes"
 import { AdministradoresSection } from "@/components/sections/administradores"
+import { EspecialidadesConfigSection } from "@/components/sections/especialidades-config"
 import { Switch } from "@/components/ui/switch"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { AiChatPanel, type AiAction } from "@/components/ai-chat-panel"
@@ -32,6 +33,7 @@ const VALID_SECTIONS = new Set([
   "inventario",
   "comodatos",
   "citas",
+  "especialidades-config",
   "reportes",
   "preregistro",
   "administradores",
@@ -65,6 +67,7 @@ function SectionContent({
     case "reportes": return <ReportesSection />
     case "preregistro": return <PreregistroSection />
     case "administradores": return <AdministradoresSection />
+    case "especialidades-config": return <EspecialidadesConfigSection />
     default: return <DashboardSection />
   }
 }

@@ -1,4 +1,5 @@
 import * as citasModel from "../models/citas.model.js";
+import { validarSlotEspecialidad } from "./especialidades-horario.service.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 
 const ESTATUS_VALIDOS = new Set(["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"]);
@@ -36,6 +37,9 @@ export const createCita = async (data) => {
   const fechaDatetime = `${fecha} ${horaFinal}:00`;
 
   const curpUpper = curp.toUpperCase();
+
+  // Validar reglas de horario de la especialidad (bloqueo duro)
+  await validarSlotEspecialidad(data.especialista || null, fecha, horaFinal.slice(0, 5));
 
   // Costo: primera cita $350, subsecuentes $300. Permite override explícito.
   let costo;

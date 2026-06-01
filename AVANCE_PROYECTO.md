@@ -17,9 +17,9 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Cobertura de pruebas (ramas) | **96.75%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 26 / 26 |
+| Migraciones de BD | 28 / 28 |
 | Archivos de prueba Jest (suites) | 53 |
-| Tests Jest | 1160 |
+| Tests Jest | 1195 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -37,7 +37,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Beneficiarios** | CRUD completo, pre-registro, aprobación/rechazo, foto de perfil, baja | 100% |
 | **Membresías** | Alta, validación de vigencia, métodos de pago, sincronización de estados | 100% |
 | **Servicios** | Registro con validación de membresía activa, clasificación SERVICIO/CONSUMIBLE/COMODATO, comodatos con fecha devolución y tracking PRESTADO/DEVUELTO, filtros, paginación | 100% |
-| **Citas** | CRUD completo, filtros por fecha/estatus | 100% |
+| **Citas** | CRUD completo, filtros por fecha/estatus, validación de horario por especialidad (bloqueo duro) | 100% |
 | **Inventario** | Artículos + categorías (Medicamentos, Insumos Médicos, Equipos Médicos), movimientos, alertas de stock mínimo, safety net comodatos | 100% |
 | **Reportes** | Generación PDF/XLSX, descarga autenticada, generación automática por cron | 100% |
 | **Administradores** | Auth JWT, cambio de contraseña con SMS OTP, recuperación de contraseña vía SMS OTP, roles, foto de perfil, teléfono editable | 100% |
@@ -45,7 +45,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Notificaciones** | Alertas automáticas de stock bajo, membresías próximas/vencidas, citas del día y **comodatos por vencer/vencidos**, job nocturno cron, panel con cards por tipo | 100% |
 | **Comodatos** | Alta, seguimiento de pagos, reportes de exenciones, consulta por beneficiario | 100% |
 | **Auditoría** | Registro de operaciones sensibles en `AUDITORIA_OPERACIONES` (fire-and-forget) | 100% |
-| **Migraciones BD** | 21 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
+| **Migraciones BD** | 28 migraciones versionadas, auto-ejecutadas al iniciar el servidor | 100% |
 | **Middleware** | Auth JWT, roles RBAC, upload de fotos, manejo de errores, rate limiting, validación Zod | 100% |
 
 ### Frontend (Next.js + React + TypeScript)
@@ -56,8 +56,13 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
 | **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus, flechas de sort dinámicas, ciclo filtro por estatus |
+<<<<<<< HEAD
 | **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm |
 | **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort; **edición de precios** (cuota de recuperación + precio real) con diálogo de confirmación al cambiar precio base; **rediseño diálogo "Modificar artículo"**: card de estado actual (stock/precio/mínimo), toggle ENTRADA/SALIDA, secciones agrupadas con tarjeta; ambas cuotas obligatorias al crear y editar |
+=======
+| **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm, especialidades dinámicas con filtro de slots |
+| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort |
+>>>>>>> 36569a4 (feat(citas): restricciones de horario y gestión de especialidades (SCRUM-212))
 | **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
@@ -77,7 +82,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 52 archivos de prueba Jest, **1153 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
+- 53 archivos de prueba Jest, **1195 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
@@ -225,6 +230,31 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Flechas dinámicas de sort en Inventario y Servicios: `↕` cuando inactivo, `↑↓` cuando activo
 - Servicios: ciclo de filtro por estatus (TODOS → COMPLETADO → PRESTADO → DEVUELTO)
 - Servicios: columna Beneficiario sin sort (solo visual)
+
+### Cambios 2026-06-01 — Horarios y restricciones de especialidades en citas (SCRUM-212)
+
+**Especialidades configurables en citas:**
+- 2 tablas nuevas: `ESPECIALIDADES_HORARIO` (4 especialidades con día, hora, capacidad, tipo de frecuencia) y `ESPECIALIDADES_EXCEPCIONES` (fechas bloqueadas por especialidad). Script: `scripts/add-especialidades-horario.sql`
+- Gastroenterología (Jue 10:00, cap. 2), Urología (Jue 09:30–12:00), Psicología (Vie 10:00–12:00, cap. 3), Cirugía (primer miércoles del mes, 08:00)
+- `validarSlotEspecialidad()` en `citas.service.js`: bloqueo duro antes de cada INSERT — 5 códigos de error: `ESPECIALIDAD_INACTIVA`, `DIA_NO_PERMITIDO`, `HORARIO_NO_PERMITIDO`, `FECHA_BLOQUEADA`, `CAPACIDAD_LLENA`
+- Detección del primer miércoles del mes: `diaSemana === 3 && fecha.getDate() <= 7`
+- Compatibilidad retroactiva: nombres de especialista no registrados en BD pasan sin validación
+- MVC completo: `especialidades-horario.model.js`, `especialidades-horario.service.js`, `especialidades-horario.controller.js`, rutas en `/especialidades-horario`
+- Frontend: dropdown dinámico desde API, hint de horario, filtro de slots, advertencia de fecha fuera de rango
+- Pantalla admin `EspecialidadesConfigSection`: edición de horario/frecuencia, alta y baja de excepciones, entrada en sidebar
+- 26 nuevos tests (20 en `especialidades-horario.service.test.js` + 6 en `citas.service.test.js`) — total: 1195 tests, 100% verde
+
+### Cambios 2026-06-01 — Clasificación cuota A/B
+
+**Clasificación económica A/B para beneficiarios e inventario (SCRUM-211):**
+- Migración 027: `TIPO_CUOTA VARCHAR2(1) CHECK('A','B')` en `BENEFICIARIOS` (nullable)
+- Migración 028: `CUOTA_B NUMBER(10,2)` en `ARTICULOS` (nullable, precio reducido para cuota B)
+- Registro de servicio bloqueado con HTTP 400 (`CUOTA_NO_ASIGNADA`) si `TIPO_CUOTA = NULL`
+- Función `precioSegunCuota(articulo, tipoCuota)` exportada de `servicios.service.js`: devuelve `cuotaB` para beneficiarios B (si definido), `cuotaRecuperacion` en cualquier otro caso
+- UI: sección "Control Interno" en diálogo de edición de beneficiario (selector A/B/Sin asignar)
+- UI: campo cuotaB en diálogos de agregar/modificar artículo en inventario
+- 9 nuevos tests en `servicios.service.test.js` — total: 1169 tests, 100% verde
+- **Nota post-despliegue:** todos los beneficiarios existentes quedan con `TIPO_CUOTA=NULL`; clasificarlos antes de registrar servicios
 
 ### Cambios 2026-06-01 — Inventario, notificaciones y calidad
 

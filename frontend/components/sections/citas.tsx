@@ -12,6 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCitas, createCita, COSTO_PRIMERA_CITA, COSTO_SUBSECUENTE_CITA, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
+import {
+  getEspecialidadesHorario,
+  esFechaValidaFrontend,
+  esHoraValidaFrontend,
+  descripcionHorario,
+  type EspecialidadHorario,
+} from "@/services/especialidades-horario"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
 import { cn } from "@/lib/utils"
@@ -41,12 +48,6 @@ function isSlotInPast(fecha: string, hora: string, now = new Date()): boolean {
   return parseSlotLocal(fecha, hora).getTime() <= now.getTime()
 }
 
-const ESPECIALISTAS = [
-  "Dr. Roberto Méndez - Neurología",
-  "Dra. Patricia Solís - Rehabilitación",
-  "Lic. Carmen Ruiz - Psicología",
-  "Dr. Miguel Torres - Urología",
-]
 const EMPTY_FORM = { curp: "", idTipoServicio: "", especialista: "", fecha: "", hora: "", notas: "" }
 
 type ActiveView = "calendar" | "list"
@@ -83,6 +84,7 @@ export function CitasSection() {
   const [buscaBenef, setBuscaBenef] = useState("")
   const [showBenefList, setShowBenefList] = useState(false)
   const [catalogoServicios, setCatalogoServicios] = useState<TipoServicioCompleto[]>([])
+  const [especialidades, setEspecialidades] = useState<EspecialidadHorario[]>([])
 
   const loadCitas = useCallback((silent=false) => {
     if(!silent) setLoading(true)
@@ -101,9 +103,31 @@ export function CitasSection() {
     loadCitas()
     getBeneficiarios().then(setBeneficiarios).catch(() => {})
     getCatalogoServicios().then(setCatalogoServicios).catch(() => {})
+    getEspecialidadesHorario().then(setEspecialidades).catch(() => {})
   }, [loadCitas])
 
   const today = useMemo(() => new Date(), [])
+
+  // Especialidad seleccionada y sus restricciones
+  const espSeleccionada = useMemo(
+    () => especialidades.find(e => e.nombre === form.especialista) ?? null,
+    [especialidades, form.especialista]
+  )
+
+  // Filtrar slots de hora según el horario de la especialidad seleccionada
+  const slotsDisponibles = useMemo(() => {
+    if (!espSeleccionada) return TIME_SLOTS
+    return TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
+  }, [espSeleccionada])
+
+  // Advertencia de fecha fuera de día permitido
+  const fechaFueraDeRango = useMemo(() => {
+    if (!espSeleccionada || !form.fecha) return null
+    if (!esFechaValidaFrontend(espSeleccionada, form.fecha)) {
+      return descripcionHorario(espSeleccionada)
+    }
+    return null
+  }, [espSeleccionada, form.fecha])
 
   const stats = useMemo(() => {
     const todayStr = today.toISOString().split("T")[0]
@@ -178,7 +202,15 @@ export function CitasSection() {
         String(d.getDate()).padStart(2, "0"),
       ].join("-")
 
-      for (const hora of TIME_SLOTS) {
+      // Solo iterar slots que cumplan el horario de la especialidad seleccionada
+      const slotsABuscar = espSeleccionada
+        ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
+        : TIME_SLOTS
+
+      // Verificar que la fecha sea válida para la especialidad
+      if (espSeleccionada && !esFechaValidaFrontend(espSeleccionada, fechaStr)) continue
+
+      for (const hora of slotsABuscar) {
         if (isSlotInPast(fechaStr, hora, now)) continue
         const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
         if (!error) {
@@ -441,13 +473,26 @@ export function CitasSection() {
 
             {/* Especialista */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialista <span className="font-normal normal-case tracking-normal opacity-60">(opcional)</span></label>
-              <Select value={form.especialista} onValueChange={v => { setForm(f => ({ ...f, especialista: v })); setSaveError(null) }}>
-                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialista" /></SelectTrigger>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialidad <span className="font-normal normal-case tracking-normal opacity-60">(opcional)</span></label>
+              <Select
+                value={form.especialista}
+                onValueChange={v => {
+                  setForm(f => ({ ...f, especialista: v, hora: "" }))
+                  setSaveError(null)
+                }}
+              >
+                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialidad" /></SelectTrigger>
                 <SelectContent>
-                  {ESPECIALISTAS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                  {especialidades.map(e => (
+                    <SelectItem key={e.idEspecialidad} value={e.nombre}>{e.nombre}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {espSeleccionada && (
+                <p className="text-[11px] text-muted-foreground">
+                  {descripcionHorario(espSeleccionada)}
+                </p>
+              )}
             </div>
 
             {/* Fecha y Hora + Smart Slot */}
@@ -511,7 +556,12 @@ export function CitasSection() {
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
                   <Input type="date" className="h-10 text-sm" value={form.fecha}
-                    onChange={e => { setForm(f => ({ ...f, fecha: e.target.value })); setSaveError(null); setSmartSuggestion(null) }} />
+                    onChange={e => { setForm(f => ({ ...f, fecha: e.target.value, hora: "" })); setSaveError(null); setSmartSuggestion(null) }} />
+                  {fechaFueraDeRango && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      ⚠ Esta fecha no corresponde al horario de la especialidad ({fechaFueraDeRango})
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
@@ -521,7 +571,7 @@ export function CitasSection() {
                     onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
                   >
                     <option value="">Seleccionar</option>
-                    {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                    {slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>

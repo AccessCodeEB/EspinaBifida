@@ -18,6 +18,21 @@ jest.unstable_mockModule("../models/citas.model.js", () => ({
   deleteE2ECitas:    jest.fn(),
 }));
 
+// Mock de validación de horario para no depender de la DB en tests de citas
+const mockValidarSlot = jest.fn().mockResolvedValue(undefined); // por defecto: sin error
+jest.unstable_mockModule("../services/especialidades-horario.service.js", () => ({
+  validarSlotEspecialidad: mockValidarSlot,
+  esFechaValida:           jest.fn().mockReturnValue(true),
+  esDentroDeHorario:       jest.fn().mockReturnValue(true),
+  getEspecialidadesHorario: jest.fn().mockResolvedValue([]),
+  getEspecialidadById:     jest.fn(),
+  getEspecialidadByNombre: jest.fn(),
+  updateEspecialidad:      jest.fn(),
+  getExcepciones:          jest.fn(),
+  createExcepcion:         jest.fn(),
+  deleteExcepcion:         jest.fn(),
+}));
+
 // Importaciones después de los mocks (ESM)
 const Service = await import("../services/citas.service.js");
 
@@ -137,5 +152,66 @@ describe("getCitaById", () => {
     mockFindById.mockResolvedValue(citaBase);
     const result = await Service.getCitaById(1);
     expect(result).toEqual(citaBase);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createCita — bloqueo por horario de especialidad
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createCita — validación de horario de especialidad", () => {
+  const basePayload = {
+    curp: CURP,
+    idTipoServicio: 1,
+    fecha: "2026-06-12",
+    hora: "10:00",
+    especialista: "Psicología",
+  };
+
+  beforeEach(() => {
+    mockValidarSlot.mockResolvedValue(undefined); // Sin error por defecto
+    mockCountCitas.mockResolvedValue(0);
+    mockCreate.mockResolvedValue({ rowsAffected: 1 });
+  });
+
+  test("especialidad con horario válido → crea la cita", async () => {
+    await Service.createCita(basePayload);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  test("validarSlotEspecialidad es llamado con nombre, fecha y hora", async () => {
+    await Service.createCita(basePayload);
+    expect(mockValidarSlot).toHaveBeenCalledWith("Psicología", "2026-06-12", "10:00");
+  });
+
+  test("día no permitido → BAD_REQUEST 400 (bloqueo duro)", async () => {
+    mockValidarSlot.mockRejectedValue({ statusCode: 400, message: "Psicología solo atiende los viernes", code: "DIA_NO_PERMITIDO" });
+    await expect(Service.createCita(basePayload)).rejects.toMatchObject({ statusCode: 400, code: "DIA_NO_PERMITIDO" });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("horario fuera de rango → BAD_REQUEST 400", async () => {
+    mockValidarSlot.mockRejectedValue({ statusCode: 400, message: "Horario fuera de rango", code: "HORARIO_NO_PERMITIDO" });
+    await expect(Service.createCita(basePayload)).rejects.toMatchObject({ statusCode: 400, code: "HORARIO_NO_PERMITIDO" });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("fecha bloqueada por excepción → BAD_REQUEST 400", async () => {
+    mockValidarSlot.mockRejectedValue({ statusCode: 400, message: "Psicología no atiende ese día", code: "FECHA_BLOQUEADA" });
+    await expect(Service.createCita(basePayload)).rejects.toMatchObject({ statusCode: 400, code: "FECHA_BLOQUEADA" });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("capacidad llena → BAD_REQUEST 400", async () => {
+    mockValidarSlot.mockRejectedValue({ statusCode: 400, message: "Capacidad máxima alcanzada", code: "CAPACIDAD_LLENA" });
+    await expect(Service.createCita(basePayload)).rejects.toMatchObject({ statusCode: 400, code: "CAPACIDAD_LLENA" });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("sin especialista (null) → validarSlot llamado con null y no bloquea", async () => {
+    mockValidarSlot.mockResolvedValue(undefined);
+    await Service.createCita({ ...basePayload, especialista: undefined });
+    expect(mockValidarSlot).toHaveBeenCalledWith(null, "2026-06-12", "10:00");
+    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 });

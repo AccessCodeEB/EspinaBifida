@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   UserCog,
   HandCoins,
+  Stethoscope,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 
@@ -79,6 +80,7 @@ export function AppSidebar({
         { title: "Inventario",    icon: Package,          id: "inventario"    },
         { title: "Comodatos",     icon: HandCoins,        id: "comodatos"     },
         { title: "Citas",         icon: CalendarDays,     id: "citas"         },
+        { title: "Especialidades", icon: Stethoscope,     id: "especialidades-config" },
       ],
     },
     {

@@ -1,7 +1,7 @@
 import oracledb from 'oracledb';
 import { withConnection } from '../config/db.js';
 import { buildInClause } from '../utils/reporteHelpers.js';
-import { MUNICIPIOS_AMM } from '../utils/municipiosAMM.js';
+import { CAPITALES_ESTADOS } from '../utils/municipiosAMM.js';
 
 // IDs de SERVICIOS_CATALOGO que corresponden a estudios médicos.
 // Ejecutar: SELECT ID_TIPO_SERVICIO, NOMBRE FROM SERVICIOS_CATALOGO
@@ -13,7 +13,7 @@ export const ESTUDIOS_IDS = [];
 // Un paciente que cumplió 18 en febrero no debe aparecer como Adulto en enero.
 export const getResumenPeriodo = (fechaInicio, fechaFin) =>
   withConnection(async conn => {
-    const { placeholders: ammPH, binds: ammBinds } = buildInClause(MUNICIPIOS_AMM, 'm');
+    const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
     const fi  = new Date(fechaInicio);
     const ff  = new Date(fechaFin);
 

@@ -1186,3 +1186,216 @@ Esta transformación se aplica a todos los resultados de queries antes de retorn
 ---
 
 *Documento generado el 2026-05-28. Versión 1.0. Equipo AccessCode EB — Tecnológico de Monterrey.*
+
+---
+
+## 6. Clasificación de Cuota A/B
+
+**Implementado:** 2026-06-01 — commit `21803e5`
+
+### 6.1 Problema que resuelve
+
+La asociación aplica tarifas diferenciadas por artículo según la situación económica del beneficiario. Beneficiarios con **Cuota A** pagan la tarifa estándar (`CUOTA_RECUPERACION`); beneficiarios con **Cuota B** pagan una tarifa reducida (`CUOTA_B`). Sin esta clasificación, el personal tenía que recordar o consultar externamente qué precio aplicar a cada beneficiario.
+
+### 6.2 Cambios en el esquema de base de datos
+
+Dos migraciones versionadas (027 y 028) agregan:
+
+**`BENEFICIARIOS.TIPO_CUOTA`**
+```sql
+ALTER TABLE BENEFICIARIOS ADD (TIPO_CUOTA VARCHAR2(1));
+ALTER TABLE BENEFICIARIOS ADD CONSTRAINT CHK_TIPO_CUOTA CHECK (TIPO_CUOTA IN ('A','B'));
+```
+- Valor `NULL` es válido — indica que aún no se ha clasificado al beneficiario.
+- El constraint `CHECK` garantiza que solo se admiten los valores `'A'` o `'B'`.
+
+**`ARTICULOS.CUOTA_B`**
+```sql
+ALTER TABLE ARTICULOS ADD (CUOTA_B NUMBER(10,2));
+```
+- Campo opcional (`NULL` = no aplica tarifa B para ese artículo).
+- Si `CUOTA_B IS NULL`, incluso beneficiarios B pagan la cuota estándar.
+
+### 6.3 Reglas de negocio
+
+| Regla | Detalle |
+|---|---|
+| `TIPO_CUOTA = NULL` bloquea servicios | Antes de registrar cualquier servicio, el sistema verifica `b.TIPO_CUOTA IS NOT NULL`. Si es nulo, retorna HTTP 400 con código `CUOTA_NO_ASIGNADA`. |
+| `TIPO_CUOTA = NULL` NO bloquea creación | Un beneficiario puede crearse y editarse sin `TIPO_CUOTA` asignado; el bloqueo solo aplica al intentar registrar servicios. |
+| Precio según cuota (`precioSegunCuota`) | Función exportada de `servicios.service.js`: devuelve `articulo.cuotaB` si `tipoCuota === 'B'` y `cuotaB != null`, en cualquier otro caso devuelve `articulo.cuotaRecuperacion`. |
+| Campo admin-only | `TIPO_CUOTA` es gestionado exclusivamente por el personal administrativo desde el diálogo de edición del beneficiario (sección "Control Interno"). No se expone en el formulario público de pre-registro. |
+| Beneficiarios existentes post-migración | Todos los registros actuales quedan con `TIPO_CUOTA = NULL` tras ejecutar las migraciones. Deben clasificarse antes de poder registrar servicios para esos beneficiarios. |
+
+**Lógica de `precioSegunCuota` (pseudo-código):**
+```js
+function precioSegunCuota(articulo, tipoCuota) {
+  if (tipoCuota === 'B' && articulo.cuotaB != null) {
+    return articulo.cuotaB;
+  }
+  return articulo.cuotaRecuperacion;
+}
+```
+
+### 6.4 Impacto en la API
+
+**`GET/POST/PUT /beneficiarios`** — nuevo campo en payload y respuesta:
+```json
+{ "tipoCuota": "A" | "B" | null }
+```
+
+**`GET/POST/PUT /articulos`** — nuevo campo en payload y respuesta:
+```json
+{ "cuotaB": 25.00 | null }
+```
+
+**`POST /servicios`** — nuevo error posible:
+```json
+HTTP 400
+{ "error": "CUOTA_NO_ASIGNADA", "message": "El beneficiario no tiene cuota asignada" }
+```
+
+El modelo `beneficiarios.model.js` incluye `TIPO_CUOTA` en `findAll`, `INSERT`, `UPDATE` y `buildBindings`. El modelo `articulos.model.js` incluye `CUOTA_B` en `SELECT`, `INSERT`, `UPDATE` y `dbColumnMap`; listado en `nullableFields` para permitir limpiarlo.
+
+### 6.5 Cambios en frontend
+
+- **`beneficiarios-edit-dialog.tsx`:** Nueva sección "Control Interno" (ícono Settings2) con un `Select` de tres opciones: Cuota A, Cuota B, Sin asignar.
+- **`inventario.tsx`:** Campo `cuotaB` en los diálogos "Agregar artículo" y "Modificar artículo", junto a la cuota estándar.
+- **`frontend/services/beneficiarios.ts`:** Interfaz `Beneficiario` incluye `tipoCuota?: "A" | "B" | null`.
+- **`frontend/services/inventario.ts`:** Interfaces `ArticuloInventario` y `NuevoArticuloPayload` incluyen `cuotaB?: number | null`.
+
+### 6.6 Nota de pre-despliegue
+
+Al ejecutar las migraciones 027 y 028 en producción, **todos los beneficiarios existentes quedarán con `TIPO_CUOTA = NULL`**. Esto bloquea el registro de servicios para esos beneficiarios hasta que sean clasificados. Se recomienda clasificar los beneficiarios activos como prioridad inmediata post-migración antes de usar el módulo de servicios.
+
+---
+
+## 7. Horarios y Restricciones de Especialidades en Citas
+
+**Implementado:** 2026-06-01 — SCRUM-212
+
+### 7.1 Problema que resuelve
+
+El módulo de citas usaba una lista de doctores hardcodeada en el frontend. No había restricción sobre qué días u horas se podían agendar citas, ni límite de capacidad por especialidad, ni manera de bloquear fechas cuando un médico no asiste. Este módulo reemplaza la lista estática por 4 especialidades reales configurables desde la base de datos, con validación de horario aplicada en el backend.
+
+### 7.2 Esquema de base de datos
+
+Dos tablas nuevas creadas mediante `scripts/add-especialidades-horario.sql`:
+
+#### `ESPECIALIDADES_HORARIO`
+
+```sql
+CREATE TABLE ESPECIALIDADES_HORARIO (
+  ID_ESPECIALIDAD  NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  NOMBRE           VARCHAR2(100) NOT NULL,
+  DIA_SEMANA       NUMBER(1)     NOT NULL,  -- 0=Dom, 1=Lun, …, 6=Sáb
+  HORA_INICIO      VARCHAR2(5)   NOT NULL,  -- 'HH:MM'
+  HORA_FIN         VARCHAR2(5)   NULL,      -- NULL = sin hora límite
+  CAPACIDAD_MAX    NUMBER        NULL,      -- NULL = sin límite
+  TIPO_FRECUENCIA  VARCHAR2(30)  DEFAULT 'SEMANAL' NOT NULL,
+    CONSTRAINT CHK_ESP_HOR_FRECUENCIA CHECK (TIPO_FRECUENCIA IN ('SEMANAL','MENSUAL_PRIMER_DIA')),
+  ACTIVO           NUMBER(1,0)   DEFAULT 1 NOT NULL,
+  NOTAS            VARCHAR2(500) NULL
+);
+```
+
+| Columna | Descripción |
+|---|---|
+| `DIA_SEMANA` | 0 = Domingo … 6 = Sábado (equivalente a `Date.getDay()` en JS) |
+| `HORA_INICIO / HORA_FIN` | Rango de atención en formato `'HH:MM'` |
+| `CAPACIDAD_MAX` | Máximo de citas no-canceladas permitidas en esa fecha |
+| `TIPO_FRECUENCIA` | `SEMANAL` = cada semana ese día; `MENSUAL_PRIMER_DIA` = solo el primer día del mes |
+| `ACTIVO` | 0 = especialidad desactivada (bloquea agendado) |
+
+**Datos iniciales (4 especialidades):**
+
+| ID | Nombre | Día | Hora inicio | Hora fin | Capacidad | Frecuencia |
+|---|---|---|---|---|---|---|
+| 1 | Gastroenterología | Jueves | 10:00 | — | 2 | SEMANAL |
+| 2 | Urología | Jueves | 09:30 | 12:00 | — | SEMANAL |
+| 3 | Psicología | Viernes | 10:00 | 12:00 | 3 | SEMANAL |
+| 4 | Cirugía | Miércoles | 08:00 | — | — | MENSUAL_PRIMER_DIA |
+
+#### `ESPECIALIDADES_EXCEPCIONES`
+
+```sql
+CREATE TABLE ESPECIALIDADES_EXCEPCIONES (
+  ID_EXCEPCION    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  ID_ESPECIALIDAD NUMBER NOT NULL REFERENCES ESPECIALIDADES_HORARIO(ID_ESPECIALIDAD),
+  FECHA           DATE   NOT NULL,
+  MOTIVO          VARCHAR2(500) NULL,
+  CREATED_AT      TIMESTAMP DEFAULT SYSTIMESTAMP
+);
+```
+
+Cada registro bloquea una fecha específica para una especialidad (p.ej. médico ausente por congreso). Las excepciones son visibles y administrables desde la pantalla de configuración en el panel admin.
+
+### 7.3 Lógica de validación de slots
+
+La función `validarSlotEspecialidad(nombre, fecha, hora)` en `src/services/especialidades-horario.service.js` se invoca desde `citas.service.js` antes de cada INSERT en `CITAS`. El flujo:
+
+```
+findByNombre(nombre)
+  ├─ NULL → especialidad no configurada → skip (compatibilidad con datos históricos)
+  ├─ ACTIVO = 0 → HTTP 400  ESPECIALIDAD_INACTIVA
+  ├─ !esFechaValida(esp, fecha) → HTTP 400  DIA_NO_PERMITIDO
+  ├─ !esDentroDeHorario(esp, hora) → HTTP 400  HORARIO_NO_PERMITIDO
+  ├─ findExcepcionByFecha(id, fecha) → HTTP 400  FECHA_BLOQUEADA
+  └─ countCitasActivasPorFecha(nombre, fecha) ≥ CAPACIDAD_MAX → HTTP 400  CAPACIDAD_LLENA
+```
+
+#### Lógica de `esFechaValida`
+
+```js
+export function esFechaValida(esp, fecha) {
+  const dia = fecha.getDay();
+  if (esp.TIPO_FRECUENCIA === 'SEMANAL')
+    return dia === esp.DIA_SEMANA;
+  if (esp.TIPO_FRECUENCIA === 'MENSUAL_PRIMER_DIA')
+    return dia === esp.DIA_SEMANA && fecha.getDate() <= 7;
+  return false;
+}
+```
+
+`MENSUAL_PRIMER_DIA` detecta el primer día del mes verificando que el día del mes sea ≤ 7 (los primeros 7 días siempre contienen exactamente una ocurrencia de cada día de la semana).
+
+#### Lógica de `esDentroDeHorario`
+
+```js
+export function esDentroDeHorario(esp, hora) {
+  if (!hora) return false;
+  if (!esp.HORA_FIN) return hora >= esp.HORA_INICIO;
+  return hora >= esp.HORA_INICIO && hora <= esp.HORA_FIN;
+}
+```
+
+Comparación lexicográfica de strings `'HH:MM'` — válida mientras el formato sea consistente (ambos cero-padded).
+
+### 7.4 API REST
+
+Montado en `/especialidades-horario` y `/api/v1/especialidades-horario`.
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/` | Pública | Lista todas las especialidades activas |
+| `GET` | `/:id` | Pública | Detalle de una especialidad |
+| `PATCH` | `/:id` | `verifyToken` | Actualiza horario/config de una especialidad |
+| `GET` | `/:id/excepciones` | `verifyToken` | Lista fechas bloqueadas de una especialidad |
+| `POST` | `/:id/excepciones` | `verifyToken` | Crea una excepción (fecha bloqueada) |
+| `DELETE` | `/:id/excepciones/:excId` | `verifyToken` | Elimina una excepción |
+
+**Respuesta de error de validación (ejemplo):**
+```json
+HTTP 400
+{ "error": "DIA_NO_PERMITIDO", "message": "La especialidad no atiende ese día de la semana" }
+```
+
+### 7.5 Frontend
+
+- **`frontend/services/especialidades-horario.ts`** — interfaces `EspecialidadHorario`, `ExcepcionEspecialidad`; helpers `descripcionHorario`, `esFechaValidaFrontend`, `esHoraValidaFrontend`; funciones de API.
+- **`frontend/components/sections/citas.tsx`** — dropdown dinámico desde API (reemplaza hardcode); hint de horario bajo el selector; advertencia si la fecha no coincide; slots filtrados por especialidad.
+- **`frontend/components/sections/especialidades-config.tsx`** — pantalla de configuración admin: panel izquierdo con lista de especialidades, panel derecho con detalle + botón editar, diálogo de edición completo, sección de fechas bloqueadas con alta/baja.
+- **`frontend/components/app-sidebar.tsx`** — entrada "Especialidades" (ícono `Stethoscope`) en grupo Operaciones del sidebar.
+
+### 7.6 Compatibilidad con datos históricos
+
+Citas existentes con nombres de especialista que no están en `ESPECIALIDADES_HORARIO` no son bloqueadas. `findByNombre` devuelve `null` → `validarSlotEspecialidad` retorna sin error. El bloqueo solo aplica cuando el nombre coincide exactamente (case-insensitive) con una especialidad registrada.
