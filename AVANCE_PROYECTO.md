@@ -219,6 +219,13 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Cierra al hacer clic fuera
 - El botón Configuración del sidebar se mantiene también
 
+**Encabezados de tablas — estilo unificado:**
+- Íconos descriptivos, texto en MAYÚSCULAS y `text-foreground` en todas las tablas del sistema
+- Tablas actualizadas: Inventario (artículos + historial), Membresías, Historial de pagos, Pre-registro, Servicios registrados, Préstamos activos, Historial de citas, Administradores
+- Flechas dinámicas de sort en Inventario y Servicios: `↕` cuando inactivo, `↑↓` cuando activo
+- Servicios: ciclo de filtro por estatus (TODOS → COMPLETADO → PRESTADO → DEVUELTO)
+- Servicios: columna Beneficiario sin sort (solo visual)
+
 ---
 
 ## 🔄 En progreso / Parcialmente terminado
@@ -235,7 +242,6 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Tarea | Descripción |
 |---|---|
-| **Barra estilo historial en Inventario** | La barra de encabezado de columnas del historial de citas (FOLIO / Paciente / Doctor / Fecha / Estatus con íconos) se ve muy bien. Replicar ese patrón en la tabla de Inventario. |
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
 
 ### Prioridad media — Membresías
