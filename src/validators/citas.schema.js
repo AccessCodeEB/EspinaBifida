@@ -17,6 +17,7 @@ export const crearCitaSchema = z.object({
   estatus:     estatusEnum.optional(),
   notas:       z.string().max(1000).nullable().optional(),
   idTipoServicio: z.number({ coerce: true }).int().positive().optional(),
+  costo:       z.number({ coerce: true }).nonnegative("costo debe ser >= 0").optional(),
 });
 
 export const actualizarCitaSchema = z.object({

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getCitas, createCita, type Cita } from "@/services/citas"
+import { getCitas, createCita, COSTO_PRIMERA_CITA, COSTO_SUBSECUENTE_CITA, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
@@ -404,6 +404,29 @@ export function CitasSection() {
               {form.curp && <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">✓ Seleccionado: {form.curp}</p>}
               {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>}
             </div>
+
+            {/* Costo auto-detectado (solo lectura) */}
+            {form.curp && (() => {
+              const previas = citas.filter(c => c.folio === form.curp && c.estatus !== "Cancelada").length
+              const esPrimera = previas === 0
+              const costo = esPrimera ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA
+              return (
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-4 py-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de consulta</p>
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">
+                      {esPrimera ? "Primera cita" : "Cita subsecuente"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Costo</p>
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">
+                      ${costo.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">

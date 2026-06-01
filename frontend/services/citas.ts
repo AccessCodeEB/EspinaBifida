@@ -1,5 +1,8 @@
 import { apiClient } from "@/lib/api-client"
 
+export const COSTO_PRIMERA_CITA     = 350
+export const COSTO_SUBSECUENTE_CITA = 300
+
 export interface Cita {
   id: number
   beneficiario: string
@@ -9,6 +12,7 @@ export interface Cita {
   hora: string
   estatus: "Confirmada" | "Pendiente" | "Completada" | "Cancelada"
   notas?: string
+  costo?: number | null
 }
 
 export interface NuevaCitaPayload {

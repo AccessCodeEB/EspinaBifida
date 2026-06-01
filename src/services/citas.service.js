@@ -3,6 +3,9 @@ import { badRequest, notFound } from "../utils/httpErrors.js";
 
 const ESTATUS_VALIDOS = new Set(["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"]);
 
+export const COSTO_PRIMERA_CITA     = 350;
+export const COSTO_SUBSECUENTE_CITA = 300;
+
 export const getAllCitas = async () => {
   return await citasModel.findAll();
 };
@@ -32,13 +35,26 @@ export const createCita = async (data) => {
   const horaFinal = hora ?? "00:00";
   const fechaDatetime = `${fecha} ${horaFinal}:00`;
 
+  const curpUpper = curp.toUpperCase();
+
+  // Costo: primera cita $350, subsecuentes $300. Permite override explícito.
+  let costo;
+  if (data.costo != null) {
+    costo = Number(data.costo);
+    if (Number.isNaN(costo) || costo < 0) throw badRequest("costo debe ser un número positivo");
+  } else {
+    const previas = await citasModel.countCitasByCurp(curpUpper);
+    costo = previas === 0 ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA;
+  }
+
   return await citasModel.create({
-    curp: curp.toUpperCase(),
+    curp: curpUpper,
     idTipoServicio,
     especialista: data.especialista || null,
     fecha: fechaDatetime,
     estatus: (estatus || "PROGRAMADA").toUpperCase(),
     notas: data.notas || null,
+    costo,
   });
 };
 

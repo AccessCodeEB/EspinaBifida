@@ -7,7 +7,7 @@ export const findAll = () =>
         c.ID_CITA, c.CURP, c.ID_TIPO_SERVICIO, c.ESPECIALISTA,
         TO_CHAR(c.FECHA, 'YYYY-MM-DD') AS FECHA,
         TO_CHAR(c.FECHA, 'HH24:MI')    AS HORA,
-        c.ESTATUS, c.NOTAS,
+        c.ESTATUS, c.NOTAS, c.COSTO,
         b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO
       FROM CITAS c
       LEFT JOIN BENEFICIARIOS b ON b.CURP = c.CURP
@@ -18,23 +18,32 @@ export const findAll = () =>
 export const findById = (id) =>
   withConnection(conn =>
     conn.execute(
-      `SELECT ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA, FECHA, ESTATUS, NOTAS
+      `SELECT ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA, FECHA, ESTATUS, NOTAS, COSTO
        FROM CITAS WHERE ID_CITA = :id`,
       { id }
     ).then(r => r.rows[0])
   );
 
-export const create = ({ curp, idTipoServicio, especialista, fecha, estatus, notas }) =>
+/** Cuenta citas no canceladas previas de un beneficiario (para detectar primera vs. subsecuente) */
+export const countCitasByCurp = (curp) =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT COUNT(1) AS TOTAL FROM CITAS WHERE CURP = :curp AND ESTATUS <> 'CANCELADA'`,
+      { curp }
+    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
+  );
+
+export const create = ({ curp, idTipoServicio, especialista, fecha, estatus, notas, costo }) =>
   withConnection(conn =>
     conn.execute(
       `INSERT INTO CITAS (
         ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA,
-        FECHA, ESTATUS, NOTAS
+        FECHA, ESTATUS, NOTAS, COSTO
       ) VALUES (
         SEQ_CITAS.NEXTVAL, :curp, :idTipoServicio, :especialista,
-        TO_TIMESTAMP(:fecha, 'YYYY-MM-DD HH24:MI:SS'), :estatus, :notas
+        TO_TIMESTAMP(:fecha, 'YYYY-MM-DD HH24:MI:SS'), :estatus, :notas, :costo
       )`,
-      { curp, idTipoServicio, especialista, fecha, estatus, notas },
+      { curp, idTipoServicio, especialista, fecha, estatus, notas, costo },
       { autoCommit: true }
     )
   );
