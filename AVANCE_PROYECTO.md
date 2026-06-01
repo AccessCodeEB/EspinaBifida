@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — Inventario: edición de precios (cuota de recuperación + precio real) con diálogo de confirmación, rediseño del diálogo "Modificar artículo", ambas cuotas obligatorias; hallazgo: `precioSegunCuota` implementada pero sin usar en producción
+**Actualización:** 2026-06-01 (Domingo) — Inventario: edición de precios con diálogo de confirmación; Auditoría QA: 3 bugs corregidos + 7 tests de regresión; 1222 tests 100% verde
 **Próxima entrega:** 2026-06-03 (Martes)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -18,8 +18,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 28 / 28 |
-| Archivos de prueba Jest (suites) | 53 |
-| Tests Jest | 1195 |
+| Archivos de prueba Jest (suites) | 55 |
+| Tests Jest | 1222 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -82,7 +82,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 ### Infraestructura y calidad
 
 - Arquitectura MVC consistente — lógica SQL extraída de rutas a controllers y services
-- 53 archivos de prueba Jest, **1195 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
+- 55 archivos de prueba Jest, **1222 tests**, cobertura 98.29% statements / 96.99% branches / 96.33% functions (superan umbral 95%)
 - Pool de conexiones Oracle con reconexión automática
 - Helper `withConnection` en todos los modelos
 - Módulo `validators.js` centralizado (CURP, EMAIL, TEL, CP, etc.)
@@ -255,6 +255,19 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - UI: campo cuotaB en diálogos de agregar/modificar artículo en inventario
 - 9 nuevos tests en `servicios.service.test.js` — total: 1169 tests, 100% verde
 - **Nota post-despliegue:** todos los beneficiarios existentes quedan con `TIPO_CUOTA=NULL`; clasificarlos antes de registrar servicios
+
+### Cambios 2026-06-01 — Auditoría QA y corrección de bugs
+
+**3 bugs corregidos detectados en auditoría estática y de flujo:**
+
+- **ISSUE-001 (typo funcional):** `diaSemanA` → `diaSemana` en `especialidades-horario.service.js` y `.model.js`. El typo silencioso hacía que `DIA_SEMANA` nunca pudiera actualizarse via `PATCH /especialidades-horario/:id`; el valor enviado se descartaba silenciosamente y Oracle mantenía el valor anterior por el `NVL`.
+- **ISSUE-002 (optional chaining):** `r.rows[0]` → `r.rows?.[0] ?? null` en `findById` y `findExcepcionByFecha` del model. Sin el optional chaining, si Oracle devuelve un objeto sin propiedad `rows` (ej. en una query de tipo DML por error), se lanzaba un `TypeError` en lugar del valor `null` esperado.
+- **ISSUE-003 (bypass de validación):** `updateCita` en `citas.service.js` no llamaba a `validarSlotEspecialidad` al modificar una cita existente. Un usuario podía crear una cita válida y luego editarla vía `PATCH` para moverla a un slot bloqueado (fecha bloqueada, día no permitido, capacidad llena). Corregido: ahora re-valida cuando cambia `fecha`, `hora` o `especialista`.
+- **7 tests de regresión** añadidos en `especialidades-horario.service.test.js` y `citas.service.test.js` — total: 1222 tests, 100% verde
+
+**Clasificación geográfica (reportes):**
+- Criterio urbano/rural cambiado de municipios AMM (15) a las 32 capitales de estado de México
+- `municipiosAMM.js` renombrado internamente a `CAPITALES_ESTADOS`
 
 ### Cambios 2026-06-01 — Inventario, notificaciones y calidad
 
