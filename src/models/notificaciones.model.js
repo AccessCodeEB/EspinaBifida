@@ -280,7 +280,9 @@ export const deleteE2ENotificaciones = () =>
     await conn.execute(
       `DELETE FROM NOTIFICACIONES
        WHERE CURP LIKE 'PLAW%'
-          OR UPPER(MENSAJE) LIKE '%PLAW%'`
+          OR CURP LIKE 'UAFT%'
+          OR UPPER(MENSAJE) LIKE '%PLAW%'
+          OR UPPER(MENSAJE) LIKE '%UAFT%'`
     );
     await conn.commit();
   });

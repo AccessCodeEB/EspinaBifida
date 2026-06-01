@@ -1,6 +1,23 @@
 import { test, expect, request } from '@playwright/test';
 import { qase } from 'playwright-qase-reporter';
 
+test.afterAll(async () => {
+  const ctx = await request.newContext({ baseURL: API_BASE });
+  const loginRes = await ctx.post('/administradores/login', {
+    data: { email: 'prueba@espina.com', password: '222222' },
+  }).catch(() => null);
+  if (!loginRes?.ok()) { await ctx.dispose(); return; }
+  const { token } = await loginRes.json();
+  await ctx.dispose();
+
+  const authCtx = await request.newContext({
+    baseURL: API_BASE,
+    extraHTTPHeaders: { Authorization: `Bearer ${token}` },
+  });
+  await authCtx.delete('/notificaciones/e2e-cleanup').catch(() => {});
+  await authCtx.dispose();
+});
+
 const PANEL_URL = 'http://localhost:3001/panel';
 const API_BASE = 'http://localhost:3000';
 // Valid 18-char CURP for female (M), matching names Test/UAT/Flujo, date 2000-03-10, estado NL
