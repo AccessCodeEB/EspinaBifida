@@ -1,31 +1,14 @@
 import { test, expect } from '../fixtures/auth';
-import { APIRequestContext } from '@playwright/test';
 import { qase } from 'playwright-qase-reporter';
 
 const TEST_CURP = 'AUSD050124MDFGNYA8';
-const E2E_ESPECIALISTA = 'Dr. E2E Playwright';
-
-async function cleanupCitasE2E(apiContext: APIRequestContext) {
-  // Buscar todas las citas del CURP de prueba y borrar las del especialista E2E
-  const res = await apiContext.get(`/citas?curp=${TEST_CURP}&limit=200`).catch(() => null);
-  if (!res?.ok()) return;
-  const body = await res.json();
-  const citas: Array<Record<string, unknown>> = body.data ?? body ?? [];
-  for (const cita of citas) {
-    const especialista = String(cita.especialista ?? cita.ESPECIALISTA ?? '');
-    if (especialista === E2E_ESPECIALISTA) {
-      const id = cita.idCita ?? cita.ID_CITA ?? cita.id;
-      if (id) await apiContext.delete(`/citas/${id}`).catch(() => {});
-    }
-  }
-}
 
 test.beforeAll(async ({ apiContext }) => {
-  await cleanupCitasE2E(apiContext);
+  await apiContext.delete('/citas/e2e-cleanup').catch(() => {});
 });
 
 test.afterAll(async ({ apiContext }) => {
-  await cleanupCitasE2E(apiContext);
+  await apiContext.delete('/citas/e2e-cleanup').catch(() => {});
 });
 
 test(qase(37, 'RT-015: GET /citas retorna citas con paginación'), async ({ apiContext }) => {

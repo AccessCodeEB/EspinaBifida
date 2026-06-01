@@ -86,3 +86,5 @@ export const deleteCita = async (id) => {
 
   return await citasModel.remove(id);
 };
+
+export const deleteE2ECitas = () => citasModel.deleteE2ECitas();

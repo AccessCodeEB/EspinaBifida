@@ -77,3 +77,15 @@ export const deleteCita = async (req, res, next) => {
     next(error);
   }
 };
+
+export const e2eCleanup = async (req, res, next) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "No disponible en producción" });
+  }
+  try {
+    await citasService.deleteE2ECitas();
+    res.json({ message: "Citas E2E eliminadas" });
+  } catch (err) {
+    next(err);
+  }
+};

@@ -61,3 +61,11 @@ export const remove = (id) =>
       { autoCommit: true }
     )
   );
+
+export const deleteE2ECitas = () =>
+  withConnection(async conn => {
+    await conn.execute(
+      `DELETE FROM CITAS WHERE ESPECIALISTA = 'Dr. E2E Playwright'`
+    );
+    await conn.commit();
+  });

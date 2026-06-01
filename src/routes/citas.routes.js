@@ -5,6 +5,7 @@ import {
   createCita,
   updateCita,
   deleteCita,
+  e2eCleanup,
 } from "../controllers/citas.controller.js";
 import { validate } from "../middleware/validate.js";
 import { crearCitaSchema, actualizarCitaSchema } from "../validators/citas.schema.js";
@@ -336,6 +337,7 @@ router.patch("/:id", validate(actualizarCitaSchema), updateCita); // alias: part
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
+router.delete("/e2e-cleanup", e2eCleanup);
 router.delete("/:id", deleteCita);
 
 export default router;
