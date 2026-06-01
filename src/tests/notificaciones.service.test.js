@@ -12,6 +12,8 @@ const mockSyncCitasHoyConsolidado      = jest.fn();
 const mockSyncComodatosPorVencer       = jest.fn();
 const mockUpsertMembresia              = jest.fn();
 const mockFindArticulosConStockBajo    = jest.fn();
+const mockFindArticulosSinStock        = jest.fn();
+const mockSyncSinStockConsolidado      = jest.fn();
 const mockFindMembresiasProximas       = jest.fn();
 const mockFindMembresiasVencidas       = jest.fn();
 const mockFindCitasHoyProgramadas      = jest.fn();
@@ -24,10 +26,12 @@ jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   markAsRead:                mockMarkAsRead,
   markAllAsRead:             mockMarkAllAsRead,
   syncStockBajoConsolidado:  mockSyncStockBajoConsolidado,
+  syncSinStockConsolidado:   mockSyncSinStockConsolidado,
   syncCitasHoyConsolidado:   mockSyncCitasHoyConsolidado,
   syncComodatosPorVencer:    mockSyncComodatosPorVencer,
   upsertMembresia:           mockUpsertMembresia,
   findArticulosConStockBajo: mockFindArticulosConStockBajo,
+  findArticulosSinStock:     mockFindArticulosSinStock,
   findMembresiasProximas:    mockFindMembresiasProximas,
   findMembresiasVencidas:    mockFindMembresiasVencidas,
   findCitasHoyProgramadas:   mockFindCitasHoyProgramadas,
@@ -85,10 +89,12 @@ describe('marcarTodasLeidas', () => {
 describe('runJob', () => {
   beforeEach(() => {
     mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
+    mockSyncSinStockConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockFindComodatosPorVencer.mockResolvedValue([]);
+    mockFindArticulosSinStock.mockResolvedValue([]);
   });
 
   it('llama syncStockBajoConsolidado una vez con mensaje del artículo cuando hay uno solo', async () => {
@@ -102,7 +108,7 @@ describe('runJob', () => {
     const res = await Service.runJob();
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('Silla'));
-    expect(res).toEqual({ stockBajo: 1, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 1, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('llama upsertMembresia MEMBRESIA_PROXIMA con mensaje de días', async () => {
@@ -160,7 +166,7 @@ describe('runJob', () => {
 
     const res = await Service.runJob();
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(null);
-    expect(res).toEqual({ stockBajo: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 0, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('genera mensaje consolidado y llama syncStockBajoConsolidado una vez para múltiples artículos', async () => {
@@ -179,7 +185,7 @@ describe('runJob', () => {
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('2 artículos'));
     expect(mockUpsertMembresia).toHaveBeenCalledTimes(2);
-    expect(res).toEqual({ stockBajo: 2, proximas: 2, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 2, sinStock: 0, proximas: 2, vencidas: 0, citasHoy: 0, comodatos: 0 });
   });
 
   it('genera mensaje para una sola cita de hoy sin confirmar', async () => {
@@ -294,10 +300,12 @@ describe('runJob', () => {
 describe('checkComodatosPorVencer (via runJob)', () => {
   beforeEach(() => {
     mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
+    mockSyncSinStockConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockFindArticulosConStockBajo.mockResolvedValue([]);
+    mockFindArticulosSinStock.mockResolvedValue([]);
     mockFindMembresiasProximas.mockResolvedValue([]);
     mockFindMembresiasVencidas.mockResolvedValue([]);
     mockFindCitasHoyProgramadas.mockResolvedValue([]);
