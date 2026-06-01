@@ -289,12 +289,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       await eliminarArticulo(deleteArticuloId)
       toast.success("Artículo eliminado del inventario")
       await refreshInventario()
+      setSearchTerm("")
       setShowEliminarDialog(false)
     } catch (err: unknown) {
       // 404 means the article was already deleted externally — sync the UI
       const status = (err as { status?: number })?.status
       if (status === 404) {
         await refreshInventario()
+        setSearchTerm("")
         setShowEliminarDialog(false)
         toast.info("El artículo ya había sido eliminado del sistema")
       } else {
