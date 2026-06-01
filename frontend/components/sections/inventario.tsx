@@ -377,14 +377,13 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             <p className="text-[11px] text-muted-foreground">
               {sortedFiltered.length} de {inventario.length} artículos
               {activeUnidadFilter && <> · Unidad: <span className="font-medium">{activeUnidadFilter}</span></>}
-              {categoriaFilter != null && <> · <span className="font-medium" style={{ color: NAVY }}>{categorias.find(c => c.id === categoriaFilter)?.nombre ?? "Categoría"}</span></>}
               {stockFilter === "bajo" && <> · <span className="font-medium text-amber-600">Stock bajo</span></>}
               {stockFilter === "sin"  && <> · <span className="font-medium text-red-600">Sin stock</span></>}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {/* Búsqueda */}
-            <div className="relative w-56">
+            <div className="relative w-48">
               <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
@@ -394,7 +393,28 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
               />
             </div>
-            {/* Filtros */}
+            {/* Selector de categoría */}
+            {categorias.length > 0 && (
+              <div className="relative">
+                <Tag className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <select
+                  value={categoriaFilter ?? ""}
+                  onChange={e => setCategoriaFilter(e.target.value === "" ? null : Number(e.target.value))}
+                  className={`h-9 rounded-lg border pl-8 pr-7 text-xs font-medium outline-none transition-colors appearance-none cursor-pointer ${
+                    categoriaFilter != null
+                      ? "border-[#0f4c81]/50 bg-[#0f4c81]/5 text-[#0f4c81]"
+                      : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <option value="">Todas las categorías</option>
+                  {categorias.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                  ))}
+                </select>
+                <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            )}
+            {/* Filtro de stock */}
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -403,16 +423,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                       ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
                       : stockFilter === "bajo"
                       ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
-                      : categoriaFilter != null
-                      ? "border-[#0f4c81]/40 bg-[#0f4c81]/5 text-[#0f4c81] dark:border-[#0f4c81]/60 dark:text-blue-400"
                       : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   <Filter className="size-3.5" />
-                  Filtrar
-                  {(stockFilter != null || categoriaFilter != null) && (
+                  Stock
+                  {stockFilter != null && (
                     <span
-                      onClick={e => { e.stopPropagation(); setStockFilter(null); setCategoriaFilter(null) }}
+                      onClick={e => { e.stopPropagation(); setStockFilter(null) }}
                       className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10"
                     >
                       <X className="size-2.5" />
@@ -457,34 +475,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   <span className="ml-auto tabular-nums font-medium">{sinStock}</span>
                 </button>
 
-                {/* Sección: Categoría */}
-                {categorias.length > 0 && <>
-                  <div className="my-1.5 border-t border-border/50" />
-                  <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categoría</p>
-                  <button
-                    onClick={() => { setCategoriaFilter(null); setFilterOpen(false) }}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                      categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Tag className="size-3.5" />
-                    Todas las categorías
-                  </button>
-                  {categorias.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => { setCategoriaFilter(cat.id); setFilterOpen(false) }}
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                        categoriaFilter === cat.id
-                          ? "bg-[#0f4c81]/5 font-medium text-[#0f4c81]"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <Tag className="size-3.5" />
-                      {cat.nombre}
-                    </button>
-                  ))}
-                </>}
               </PopoverContent>
             </Popover>
             {/* Acciones */}
