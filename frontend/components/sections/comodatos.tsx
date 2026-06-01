@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Package, Plus, CreditCard, CheckCircle2, XCircle,
   Search, RefreshCw, ChevronDown, FileText, AlertCircle,
@@ -55,6 +55,9 @@ function AltaComodatoDialog({
   articulos: ArticuloInventario[]
 }) {
   const [curp, setCurp]               = useState("")
+  const [busqueda, setBusqueda]       = useState("")
+  const [showSug, setShowSug]         = useState(false)
+  const inputRef                      = useRef<HTMLInputElement>(null)
   const [idArticulo, setIdArticulo]   = useState("")
   const [montoTotal, setMontoTotal]   = useState("")
   const [esGratis, setEsGratis]       = useState(false)
@@ -62,7 +65,22 @@ function AltaComodatoDialog({
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
-  const reset = () => { setCurp(""); setIdArticulo(""); setMontoTotal(""); setEsGratis(false); setNotas(""); setError(null) }
+  const activos = beneficiarios.filter(b => b.estatus === "Activo")
+  const busqNorm = busqueda.trim().toLowerCase()
+  const sugerencias = busqNorm
+    ? activos.filter(b => {
+        const nombre = `${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`.trim().toLowerCase()
+        return nombre.startsWith(busqNorm) || (b.curp ?? "").toLowerCase().startsWith(busqNorm)
+      }).slice(0, 8)
+    : []
+
+  function seleccionar(b: Beneficiario) {
+    setCurp(b.curp ?? "")
+    setBusqueda(`${b.nombres} ${b.apellidoPaterno} ${b.apellidoMaterno ?? ""}`.replace(/\s+/g, " ").trim())
+    setShowSug(false)
+  }
+
+  const reset = () => { setCurp(""); setBusqueda(""); setShowSug(false); setIdArticulo(""); setMontoTotal(""); setEsGratis(false); setNotas(""); setError(null) }
   const handleClose = () => { reset(); onClose() }
 
   async function handleSubmit() {
@@ -102,18 +120,36 @@ function AltaComodatoDialog({
           {/* Beneficiario */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Beneficiario</Label>
-            <Select value={curp} onValueChange={setCurp}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Seleccionar beneficiario..." />
-              </SelectTrigger>
-              <SelectContent>
-                {beneficiarios.filter(b => b.estatus === "Activo").map(b => (
-                  <SelectItem key={b.curp ?? ""} value={b.curp ?? ""} className="text-xs">
-                    {b.nombres} {b.apellidoPaterno} {b.apellidoMaterno ?? ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Buscar por nombre o CURP..."
+                value={busqueda}
+                autoComplete="off"
+                onChange={e => { setBusqueda(e.target.value); setCurp(""); setShowSug(true) }}
+                onFocus={() => { if (busqueda) setShowSug(true) }}
+                onBlur={() => setTimeout(() => setShowSug(false), 150)}
+                className="h-9 w-full rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+              />
+              {showSug && sugerencias.length > 0 && (
+                <ul className="absolute z-50 mt-1 w-full rounded-lg border border-border/70 bg-background shadow-md overflow-hidden">
+                  {sugerencias.map(b => (
+                    <li
+                      key={b.curp}
+                      onMouseDown={() => seleccionar(b)}
+                      className="flex items-center justify-between gap-4 cursor-pointer px-4 py-3 hover:bg-muted"
+                    >
+                      <span className="text-sm font-medium text-foreground">
+                        {b.nombres} {b.apellidoPaterno} {b.apellidoMaterno ?? ""}
+                      </span>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">{b.curp}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           {/* Artículo */}

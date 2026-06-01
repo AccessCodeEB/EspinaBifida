@@ -284,7 +284,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 | 1b | Tabla: headers con íconos + UPPERCASE + flechas sort (igual al resto del sistema) | ✅ Listo |
 | 1c | Botón actualizar: agregar texto "Actualizar" junto al emoji | ✅ Listo |
 | 1d | Tabs "Lista" / "Reporte de exenciones" → rediseño estilo citas/inventario (navy azul activo, fade 180ms) | ✅ Listo |
-| 1e | Búsqueda de beneficiario → texto libre con filtro en tiempo real (igual que servicios) | ⏳ Pendiente |
+| 1e | Búsqueda de beneficiario → texto libre con filtro en tiempo real (igual que servicios) | ✅ Listo |
 | 1f | Selector de equipo médico → Popover+Command buscable, filtrado solo a categoría Equipos Médicos | ⏳ Pendiente |
 | 1g | Agregar `FECHA_DEVOLUCION_ESPERADA` en el formulario de nuevo comodato (depende de 0a) | ⏳ Pendiente |
 
