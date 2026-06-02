@@ -260,8 +260,8 @@ export function DashboardSection() {
   /* ── Membresías por vencer ── */
   const membresiasPorVencer = useMemo(() => {
     return beneficiarios
-      .filter((b) => b.estatus !== "Baja" && b.diasRestantes != null)
-      .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999))
+      .filter((b) => b.estatus !== "Baja")
+      .sort((a, b) => (a.diasRestantes ?? Infinity) - (b.diasRestantes ?? Infinity))
   }, [beneficiarios])
 
   /* ── Citas de hoy ── */
@@ -622,10 +622,21 @@ export function DashboardSection() {
                           <p className="truncate text-[11px] font-semibold text-foreground">{nombre}</p>
                           <p className="truncate text-[10px] text-muted-foreground">{b.ciudad || "—"}</p>
                         </div>
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${estatusStyle.cls}`}>
-                          <span className={`size-1.5 rounded-full ${estatusStyle.dot}`} />
-                          {b.estatus}
-                        </span>
+                        <div className="flex flex-col items-end shrink-0">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${estatusStyle.cls}`}>
+                            <span className={`size-1.5 rounded-full ${estatusStyle.dot}`} />
+                            {b.estatus}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {b.diasRestantes == null
+                              ? "Sin membresía"
+                              : b.diasRestantes < 0
+                                ? `Vencida hace ${Math.abs(b.diasRestantes)}d`
+                                : b.diasRestantes === 0
+                                  ? "Vence hoy"
+                                  : `${b.diasRestantes}d restantes`}
+                          </span>
+                        </div>
                       </div>
                     )
                   })
