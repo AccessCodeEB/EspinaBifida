@@ -80,7 +80,7 @@ export function BeneficiariosOrigenMapCard({ stateCounts, loading = false }: Ben
     const total = stateCounts.reduce((sum, entry) => sum + entry.total, 0)
     const estadosConDato = stateCounts.length
     const estadoLider = stateCounts[0] ?? null
-    const coverage = total > 0 ? Math.round((estadosConDato / 32) * 100) : 0
+    const coverage = total > 0 ? Math.round((estadosConDato / ESTADOS.length) * 100) : 0
 
     return { total, estadosConDato, estadoLider, coverage }
   }, [stateCounts])

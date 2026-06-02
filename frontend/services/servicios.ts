@@ -47,7 +47,7 @@ export function getServicios() {
 
 /** POST /servicios */
 export function createServicio(data: NuevoServicioPayload) {
-  return apiClient.post<{ message: string; idServicio: number }>("/servicios", data)
+  return apiClient.post<{ message: string; idServicio: number; warning?: string }>("/servicios", data)
 }
 
 /** DELETE /servicios/:id */

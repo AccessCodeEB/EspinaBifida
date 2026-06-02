@@ -84,11 +84,16 @@ describe('createConValidacion — validaciones de entrada', () => {
     expect(result.idServicio).toBe(99);
   });
 
-  it('409 cuando beneficiario tiene estatus Inactivo', async () => {
+  it('registra con warning cuando beneficiario tiene estatus Inactivo', async () => {
     mockFindBeneficiario.mockResolvedValueOnce({ ...BENEFICIARIO_ACTIVO, ESTATUS: 'Inactivo' });
-    await expect(Service.createConValidacion({
+    mockCreate.mockResolvedValueOnce(99);
+
+    const result = await Service.createConValidacion({
       curp: CURP, idTipoServicio: 1, costo: 0,
-    })).rejects.toMatchObject({ statusCode: 409 });
+    });
+
+    expect(result.idServicio).toBe(99);
+    expect(result.warning).toMatch(/membresía/i);
   });
 
   it('usa createWithInventarioTransaction cuando hay consumos', async () => {

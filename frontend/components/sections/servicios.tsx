@@ -409,7 +409,7 @@ export function ServiciosSection() {
       setRegistroLoading(true)
       setRegistroError("")
       setFechaError("")
-      await createServicio({
+      const result = await createServicio({
         curp:           beneficiarioEncontrado.curp,
         idTipoServicio: idTipoServicioNumerico,
         costo:          montoNum,
@@ -432,7 +432,11 @@ export function ServiciosSection() {
       setFechaServicio(hoy)
       setIdArticuloSeleccionado("")
       setArticulosInventario([])
-      toast.success("Servicio registrado correctamente")
+      if (result.warning) {
+        toast.warning("Servicio registrado", { description: result.warning })
+      } else {
+        toast.success("Servicio registrado correctamente")
+      }
     } catch (err) {
       setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
     } finally {

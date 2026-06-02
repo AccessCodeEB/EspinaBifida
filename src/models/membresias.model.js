@@ -151,8 +151,7 @@ export const setBeneficiarioBaja = (curp) =>
 /** Sincroniza ESTATUS de todos los beneficiarios según días vencidos de su membresía. */
 export const syncEstados = () =>
   withConnection(async conn => {
-    // Credencial vencida (cualquier antigüedad) → Inactivo
-    // Solo aplica a beneficiarios con al menos una credencial registrada
+    // Sin credencial activa → Inactivo (cubre tanto credencial vencida como sin credencial)
     await conn.execute(
       `UPDATE BENEFICIARIOS b
        SET ESTATUS = 'Inactivo'
@@ -161,10 +160,6 @@ export const syncEstados = () =>
            SELECT 1 FROM CREDENCIALES c
            WHERE c.CURP = b.CURP
              AND c.FECHA_VIGENCIA_FIN >= TRUNC(SYSDATE)
-         )
-         AND EXISTS (
-           SELECT 1 FROM CREDENCIALES c
-           WHERE c.CURP = b.CURP
          )`,
       {},
       { autoCommit: true }

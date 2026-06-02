@@ -2,8 +2,8 @@ import * as ServiciosModel from "../models/servicios.model.js";
 import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
-// Validar beneficiario activo y crear servicio
-const ESTATUS_BLOQUEADOS = new Set(["Inactivo", "Baja"]);
+// Solo Baja bloquea el registro. Inactivo (sin credencial activa) permite con advertencia.
+const ESTATUS_BLOQUEADOS = new Set(["Baja"]);
 
 function parseNumber(value, fieldName) {
   const parsed = Number(value);
@@ -126,11 +126,17 @@ export async function createConValidacion(data) {
     idServicio = await ServiciosModel.create(payload);
   }
 
-  return {
+  const resultado = {
     message: "Servicio creado exitosamente",
     idServicio,
     beneficiario: beneficiario.NOMBRES,
   };
+
+  if (beneficiario.ESTATUS === "Inactivo") {
+    resultado.warning = "El beneficiario no tiene membresía activa. Se recomienda renovar antes del próximo servicio.";
+  }
+
+  return resultado;
 }
 
 export const getByCurp = (curp) =>
