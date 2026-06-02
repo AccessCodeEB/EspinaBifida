@@ -573,7 +573,7 @@ export function PublicPreregistroSection({
               </Select>
             </FieldShell>
 
-            <FieldShell label="Tipo de espina bífida" error={errors.tipo} htmlFor="prereg-tipo">
+            <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo">
               <Select
                 value={form.tipo || undefined}
                 onValueChange={(v) => change("tipo", v)}

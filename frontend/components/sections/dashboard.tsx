@@ -20,6 +20,7 @@ import type { Beneficiario }       from "@/services/beneficiarios"
 import { getInventario }           from "@/services/inventario"
 import { getBeneficiarios }        from "@/services/beneficiarios"
 import { getPagosRecientes }       from "@/services/membresias"
+import { getResumenFinanciero, type ResumenFinanciero } from "@/services/configuracion"
 import { getCitas }                from "@/services/citas"
 import { getServicios, type Servicio } from "@/services/servicios"
 import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
@@ -195,6 +196,8 @@ export function DashboardSection() {
   const [beneficiarios, setBeneficiarios]             = useState<Beneficiario[]>([])
   const [pagos, setPagos]                             = useState<PagoReciente[]>([])
   const [loadingPagos, setLoadingPagos]               = useState(true)
+  const [resumenFin, setResumenFin]                   = useState<ResumenFinanciero | null>(null)
+  const [loadingResumenFin, setLoadingResumenFin]     = useState(true)
   const [citas, setCitas]                             = useState<Cita[]>([])
   const [loadingCitas, setLoadingCitas]               = useState(true)
   const [servicios, setServicios]                     = useState<Servicio[]>([])
@@ -239,10 +242,15 @@ export function DashboardSection() {
       .catch(() => { setActivosMembresia(null); setSolicitudesPendientes(null); setListaSolicitudes([]); setBeneficiarios([]) })
       .finally(() => setLoadingBenef(false))
 
-    getPagosRecientes(PAGOS_FETCH_LIMIT)
+    getPagosRecientes()
       .then(setPagos)
       .catch(() => setPagos([]))
       .finally(() => setLoadingPagos(false))
+
+    getResumenFinanciero()
+      .then(setResumenFin)
+      .catch(() => setResumenFin(null))
+      .finally(() => setLoadingResumenFin(false))
 
     getCitas()
       .then(setCitas)
@@ -272,29 +280,17 @@ export function DashboardSection() {
       .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
   }, [citas])
 
-  /* ── Resumen financiero ── */
+  /* ── Resumen financiero (endpoint dedicado con agregación en BD) ── */
   const financiero = useMemo(() => {
-    const mesActual  = mesActualISO()
-    const mesAnterior = mesAnteriorISO()
-
-    const pagosActual   = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesActual))
-    const pagosAnterior = pagos.filter((p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(mesAnterior))
-
-    const totalAnterior = pagosAnterior.reduce((s, p) => s + (Number(p.monto) || 0), 0)
-
-    const porMetodo = {
-      efectivo:      pagosActual.filter((p) => p.metodoPago === "efectivo").reduce((s, p) => s + (Number(p.monto) || 0), 0),
-      transferencia: pagosActual.filter((p) => p.metodoPago === "transferencia").reduce((s, p) => s + (Number(p.monto) || 0), 0),
-      tarjeta:       pagosActual.filter((p) => p.metodoPago === "tarjeta").reduce((s, p) => s + (Number(p.monto) || 0), 0),
+    if (!resumenFin) return { totalActual: 0, totalAnterior: 0, diff: 0, porMetodo: { efectivo: 0, transferencia: 0, tarjeta: 0 }, count: 0 }
+    return {
+      totalActual:   resumenFin.totalActual,
+      totalAnterior: resumenFin.totalAnterior,
+      diff:          resumenFin.porcentajeCambio,
+      porMetodo:     resumenFin.desglosePorMetodo,
+      count:         resumenFin.cantidadPagos,
     }
-
-    // totalActual = suma de los tres métodos para que siempre cuadre
-    const totalActual = porMetodo.efectivo + porMetodo.transferencia + porMetodo.tarjeta
-
-    const diff = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior) * 100 : 0
-
-    return { totalActual, totalAnterior, diff, porMetodo, count: pagosActual.length }
-  }, [pagos])
+  }, [resumenFin])
 
   /* ── Datos mensuales para la gráfica (últimos 6 meses) ── */
   const monthlyData = useMemo(() => {
@@ -516,7 +512,7 @@ export function DashboardSection() {
           <p className="text-sm font-semibold text-foreground">Resumen financiero</p>
           <p className="text-[11px] text-muted-foreground">Ingresos por membresías · mes actual vs anterior</p>
         </div>
-        {loadingPagos ? (
+        {loadingResumenFin ? (
           <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-card px-6 py-5 space-y-2">
