@@ -36,7 +36,7 @@ export interface MovimientoPayload {
 }
 
 export interface NuevoArticuloPayload {
-  idArticulo: number
+  idArticulo?: number
   descripcion: string
   unidad: string
   cuotaRecuperacion: number

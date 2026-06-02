@@ -303,7 +303,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     setSavingArticulo(true); setArticuloError(null)
     try {
       await crearArticulo({
-        idArticulo: id,
+        ...(id > 0 ? { idArticulo: id } : {}),
         descripcion: articuloForm.descripcion.trim(),
         unidad: unidadFinal,
         cuotaRecuperacion: cuota,
