@@ -576,7 +576,7 @@ export function PublicPreregistroSection({
             <FieldShell label="Tipo de espina bífida" error={errors.tipo} htmlFor="prereg-tipo">
               <Select
                 value={form.tipo || undefined}
-                onValueChange={(v) => change("tipo", v === "__no_se__" ? "" : v)}
+                onValueChange={(v) => change("tipo", v)}
               >
                 <SelectTrigger
                   id="prereg-tipo"

@@ -148,7 +148,8 @@ export function validateAlta(form: BeneficiarioAltaForm): Record<string, string>
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
   const tipoEbRaw = String(form.tipo ?? "").trim()
-  if (tipoEbRaw) {
+  const tipoEbEsVacio = !tipoEbRaw || tipoEbRaw === "__no_se__"
+  if (!tipoEbEsVacio) {
     const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
       (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
     )
@@ -227,7 +228,8 @@ export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
   const tipoEbRaw = String(form.tipo ?? "").trim()
-  if (tipoEbRaw) {
+  const tipoEbEsVacio = !tipoEbRaw || tipoEbRaw === "__no_se__"
+  if (!tipoEbEsVacio) {
     const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
       (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
     )
@@ -261,10 +263,12 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     const s = String(t).trim()
     return s === "" ? null : s
   })()
-  const tipoCanon =
-    TIPOS_ESPINA_BIFIDA_OPCIONES.find(
-      (t) => t.toLowerCase() === String(formData.tipo ?? "").trim().toLowerCase()
-    ) ?? String(formData.tipo ?? "").trim()
+  const tipoRaw = String(formData.tipo ?? "").trim()
+  const tipoCanon = (tipoRaw === "__no_se__" || tipoRaw === "")
+    ? undefined
+    : TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+        (t) => t.toLowerCase() === tipoRaw.toLowerCase()
+      ) ?? tipoRaw
   // CURP usa H=Hombre / M=Mujer; el backend espera M=Masculino / F=Femenino
   const generoApi = formData.genero === "H" ? "M" : formData.genero === "M" ? "F" : formData.genero
   return {
