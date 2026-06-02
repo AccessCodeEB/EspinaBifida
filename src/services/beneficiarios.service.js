@@ -193,6 +193,22 @@ function validarFechaNacimiento(fechaNacimiento) {
   }
 }
 
+// Valida los campos enum/bounded compartidos entre CREATE y UPDATE
+function validarCamposEnum(data) {
+  if (data.genero && !["M", "F"].includes(data.genero)) {
+    throw badRequest("GENERO debe ser 'M' o 'F'", "INVALID_GENERO");
+  }
+  if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
+    throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
+  }
+  if (data.tipoSangre && !TIPOS_SANGRE.includes(data.tipoSangre)) {
+    throw badRequest(`TIPOS_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
+  }
+  if (data.notas && data.notas.length > 500) {
+    throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
+  }
+}
+
 function validarFormatos(data) {
   if (data.correoElectronico && !EMAIL_REGEX.test(data.correoElectronico)) {
     throw badRequest("Formato de correo electrónico inválido", "INVALID_EMAIL");
@@ -201,18 +217,7 @@ function validarFormatos(data) {
   if (data.cp && !CP_REGEX.test(data.cp)) {
     throw badRequest("CP debe contener exactamente 5 dígitos", "INVALID_CP");
   }
-  if (data.genero && !["M", "F"].includes(data.genero)) {
-    throw badRequest("GENERO debe ser 'M' o 'F'", "INVALID_GENERO");
-  }
-  if (data.tipoSangre && !TIPOS_SANGRE.includes(data.tipoSangre)) {
-    throw badRequest(`TIPOS_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
-  }
-  if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
-    throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
-  }
-  if (data.notas && data.notas.length > 500) {
-    throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
-  }
+  validarCamposEnum(data);
   if (data.fechaNacimiento) {
     validarFechaNacimiento(data.fechaNacimiento);
   }
@@ -220,18 +225,7 @@ function validarFormatos(data) {
 
 // Validación permisiva para UPDATE — solo valida enums, no formato libre
 function validarFormatosUpdate(data) {
-  if (data.genero && !["M", "F"].includes(data.genero)) {
-    throw badRequest("GENERO debe ser 'M' o 'F'", "INVALID_GENERO");
-  }
-  if (data.usaValvula && !["S", "N"].includes(data.usaValvula)) {
-    throw badRequest("USA_VALVULA debe ser 'S' o 'N'", "INVALID_USA_VALVULA");
-  }
-  if (data.tipoSangre && !TIPOS_SANGRE.includes(data.tipoSangre)) {
-    throw badRequest(`TIPOS_SANGRE debe ser uno de: ${TIPOS_SANGRE.join(", ")}`, "INVALID_TIPO_SANGRE");
-  }
-  if (data.notas && data.notas.length > 500) {
-    throw badRequest("NOTAS no puede superar los 500 caracteres", "NOTES_TOO_LONG");
-  }
+  validarCamposEnum(data);
 }
 
 export const getAll = () => BeneficiarioModel.findAll();

@@ -11,6 +11,10 @@ export const marcarTodasLeidas = ()    => Model.markAllAsRead();
 const trimNombre = (s, max = 35) =>
   s && s.length > max ? s.slice(0, max - 1) + "…" : (s ?? "");
 
+const MSG_MAX_LENGTH = 500;
+const truncar = (msg) =>
+  msg.length > MSG_MAX_LENGTH ? msg.slice(0, MSG_MAX_LENGTH - 3) + "..." : msg;
+
 export async function checkStockBajo() {
   const rows = await Model.findArticulosConStockBajo();
   if (rows.length === 0) {
@@ -30,7 +34,7 @@ export async function checkStockBajo() {
     const extra = rows.length > 5 ? ` y ${rows.length - 5} más` : "";
     msg = `${rows.length} artículos con stock bajo: ${lista}${extra}.`;
   }
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  msg = truncar(msg);
   await Model.syncStockBajoConsolidado(msg);
   return rows.length;
 }
@@ -49,7 +53,7 @@ export async function checkSinStock() {
     const extra = rows.length > 5 ? ` y ${rows.length - 5} más` : "";
     msg = `${rows.length} artículos sin stock: ${lista}${extra}.`;
   }
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  msg = truncar(msg);
   await Model.syncSinStockConsolidado(msg);
   return rows.length;
 }
@@ -68,7 +72,7 @@ async function checkCitasHoy() {
     const lista = rows.map(r => `${r.NOMBRE} (${r.HORA})`).join(", ");
     msg = `${rows.length} citas de hoy sin confirmar: ${lista}.`;
   }
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  msg = truncar(msg);
   await Model.syncCitasHoyConsolidado(msg);
   return rows.length;
 }
@@ -120,7 +124,7 @@ async function checkComodatosPorVencer() {
     const extra = rows.length > 3 ? ` y ${rows.length - 3} más` : "";
     msg = `${rows.length} préstamos por vencer o vencidos: ${lista}${extra}.`;
   }
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  msg = truncar(msg);
 
   await Model.syncComodatosPorVencer(msg);
   return rows.length;
