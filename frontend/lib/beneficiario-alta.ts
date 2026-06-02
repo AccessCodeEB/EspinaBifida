@@ -335,7 +335,6 @@ export function parseBeneficiarioApiError(raw: string): Record<string, string> {
       if (msg.includes("estado")) errs.estado = "Obligatorio"
       if (msg.includes("telefonoCelular")) errs.telefonoCelular = "Obligatorio"
       if (msg.includes("correoElectronico")) errs.correoElectronico = "Obligatorio"
-      if (msg.includes("tipo")) errs.tipo = "Obligatorio"
       if (msg.includes("usaValvula")) errs.usaValvula = "Obligatorio"
       return Object.keys(errs).length > 0 ? errs : { _global: msg }
     }

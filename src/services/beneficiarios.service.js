@@ -115,7 +115,6 @@ const CAMPOS_SOLICITUD_PUBLICA_MIN = [
   "estado",
   "telefonoCelular",
   "correoElectronico",
-  "tipo",
 ];
 
 function validarCamposMinimosSolicitudPublica(data) {
