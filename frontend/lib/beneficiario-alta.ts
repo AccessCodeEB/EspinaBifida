@@ -72,6 +72,7 @@ export const ALTA_FORM_INICIAL = {
   ciudad: "",
   municipio: "",
   estado: "",
+  estadoNacimiento: "",
   cp: "",
   telefonoCasa: "",
   telefonoCelular: "",
@@ -208,6 +209,11 @@ export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record
   } else if (!ESTADOS.includes(form.estado)) {
     errs.estado = "Selecciona un estado válido"
   }
+  if (!form.estadoNacimiento.trim()) {
+    errs.estadoNacimiento = "Obligatorio"
+  } else if (!ESTADOS.includes(form.estadoNacimiento)) {
+    errs.estadoNacimiento = "Selecciona un estado válido"
+  }
 
   const celErr = errPhoneField(form.telefonoCelular, true)
   if (celErr) errs.telefonoCelular = celErr
@@ -223,13 +229,11 @@ export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
   const tipoEbRaw = String(form.tipo ?? "").trim()
-  const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
-    (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
-  )
-  if (!tipoEbRaw) {
-    errs.tipo = "Selecciona un tipo de espina bífida"
-  } else if (!tipoEbCanon) {
-    errs.tipo = "Tipo no válido"
+  if (tipoEbRaw) {
+    const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+      (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
+    )
+    if (!tipoEbCanon) errs.tipo = "Tipo no válido"
   }
 
   const notasUsuario = String(form.notas ?? "").trim()
@@ -246,36 +250,39 @@ export function validateAltaSolicitudPublica(form: BeneficiarioAltaForm): Record
 
 /** Cuerpo para `POST /beneficiarios` (misma forma que el alta del panel). */
 export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Beneficiario, "folio"> {
-  const celularDigits = String(form.telefonoCelular ?? "").replace(/\D/g, "")
-  const casaDigits = String(form.telefonoCasa ?? "").replace(/\D/g, "")
-  const emergenciaDigits = String(form.telefonoEmergencia ?? "").replace(/\D/g, "")
-  const cpDigits = String(form.cp ?? "").replace(/\D/g, "")
+  // estadoNacimiento es solo para calcular la CURP en el front; no se envía al API
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { estadoNacimiento: _sn, ...formData } = form
+  const celularDigits = String(formData.telefonoCelular ?? "").replace(/\D/g, "")
+  const casaDigits = String(formData.telefonoCasa ?? "").replace(/\D/g, "")
+  const emergenciaDigits = String(formData.telefonoEmergencia ?? "").replace(/\D/g, "")
+  const cpDigits = String(formData.cp ?? "").replace(/\D/g, "")
   const tipoSangreAlta = (() => {
-    const t = form.tipoSangre
+    const t = formData.tipoSangre
     if (t === undefined || t === null) return null
     const s = String(t).trim()
     return s === "" ? null : s
   })()
   const tipoCanon =
     TIPOS_ESPINA_BIFIDA_OPCIONES.find(
-      (t) => t.toLowerCase() === String(form.tipo ?? "").trim().toLowerCase()
-    ) ?? String(form.tipo ?? "").trim()
+      (t) => t.toLowerCase() === String(formData.tipo ?? "").trim().toLowerCase()
+    ) ?? String(formData.tipo ?? "").trim()
   // CURP usa H=Hombre / M=Mujer; el backend espera M=Masculino / F=Femenino
-  const generoApi = form.genero === "H" ? "M" : form.genero === "M" ? "F" : form.genero
+  const generoApi = formData.genero === "H" ? "M" : formData.genero === "M" ? "F" : formData.genero
   return {
-    ...form,
-    curp: form.curp.toUpperCase(),
+    ...formData,
+    curp: formData.curp.toUpperCase(),
     genero: generoApi,
     telefonoCelular: celularDigits || undefined,
     telefonoCasa: casaDigits || undefined,
     telefonoEmergencia: emergenciaDigits || undefined,
     cp: cpDigits || undefined,
-    correoElectronico: String(form.correoElectronico ?? "").trim() || undefined,
+    correoElectronico: String(formData.correoElectronico ?? "").trim() || undefined,
     tipoSangre: tipoSangreAlta ?? undefined,
-    usaValvula: (form.usaValvula ? "S" : "N") as unknown as boolean,
+    usaValvula: (formData.usaValvula ? "S" : "N") as unknown as boolean,
     tipo: tipoCanon,
-    ciudad: form.ciudad,
-    estado: form.estado,
+    ciudad: formData.ciudad,
+    estado: formData.estado,
     membresiaEstatus: "Sin membresia",
   }
 }

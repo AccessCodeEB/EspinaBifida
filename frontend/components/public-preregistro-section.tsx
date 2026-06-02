@@ -152,11 +152,11 @@ export function PublicPreregistroSection({
       nombres: form.nombres,
       fechaNacimiento: form.fechaNacimiento,
       genero: form.genero,
-      estado: form.estado,
+      estado: form.estadoNacimiento,
     })
     setForm((p) => ({ ...p, curp: prefix + homoclave }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estado, homoclave])
+  }, [form.apellidoPaterno, form.apellidoMaterno, form.nombres, form.fechaNacimiento, form.genero, form.estadoNacimiento, homoclave])
 
   const turnstileSiteKey = useMemo(
     () =>
@@ -416,7 +416,7 @@ export function PublicPreregistroSection({
               </Select>
             </FieldShell>
 
-            <FieldShell label="Estado" required error={errors.estado} htmlFor="prereg-estado">
+            <FieldShell label="Estado de residencia" required error={errors.estado} htmlFor="prereg-estado">
               <Select
                 value={form.estado || undefined}
                 onValueChange={(v) => change("estado", v)}
@@ -426,6 +426,25 @@ export function PublicPreregistroSection({
                   className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.estado && "border-red-400")}
                 >
                   <SelectValue placeholder="Selecciona un estado" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {ESTADOS.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldShell>
+
+            <FieldShell label="Estado de nacimiento" required error={errors.estadoNacimiento} htmlFor="prereg-estado-nac">
+              <Select
+                value={form.estadoNacimiento || undefined}
+                onValueChange={(v) => change("estadoNacimiento", v)}
+              >
+                <SelectTrigger
+                  id="prereg-estado-nac"
+                  className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.estadoNacimiento && "border-red-400")}
+                >
+                  <SelectValue placeholder="Para generar la CURP" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {ESTADOS.map((e) => (
@@ -554,7 +573,7 @@ export function PublicPreregistroSection({
               </Select>
             </FieldShell>
 
-            <FieldShell label="Tipo de espina bífida" required error={errors.tipo} htmlFor="prereg-tipo">
+            <FieldShell label="Tipo de espina bífida" error={errors.tipo} htmlFor="prereg-tipo">
               <Select
                 value={form.tipo || undefined}
                 onValueChange={(v) => change("tipo", v)}
