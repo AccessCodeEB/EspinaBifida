@@ -29,6 +29,7 @@ import { runMigration025 } from "./migrations/025_comodatos_fecha_devolucion.js"
 import { runMigration026 } from "./migrations/026_eliminar_prestamo_equipo_catalogo.js";
 import { runMigration027 } from "./migrations/027_tipo_cuota_beneficiarios.js";
 import { runMigration028 } from "./migrations/028_cuota_b_articulos.js";
+import { runMigration029 } from "./migrations/029_especialidades_horario.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
@@ -101,6 +102,7 @@ async function initOracle() {
   await runMigration026();
   await runMigration027();
   await runMigration028();
+  await runMigration029();
   initScheduler();
   initNotificacionesScheduler();
 }
