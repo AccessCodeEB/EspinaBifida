@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/select"
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
 import { TIPOS_SANGRE_OPCIONES } from "@/lib/beneficiario-alta"
+import { ESTADOS, MUNICIPIOS } from "@/data/mx-estados-municipios"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
 
@@ -440,12 +441,40 @@ export function BeneficiariosEditDialog({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Ciudad</Label>
-                  <Input value={editForm.ciudad ?? ""} onChange={(e) => handleEditChange("ciudad", e.target.value)} className="bg-background" />
+                  <Label>Estado</Label>
+                  <Select
+                    value={editForm.estado ?? ""}
+                    onValueChange={(v) => {
+                      handleEditChange("estado", v)
+                      handleEditChange("ciudad", "")
+                    }}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Selecciona estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ESTADOS.map((e) => (
+                        <SelectItem key={e} value={e}>{e}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Estado</Label>
-                  <Input value={editForm.estado ?? ""} onChange={(e) => handleEditChange("estado", e.target.value)} className="bg-background" />
+                  <Label>Ciudad / Municipio</Label>
+                  <Select
+                    value={editForm.ciudad ?? ""}
+                    onValueChange={(v) => handleEditChange("ciudad", v)}
+                    disabled={!editForm.estado}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder={editForm.estado ? "Selecciona ciudad" : "Selecciona estado primero"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(MUNICIPIOS[editForm.estado ?? ""] ?? []).map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </SectionCard>
