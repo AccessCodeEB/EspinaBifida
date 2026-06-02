@@ -335,9 +335,15 @@ export function PreregistroSection() {
                           <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Tipo de espina bífida
                           </p>
-                          <p className="text-sm font-normal leading-relaxed text-foreground">
-                            {labelTipoEspinaBifida(solicitudRapida.tipo)}
-                          </p>
+                          {solicitudRapida.tipo?.trim() ? (
+                            <p className="text-sm font-normal leading-relaxed text-foreground">
+                              {labelTipoEspinaBifida(solicitudRapida.tipo)}
+                            </p>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-800/50">
+                              ⚠ Falta diagnóstico — preguntar al paciente
+                            </span>
+                          )}
                         </div>
                         <div>
                           <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

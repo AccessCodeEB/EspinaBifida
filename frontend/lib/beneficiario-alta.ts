@@ -148,13 +148,11 @@ export function validateAlta(form: BeneficiarioAltaForm): Record<string, string>
   if (form.usaValvula === undefined) errs.usaValvula = "Obligatorio"
 
   const tipoEbRaw = String(form.tipo ?? "").trim()
-  const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
-    (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
-  )
-  if (!tipoEbRaw) {
-    errs.tipo = "Selecciona un tipo de espina bífida"
-  } else if (!tipoEbCanon) {
-    errs.tipo = "Tipo no válido"
+  if (tipoEbRaw) {
+    const tipoEbCanon = TIPOS_ESPINA_BIFIDA_OPCIONES.find(
+      (t) => t.toLowerCase() === tipoEbRaw.toLowerCase()
+    )
+    if (!tipoEbCanon) errs.tipo = "Tipo no válido"
   }
 
   const tsAlta = String(form.tipoSangre ?? "").trim()

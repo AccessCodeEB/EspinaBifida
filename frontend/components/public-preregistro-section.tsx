@@ -576,18 +576,21 @@ export function PublicPreregistroSection({
             <FieldShell label="Tipo de espina bífida" error={errors.tipo} htmlFor="prereg-tipo">
               <Select
                 value={form.tipo || undefined}
-                onValueChange={(v) => change("tipo", v)}
+                onValueChange={(v) => change("tipo", v === "__no_se__" ? "" : v)}
               >
                 <SelectTrigger
                   id="prereg-tipo"
                   className={cn("h-11 rounded-lg bg-white dark:bg-slate-900", errors.tipo && "border-red-400")}
                 >
-                  <SelectValue placeholder="Selecciona un tipo" />
+                  <SelectValue placeholder="Selecciona un tipo (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {TIPOS_ESPINA_BIFIDA_OPCIONES.map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
+                  <SelectItem value="__no_se__" className="text-muted-foreground">
+                    No sé / No conozco mi diagnóstico
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </FieldShell>
