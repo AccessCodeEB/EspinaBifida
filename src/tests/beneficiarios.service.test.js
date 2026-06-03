@@ -401,6 +401,51 @@ describe("createPublicSolicitud", () => {
     });
     expect(mockCreate).not.toHaveBeenCalled();
   });
+
+  test("sin tipo → acepta la solicitud (tipo es opcional)", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+    const { tipo, ...sinTipo } = basePublicSolicitud;
+
+    await expect(
+      Service.createPublicSolicitud({ ...sinTipo, genero: "M" })
+    ).resolves.not.toThrow();
+
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  test("tipo undefined → acepta la solicitud", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, genero: "M", tipo: undefined })
+    ).resolves.not.toThrow();
+
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  test("tipo vacío '' → acepta la solicitud", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, genero: "M", tipo: "" })
+    ).resolves.not.toThrow();
+
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  test("tipo '__no_se__' → acepta la solicitud (centinela del frontend)", async () => {
+    mockFindById.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(undefined);
+
+    await expect(
+      Service.createPublicSolicitud({ ...basePublicSolicitud, genero: "M", tipo: "__no_se__" })
+    ).resolves.not.toThrow();
+
+    expect(mockCreate).toHaveBeenCalled();
+  });
 });
 
 describe("approvePreRegistro", () => {
