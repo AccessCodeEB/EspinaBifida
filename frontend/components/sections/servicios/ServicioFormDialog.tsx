@@ -63,6 +63,8 @@ interface ServicioFormDialogProps {
   setTipoServicioSeleccionado: (v: string) => void
   montoServicio: string
   setMontoServicio: (v: string) => void
+  cantidadArticulo: string
+  setCantidadArticulo: (v: string) => void
   descripcionOtro: string
   setDescripcionOtro: (v: string) => void
   fechaServicio: string
@@ -112,6 +114,8 @@ export function ServicioFormDialog({
   setTipoServicioSeleccionado,
   montoServicio,
   setMontoServicio,
+  cantidadArticulo,
+  setCantidadArticulo,
   descripcionOtro,
   setDescripcionOtro,
   fechaServicio,
@@ -146,6 +150,9 @@ export function ServicioFormDialog({
   const articuloLabel = idArticuloSeleccionado
     ? articulosFiltrados.find(a => String(a.clave) === idArticuloSeleccionado)?.descripcion ?? "Seleccionar"
     : "Seleccionar artículo..."
+  const cantidadNumero = Number(cantidadArticulo)
+  const cantidadValida = cantidadArticulo.trim() !== "" && Number.isInteger(cantidadNumero) && cantidadNumero > 0
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -239,7 +246,10 @@ export function ServicioFormDialog({
                 setIdArticuloSeleccionado("")
                 const tipo = catalogoServicios.find(t => t.idTipoServicio === Number(value))
                 const nuevoMonto = tipo?.montoSugerido ?? null
-                if (nuevoMonto !== null) {
+                if (tipo?.tipoServicio === "CONSUMIBLE") {
+                  setMontoServicio("")
+                  setCantidadArticulo("1")
+                } else if (nuevoMonto !== null) {
                   setMontoServicio(String(nuevoMonto.toFixed(2)))
                 } else {
                   setMontoServicio("")
@@ -267,14 +277,12 @@ export function ServicioFormDialog({
           {/* Selector de artículo con búsqueda — CONSUMIBLE */}
           {requiereArticulo && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Artículo a entregar (opcional)
-              </label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Artículo a entregar</label>
               {loadingArticulos ? (
                 <p className="text-xs text-muted-foreground">Cargando inventario...</p>
               ) : articulosFiltrados.length === 0 ? (
                 <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Sin artículos disponibles en inventario — el servicio se registrará sin descuento de stock.
+                  Sin artículos disponibles en inventario para este tipo de servicio.
                 </p>
               ) : (
                 <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
@@ -322,6 +330,29 @@ export function ServicioFormDialog({
             </div>
           )}
 
+          {requiereArticulo && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="1"
+                className="h-10 text-sm"
+                value={cantidadArticulo}
+                onChange={(e) => {
+                  setCantidadArticulo(e.target.value)
+                  if (registroError) setRegistroError("")
+                }}
+              />
+              {!cantidadValida && intentoEnvio && (
+                <p className="text-xs font-medium text-destructive">La cantidad debe ser un entero mayor a 0.</p>
+              )}
+            </div>
+          )}
+
+          
+
           {/* Descripción para "Otros" */}
           {requiereDescripcionOtro && (
             <div className="flex flex-col gap-1.5">
@@ -343,7 +374,7 @@ export function ServicioFormDialog({
           )}
 
           {/* Fecha y monto */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className={requiereArticulo ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
               <Input
@@ -358,22 +389,30 @@ export function ServicioFormDialog({
               />
               {fechaError && <p className="text-sm font-medium text-destructive">{fechaError}</p>}
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="$0.00"
-                className="h-10 text-sm"
-                value={montoServicio}
-                onChange={(e) => {
-                  setMontoServicio(e.target.value)
-                  if (registroError) setRegistroError("")
-                }}
-              />
-            </div>
+            {!requiereArticulo && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="$0.00"
+                  className="h-10 text-sm"
+                  value={montoServicio}
+                  onChange={(e) => {
+                    setMontoServicio(e.target.value)
+                    if (registroError) setRegistroError("")
+                  }}
+                />
+              </div>
+            )}
           </div>
+
+          {requiereArticulo && (
+            <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              El monto se calculará al registrar el servicio según el artículo seleccionado, la cantidad y la cuota del beneficiario.
+            </div>
+          )}
 
           {/* Error de registro */}
           {registroError && (
@@ -398,7 +437,8 @@ export function ServicioFormDialog({
                 fechaEsFutura ||
                 !Number.isInteger(idTipoServicioNumerico) ||
                 idTipoServicioNumerico <= 0 ||
-                !montoEsValido
+                (!requiereArticulo && !montoEsValido) ||
+                (requiereArticulo && !cantidadValida)
               }
               onClick={() => { setIntentoEnvio(true); onRegistrar() }}
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"

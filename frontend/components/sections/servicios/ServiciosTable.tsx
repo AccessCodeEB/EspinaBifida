@@ -221,7 +221,7 @@ export function ServiciosTable({
                     <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
                     <td className="hidden py-3 lg:table-cell">
                       {s.articuloEntregado
-                        ? <span className="text-xs text-foreground">{s.articuloEntregado}</span>
+                        ? <span className="text-xs text-foreground">{s.articuloEntregado}{s.cantidadArticulo ? ` x${s.cantidadArticulo}` : ""}</span>
                         : <span className="text-[11px] text-muted-foreground/60">—</span>
                       }
                     </td>

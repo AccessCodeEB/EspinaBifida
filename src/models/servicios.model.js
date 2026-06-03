@@ -21,6 +21,9 @@ export const findAll = () =>
                JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
                WHERE sa.ID_SERVICIO = s.ID_SERVICIO
                AND ROWNUM = 1) AS ARTICULO_ENTREGADO,
+              (SELECT SUM(sa.CANTIDAD)
+               FROM SERVICIO_ARTICULOS sa
+               WHERE sa.ID_SERVICIO = s.ID_SERVICIO) AS CANTIDAD_ARTICULO,
               CASE
                 WHEN EXISTS (
                   SELECT 1 FROM CREDENCIALES c

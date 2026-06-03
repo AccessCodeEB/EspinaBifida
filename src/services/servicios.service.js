@@ -1,4 +1,5 @@
 import * as ServiciosModel from "../models/servicios.model.js";
+import * as ArticulosModel from "../models/articulos.model.js";
 import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
@@ -25,6 +26,15 @@ function validateMontoReglas(costo, montoPagado) {
   if (montoPagado > costo) {
     throw badRequest("montoPagado no puede ser mayor que costo");
   }
+}
+
+function parseOptionalNumber(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) {
+    throw badRequest("costo debe ser numerico");
+  }
+  return parsed;
 }
 
 function normalizeConsumos(consumos) {
@@ -58,8 +68,8 @@ export const getAll = () => ServiciosModel.findAll();
 export async function createConValidacion(data) {
   const curp = String(data.curp ?? "").trim().toUpperCase();
   const idTipoServicio = parseNumber(data.idTipoServicio, "idTipoServicio");
-  const costo = parseNumber(data.costo, "costo");
   const montoPagado = parseNumber(data.montoPagado ?? 0, "montoPagado");
+  const costoProvisto = parseOptionalNumber(data.costo);
 
   if (!curp) {
     throw badRequest("curp es requerido");
@@ -68,8 +78,6 @@ export async function createConValidacion(data) {
   if (!Number.isInteger(idTipoServicio) || idTipoServicio <= 0) {
     throw badRequest("idTipoServicio debe ser entero positivo");
   }
-
-  validateMontoReglas(costo, montoPagado);
 
   if (data.referenciaTipo && (data.referenciaId === undefined || data.referenciaId === null)) {
     throw badRequest("referenciaId es requerido cuando referenciaTipo existe");
@@ -85,6 +93,13 @@ export async function createConValidacion(data) {
       ? String(data.referenciaTipo).trim().toUpperCase()
       : null;
   const consumos = normalizeConsumos(data.consumos);
+
+  if (consumos.length === 0) {
+    if (costoProvisto === null) {
+      throw badRequest("costo es requerido cuando no hay consumos");
+    }
+    validateMontoReglas(costoProvisto, montoPagado);
+  }
 
   // Single query: check beneficiary status + active membership atomically (no TOCTOU gap)
   const beneficiario = await ServiciosModel.findBeneficiarioActivoConMembresia(curp);
@@ -105,6 +120,26 @@ export async function createConValidacion(data) {
       "CUOTA_NO_ASIGNADA"
     );
   }
+
+  let costo = costoProvisto;
+  if (consumos.length > 0) {
+    costo = 0;
+    for (const consumo of consumos) {
+      const articulo = await ArticulosModel.findById(consumo.idProducto);
+      if (!articulo) {
+        throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+      }
+      const precioUnitario = precioSegunCuota(articulo, beneficiario.TIPO_CUOTA);
+      costo += precioUnitario * consumo.cantidad;
+    }
+    costo = Number(costo.toFixed(2));
+  }
+
+  if (costo === null || costo === undefined) {
+    throw badRequest("costo es requerido cuando no hay consumos");
+  }
+
+  validateMontoReglas(costo, montoPagado);
 
   const payload = {
     curp,

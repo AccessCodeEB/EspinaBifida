@@ -17,6 +17,7 @@ const mockUpdate               = jest.fn();
 const mockFindDetailed         = jest.fn();
 const mockDeleteById           = jest.fn();
 const mockFindBeneficiario     = jest.fn();
+const mockFindArticulo         = jest.fn();
 
 jest.unstable_mockModule('../models/servicios.model.js', () => ({
   findAll:                           mockFindAll,
@@ -29,6 +30,10 @@ jest.unstable_mockModule('../models/servicios.model.js', () => ({
   findDetailed:                      mockFindDetailed,
   deleteById:                        mockDeleteById,
   findBeneficiarioActivoConMembresia: mockFindBeneficiario,
+}));
+
+jest.unstable_mockModule('../models/articulos.model.js', () => ({
+  findById: mockFindArticulo,
 }));
 
 const Service = await import('../services/servicios.service.js');
@@ -98,6 +103,7 @@ describe('createConValidacion — validaciones de entrada', () => {
 
   it('usa createWithInventarioTransaction cuando hay consumos', async () => {
     mockFindBeneficiario.mockResolvedValueOnce(BENEFICIARIO_ACTIVO);
+    mockFindArticulo.mockResolvedValueOnce({ CUOTA_RECUPERACION: 100, CUOTA_B: 150 });
     mockCreateWithInv.mockResolvedValueOnce({ idServicio: 42 });
 
     const result = await Service.createConValidacion({
@@ -108,6 +114,22 @@ describe('createConValidacion — validaciones de entrada', () => {
     expect(mockCreateWithInv).toHaveBeenCalledTimes(1);
     expect(result.idServicio).toBe(42);
   });
+
+  it('calcula el costo desde artículo y cantidad cuando hay consumos y cuota B', async () => {
+    mockFindBeneficiario.mockResolvedValueOnce({ ...BENEFICIARIO_ACTIVO, TIPO_CUOTA: 'B' });
+    mockFindArticulo.mockResolvedValueOnce({ CUOTA_RECUPERACION: 100, CUOTA_B: 150 });
+    mockCreateWithInv.mockResolvedValueOnce({ idServicio: 88 });
+
+    await Service.createConValidacion({
+      curp: CURP, idTipoServicio: 1, montoPagado: 0,
+      consumos: [{ idProducto: 9, cantidad: 3 }],
+    });
+
+    const [payload] = mockCreateWithInv.mock.calls[0];
+    expect(payload.costo).toBe(450);
+  });
+
+  
 });
 
 // ── normalizeConsumos — ramas internas (líneas 37, 46, 54, 58) ────────────────
@@ -149,6 +171,8 @@ describe('createConValidacion — normalizeConsumos', () => {
 
   it('normaliza motivo: string cuando existe, null cuando no existe', async () => {
     mockFindBeneficiario.mockResolvedValueOnce(BENEFICIARIO_ACTIVO);
+    mockFindArticulo.mockResolvedValueOnce({ CUOTA_RECUPERACION: 100, CUOTA_B: null });
+    mockFindArticulo.mockResolvedValueOnce({ CUOTA_RECUPERACION: 100, CUOTA_B: null });
     mockCreateWithInv.mockResolvedValueOnce({ idServicio: 5 });
 
     await Service.createConValidacion({

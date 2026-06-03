@@ -22,12 +22,13 @@ export interface Servicio {
   estatus: string
   notas?: string
   articuloEntregado?: string | null
+  cantidadArticulo?: number | null
 }
 
 export interface NuevoServicioPayload {
   curp: string
   idTipoServicio: number
-  costo: number
+  costo?: number
   montoPagado?: number
   notas?: string
   estatus?: string

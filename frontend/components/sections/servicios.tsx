@@ -171,6 +171,7 @@ export function ServiciosSection() {
   const [beneficiarioEncontrado, setBeneficiarioEncontrado] = useState<BeneficiarioEncontrado | null>(null)
   const [tipoServicioSeleccionado, setTipoServicioSeleccionado] = useState("")
   const [montoServicio, setMontoServicio] = useState("")
+  const [cantidadArticulo, setCantidadArticulo] = useState("1")
   const [descripcionOtro, setDescripcionOtro] = useState("")
   const [fechaServicio, setFechaServicio] = useState(() => new Date().toISOString().split("T")[0])
   const [fechaError, setFechaError] = useState("")
@@ -226,7 +227,6 @@ export function ServiciosSection() {
   const hoy = new Date().toISOString().split("T")[0]
   const idTipoServicioNumerico = Number(tipoServicioSeleccionado)
   const montoNum = Number(montoServicio)
-  const montoEsValido = montoServicio.trim() !== "" && Number.isFinite(montoNum) && montoNum >= 0
   const fechaEsFutura = fechaServicio > hoy
   const tipoSeleccionado = catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)
   const montoSugerido = tipoSeleccionado?.montoSugerido ?? null
@@ -234,6 +234,9 @@ export function ServiciosSection() {
   const tipoServicioClasificacion =
     catalogoServicios.find((t) => t.idTipoServicio === idTipoServicioNumerico)?.tipoServicio ?? "SERVICIO"
   const requiereArticulo = tipoServicioClasificacion === "CONSUMIBLE"
+  const montoEsValido = requiereArticulo || (montoServicio.trim() !== "" && Number.isFinite(montoNum) && montoNum >= 0)
+  const cantidadArticuloNum = Number(cantidadArticulo)
+  const cantidadArticuloValida = cantidadArticulo.trim() !== "" && Number.isInteger(cantidadArticuloNum) && cantidadArticuloNum > 0
   const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros"
 
   const categoriaArticulo =
@@ -401,9 +404,13 @@ export function ServiciosSection() {
   const handleRegistrarServicio = async () => {
     if (!beneficiarioEncontrado) { setRegistroError("Seleccione un beneficiario valido"); return }
     if (!Number.isInteger(idTipoServicioNumerico) || idTipoServicioNumerico <= 0) { setRegistroError("Seleccione un tipo de servicio"); return }
-    if (!montoEsValido) { setRegistroError("Ingrese un monto valido"); return }
+    if (requiereArticulo && !idArticuloSeleccionado) { setRegistroError("Seleccione un artículo para registrar el consumo de inventario"); return }
+    if (requiereArticulo && !cantidadArticuloValida) { setRegistroError("La cantidad debe ser un entero mayor a 0"); return }
+    if (!requiereArticulo && !montoEsValido) { setRegistroError("Ingrese un monto valido"); return }
     if (requiereDescripcionOtro && !descripcionOtro.trim()) { setRegistroError("Debe especificar en que consiste el servicio para la opcion 'Otros'"); return }
     if (fechaEsFutura) { setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores."); return }
+
+    
 
     try {
       setRegistroLoading(true)
@@ -412,14 +419,14 @@ export function ServiciosSection() {
       const result = await createServicio({
         curp:           beneficiarioEncontrado.curp,
         idTipoServicio: idTipoServicioNumerico,
-        costo:          montoNum,
         montoPagado:    0,
         notas:          requiereDescripcionOtro ? `Servicio otros: ${descripcionOtro.trim()}` : undefined,
         estatus:        "COMPLETADO",
         fechaDevolucionEsperada: null,
         consumos: requiereArticulo && idArticuloSeleccionado
-          ? [{ idProducto: Number(idArticuloSeleccionado), cantidad: 1 }]
+          ? [{ idProducto: Number(idArticuloSeleccionado), cantidad: cantidadArticuloNum }]
           : undefined,
+        costo: requiereArticulo ? undefined : montoNum,
       })
       const updated = await getServicios()
       setServiciosRegistrados(updated)
@@ -428,6 +435,7 @@ export function ServiciosSection() {
       setBusquedaBeneficiario("")
       setTipoServicioSeleccionado("")
       setMontoServicio("")
+      setCantidadArticulo("1")
       setDescripcionOtro("")
       setFechaServicio(hoy)
       setIdArticuloSeleccionado("")
@@ -515,6 +523,7 @@ export function ServiciosSection() {
     setBusquedaBeneficiario("")
     setTipoServicioSeleccionado("")
     setMontoServicio("")
+    setCantidadArticulo("1")
     setDescripcionOtro("")
     setFechaServicio(hoy)
     setFechaError("")
@@ -705,7 +714,7 @@ export function ServiciosSection() {
                   { label: "CURP",         value: <span className="font-mono text-[11px]">{servicioDetalle.folio}</span> },
                   { label: "Servicio",     value: servicioDetalle.servicio },
                   ...(servicioDetalle.articuloEntregado
-                    ? [{ label: "Artículo", value: servicioDetalle.articuloEntregado }]
+                    ? [{ label: "Artículo", value: `${servicioDetalle.articuloEntregado}${servicioDetalle.cantidadArticulo ? ` x${servicioDetalle.cantidadArticulo}` : ""}` }]
                     : []),
                   { label: "Fecha",    value: servicioDetalle.fecha },
                   { label: "Monto",    value: <span className="font-bold">{formatMoney(servicioDetalle.montoNumero)}</span> },
@@ -755,6 +764,8 @@ export function ServiciosSection() {
         setTipoServicioSeleccionado={setTipoServicioSeleccionado}
         montoServicio={montoServicio}
         setMontoServicio={setMontoServicio}
+        cantidadArticulo={cantidadArticulo}
+        setCantidadArticulo={setCantidadArticulo}
         descripcionOtro={descripcionOtro}
         setDescripcionOtro={setDescripcionOtro}
         fechaServicio={fechaServicio}
@@ -779,6 +790,7 @@ export function ServiciosSection() {
         loadingArticulos={loadingArticulos}
         idArticuloSeleccionado={idArticuloSeleccionado}
         setIdArticuloSeleccionado={setIdArticuloSeleccionado}
+        
       />
 
       {/* Dialog: Eliminar */}

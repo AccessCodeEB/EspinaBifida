@@ -26,6 +26,7 @@ function mapServicio(row) {
     membresia:         r.membresiaEstatus ?? "Sin membresia",
     notas:             safeClobString(r.notas),
     articuloEntregado: r.articuloEntregado ?? null,
+    cantidadArticulo:  r.cantidadArticulo == null ? null : Number(r.cantidadArticulo),
   };
 }
 
@@ -100,10 +101,11 @@ export async function create(req, res, next) {
       estatus,
       fechaDevolucionEsperada,
     } = req.body;
+    const tieneConsumos = Array.isArray(consumos) && consumos.length > 0;
 
     // Validar campos requeridos
-    if (!curp || !idTipoServicio || costo === undefined) {
-      throw badRequest("CURP, idTipoServicio y costo son requeridos");
+    if (!curp || !idTipoServicio || (!tieneConsumos && costo === undefined)) {
+      throw badRequest("CURP e idTipoServicio son requeridos; costo solo aplica cuando no hay consumos");
     }
 
     const resultado = await ServiciosService.createConValidacion({

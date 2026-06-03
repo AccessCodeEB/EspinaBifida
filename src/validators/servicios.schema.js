@@ -7,13 +7,15 @@ const consumoSchema = z.object({
   idProducto: z.number({ coerce: true }).int().positive().optional(),
   cantidad:   z.number({ coerce: true }).int().positive("cantidad debe ser entero positivo"),
 }).refine(d => d.idArticulo !== undefined || d.idProducto !== undefined, {
+  
+}).refine(d => d.idArticulo !== undefined || d.idProducto !== undefined, {
   message: "consumo debe incluir idArticulo o idProducto",
 });
 
 export const crearServicioSchema = z.object({
   curp:                    z.string().regex(CURP_REGEX, "CURP inválida"),
   idTipoServicio:          z.number({ coerce: true }).int().positive("idTipoServicio debe ser entero positivo"),
-  costo:                   z.number({ coerce: true }).nonnegative("costo debe ser >= 0"),
+  costo:                   z.number({ coerce: true }).nonnegative("costo debe ser >= 0").optional(),
   montoPagado:             z.number({ coerce: true }).nonnegative("montoPagado debe ser >= 0").optional(),
   referenciaId:            z.number({ coerce: true }).int().positive().nullable().optional(),
   referenciaTipo:          z.string().max(50).nullable().optional(),
