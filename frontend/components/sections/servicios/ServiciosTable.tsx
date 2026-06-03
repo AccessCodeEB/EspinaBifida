@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag, FileText } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
 
 function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
@@ -188,6 +188,9 @@ export function ServiciosTable({
               <th className="hidden py-2.5 text-right text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
                 <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}><DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}</button>
               </th>
+              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground xl:table-cell">
+                <span className="inline-flex items-center gap-1"><FileText className="size-3" />NOTAS / CITA</span>
+              </th>
               <th className="py-2.5 pr-5 text-center text-[10px] font-bold tracking-widest text-foreground">
                 <button
                   className={`group inline-flex items-center gap-1 hover:opacity-70 transition-opacity ${estatusCicloIdx > 0 ? "text-primary" : ""}`}
@@ -206,7 +209,7 @@ export function ServiciosTable({
           <tbody className="divide-y divide-border/30">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
+                <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
                   No hay servicios para los filtros seleccionados.
                 </td>
               </tr>
@@ -238,6 +241,12 @@ export function ServiciosTable({
                         <span className="size-1.5 rounded-full bg-slate-400" />Completado
                       </span>
                     </td>
+                      <td className="hidden py-3 xl:table-cell">
+                        {s.notas
+                          ? <p className="max-w-[260px] truncate text-xs text-foreground" title={s.notas}>{s.notas}</p>
+                          : <span className="text-[11px] text-muted-foreground/60">—</span>
+                        }
+                      </td>
                   </tr>
                 ))
             )}

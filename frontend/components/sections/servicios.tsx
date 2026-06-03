@@ -55,6 +55,7 @@ import type { BeneficiarioEncontrado } from "./servicios/ServicioFormDialog"
 const PAGE_SIZE = 25
 const PIE_COLORS = ["#005bb5", "#eab308", "#ef4444", "#10b981", "#9333ea", "#fb923c", "#14b8a6"]
 const NAVY = "#0f4c81"
+const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
 
 function monthKey(date: Date): string {
   const y = date.getFullYear()
@@ -188,6 +189,30 @@ export function ServiciosSection() {
     getCatalogoServicios()
       .then(setCatalogoServicios)
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SERVICIO_DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+
+      if (draft.busquedaBeneficiario) setBusquedaBeneficiario(draft.busquedaBeneficiario)
+      if (draft.beneficiarioEncontrado) setBeneficiarioEncontrado(draft.beneficiarioEncontrado)
+      if (draft.tipoServicioSeleccionado) setTipoServicioSeleccionado(draft.tipoServicioSeleccionado)
+      if (draft.montoServicio !== undefined) setMontoServicio(String(draft.montoServicio))
+      if (draft.cantidadArticulo !== undefined) setCantidadArticulo(String(draft.cantidadArticulo))
+      if (draft.descripcionOtro !== undefined) setDescripcionOtro(String(draft.descripcionOtro))
+      if (draft.fechaServicio) setFechaServicio(draft.fechaServicio)
+      if (draft.idArticuloSeleccionado !== undefined) setIdArticuloSeleccionado(String(draft.idArticuloSeleccionado))
+
+      setFechaError("")
+      setRegistroError("")
+      setShowRegistroDialog(true)
+      sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
+    } catch {
+      // ignore malformed draft payloads
+    }
   }, [])
 
   useEffect(() => {

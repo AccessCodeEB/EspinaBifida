@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search, Check, ChevronsUpDown } from "lucide-react"
 import {
   Dialog,
@@ -33,6 +34,8 @@ import type { Beneficiario } from "@/services/beneficiarios"
 import type { ArticuloInventario } from "@/services/inventario"
 
 const NAVY = "#0f4c81"
+const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
+const CITA_PREFILL_KEY = "prefillCitaFromServicio"
 
 export interface BeneficiarioEncontrado {
   curp: string
@@ -143,6 +146,7 @@ export function ServicioFormDialog({
 }: ServicioFormDialogProps) {
   const [articuloPickerOpen, setArticuloPickerOpen] = useState(false)
   const [intentoEnvio, setIntentoEnvio] = useState(false)
+  const router = useRouter()
 
   const normalizeForSearch = (v: string) =>
     String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
@@ -152,6 +156,43 @@ export function ServicioFormDialog({
     : "Seleccionar artículo..."
   const cantidadNumero = Number(cantidadArticulo)
   const cantidadValida = cantidadArticulo.trim() !== "" && Number.isInteger(cantidadNumero) && cantidadNumero > 0
+  const tipoNormalizado = tipoServicioSeleccionadoLabel
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+  const requiereCita = tipoNormalizado.includes("consulta medica") || tipoNormalizado.includes("estudio medico")
+
+  const guardarBorradorYProgramar = () => {
+    if (!beneficiarioEncontrado) return
+
+    const draft = {
+      busquedaBeneficiario,
+      beneficiarioEncontrado,
+      tipoServicioSeleccionado,
+      montoServicio,
+      cantidadArticulo,
+      descripcionOtro,
+      fechaServicio,
+      idArticuloSeleccionado,
+    }
+
+    const prefill = {
+      curp: beneficiarioEncontrado.curp ?? "",
+      idTipoServicio: Number(idTipoServicioNumerico) > 0 ? Number(idTipoServicioNumerico) : undefined,
+      fecha: fechaServicio || undefined,
+      notas: descripcionOtro?.trim() || undefined,
+      registrarServicio: requiereCita,
+    }
+
+    try {
+      sessionStorage.setItem(SERVICIO_DRAFT_KEY, JSON.stringify(draft))
+      sessionStorage.setItem(CITA_PREFILL_KEY, JSON.stringify(prefill))
+    } catch {
+      // ignore storage errors
+    }
+
+    router.push("/panel?section=citas")
+  }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -430,22 +471,31 @@ export function ServicioFormDialog({
               Cancelar
             </button>
             <button
-              disabled={
-                registroLoading ||
-                !beneficiarioEncontrado ||
-                expedienteBloqueado ||
-                fechaEsFutura ||
-                !Number.isInteger(idTipoServicioNumerico) ||
-                idTipoServicioNumerico <= 0 ||
-                (!requiereArticulo && !montoEsValido) ||
-                (requiereArticulo && !cantidadValida)
-              }
-              onClick={() => { setIntentoEnvio(true); onRegistrar() }}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: NAVY }}
+              disabled={registroLoading || !beneficiarioEncontrado || expedienteBloqueado}
+              onClick={guardarBorradorYProgramar}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
-              {registroLoading ? "Registrando..." : "Registrar servicio"}
+              {requiereCita ? "Programar cita y registrar" : "Programar cita"}
             </button>
+            {!requiereCita && (
+              <button
+                disabled={
+                  registroLoading ||
+                  !beneficiarioEncontrado ||
+                  expedienteBloqueado ||
+                  fechaEsFutura ||
+                  !Number.isInteger(idTipoServicioNumerico) ||
+                  idTipoServicioNumerico <= 0 ||
+                  (!requiereArticulo && !montoEsValido) ||
+                  (requiereArticulo && !cantidadValida)
+                }
+                onClick={() => { setIntentoEnvio(true); onRegistrar() }}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: NAVY }}
+              >
+                {registroLoading ? "Registrando..." : "Registrar servicio"}
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

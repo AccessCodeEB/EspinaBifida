@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getCitas, createCita, COSTO_PRIMERA_CITA, COSTO_SUBSECUENTE_CITA, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
-import { getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
+import { createServicio, getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
 import {
   getEspecialidadesHorario,
   esFechaValidaFrontend,
@@ -24,6 +24,8 @@ import { CitasListView } from "@/components/sections/citas-list-view"
 import { cn } from "@/lib/utils"
 
 const DISPONIBILIDAD_DIAS_BUSQUEDA = 7
+const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
+const CITA_PREFILL_KEY = "prefillCitaFromServicio"
 
 // 30-min time slots 08:00 – 20:00
 const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
@@ -49,6 +51,17 @@ function isSlotInPast(fecha: string, hora: string, now = new Date()): boolean {
 }
 
 const EMPTY_FORM = { curp: "", idTipoServicio: "", especialista: "", fecha: "", hora: "", notas: "" }
+
+function buildNotasServicioDesdeCita(form: typeof EMPTY_FORM) {
+  const partes = [
+    form.especialista ? `Especialidad: ${form.especialista}` : null,
+    form.fecha ? `Fecha cita: ${form.fecha}` : null,
+    form.hora ? `Hora cita: ${form.hora}` : null,
+    form.notas?.trim() ? `Notas cita: ${form.notas.trim()}` : null,
+  ].filter((valor): valor is string => Boolean(valor))
+
+  return partes.join(" | ") || "Registro generado desde una cita programada"
+}
 
 type ActiveView = "calendar" | "list"
 
@@ -85,6 +98,7 @@ export function CitasSection() {
   const [showBenefList, setShowBenefList] = useState(false)
   const [catalogoServicios, setCatalogoServicios] = useState<TipoServicioCompleto[]>([])
   const [especialidades, setEspecialidades] = useState<EspecialidadHorario[]>([])
+  const [origenServicio, setOrigenServicio] = useState<{ registrarServicio: boolean; idTipoServicio: number | null } | null>(null)
 
   const loadCitas = useCallback((silent=false) => {
     if(!silent) setLoading(true)
@@ -105,6 +119,32 @@ export function CitasSection() {
     getCatalogoServicios().then(setCatalogoServicios).catch(() => {})
     getEspecialidadesHorario().then(setEspecialidades).catch(() => {})
   }, [loadCitas])
+
+  // Prefill desde otro flujo (por ejemplo: registrar servicio → programar cita)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(CITA_PREFILL_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw)
+      const pre = {
+        curp: d.curp ?? "",
+        idTipoServicio: d.idTipoServicio ? String(d.idTipoServicio) : "",
+        especialista: d.especialista ?? "",
+        fecha: d.fecha ?? "",
+        hora: d.hora ?? "",
+        notas: d.notas ?? "",
+      }
+      setForm(pre)
+      setOrigenServicio({
+        registrarServicio: Boolean(d.registrarServicio),
+        idTipoServicio: d.idTipoServicio ? Number(d.idTipoServicio) : null,
+      })
+      setShowDialog(true)
+      sessionStorage.removeItem(CITA_PREFILL_KEY)
+    } catch (e) {
+      // ignore
+    }
+  }, [])
 
   const today = useMemo(() => new Date(), [])
 
@@ -262,11 +302,44 @@ export function CitasSection() {
         hora: form.hora,
         notas: form.notas || undefined,
       })
+
+      let servicioRegistrado = false
+      let servicioWarning: string | null = null
+
+      if (origenServicio?.registrarServicio && origenServicio.idTipoServicio) {
+        const tipoServicio = catalogoServicios.find((tipo) => tipo.idTipoServicio === origenServicio.idTipoServicio)
+        const costo = tipoServicio?.montoSugerido ?? 0
+
+        try {
+          await createServicio({
+            curp: form.curp,
+            idTipoServicio: origenServicio.idTipoServicio,
+            costo,
+            montoPagado: 0,
+            notas: buildNotasServicioDesdeCita(form),
+            estatus: "COMPLETADO",
+          })
+          servicioRegistrado = true
+          sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
+        } catch (err) {
+          servicioWarning = friendlyError(err, "Se guardó la cita, pero no se pudo registrar el servicio")
+        }
+      }
+
       setShowDialog(false)
       loadCitas()
-      toast.success("Cita agendada correctamente", {
-        description: `${form.fecha} · ${form.hora}`,
-      })
+      if (servicioRegistrado) {
+        toast.success("Cita agendada y servicio registrado correctamente", {
+          description: `${form.fecha} · ${form.hora}`,
+        })
+      } else if (servicioWarning) {
+        toast.warning("Cita agendada", { description: servicioWarning })
+      } else {
+        toast.success("Cita agendada correctamente", {
+          description: `${form.fecha} · ${form.hora}`,
+        })
+      }
+      setOrigenServicio(null)
     } catch (err: unknown) {
       const msg = friendlyError(err, "No se pudo guardar la cita")
       setSaveError(msg)
