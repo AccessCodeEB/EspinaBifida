@@ -38,6 +38,7 @@ import {
   deleteServicio,
   getServicios,
   getCatalogoServicios,
+  updateServicio,
   type Servicio,
   type TipoServicioCompleto,
 } from "@/services/servicios"
@@ -153,7 +154,7 @@ export function ServiciosSection() {
   const [fechaFinFiltro, setFechaFinFiltro] = useState("")
   const [sortField, setSortField] = useState<SortField>("fecha")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const ESTATUS_CICLO = [null, "COMPLETADO"] as const
+  const ESTATUS_CICLO = [null, "PENDIENTE", "COMPLETADO"] as const
   type EstatusCiclo = typeof ESTATUS_CICLO[number]
   const [estatusCicloIdx, setEstatusCicloIdx] = useState(0)
   const estatusCicloFiltro: EstatusCiclo = ESTATUS_CICLO[estatusCicloIdx]
@@ -166,6 +167,7 @@ export function ServiciosSection() {
   const [servicioParaEliminar, setServicioParaEliminar] = useState<ServicioDetallado | null>(null)
   const [eliminandoServicio, setEliminandoServicio] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [updatingServicioId, setUpdatingServicioId] = useState<number | null>(null)
 
   // ── Form state ──
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
@@ -313,9 +315,12 @@ export function ServiciosSection() {
     [serviciosConFecha, selectedMonth]
   )
 
-  const montoMes = useMemo(() => serviciosMes.reduce((acc, s) => acc + s.montoNumero, 0), [serviciosMes])
+  const montoMes = useMemo(
+    () => serviciosMes.filter((s) => String(s.estatus ?? "").toUpperCase() === "COMPLETADO").reduce((acc, s) => acc + s.montoNumero, 0),
+    [serviciosMes]
+  )
   const pendientesMes = useMemo(
-    () => serviciosMes.filter((s) => s.estatus !== "COMPLETADO").length,
+    () => serviciosMes.filter((s) => String(s.estatus ?? "").toUpperCase() === "PENDIENTE").length,
     [serviciosMes]
   )
 
@@ -348,7 +353,7 @@ export function ServiciosSection() {
   const monthlyBarData = useMemo(() => {
     return buildLastMonths(selectedMonth, 6).map((m) => {
       const monto = serviciosConFecha
-        .filter((s) => s.mesClave === m)
+        .filter((s) => s.mesClave === m && String(s.estatus ?? "").toUpperCase() === "COMPLETADO")
         .reduce((acc, s) => acc + s.montoNumero, 0)
       return { mes: monthLabel(m), mesClave: m, monto: Number(monto.toFixed(2)) }
     })
@@ -506,6 +511,20 @@ export function ServiciosSection() {
       toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
     } finally {
       setEliminandoServicio(false)
+    }
+  }
+
+  const handleActualizarEstatusServicio = async (idServicio: number, estatus: string) => {
+    try {
+      setUpdatingServicioId(idServicio)
+      await updateServicio(idServicio, { estatus })
+      const updated = await getServicios()
+      setServiciosRegistrados(updated)
+      toast.success("Estatus actualizado")
+    } catch (err) {
+      toast.error(friendlyError(err, "No se pudo actualizar el estatus"))
+    } finally {
+      setUpdatingServicioId(null)
     }
   }
 
@@ -716,12 +735,14 @@ export function ServiciosSection() {
         onSortBy={handleSortBy}
         onSortPreset={applySortPreset}
         estatusCicloIdx={estatusCicloIdx}
-        onCicloEstatus={() => setEstatusCicloIdx(i => (i + 1) % 4)}
+        onCicloEstatus={() => setEstatusCicloIdx(i => (i + 1) % 3)}
 
         onRowClick={setServicioDetalle}
         setPage={setPage}
         pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
         onUndoDelete={handleUndoDelete}
+        onUpdateEstatus={handleActualizarEstatusServicio}
+        updatingServicioId={updatingServicioId}
       />}
 
       {/* Dialog: Detalle */}

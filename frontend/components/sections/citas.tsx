@@ -120,6 +120,16 @@ export function CitasSection() {
     getEspecialidadesHorario().then(setEspecialidades).catch(() => {})
   }, [loadCitas])
 
+  const bloqueadoDesdeServicios = Boolean(origenServicio?.registrarServicio)
+
+  useEffect(() => {
+    if (!bloqueadoDesdeServicios || !form.curp || buscaBenef) return
+    const beneficiario = beneficiarios.find((b) => String(b.curp ?? "").trim() === String(form.curp).trim())
+    if (beneficiario) {
+      setBuscaBenef(`${beneficiario.nombres} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.replace(/\s+/g, " ").trim())
+    }
+  }, [bloqueadoDesdeServicios, beneficiarios, buscaBenef, form.curp])
+
   // Prefill desde otro flujo (por ejemplo: registrar servicio → programar cita)
   useEffect(() => {
     try {
@@ -294,7 +304,7 @@ export function CitasSection() {
     if (slotError) { setSaveError(slotError); return }
     setSaving(true); setSaveError(null)
     try {
-      await createCita({
+      const citaCreada = await createCita({
         curp: form.curp,
         idTipoServicio: Number(form.idTipoServicio),
         especialista: form.especialista || undefined,
@@ -303,26 +313,34 @@ export function CitasSection() {
         notas: form.notas || undefined,
       })
 
+      const citaId = Number(citaCreada?.result?.idCita ?? 0)
+
       let servicioRegistrado = false
       let servicioWarning: string | null = null
 
       if (origenServicio?.registrarServicio && origenServicio.idTipoServicio) {
-        const tipoServicio = catalogoServicios.find((tipo) => tipo.idTipoServicio === origenServicio.idTipoServicio)
-        const costo = tipoServicio?.montoSugerido ?? 0
+        if (citaId > 0) {
+          const tipoServicio = catalogoServicios.find((tipo) => tipo.idTipoServicio === origenServicio.idTipoServicio)
+          const costo = tipoServicio?.montoSugerido ?? 0
 
-        try {
-          await createServicio({
-            curp: form.curp,
-            idTipoServicio: origenServicio.idTipoServicio,
-            costo,
-            montoPagado: 0,
-            notas: buildNotasServicioDesdeCita(form),
-            estatus: "COMPLETADO",
-          })
-          servicioRegistrado = true
-          sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
-        } catch (err) {
-          servicioWarning = friendlyError(err, "Se guardó la cita, pero no se pudo registrar el servicio")
+          try {
+            await createServicio({
+              curp: form.curp,
+              idTipoServicio: origenServicio.idTipoServicio,
+              costo,
+              montoPagado: 0,
+              notas: buildNotasServicioDesdeCita(form),
+              estatus: "PENDIENTE",
+              referenciaId: citaId,
+              referenciaTipo: "CITA",
+            })
+            servicioRegistrado = true
+            sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
+          } catch (err) {
+            servicioWarning = friendlyError(err, "Se guardó la cita, pero no se pudo registrar el servicio")
+          }
+        } else {
+          servicioWarning = "Se guardó la cita, pero no se pudo vincular el servicio porque faltó el ID de cita."
         }
       }
 
@@ -472,8 +490,10 @@ export function CitasSection() {
                 <Input
                   placeholder="Buscar por folio o nombre..."
                   className="h-10 pr-8 text-sm"
+                  disabled={bloqueadoDesdeServicios}
                   value={buscaBenef}
                   onChange={e => {
+                    if (bloqueadoDesdeServicios) return
                     setBuscaBenef(e.target.value)
                     setForm(f => ({ ...f, curp: "" }))
                     setShowBenefList(true)
@@ -481,18 +501,20 @@ export function CitasSection() {
                     setSmartSuggestion(null)
                   }}
                 />
-                <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setShowBenefList(v => !v)
-                    // Al reabrir para cambiar, limpiamos la seleccion previa
-                    if (!showBenefList && form.curp) {
-                      setForm(f => ({ ...f, curp: "" }))
-                      setBuscaBenef("")
-                      setSmartSuggestion(null)
-                    }
-                  }}>
-                  <ChevronDown className="size-4" />
-                </button>
+                {!bloqueadoDesdeServicios ? (
+                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setShowBenefList(v => !v)
+                      // Al reabrir para cambiar, limpiamos la seleccion previa
+                      if (!showBenefList && form.curp) {
+                        setForm(f => ({ ...f, curp: "" }))
+                        setBuscaBenef("")
+                        setSmartSuggestion(null)
+                      }
+                    }}>
+                    <ChevronDown className="size-4" />
+                  </button>
+                ) : null}
               </div>
               {showBenefList && benefFiltrados.length > 0 && (
                 <div className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-border/60 bg-background shadow-lg">
@@ -508,6 +530,9 @@ export function CitasSection() {
               )}
               {form.curp && <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">✓ Seleccionado: {form.curp}</p>}
               {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>}
+              {bloqueadoDesdeServicios && (
+                <p className="text-[11px] text-muted-foreground">Estos datos vienen heredados desde el módulo de servicios y no pueden modificarse aquí.</p>
+              )}
             </div>
 
             {/* Costo auto-detectado (solo lectura) */}
@@ -536,12 +561,15 @@ export function CitasSection() {
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de servicio</label>
-              <Select value={form.idTipoServicio} onValueChange={v => { setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }}>
+              <Select value={form.idTipoServicio} onValueChange={v => { if (bloqueadoDesdeServicios) return; setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }} disabled={bloqueadoDesdeServicios}>
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
                   {catalogoServicios.map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {bloqueadoDesdeServicios && (
+                <p className="text-[11px] text-muted-foreground">El tipo de servicio ya fue definido en el módulo de servicios.</p>
+              )}
             </div>
 
             {/* Especialista */}

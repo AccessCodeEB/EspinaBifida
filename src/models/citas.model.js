@@ -33,20 +33,29 @@ export const countCitasByCurp = (curp) =>
     ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
   );
 
-export const create = ({ curp, idTipoServicio, especialista, fecha, estatus, notas, costo }) =>
-  withConnection(conn =>
-    conn.execute(
+export const create = async ({ curp, idTipoServicio, especialista, fecha, estatus, notas, costo }) =>
+  withConnection(async conn => {
+    const idResult = await conn.execute(`SELECT SEQ_CITAS.NEXTVAL AS NEXT_ID FROM DUAL`);
+    const idCita = Number(idResult.rows?.[0]?.NEXT_ID ?? 0);
+
+    if (!Number.isInteger(idCita) || idCita <= 0) {
+      throw new Error("No se pudo generar ID_CITA");
+    }
+
+    await conn.execute(
       `INSERT INTO CITAS (
         ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA,
         FECHA, ESTATUS, NOTAS, COSTO
       ) VALUES (
-        SEQ_CITAS.NEXTVAL, :curp, :idTipoServicio, :especialista,
+        :idCita, :curp, :idTipoServicio, :especialista,
         TO_TIMESTAMP(:fecha, 'YYYY-MM-DD HH24:MI:SS'), :estatus, :notas, :costo
       )`,
-      { curp, idTipoServicio, especialista, fecha, estatus, notas, costo },
+      { idCita, curp, idTipoServicio, especialista, fecha, estatus, notas, costo },
       { autoCommit: true }
-    )
-  );
+    );
+
+    return { idCita };
+  });
 
 export const update = (id, { curp, idTipoServicio, especialista, fecha, estatus, notas }) =>
   withConnection(conn =>

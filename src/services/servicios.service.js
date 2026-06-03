@@ -204,9 +204,12 @@ export async function update(idServicio, data) {
     }
   }
 
+  const estatus = data.estatus !== undefined ? String(data.estatus).trim().toUpperCase() : String(servicio.ESTATUS_SERVICIO ?? servicio.ESTATUS ?? "COMPLETADO").toUpperCase();
+
   return ServiciosModel.update(idServicio, {
     montoPagado,
     notas: data.notas ?? servicio.NOTAS ?? null,
+    estatus,
   });
 }
 

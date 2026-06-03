@@ -470,13 +470,16 @@ export function ServicioFormDialog({
             >
               Cancelar
             </button>
-            <button
-              disabled={registroLoading || !beneficiarioEncontrado || expedienteBloqueado}
-              onClick={guardarBorradorYProgramar}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-            >
-              {requiereCita ? "Programar cita y registrar" : "Programar cita"}
-            </button>
+            {requiereCita && (
+              <button
+                disabled={registroLoading || !beneficiarioEncontrado || expedienteBloqueado}
+                onClick={guardarBorradorYProgramar}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ backgroundColor: NAVY }}
+              >
+                Programar cita y registrar
+              </button>
+            )}
             {!requiereCita && (
               <button
                 disabled={

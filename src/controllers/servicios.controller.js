@@ -149,18 +149,24 @@ export async function getById(req, res, next) {
 export async function update(req, res, next) {
   try {
     const idServicio = parseIdServicio(req.params.idServicio);
-    const { montoPagado, notas } = req.body;
+    const { montoPagado, notas, estatus } = req.body;
 
     /* istanbul ignore next */
     if (!idServicio) throw badRequest("ID de servicio requerido");
 
-    if (montoPagado === undefined && notas === undefined) {
+    if (montoPagado === undefined && notas === undefined && estatus === undefined) {
       throw badRequest("Debe enviar al menos un campo para actualizar");
+    }
+
+    const estatusNormalizado = estatus === undefined || estatus === null ? undefined : String(estatus).trim().toUpperCase();
+    if (estatusNormalizado && !["PENDIENTE", "COMPLETADO"].includes(estatusNormalizado)) {
+      throw badRequest("estatus debe ser PENDIENTE o COMPLETADO");
     }
 
     await ServiciosService.update(idServicio, {
       montoPagado,
       notas,
+      estatus: estatusNormalizado,
     });
 
     res.json({ message: "Servicio actualizado exitosamente" });

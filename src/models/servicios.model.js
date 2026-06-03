@@ -3,6 +3,18 @@ import { getConnection, withConnection } from "../config/db.js";
 import { applyMovimientoConConexion } from "./inventario.model.js";
 import { internal } from "../utils/httpErrors.js";
 
+function buildEstatusServicioSql(citaAlias = "cita") {
+  return `
+              CASE
+                WHEN UPPER(NVL(s.ESTATUS, 'COMPLETADO')) = 'PENDIENTE'
+                 AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
+                 AND ${citaAlias}.ID_CITA IS NOT NULL
+                 AND ${citaAlias}.FECHA <= SYSTIMESTAMP
+                THEN 'COMPLETADO'
+                ELSE UPPER(NVL(s.ESTATUS, 'COMPLETADO'))
+              END AS ESTATUS_SERVICIO`;
+}
+
 export const findAll = () =>
   withConnection(conn =>
     conn.execute(
@@ -14,7 +26,7 @@ export const findAll = () =>
               s.COSTO,
               s.MONTO_PAGADO,
               s.NOTAS,
-              NVL(s.ESTATUS, 'COMPLETADO') AS ESTATUS_SERVICIO,
+              ${buildEstatusServicioSql("cita")},
               NVL(b.ESTATUS, 'Activo') AS ESTATUS_BENEFICIARIO,
               (SELECT LISTAGG(a.DESCRIPCION, ', ') WITHIN GROUP (ORDER BY a.DESCRIPCION)
                FROM SERVICIO_ARTICULOS sa
@@ -42,7 +54,8 @@ export const findAll = () =>
                 ) THEN 'Vencida'
                 ELSE 'Sin membresia'
               END AS MEMBRESIA_ESTATUS
-       FROM SERVICIOS s
+      FROM SERVICIOS s
+      LEFT JOIN CITAS cita ON cita.ID_CITA = s.REFERENCIA_ID AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
        LEFT JOIN BENEFICIARIOS b ON b.CURP = s.CURP
        LEFT JOIN SERVICIOS_CATALOGO cat ON cat.ID_TIPO_SERVICIO = s.ID_TIPO_SERVICIO
        ORDER BY s.FECHA DESC`
@@ -80,9 +93,11 @@ export const findBeneficiarioActivoConMembresia = (curp) =>
 export const findByCurp = (curp) =>
   withConnection(conn =>
     conn.execute(
-      `SELECT ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO,
-              MONTO_PAGADO, REFERENCIA_ID, REFERENCIA_TIPO, NOTAS
-       FROM SERVICIOS
+      `SELECT s.ID_SERVICIO, s.CURP, s.ID_TIPO_SERVICIO, s.FECHA, s.COSTO,
+              s.MONTO_PAGADO, s.REFERENCIA_ID, s.REFERENCIA_TIPO, s.NOTAS,
+              ${buildEstatusServicioSql("cita")}
+       FROM SERVICIOS s
+       LEFT JOIN CITAS cita ON cita.ID_CITA = s.REFERENCIA_ID AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
        WHERE CURP = :curp
        ORDER BY FECHA DESC`,
       { curp }
@@ -94,9 +109,11 @@ export const findByCurpPaginated = (curp, page = 1, limit = 10) => {
   const offset = (page - 1) * limit;
   return withConnection(conn =>
     conn.execute(
-      `SELECT ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO,
-              MONTO_PAGADO, REFERENCIA_ID, REFERENCIA_TIPO, NOTAS
-       FROM SERVICIOS
+            `SELECT s.ID_SERVICIO, s.CURP, s.ID_TIPO_SERVICIO, s.FECHA, s.COSTO,
+              s.MONTO_PAGADO, s.REFERENCIA_ID, s.REFERENCIA_TIPO, s.NOTAS,
+              ${buildEstatusServicioSql("cita")}
+             FROM SERVICIOS s
+             LEFT JOIN CITAS cita ON cita.ID_CITA = s.REFERENCIA_ID AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
        WHERE CURP = :curp
        ORDER BY FECHA DESC
        OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
@@ -312,10 +329,13 @@ export async function findDetailed(filters = {}) {
          s.MONTO_PAGADO,
          s.REFERENCIA_ID,
          s.REFERENCIA_TIPO,
-         s.NOTAS
+         s.NOTAS,
+         ${buildEstatusServicioSql("cita")}
        FROM SERVICIOS s
        LEFT JOIN SERVICIOS_CATALOGO c
          ON c.ID_TIPO_SERVICIO = s.ID_TIPO_SERVICIO
+       LEFT JOIN CITAS cita
+         ON cita.ID_CITA = s.REFERENCIA_ID AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
        ${whereClause}
        ORDER BY s.FECHA DESC
        OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
@@ -353,10 +373,12 @@ export async function createWithHistorialTransaction(data) {
 export const findById = (idServicio) =>
   withConnection(conn =>
     conn.execute(
-      `SELECT ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO,
-              MONTO_PAGADO, REFERENCIA_ID, REFERENCIA_TIPO, NOTAS
-       FROM SERVICIOS
-       WHERE ID_SERVICIO = :idServicio`,
+      `SELECT s.ID_SERVICIO, s.CURP, s.ID_TIPO_SERVICIO, s.FECHA, s.COSTO,
+              s.MONTO_PAGADO, s.REFERENCIA_ID, s.REFERENCIA_TIPO, s.NOTAS,
+              ${buildEstatusServicioSql("cita")}
+       FROM SERVICIOS s
+       LEFT JOIN CITAS cita ON cita.ID_CITA = s.REFERENCIA_ID AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
+       WHERE s.ID_SERVICIO = :idServicio`,
       { idServicio }
     ).then(r => r.rows[0] ?? null)
   );
@@ -367,7 +389,8 @@ export const update = (idServicio, data) =>
     conn.execute(
       `UPDATE SERVICIOS SET
          MONTO_PAGADO = :montoPagado,
-         NOTAS = :notas
+         NOTAS = :notas,
+         ESTATUS = :estatus
        WHERE ID_SERVICIO = :idServicio`,
       { ...data, idServicio },
       { autoCommit: true }

@@ -21,7 +21,7 @@ export const crearServicioSchema = z.object({
   referenciaTipo:          z.string().max(50).nullable().optional(),
   notas:                   z.string().max(1000).nullable().optional(),
   consumos:                z.array(consumoSchema).optional(),
-  estatus:                 z.enum(["COMPLETADO"]).optional(),
+  estatus:                 z.enum(["PENDIENTE", "COMPLETADO"]).optional(),
 });
 
 export const actualizarServicioSchema = z.object({

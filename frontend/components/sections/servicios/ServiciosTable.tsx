@@ -1,6 +1,7 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag, FileText } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag, FileText, PencilLine } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { ServicioDetallado, SortField } from "./types"
 
 function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
@@ -14,6 +15,31 @@ function formatMoney(value: number): string {
     currency: "MXN",
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function renderEstatusBadge(estatus: string | null | undefined) {
+  const value = String(estatus ?? "").toUpperCase()
+  if (value === "PENDIENTE") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
+        <span className="size-1.5 rounded-full bg-amber-500" />Pendiente
+      </span>
+    )
+  }
+
+  if (value === "COMPLETADO") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+        <span className="size-1.5 rounded-full bg-emerald-500" />Completado
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-slate-400" />{estatus || "—"}
+    </span>
+  )
 }
 
 interface ServiciosTableProps {
@@ -51,6 +77,8 @@ interface ServiciosTableProps {
   onUndoDelete: () => void
   estatusCicloIdx: number
   onCicloEstatus: () => void
+  onUpdateEstatus: (idServicio: number, estatus: string) => void | Promise<void>
+  updatingServicioId: number | null
 }
 
 export function ServiciosTable({
@@ -83,8 +111,10 @@ export function ServiciosTable({
   onUndoDelete,
   estatusCicloIdx,
   onCicloEstatus,
+  onUpdateEstatus,
+  updatingServicioId,
 }: ServiciosTableProps) {
-  const CICLO_LABELS = ["TODOS", "COMPLETADO"] as const
+  const CICLO_LABELS = ["TODOS", "PENDIENTE", "COMPLETADO"] as const
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
@@ -185,10 +215,10 @@ export function ServiciosTable({
               <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
                 <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("fecha")}><Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}</button>
               </th>
-              <th className="hidden py-2.5 text-right text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
+              <th className="hidden py-2.5 pr-4 text-right text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
                 <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}><DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}</button>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground xl:table-cell">
+              <th className="hidden py-2.5 pl-6 text-left text-[10px] font-bold tracking-widest text-foreground xl:table-cell">
                 <span className="inline-flex items-center gap-1"><FileText className="size-3" />NOTAS / CITA</span>
               </th>
               <th className="py-2.5 pr-5 text-center text-[10px] font-bold tracking-widest text-foreground">
@@ -235,18 +265,33 @@ export function ServiciosTable({
                       {s.cantidadArticulo ? <span className="text-xs font-semibold text-foreground">{s.cantidadArticulo}</span> : <span className="text-[11px] text-muted-foreground/60">—</span>}
                     </td>
                     <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
-                    <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
-                    <td className="py-3 pr-5 text-center">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        <span className="size-1.5 rounded-full bg-slate-400" />Completado
-                      </span>
+                    <td className="hidden py-3 pr-4 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
+                    <td className="hidden py-3 pl-6 xl:table-cell">
+                      {s.notas
+                        ? <p className="max-w-[260px] truncate text-xs text-foreground" title={s.notas}>{s.notas}</p>
+                        : <span className="text-[11px] text-muted-foreground/60">—</span>
+                      }
                     </td>
-                      <td className="hidden py-3 xl:table-cell">
-                        {s.notas
-                          ? <p className="max-w-[260px] truncate text-xs text-foreground" title={s.notas}>{s.notas}</p>
-                          : <span className="text-[11px] text-muted-foreground/60">—</span>
-                        }
-                      </td>
+                    <td className="py-3 pr-5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex min-w-[190px] items-center justify-end gap-2">
+                        {updatingServicioId === s.id ? (
+                          <span className="text-[11px] text-muted-foreground">Guardando...</span>
+                        ) : null}
+                        <Select
+                          value={String(s.estatus ?? "").toUpperCase() === "PENDIENTE" ? "PENDIENTE" : "COMPLETADO"}
+                          onValueChange={(value) => onUpdateEstatus(s.id, value)}
+                          disabled={updatingServicioId === s.id}
+                        >
+                          <SelectTrigger className="h-8 w-32 text-[11px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                            <SelectItem value="COMPLETADO">Completado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </td>
                   </tr>
                 ))
             )}

@@ -24,6 +24,13 @@ export interface NuevaCitaPayload {
   notas?: string
 }
 
+export interface CreateCitaResponse {
+  message: string
+  result: {
+    idCita: number
+  }
+}
+
 /** GET /citas */
 export function getCitas() {
   return apiClient.get<Cita[]>("/citas")
@@ -31,7 +38,7 @@ export function getCitas() {
 
 /** POST /citas */
 export function createCita(data: NuevaCitaPayload) {
-  return apiClient.post<{ message: string }>("/citas", data)
+  return apiClient.post<CreateCitaResponse>("/citas", data)
 }
 
 /** PATCH /citas/:id — actualiza el estatus */

@@ -74,7 +74,7 @@ export function ServiciosChartsKpis({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: "Servicios del mes",   value: totalMes,               sub: `Período: ${monthInputToLabel(selectedMonth)}`,          icon: ClipboardList,    color: NAVY      },
-          { label: "Monto total del mes", value: formatMoney(montoMes),  sub: "Suma de servicios registrados",                          icon: CircleDollarSign, color: "#10b981" },
+          { label: "Monto completado del mes", value: formatMoney(montoMes),  sub: "Solo servicios con estatus completado",                  icon: CircleDollarSign, color: "#10b981" },
           { label: "Pendientes",          value: pendientesMes,          sub: "Servicios con estatus pendiente",                        icon: AlertTriangle,    color: "#f59e0b" },
           { label: "Tipos distintos",     value: tiposDistintosMes,      sub: `Top: ${topTipoMes.label} (${topTipoMes.value})`,          icon: Layers3,         color: "#e11d48" },
         ].map(({ label, value, sub, icon: Icon, color }) => (
