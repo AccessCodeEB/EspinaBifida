@@ -224,6 +224,199 @@ describe("validarSlotEspecialidad", () => {
 // Regresión ISSUE-001: updateEspecialidad debe persistir diaSemana correctamente
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// esFechaValida — rama faltante: tipo desconocido
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("esFechaValida — tipo desconocido", () => {
+  test("TIPO_FRECUENCIA desconocido → false", () => {
+    expect(Svc.esFechaValida({ TIPO_FRECUENCIA: "QUINCENAL", DIA_SEMANA: 5 }, new Date(2026, 5, 5))).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getEspecialidadesHorario
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getEspecialidadesHorario", () => {
+  test("retorna lista mapeada con soloActivos=true por defecto", async () => {
+    mockFindAll.mockResolvedValue([ESP_PSICOLOGIA]);
+    const result = await Svc.getEspecialidadesHorario();
+    expect(mockFindAll).toHaveBeenCalledWith({ soloActivos: true });
+    expect(result[0]).toMatchObject({ idEspecialidad: 3, nombre: "Psicología", activo: true });
+  });
+
+  test("soloActivos=false pasa al modelo", async () => {
+    mockFindAll.mockResolvedValue([{ ...ESP_PSICOLOGIA, ACTIVO: 0 }]);
+    const result = await Svc.getEspecialidadesHorario({ soloActivos: false });
+    expect(result[0].activo).toBe(false);
+  });
+
+  test("HORA_FIN null → horaFin null en resultado", async () => {
+    mockFindAll.mockResolvedValue([ESP_CIRUGIA]);
+    const [r] = await Svc.getEspecialidadesHorario();
+    expect(r.horaFin).toBeNull();
+  });
+
+  test("CAPACIDAD_MAX null → capacidadMax null en resultado", async () => {
+    mockFindAll.mockResolvedValue([ESP_CIRUGIA]);
+    const [r] = await Svc.getEspecialidadesHorario();
+    expect(r.capacidadMax).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getEspecialidadById
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getEspecialidadById", () => {
+  test("encontrada → retorna objeto mapeado", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    const r = await Svc.getEspecialidadById(3);
+    expect(r.nombre).toBe("Psicología");
+    expect(r.idEspecialidad).toBe(3);
+  });
+
+  test("no encontrada → lanza 404", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(Svc.getEspecialidadById(999)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getEspecialidadByNombre
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getEspecialidadByNombre", () => {
+  test("delega al modelo y retorna la fila", async () => {
+    mockFindByNombre.mockResolvedValue(ESP_PSICOLOGIA);
+    const r = await Svc.getEspecialidadByNombre("Psicología");
+    expect(mockFindByNombre).toHaveBeenCalledWith("Psicología");
+    expect(r).toBe(ESP_PSICOLOGIA);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateEspecialidad — validaciones
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateEspecialidad — validaciones y ramas", () => {
+  test("especialidad no encontrada → lanza 404", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(Svc.updateEspecialidad(999, {})).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("horaInicio con formato inválido → lanza 400", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    await expect(Svc.updateEspecialidad(3, { horaInicio: "10h00" })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("horaFin con formato inválido → lanza 400", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    await expect(Svc.updateEspecialidad(3, { horaFin: "12h00" })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("horaFin = null es válido (sin límite superior)", async () => {
+    mockFindById.mockResolvedValueOnce(ESP_PSICOLOGIA).mockResolvedValueOnce(ESP_PSICOLOGIA);
+    mockUpdate.mockResolvedValue(undefined);
+    await expect(Svc.updateEspecialidad(3, { horaFin: null })).resolves.toBeDefined();
+  });
+
+  test("tipoFrecuencia inválido → lanza 400", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    await expect(Svc.updateEspecialidad(3, { tipoFrecuencia: "DIARIO" })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("tipoFrecuencia MENSUAL_PRIMER_DIA es válido", async () => {
+    mockFindById.mockResolvedValueOnce(ESP_PSICOLOGIA).mockResolvedValueOnce(ESP_PSICOLOGIA);
+    mockUpdate.mockResolvedValue(undefined);
+    await expect(Svc.updateEspecialidad(3, { tipoFrecuencia: "MENSUAL_PRIMER_DIA" })).resolves.toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getExcepciones
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getExcepciones", () => {
+  test("especialidad no encontrada → lanza 404", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(Svc.getExcepciones(999)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("retorna lista mapeada con motivo", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepciones.mockResolvedValue([
+      { ID_EXCEPCION: 1, ID_ESPECIALIDAD: 3, FECHA: "2026-07-03", MOTIVO: "Congreso", CREATED_AT: "2026-06-01" },
+    ]);
+    const result = await Svc.getExcepciones(3);
+    expect(result[0]).toMatchObject({ idExcepcion: 1, fecha: "2026-07-03", motivo: "Congreso" });
+  });
+
+  test("MOTIVO null → motivo null en resultado", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepciones.mockResolvedValue([
+      { ID_EXCEPCION: 2, ID_ESPECIALIDAD: 3, FECHA: "2026-07-04", MOTIVO: null, CREATED_AT: "2026-06-01" },
+    ]);
+    const result = await Svc.getExcepciones(3);
+    expect(result[0].motivo).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createExcepcion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createExcepcion", () => {
+  test("especialidad no encontrada → lanza 404", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(Svc.createExcepcion(999, "2026-07-01", null)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("fecha con formato inválido → lanza 400", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    await expect(Svc.createExcepcion(3, "01-07-2026", null)).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("fecha duplicada → lanza 409", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepcionByFecha.mockResolvedValue({ ID_EXCEPCION: 5 });
+    await expect(Svc.createExcepcion(3, "2026-07-03", null)).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  test("crea correctamente con motivo", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCreateExcepcion.mockResolvedValue(undefined);
+    const r = await Svc.createExcepcion(3, "2026-07-03", "Vacaciones");
+    expect(r).toEqual({ idEspecialidad: 3, fecha: "2026-07-03", motivo: "Vacaciones" });
+  });
+
+  test("motivo undefined → motivo null en resultado", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCreateExcepcion.mockResolvedValue(undefined);
+    const r = await Svc.createExcepcion(3, "2026-07-10", undefined);
+    expect(r.motivo).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// deleteExcepcion
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("deleteExcepcion", () => {
+  test("delega al modelo con el id correcto", async () => {
+    mockDeleteExcepcion.mockResolvedValue(undefined);
+    await Svc.deleteExcepcion(7);
+    expect(mockDeleteExcepcion).toHaveBeenCalledWith(7);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// regression ISSUE-001 — updateEspecialidad persiste diaSemana
+// ═══════════════════════════════════════════════════════════════════════════════
+
 describe("regression ISSUE-001 — updateEspecialidad persiste diaSemana", () => {
   test("PATCH con diaSemana=1 debe llamar model.update con diaSemana=1 (no undefined)", async () => {
     mockFindById.mockResolvedValue(ESP_PSICOLOGIA);

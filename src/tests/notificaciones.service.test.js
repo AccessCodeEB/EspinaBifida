@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockFindAll                      = jest.fn();
+const mockDeleteE2ENotificaciones      = jest.fn();
 const mockFindPendientes               = jest.fn();
 const mockCountPendientes              = jest.fn();
 const mockMarkAsRead                   = jest.fn();
@@ -21,6 +22,7 @@ const mockFindComodatosPorVencer       = jest.fn();
 
 jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findAll:                   mockFindAll,
+  deleteE2ENotificaciones:   mockDeleteE2ENotificaciones,
   findPendientes:            mockFindPendientes,
   countPendientes:           mockCountPendientes,
   markAsRead:                mockMarkAsRead,
@@ -49,6 +51,14 @@ describe('getAll', () => {
     mockFindAll.mockResolvedValueOnce([]);
     await Service.getAll(50);
     expect(mockFindAll).toHaveBeenCalledWith(50);
+  });
+});
+
+describe('deleteE2ENotificaciones', () => {
+  it('delega al model', async () => {
+    mockDeleteE2ENotificaciones.mockResolvedValueOnce(undefined);
+    await Service.deleteE2ENotificaciones();
+    expect(mockDeleteE2ENotificaciones).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -258,4 +258,9 @@ describe("regression ISSUE-003 — updateCita re-valida slot al editar cita", ()
       .rejects.toMatchObject({ statusCode: 404 });
     expect(mockValidarSlot).not.toHaveBeenCalled();
   });
+
+  test("estatus inválido en PATCH → BAD_REQUEST", async () => {
+    await expect(Service.updateCita(1, { estatus: "INVALIDO" }))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
 });
