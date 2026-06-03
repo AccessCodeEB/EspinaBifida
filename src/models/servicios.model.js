@@ -16,11 +16,10 @@ export const findAll = () =>
               s.NOTAS,
               NVL(s.ESTATUS, 'COMPLETADO') AS ESTATUS_SERVICIO,
               NVL(b.ESTATUS, 'Activo') AS ESTATUS_BENEFICIARIO,
-              (SELECT a.DESCRIPCION
+              (SELECT LISTAGG(a.DESCRIPCION, ', ') WITHIN GROUP (ORDER BY a.DESCRIPCION)
                FROM SERVICIO_ARTICULOS sa
                JOIN ARTICULOS a ON a.ID_ARTICULO = sa.ID_ARTICULO
-               WHERE sa.ID_SERVICIO = s.ID_SERVICIO
-               AND ROWNUM = 1) AS ARTICULO_ENTREGADO,
+               WHERE sa.ID_SERVICIO = s.ID_SERVICIO) AS ARTICULO_ENTREGADO,
               (SELECT SUM(sa.CANTIDAD)
                FROM SERVICIO_ARTICULOS sa
                WHERE sa.ID_SERVICIO = s.ID_SERVICIO) AS CANTIDAD_ARTICULO,

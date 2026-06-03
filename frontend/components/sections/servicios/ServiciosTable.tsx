@@ -179,6 +179,9 @@ export function ServiciosTable({
               <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
                 <span className="inline-flex items-center gap-1"><Package className="size-3" />ARTÍCULO ENTREGADO</span>
               </th>
+              <th className="hidden py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground md:table-cell">
+                <span className="inline-flex items-center gap-1"><Tag className="size-3" />CANTIDAD</span>
+              </th>
               <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
                 <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("fecha")}><Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}</button>
               </th>
@@ -203,7 +206,7 @@ export function ServiciosTable({
           <tbody className="divide-y divide-border/30">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
                   No hay servicios para los filtros seleccionados.
                 </td>
               </tr>
@@ -221,9 +224,12 @@ export function ServiciosTable({
                     <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
                     <td className="hidden py-3 lg:table-cell">
                       {s.articuloEntregado
-                        ? <span className="text-xs text-foreground">{s.articuloEntregado}{s.cantidadArticulo ? ` x${s.cantidadArticulo}` : ""}</span>
+                        ? <span className="text-xs text-foreground">{s.articuloEntregado}</span>
                         : <span className="text-[11px] text-muted-foreground/60">—</span>
                       }
+                    </td>
+                    <td className="hidden py-3 text-center md:table-cell">
+                      {s.cantidadArticulo ? <span className="text-xs font-semibold text-foreground">{s.cantidadArticulo}</span> : <span className="text-[11px] text-muted-foreground/60">—</span>}
                     </td>
                     <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
                     <td className="hidden py-3 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
