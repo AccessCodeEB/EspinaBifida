@@ -398,6 +398,8 @@ export function ComodatosSection() {
   const [selectedComodato, setSelectedComodato] = useState<Comodato | null>(null)
   const [detalle, setDetalle]           = useState<ComodatoDetalle | null>(null)
   const [loadingDetalle, setLoadingDetalle] = useState(false)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const [comodatoTooltip, setComodatoTooltip] = useState<{ x: number; y: number } | null>(null)
 
   // Reporte exenciones
   const [fechaInicio, setFechaInicio]   = useState("")
@@ -565,7 +567,7 @@ export function ComodatosSection() {
 
       {/* TAB: Lista */}
       {tab === "lista" && (
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        <div ref={tableContainerRef} className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
           {/* Toolbar */}
           <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-foreground">
@@ -640,6 +642,17 @@ export function ComodatosSection() {
                   <tr
                     key={c.idComodato}
                     onClick={() => openDetalle(c)}
+                    onMouseEnter={(e) => {
+                      const rect = tableContainerRef.current?.getBoundingClientRect()
+                      if (!rect) return
+                      setComodatoTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                    }}
+                    onMouseMove={(e) => {
+                      const rect = tableContainerRef.current?.getBoundingClientRect()
+                      if (!rect) return
+                      setComodatoTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+                    }}
+                    onMouseLeave={() => setComodatoTooltip(null)}
                     className="cursor-pointer transition-colors hover:bg-muted/20"
                   >
                     <td className="py-3 pl-5 pr-3 font-mono text-[11px] text-foreground">{c.idComodato}</td>
@@ -675,6 +688,15 @@ export function ComodatosSection() {
               </tbody>
             </table>
           </div>
+          {/* Tooltip flotante */}
+          {comodatoTooltip && (
+            <div
+              className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-xl border border-white/10 bg-slate-950/95 px-3 py-2 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] backdrop-blur-sm"
+              style={{ left: comodatoTooltip.x, top: comodatoTooltip.y - 12 }}
+            >
+              <p className="text-xs font-medium text-white/80">Click para ver más detalles</p>
+            </div>
+          )}
         </div>
       )}
 
