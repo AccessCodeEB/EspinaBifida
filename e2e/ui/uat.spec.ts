@@ -93,7 +93,15 @@ test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ pa
   await page.locator('#prereg-estado').click().catch(() => {});
   await page.waitForTimeout(300);
   await page.getByRole('option', { name: /nuevo le/i }).click().catch(() => {});
-  await page.waitForTimeout(500);
+
+  // Wait for CURP autocalculation to complete before filling homoclave
+  await page.waitForFunction(
+    () => {
+      const curpField = document.querySelector('#prereg-curp') as HTMLInputElement;
+      return (curpField?.value?.length ?? 0) >= 10;
+    },
+    { timeout: 5000 }
+  ).catch(() => {});
 
   // Ciudad/Municipio
   await page.locator('#prereg-ciudad').click().catch(() => {});
@@ -121,7 +129,7 @@ test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ pa
   await page.waitForTimeout(300);
 
   // Wait for Turnstile auto-pass (site key 1x00000000000000000000AA); CI needs extra time
-  await page.waitForTimeout(12000);
+  await page.waitForTimeout(15000);
 
   await page.getByRole('button', { name: /enviar solicitud/i }).click();
   // Use heading-level check to avoid matching static page text (e.g. "Gracias a ellos es posible")
