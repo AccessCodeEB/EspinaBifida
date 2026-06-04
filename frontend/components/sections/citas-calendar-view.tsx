@@ -572,9 +572,10 @@ interface Props{
   /** Called after a successful status update — updates parent citas array without setLoading(true) */
   onSilentUpdate:(updater:(prev:Cita[])=>Cita[])=>void
   stats:{hoy:number;semana:number;pendientes:number}
+  onCitaCancelada?:()=>void
 }
 
-export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats}:Props){
+export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats,onCitaCancelada}:Props){
   // Local optimistic state — initialised from props, updated immediately on action
   const[citas,setCitas]=useState<Cita[]>(citasProp)
   // Sync only when a full reload happens (new cita created, page mount)
@@ -659,6 +660,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
     try{
       await updateEstatusCita(id,estatus)
       toast.success(`Cita marcada como ${estatus}`)
+      if(estatus==="Cancelada") onCitaCancelada?.()
     }catch{
       // Revert both
       const revert=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus:citasProp.find(x=>x.id===id)?.estatus??c.estatus}:c)
