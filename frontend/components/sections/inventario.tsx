@@ -127,11 +127,15 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   ).sort((a, b) => a.localeCompare(b, "es"))
   const unidadesParaAlta = Array.from(new Set(["PZA.", ...unidadesDisponibles])).sort((a, b) => a.localeCompare(b, "es"))
 
+  const normalizeForSearch = (v: string | number) => String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
   const activeUnidadFilter = unidadFilterIndex >= 0 ? unidadesDisponibles[unidadFilterIndex] : null
-  const filtered = inventario.filter(item =>
-    item.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(item.clave).toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const normTerm = normalizeForSearch(searchTerm)
+  const filtered = searchTerm.trim()
+    ? inventario.filter(item =>
+        normalizeForSearch(item.descripcion).includes(normTerm) ||
+        normalizeForSearch(item.clave).includes(normTerm)
+      )
+    : inventario
   const filteredByUnidad = activeUnidadFilter ? filtered.filter(i => i.unidad === activeUnidadFilter) : filtered
   const filteredByCategoria = categoriaFilter != null
     ? filteredByUnidad.filter(i => i.idCategoria === categoriaFilter)
@@ -142,6 +146,11 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     ? filteredByCategoria.filter(i => i.cantidad > 0 && i.cantidad <= i.minimo)
     : filteredByCategoria
   const sortedFiltered = [...filteredByStock].sort((a, b) => {
+    if (normTerm) {
+      const aStarts = normalizeForSearch(a.descripcion).startsWith(normTerm) ? 0 : 1
+      const bStarts = normalizeForSearch(b.descripcion).startsWith(normTerm) ? 0 : 1
+      if (aStarts !== bStarts) return aStarts - bStarts
+    }
     if (!sortField) return 0
     const f = sortDirection === "asc" ? 1 : -1
     if (sortField === "clave") {
@@ -286,7 +295,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   function openEliminarArticulo() {
     setArticuloError(null); setSavingArticulo(false); setDeleteArticuloId(""); setDeletePickerOpen(false); setShowEliminarDialog(true)
   }
-  const normalizeForSearch = (v: string | number) => String(v).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
   const findArticuloLabel  = (id: string) => { const item = inventario.find(a => String(a.clave) === id); return item ? `${item.clave} - ${item.descripcion}` : "Seleccionar artículo" }
 
   async function handleAgregarArticulo() {
@@ -1079,10 +1087,13 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                     <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[420px] max-h-[280px] p-0 overflow-hidden" align="start">
-                  <Command shouldFilter>
+                <PopoverContent className="w-[420px] p-0" align="start">
+                  <Command shouldFilter filter={(value, search) => {
+                    const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+                    return norm(value).includes(norm(search)) ? 1 : 0
+                  }}>
                     <CommandInput placeholder="Clave o descripción..." />
-                    <CommandList className="max-h-[240px] overflow-y-auto">
+                    <CommandList className="max-h-[280px] overflow-y-auto">
                       <CommandEmpty>No se encontraron artículos.</CommandEmpty>
                       <CommandGroup>
                         {inventario.map((item, idx) => {
