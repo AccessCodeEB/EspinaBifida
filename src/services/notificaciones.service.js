@@ -139,6 +139,12 @@ export async function runJob() {
     checkCitasHoy(),
     checkComodatosPorVencer(),
   ]);
+
+  const huerfanas = await Model.deleteOrphanedNotificaciones().catch(() => 0);
+  if (huerfanas > 0) {
+    console.log(`[notificaciones-job] limpiadas ${huerfanas} notificacion(es) de beneficiarios eliminados`);
+  }
+
   console.log(`[notificaciones-job] stock_bajo=${stockBajo}, sin_stock=${sinStock}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}, comodatos_por_vencer=${comodatos}`);
   return { stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos };
 }

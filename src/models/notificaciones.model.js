@@ -354,3 +354,14 @@ export const upsertMembresia = (curp, tipo, mensaje) =>
     );
     await conn.commit();
   });
+
+export const deleteOrphanedNotificaciones = () =>
+  withConnection(async conn => {
+    const result = await conn.execute(
+      `DELETE FROM NOTIFICACIONES
+       WHERE CURP IS NOT NULL
+         AND CURP NOT IN (SELECT CURP FROM BENEFICIARIOS)`,
+      {}, { autoCommit: true }
+    );
+    return result.rowsAffected ?? 0;
+  });
