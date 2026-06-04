@@ -371,12 +371,38 @@ export function MembresiasSection() {
     <div className="flex flex-col gap-6 pb-8">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Membresías</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Membresía anual · Nuevo ingreso ${MONTO_NUEVO_INGRESO} · Re-inscripción ${MONTO_REINSCRIPCION}
-          </p>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Membresías</h1>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Membresía anual · Nuevo ingreso ${MONTO_NUEVO_INGRESO} · Re-inscripción ${MONTO_REINSCRIPCION}
+        </p>
+      </div>
+
+      {/* Tabs + Botones en la misma fila */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("membresias")}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+              activeTab === "membresias"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <Users className="size-3.5" />
+            Membresías
+          </button>
+          <button
+            onClick={() => setActiveTab("historial")}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+              activeTab === "historial"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <History className="size-3.5" />
+            Historial de pagos
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={cargarDatos}
@@ -387,39 +413,13 @@ export function MembresiasSection() {
           <button
             onClick={() => setShowNuevaDialog(true)}
             disabled={sinMembresia.length === 0}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
             style={{ backgroundColor: NAVY }}
           >
             <Plus className="size-3.5" />
             Nueva membresía
           </button>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab("membresias")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "membresias"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <Users className="size-3.5" />
-          Membresías
-        </button>
-        <button
-          onClick={() => setActiveTab("historial")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "historial"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <History className="size-3.5" />
-          Historial de pagos
-        </button>
       </div>
 
       {/* KPIs — solo en tab Membresías */}
