@@ -234,7 +234,7 @@ export function BeneficiarioDetailPanel({
                 </div>
 
                 {/* Contenido del Expediente */}
-                <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8 scrollbar-hide">
+                <div className="flex-1 min-h-0 overflow-y-auto bg-muted/10 px-6 py-6 sm:px-8">
                   <div className="space-y-6 pb-2">
                     <DetailGroup title="Información Personal" icon={User}>
                       <DetailField label="Nombres" value={selectedBeneficiario.nombres} />

@@ -226,13 +226,14 @@ export function BeneficiariosEditDialog({
                 Modificando datos de{" "}
                 <span className="font-semibold text-foreground">
                   {editForm.nombres} {editForm.apellidoPaterno} {editForm.apellidoMaterno}
-                </span>{" "}
-                — {editForm.curp || "Sin CURP"}
+                </span>
+                <br />
+                <span className="font-mono text-[11px]">{editForm.curp || "Sin CURP"}</span>
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="scrollbar-hide min-h-0 flex-1 space-y-6 overflow-y-auto bg-muted/10 px-6 py-8">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-muted/10 px-6 py-8">
             {saveError ? (
               <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 <XCircle className="size-4 shrink-0" />
