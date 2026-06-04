@@ -366,3 +366,40 @@ describe("DELETE /api/v1/articulos/:id — eliminar artículo", () => {
     expect(res.body.error).toMatch(/no encontrado/i);
   });
 });
+
+// ── GET /api/v1/articulos/log ─────────────────────────────────────────────────
+
+describe("GET /api/v1/articulos/log — historial de altas y bajas", () => {
+  test("retorna lista vacía (200)", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get("/api/v1/articulos/log")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test("retorna registros del log con filtros (200)", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{
+        ID_LOG: 1, ID_ARTICULO: 5,
+        DESCRIPCION_ARTICULO: "Silla", TIPO: "ALTA",
+        MOTIVO: "Donación", FECHA: "2026-01-01",
+      }],
+    });
+
+    const res = await request(app)
+      .get("/api/v1/articulos/log?tipo=ALTA&dias=30")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+  });
+
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).get("/api/v1/articulos/log");
+    expect(res.status).toBe(401);
+  });
+});
