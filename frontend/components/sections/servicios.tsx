@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import {
@@ -57,6 +58,7 @@ const PAGE_SIZE = 25
 const PIE_COLORS = ["#005bb5", "#eab308", "#ef4444", "#10b981", "#9333ea", "#fb923c", "#14b8a6"]
 const NAVY = "#0f4c81"
 const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
+const CITA_PREFILL_KEY = "prefillCitaFromServicio"
 
 function monthKey(date: Date): string {
   const y = date.getFullYear()
@@ -168,8 +170,11 @@ export function ServiciosSection() {
   const [page, setPage] = useState(1)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
 
+  const router = useRouter()
+
   // ── Dialogs ──
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
+  const [bannerCita, setBannerCita] = useState<{ curp: string; nombre: string; idTipoServicio: number; fecha: string } | null>(null)
   const [servicioDetalle, setServicioDetalle] = useState<ServicioDetallado | null>(null)
   const [servicioParaEliminar, setServicioParaEliminar] = useState<ServicioDetallado | null>(null)
   const [eliminandoServicio, setEliminandoServicio] = useState(false)
@@ -467,6 +472,14 @@ export function ServiciosSection() {
       })
       const updated = await getServicios()
       setServiciosRegistrados(updated)
+
+      // Capturar antes del reset para el banner de cita
+      const esConsulta = tipoServicioSeleccionadoLabel.toLowerCase().includes("consulta")
+      const snapCurp = beneficiarioEncontrado?.curp ?? ""
+      const snapNombre = beneficiarioEncontrado?.nombre ?? ""
+      const snapIdTipo = idTipoServicioNumerico
+      const snapFecha = fechaServicio
+
       setShowRegistroDialog(false)
       setBeneficiarioEncontrado(null)
       setBusquedaBeneficiario("")
@@ -477,10 +490,15 @@ export function ServiciosSection() {
       setFechaServicio(hoy)
       setIdArticuloSeleccionado("")
       setArticulosInventario([])
+
       if (result.warning) {
         toast.warning("Servicio registrado", { description: result.warning })
       } else {
         toast.success("Servicio registrado correctamente")
+      }
+
+      if (esConsulta && snapCurp) {
+        setBannerCita({ curp: snapCurp, nombre: snapNombre, idTipoServicio: snapIdTipo, fecha: snapFecha })
       }
     } catch (err) {
       setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
@@ -702,6 +720,42 @@ export function ServiciosSection() {
           <ClipboardList className="size-3.5" />Servicios registrados
         </button>
       </div>
+
+      {/* Banner: agendar cita post-consulta */}
+      {bannerCita && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[#0f4c81]/30 bg-[#0f4c81]/8 px-5 py-3.5 dark:border-blue-900/40 dark:bg-blue-950/20">
+          <div className="flex items-center gap-3">
+            <CalendarDays className="size-4 shrink-0 text-[#0f4c81] dark:text-blue-400" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">¿Quieres agendar una cita para esta consulta?</p>
+              <p className="text-[11px] text-muted-foreground">{bannerCita.nombre} · {bannerCita.fecha}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => {
+                sessionStorage.setItem(CITA_PREFILL_KEY, JSON.stringify({
+                  curp: bannerCita.curp,
+                  idTipoServicio: bannerCita.idTipoServicio,
+                  fecha: bannerCita.fecha,
+                }))
+                router.push("/panel?section=citas")
+                setBannerCita(null)
+              }}
+              className="rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#0f4c81" }}
+            >
+              Sí, agendar
+            </button>
+            <button
+              onClick={() => setBannerCita(null)}
+              className="rounded-lg border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+            >
+              No, gracias
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPIs + Charts */}
       {activeTab === "resumen" && <ServiciosChartsKpis
