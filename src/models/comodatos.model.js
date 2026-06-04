@@ -1,6 +1,7 @@
 import oracledb from "oracledb";
-import { withConnection } from "../config/db.js";
+import { withConnection, getConnection } from "../config/db.js";
 import { toCamel } from "../utils/dbTransform.js";
+import { applyMovimientoConConexion } from "./inventario.model.js";
 
 /**
  * Devuelve lista paginada de comodatos con datos del beneficiario y artículo.
@@ -79,12 +80,21 @@ export function findByCurp(curp) {
 }
 
 /**
- * Crea un nuevo comodato.
+ * Crea un nuevo comodato y registra la SALIDA en MOVIMIENTOS_INVENTARIO.
  * Si montoTotal es null → donación total, se crea directamente como Pagado.
  */
-export function create({ curp, idArticulo, montoTotal, notas, fechaDevolucionEsperada }) {
+export async function create({ curp, idArticulo, montoTotal, notas, fechaDevolucionEsperada }) {
   const estatus = montoTotal == null ? "Pagado" : "Activo";
-  return withConnection(async (conn) => {
+  const conn = await getConnection();
+  try {
+    // Obtener nombre del beneficiario para el motivo del movimiento
+    const benefRes = await conn.execute(
+      `SELECT NOMBRES || ' ' || APELLIDO_PATERNO AS NOMBRE FROM BENEFICIARIOS WHERE CURP = :curp`,
+      { curp },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    const nombreBenef = benefRes.rows?.[0]?.NOMBRE ?? curp;
+
     const result = await conn.execute(
       `INSERT INTO COMODATOS (ID_COMODATO, CURP, ID_ARTICULO, MONTO_TOTAL,
                               MONTO_PAGADO, MONTO_EXENTO, ESTATUS, NOTAS,
@@ -101,14 +111,28 @@ export function create({ curp, idArticulo, montoTotal, notas, fechaDevolucionEsp
         notas: notas ?? null,
         fechaDevolucionEsperada: fechaDevolucionEsperada ? new Date(fechaDevolucionEsperada) : null,
         newId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
-      },
-      { autoCommit: true }
+      }
     );
     const idComodato = Array.isArray(result.outBinds.newId)
       ? result.outBinds.newId[0]
       : result.outBinds.newId;
+
+    // Registrar SALIDA en inventario
+    await applyMovimientoConConexion(conn, {
+      idArticulo,
+      tipo: "SALIDA",
+      cantidad: 1,
+      motivo: `Comodato a ${nombreBenef}`,
+    });
+
+    await conn.commit();
     return { idComodato, estatus };
-  });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    await conn.close();
+  }
 }
 
 /**
