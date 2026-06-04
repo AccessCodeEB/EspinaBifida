@@ -787,22 +787,40 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               </DialogHeader>
               <div className="flex flex-col gap-2 py-2">
                 {cuotaAChng && (
-                  <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-muted-foreground line-through">${cuotaAOld.toFixed(2)}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-sm font-bold text-[#0f4c81]">${cuotaANew.toFixed(2)}</span>
+                  <div className="rounded-xl border border-amber-200/60 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/20 p-4">
+                    <div className="mb-3 flex items-center gap-1.5">
+                      <DollarSign className="size-3 text-amber-600 dark:text-amber-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">Cuota de recuperación</span>
+                    </div>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Actual</span>
+                        <span className="text-lg font-semibold tabular-nums text-muted-foreground">${cuotaAOld.toFixed(2)}</span>
+                      </div>
+                      <span className="text-base text-muted-foreground">→</span>
+                      <div className="flex flex-col gap-0.5 text-right">
+                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Nueva</span>
+                        <span className="text-lg font-bold tabular-nums text-[#0f4c81] dark:text-blue-400">${cuotaANew.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
                 {cuotaBChng && (
-                  <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-muted-foreground line-through">${cuotaBOld.toFixed(2)}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-sm font-bold text-[#0f4c81]">${cuotaBNew.toFixed(2)}</span>
+                  <div className="rounded-xl border border-amber-200/60 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/20 p-4">
+                    <div className="mb-3 flex items-center gap-1.5">
+                      <DollarSign className="size-3 text-amber-600 dark:text-amber-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">Precio de Lista</span>
+                    </div>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Actual</span>
+                        <span className="text-lg font-semibold tabular-nums text-muted-foreground">${cuotaBOld.toFixed(2)}</span>
+                      </div>
+                      <span className="text-base text-muted-foreground">→</span>
+                      <div className="flex flex-col gap-0.5 text-right">
+                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Nuevo</span>
+                        <span className="text-lg font-bold tabular-nums text-[#0f4c81] dark:text-blue-400">${cuotaBNew.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
