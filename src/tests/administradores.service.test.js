@@ -761,3 +761,29 @@ describe("revokeRefreshToken", () => {
     expect(mockRtRevoke).not.toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// resetPasswordBySuperAdmin
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("resetPasswordBySuperAdmin", () => {
+  test("cambia la contraseña cuando el admin existe y la password es válida", async () => {
+    mockFindById.mockResolvedValueOnce(adminRow);
+    mockUpdatePassword.mockResolvedValueOnce(undefined);
+    await Service.resetPasswordBySuperAdmin(1, { passwordNueva: "NuevaPass1!" });
+    expect(mockUpdatePassword).toHaveBeenCalledTimes(1);
+  });
+
+  test("lanza notFound cuando el admin no existe", async () => {
+    mockFindById.mockResolvedValueOnce(null);
+    await expect(
+      Service.resetPasswordBySuperAdmin(999, { passwordNueva: "NuevaPass1!" })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("lanza badRequest cuando la password no cumple requisitos", async () => {
+    await expect(
+      Service.resetPasswordBySuperAdmin(1, { passwordNueva: "corta" })
+    ).rejects.toThrow();
+  });
+});
