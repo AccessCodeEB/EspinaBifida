@@ -61,7 +61,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort; **edición de precios** (cuota de recuperación + precio real) con diálogo de confirmación al cambiar precio base; **rediseño diálogo "Modificar artículo"**: card de estado actual (stock/precio/mínimo), toggle ENTRADA/SALIDA, secciones agrupadas con tarjeta; ambas cuotas obligatorias al crear y editar |
 =======
 | **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm, especialidades dinámicas con filtro de slots |
-| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort |
+| **Inventario** | ✅ Completo — filtro por categoría, columna Precio de Lista, card de estado 4 columnas, diálogo confirmación precios rediseñado, tab Altas/Bajas con log, búsqueda normalizada (ñ/acentos), label dinámico cantidad, safety net redirige a Comodatos, comodatos registran SALIDA en inventario |
 >>>>>>> 36569a4 (feat(citas): restricciones de horario y gestión de especialidades (SCRUM-212))
 | **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
@@ -325,6 +325,50 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - El campo `TIPO_CUOTA` en `BENEFICIARIOS` (A = subsidiado, B = precio real) es editable en el formulario de beneficiario pero tampoco afecta ningún cálculo automático
 - Al registrar un servicio con artículo (medicamento/insumo), el costo se ingresa **manualmente** — el sistema no auto-rellena desde el precio del artículo
 - **Oportunidad identificada**: conectar `precioSegunCuota` al formulario de registro de servicios para que al seleccionar un artículo y un beneficiario, el monto se pre-rellene automáticamente según su clasificación A/B
+
+### Cambios 2026-06-04 — Mejoras UX/funcionales de Inventario
+
+**Formulario de alta:**
+- Eliminado campo "Clave del artículo" — el ID lo asigna el trigger Oracle automáticamente
+- Nuevo campo **"Motivo del alta"** (opcional) registrado en `ARTICULOS_LOG`
+
+**Nomenclatura de precios unificada:**
+- `CUOTA_RECUPERACION` → "Cuota de Recuperación" (subsidiado) en toda la UI
+- `CUOTA_B` → "Precio de Lista" (precio de mercado) en toda la UI
+- Columna "Precio de Lista" agregada a la tabla de artículos con sort
+- Card de estado en diálogo Modificar: **4 columnas iguales** (Stock · Cuota Rec. · Precio Lista · Mínimo)
+- Diálogo de confirmación de precio: rediseñado con fondo ámbar, valores grandes, aplica para AMBOS precios
+- Un solo diálogo de confirmación cuando cambian los dos precios simultáneamente
+
+**Búsqueda mejorada:**
+- Normalización de acentos y letra `ñ` en búsqueda de artículos
+- Resultados priorizados: los que empiezan con el término van al tope
+- Scroll habilitado en dropdown de eliminar (fix `onWheel stopPropagation`)
+
+**UX movimiento de stock:**
+- Label dinámico: "Cantidad a agregar" (ENTRADA) / "Cantidad a retirar" (SALIDA)
+
+**Redirección safety net:**
+- Equipos Médicos → "Registrar comodato" ahora redirige a la sección Comodatos (antes iba a Servicios)
+
+**Historial de altas y bajas:**
+- Nueva tabla `ARTICULOS_LOG` (migración 030) con secuencia y trigger
+- Al agregar artículo → se registra evento ALTA con motivo opcional
+- Al eliminar artículo → se registra evento BAJA con motivo opcional (nuevo campo en diálogo)
+- Tab **"Altas/Bajas"** en la sección Inventario: tabla con fecha, artículo, tipo (badge) y motivo
+- Endpoint `GET /articulos/log` con filtros `tipo` y `dias`
+
+**Comodatos → inventario:**
+- Al crear un comodato se registra automáticamente una SALIDA en `MOVIMIENTOS_INVENTARIO` con motivo `"Comodato a [Nombre Beneficiario]"`
+- Historial de inventario ahora refleja los préstamos de equipos
+
+**Descripciones user-friendly en historial:**
+- Consumo por servicio: `"Consumo de [Nombre Beneficiario]"` (antes: "Consumo por servicio 1136")
+- Cancelación de servicio: `"Cancelación de consumo – [Nombre Beneficiario]"` (antes: "Reversa por eliminación de servicio ID: 1122")
+
+**Tests:** +129 tests nuevos/actualizados, cobertura 97.56% statements / 95.19% functions / 95.97% branches
+
+---
 
 ### Cambios 2026-06-01 — Refactor Comodatos + UI (Fases 0–3)
 
