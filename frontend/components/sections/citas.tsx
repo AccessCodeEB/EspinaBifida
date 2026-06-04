@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
@@ -66,6 +67,7 @@ function buildNotasServicioDesdeCita(form: typeof EMPTY_FORM) {
 type ActiveView = "calendar" | "list"
 
 export function CitasSection() {
+  const router = useRouter()
   const [citas, setCitas] = useState<Cita[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -99,6 +101,7 @@ export function CitasSection() {
   const [catalogoServicios, setCatalogoServicios] = useState<TipoServicioCompleto[]>([])
   const [especialidades, setEspecialidades] = useState<EspecialidadHorario[]>([])
   const [origenServicio, setOrigenServicio] = useState<{ registrarServicio: boolean; idTipoServicio: number | null } | null>(null)
+  const [bannerCancelarServicio, setBannerCancelarServicio] = useState(false)
 
   const loadCitas = useCallback((silent=false) => {
     if(!silent) setLoading(true)
@@ -123,12 +126,12 @@ export function CitasSection() {
   const bloqueadoDesdeServicios = Boolean(origenServicio?.registrarServicio)
 
   useEffect(() => {
-    if (!bloqueadoDesdeServicios || !form.curp || buscaBenef) return
+    if (!form.curp || buscaBenef) return
     const beneficiario = beneficiarios.find((b) => String(b.curp ?? "").trim() === String(form.curp).trim())
     if (beneficiario) {
       setBuscaBenef(`${beneficiario.nombres} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.replace(/\s+/g, " ").trim())
     }
-  }, [bloqueadoDesdeServicios, beneficiarios, buscaBenef, form.curp])
+  }, [beneficiarios, buscaBenef, form.curp])
 
   // Prefill desde otro flujo (por ejemplo: registrar servicio → programar cita)
   useEffect(() => {
@@ -452,6 +455,7 @@ export function CitasSection() {
               onReload={()=>loadCitas(true)}
               onSilentUpdate={silentUpdate}
               stats={stats}
+              onCitaCancelada={() => setBannerCancelarServicio(true)}
             />
           ) : (
             <CitasListView citas={citas} beneficiarios={beneficiarios} />
@@ -716,6 +720,41 @@ export function CitasSection() {
             >
               {saving ? "Guardando..." : "Guardar cita"}
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: cancelar servicio post-cancelación de cita */}
+      <Dialog open={bannerCancelarServicio} onOpenChange={(open) => { if (!open) setBannerCancelarServicio(false) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <CalendarDays className="size-4 text-[#0f4c81]" />
+              ¿Cancelar el servicio?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 pt-1">
+            <p className="text-sm text-muted-foreground">
+              ¿Quieres ir a Servicios para cancelar también el servicio asociado a esta cita?
+            </p>
+            <div className="flex justify-end gap-2 border-t border-border/40 pt-2">
+              <button
+                onClick={() => setBannerCancelarServicio(false)}
+                className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+              >
+                No, gracias
+              </button>
+              <button
+                onClick={() => {
+                  router.push("/panel?section=servicios")
+                  setBannerCancelarServicio(false)
+                }}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                style={{ backgroundColor: "#0f4c81" }}
+              >
+                Ir a Servicios
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
