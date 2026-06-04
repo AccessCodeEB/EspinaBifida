@@ -43,12 +43,12 @@ export const createCita = async (data) => {
 
   // Costo: primera cita $350, subsecuentes $300. Permite override explícito.
   let costo;
-  if (data.costo != null) {
-    costo = Number(data.costo);
-    if (Number.isNaN(costo) || costo < 0) throw badRequest("costo debe ser un número positivo");
-  } else {
+  if (data.costo == null) {
     const previas = await citasModel.countCitasByCurp(curpUpper);
     costo = previas === 0 ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA;
+  } else {
+    costo = Number(data.costo);
+    if (Number.isNaN(costo) || costo < 0) throw badRequest("costo debe ser un número positivo");
   }
 
   return await citasModel.create({

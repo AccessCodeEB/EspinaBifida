@@ -63,6 +63,41 @@ function normalizeConsumos(consumos) {
   });
 }
 
+function validarBeneficiario(beneficiario) {
+  if (!beneficiario) {
+    throw notFound("Beneficiario no encontrado");
+  }
+  if (ESTATUS_BLOQUEADOS.has(beneficiario.ESTATUS)) {
+    throw conflict(
+      `No se puede asignar un servicio a un beneficiario con estatus '${beneficiario.ESTATUS}'`
+    );
+  }
+  if (!beneficiario.TIPO_CUOTA) {
+    throw badRequest(
+      "El beneficiario no tiene cuota asignada (A o B). Asígnale la cuota antes de registrar un servicio.",
+      "CUOTA_NO_ASIGNADA"
+    );
+  }
+}
+
+async function resolverCosto(consumos, beneficiario, costoProvisto) {
+  if (consumos.length === 0) return costoProvisto;
+  if (costoProvisto !== null) {
+    for (const consumo of consumos) {
+      const articulo = await ArticulosModel.findById(consumo.idProducto);
+      if (!articulo) throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+    }
+    return costoProvisto;
+  }
+  let costo = 0;
+  for (const consumo of consumos) {
+    const articulo = await ArticulosModel.findById(consumo.idProducto);
+    if (!articulo) throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+    costo += precioSegunCuota(articulo, beneficiario.TIPO_CUOTA) * consumo.cantidad;
+  }
+  return Number(costo.toFixed(2));
+}
+
 export const getAll = () => ServiciosModel.findAll();
 
 export async function createConValidacion(data) {
@@ -103,48 +138,9 @@ export async function createConValidacion(data) {
 
   // Single query: check beneficiary status + active membership atomically (no TOCTOU gap)
   const beneficiario = await ServiciosModel.findBeneficiarioActivoConMembresia(curp);
+  validarBeneficiario(beneficiario);
 
-  if (!beneficiario) {
-    throw notFound("Beneficiario no encontrado");
-  }
-
-  if (ESTATUS_BLOQUEADOS.has(beneficiario.ESTATUS)) {
-    throw conflict(
-      `No se puede asignar un servicio a un beneficiario con estatus '${beneficiario.ESTATUS}'`
-    );
-  }
-
-  if (!beneficiario.TIPO_CUOTA) {
-    throw badRequest(
-      "El beneficiario no tiene cuota asignada (A o B). Asígnale la cuota antes de registrar un servicio.",
-      "CUOTA_NO_ASIGNADA"
-    );
-  }
-
-  let costo = costoProvisto;
-  if (consumos.length > 0) {
-    // Solo auto-calcular si el frontend no envió un costo explícito
-    if (costoProvisto === null) {
-      costo = 0;
-      for (const consumo of consumos) {
-        const articulo = await ArticulosModel.findById(consumo.idProducto);
-        if (!articulo) {
-          throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
-        }
-        const precioUnitario = precioSegunCuota(articulo, beneficiario.TIPO_CUOTA);
-        costo += precioUnitario * consumo.cantidad;
-      }
-      costo = Number(costo.toFixed(2));
-    } else {
-      // Validar que los artículos existan aunque el costo venga del frontend
-      for (const consumo of consumos) {
-        const articulo = await ArticulosModel.findById(consumo.idProducto);
-        if (!articulo) {
-          throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
-        }
-      }
-    }
-  }
+  const costo = await resolverCosto(consumos, beneficiario, costoProvisto);
 
   validateMontoReglas(costo, montoPagado);
 
@@ -211,7 +207,7 @@ export async function update(idServicio, data) {
     }
   }
 
-  const estatus = data.estatus !== undefined ? String(data.estatus).trim().toUpperCase() : String(servicio.ESTATUS_SERVICIO ?? servicio.ESTATUS ?? "COMPLETADO").toUpperCase();
+  const estatus = data.estatus === undefined ? String(servicio.ESTATUS_SERVICIO ?? servicio.ESTATUS ?? "COMPLETADO").toUpperCase() : String(data.estatus).trim().toUpperCase();
 
   return ServiciosModel.update(idServicio, {
     montoPagado,

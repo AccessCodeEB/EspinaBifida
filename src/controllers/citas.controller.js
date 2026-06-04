@@ -27,7 +27,7 @@ function mapCita(row) {
     hora:         horaStr,
     estatus,
     notas:        safeClobString(r.notas),
-    costo:        r.costo != null ? Number(r.costo) : null,
+    costo:        r.costo == null ? null : Number(r.costo),
   };
 }
 

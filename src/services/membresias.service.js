@@ -125,10 +125,10 @@ function parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr) {
 function validarMontoYMetodo(data, tipo, anios = 1) {
   const montoBase = tipo === "reinscripcion" ? MONTO_REINSCRIPCION : MONTO_NUEVO_INGRESO;
   let monto;
-  if (data?.monto != null) {
-    monto = Number(data.monto);
-  } else {
+  if (data?.monto == null) {
     monto = anios * montoBase;
+  } else {
+    monto = Number(data.monto);
   }
   if (Number.isNaN(monto) || monto < 0) {
     throw badRequest("monto debe ser un número positivo");
@@ -141,6 +141,12 @@ function validarMontoYMetodo(data, tipo, anios = 1) {
   }
 
   return { monto, metodoPago };
+}
+
+async function determinarTipoMembresia(tipo, curp) {
+  if (tipo === "reinscripcion" || tipo === "nuevo_ingreso") return tipo;
+  const count = await MembresiasModel.countCredencialesByCurp(curp);
+  return count > 0 ? "reinscripcion" : "nuevo_ingreso";
 }
 
 async function getIdTipoServicioMembresia() {
@@ -179,11 +185,7 @@ export async function registrarMembresia(data) {
   }
 
   // Tipo: si no se provee, se determina automáticamente por historial en BD
-  const tipoFinal = data?.tipo === "reinscripcion" || data?.tipo === "nuevo_ingreso"
-    ? data.tipo
-    : (await MembresiasModel.countCredencialesByCurp(curp)) > 0
-      ? "reinscripcion"
-      : "nuevo_ingreso";
+  const tipoFinal = await determinarTipoMembresia(data?.tipo, curp);
 
   const { fechaEmision, fechaVigenciaInicio, fechaUltimoPago } =
     parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr);

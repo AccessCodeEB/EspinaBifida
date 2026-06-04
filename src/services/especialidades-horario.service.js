@@ -128,6 +128,17 @@ export const deleteExcepcion = async (idExcepcion) => {
  * @param {string} fecha   - 'YYYY-MM-DD'
  * @param {string} hora    - 'HH:MM'
  */
+async function validarCapacidad(esp, fecha) {
+  if (esp.CAPACIDAD_MAX == null) return;
+  const ocupados = await model.countCitasActivasPorFecha(esp.NOMBRE, fecha);
+  if (ocupados >= esp.CAPACIDAD_MAX) {
+    throw badRequest(
+      `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el ${fecha}.`,
+      "CAPACIDAD_LLENA"
+    );
+  }
+}
+
 export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) => {
   if (!nombreEspecialidad) return; // Especialista opcional: sin restricción
 
@@ -178,15 +189,7 @@ export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) =
   }
 
   // 4. Verificar capacidad
-  if (esp.CAPACIDAD_MAX !== null && esp.CAPACIDAD_MAX !== undefined) {
-    const ocupados = await model.countCitasActivasPorFecha(esp.NOMBRE, fecha);
-    if (ocupados >= esp.CAPACIDAD_MAX) {
-      throw badRequest(
-        `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el ${fecha}.`,
-        "CAPACIDAD_LLENA"
-      );
-    }
-  }
+  await validarCapacidad(esp, fecha);
 };
 
 // ─── Mapper ──────────────────────────────────────────────────────────────────
