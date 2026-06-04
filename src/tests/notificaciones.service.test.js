@@ -18,7 +18,8 @@ const mockSyncSinStockConsolidado      = jest.fn();
 const mockFindMembresiasProximas       = jest.fn();
 const mockFindMembresiasVencidas       = jest.fn();
 const mockFindCitasHoyProgramadas      = jest.fn();
-const mockFindComodatosPorVencer       = jest.fn();
+const mockFindComodatosPorVencer           = jest.fn();
+const mockDeleteOrphanedNotificaciones     = jest.fn();
 
 jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findAll:                   mockFindAll,
@@ -37,7 +38,8 @@ jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findMembresiasProximas:    mockFindMembresiasProximas,
   findMembresiasVencidas:    mockFindMembresiasVencidas,
   findCitasHoyProgramadas:   mockFindCitasHoyProgramadas,
-  findComodatosPorVencer:    mockFindComodatosPorVencer,
+  findComodatosPorVencer:             mockFindComodatosPorVencer,
+  deleteOrphanedNotificaciones:       mockDeleteOrphanedNotificaciones,
 }));
 
 const Service = await import('../services/notificaciones.service.js');
@@ -105,6 +107,7 @@ describe('runJob', () => {
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockFindComodatosPorVencer.mockResolvedValue([]);
     mockFindArticulosSinStock.mockResolvedValue([]);
+    mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
   });
 
   it('llama syncStockBajoConsolidado una vez con mensaje del artículo cuando hay uno solo', async () => {
@@ -319,6 +322,7 @@ describe('checkComodatosPorVencer (via runJob)', () => {
     mockFindMembresiasProximas.mockResolvedValue([]);
     mockFindMembresiasVencidas.mockResolvedValue([]);
     mockFindCitasHoyProgramadas.mockResolvedValue([]);
+    mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
   });
 
   it('llama syncComodatosPorVencer con null cuando no hay préstamos por vencer', async () => {

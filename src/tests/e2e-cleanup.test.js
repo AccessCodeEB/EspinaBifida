@@ -3,7 +3,8 @@ import { jest } from "@jest/globals";
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 const mockDeleteE2ECitas  = jest.fn();
-const mockDeleteE2EMovs   = jest.fn();
+const mockDeleteE2EMovs        = jest.fn();
+const mockDeleteE2EInventario  = jest.fn();
 const mockDeleteE2EAdmins = jest.fn();
 
 jest.unstable_mockModule("../services/citas.service.js", () => ({
@@ -16,7 +17,8 @@ jest.unstable_mockModule("../services/citas.service.js", () => ({
 }));
 
 jest.unstable_mockModule("../services/inventario.service.js", () => ({
-  deleteE2EMovimientos: mockDeleteE2EMovs,
+  deleteE2EMovimientos:  mockDeleteE2EMovs,
+  deleteE2EInventario:   mockDeleteE2EInventario,
   getInventario:        jest.fn(),
   registrarMovimiento:  jest.fn(),
   crearArticulo:        jest.fn(),
@@ -88,12 +90,12 @@ describe("inventario.controller — e2eCleanup", () => {
   const OLD = process.env.NODE_ENV;
   afterEach(() => { process.env.NODE_ENV = OLD; });
 
-  it("borra movimientos E2E y responde 200", async () => {
+  it("borra datos E2E de inventario y responde 200", async () => {
     process.env.NODE_ENV = "test";
-    mockDeleteE2EMovs.mockResolvedValueOnce(undefined);
+    mockDeleteE2EInventario.mockResolvedValueOnce(undefined);
     const res = makeRes();
     await invCleanup({}, res, jest.fn());
-    expect(mockDeleteE2EMovs).toHaveBeenCalledTimes(1);
+    expect(mockDeleteE2EInventario).toHaveBeenCalledTimes(1);
     expect(res._body.message).toMatch(/E2E/i);
   });
 
@@ -102,7 +104,7 @@ describe("inventario.controller — e2eCleanup", () => {
     const res = makeRes();
     await invCleanup({}, res, jest.fn());
     expect(res._status).toBe(403);
-    expect(mockDeleteE2EMovs).not.toHaveBeenCalled();
+    expect(mockDeleteE2EInventario).not.toHaveBeenCalled();
   });
 });
 
