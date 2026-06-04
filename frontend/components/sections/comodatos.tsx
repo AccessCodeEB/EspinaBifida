@@ -500,7 +500,7 @@ export function ComodatosSection() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-foreground">Comodatos</h2>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Comodatos</h1>
           <p className="text-xs text-muted-foreground">Financiamiento de equipo médico por beneficiario</p>
         </div>
         <div className="flex items-center gap-2">

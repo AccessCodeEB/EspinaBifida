@@ -280,13 +280,8 @@ export function AdministradoresSection() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="size-5 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Administradores</h1>
-          </div>
-          <p className="mt-1.5 ml-11 text-sm text-muted-foreground">Gestión de cuentas de acceso al sistema.</p>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Administradores</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">Gestión de cuentas de acceso al sistema.</p>
         </div>
         <Button onClick={() => { setCreateForm(EMPTY_CREATE); setCreateErrors({}); setShowCreate(true) }} className="gap-2 shrink-0">
           <Plus className="size-4" /> Nuevo administrador

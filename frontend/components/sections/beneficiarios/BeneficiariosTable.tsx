@@ -1,7 +1,7 @@
 "use client"
 
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
-import { Search, Plus, Eye, CreditCard, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle, Users } from "lucide-react"
+import { Search, Plus, Eye, CreditCard, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,15 +58,8 @@ export function BeneficiariosTable({
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="size-5 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Beneficiarios</h1>
-          </div>
-          <p className="mt-1.5 ml-11 text-sm text-muted-foreground">
-            Gestión y consulta de beneficiarios registrados en el sistema.
-          </p>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Beneficiarios</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">Gestión y consulta de beneficiarios registrados en el sistema.</p>
         </div>
       </div>
 
