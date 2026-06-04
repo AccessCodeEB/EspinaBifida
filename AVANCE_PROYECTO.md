@@ -469,6 +469,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 | Tarea | Descripción |
 |---|---|
 | **Posponer o cancelar cita** | En el panel de detalle de una cita, agregar dos opciones: "Posponer" y "Cancelar". Posponer muestra solo los slots disponibles del mismo especialista (misma lógica de `validarSlotEspecialidad` pero en modo descubrimiento). Al posponer, el `ID_CITA` se mantiene — solo cambia `FECHA`/`HORA`. Aplica para todas las citas sin importar si tienen servicio vinculado. Caso sutil: al validar el nuevo slot, excluir la cita que se está moviendo del conteo de capacidad para evitar falso lleno. |
+| **Vínculo BD entre Servicios y Citas** | Actualmente al cancelar una cita/servicio el dialog solo redirige a la otra sección sin saber cuál registro cancelar exactamente. Para que la cancelación sea directa y automática se necesita: (1) migración — agregar `ID_CITA NUMBER NULL` como FK en `SERVICIOS`; (2) backend — guardar el vínculo al crear servicio de tipo consulta; (3) cascade — al cancelar servicio → cancelar cita vinculada automáticamente, y viceversa. Por ahora los dialogs de redirección cubren el caso de uso aunque requieren búsqueda manual. |
 
 ### Prioridad media — Servicios
 
