@@ -499,10 +499,34 @@ export function ComodatosSection() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Comodatos</h1>
-          <p className="text-xs text-muted-foreground">Financiamiento de equipo médico por beneficiario</p>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Comodatos</h1>
+        <p className="text-xs text-muted-foreground">Financiamiento de equipo médico por beneficiario</p>
+      </div>
+
+      {/* Tabs + Botones */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTab("lista")}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+              tab === "lista"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <Package className="size-3.5" />Lista
+          </button>
+          <button
+            onClick={() => setTab("reporte")}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
+              tab === "reporte"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <FileText className="size-3.5" />Reporte de exenciones
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={loadData} className="flex items-center gap-1.5 rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground hover:bg-muted">
@@ -511,37 +535,13 @@ export function ComodatosSection() {
           </button>
           <button
             onClick={() => setShowAlta(true)}
-            className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
             style={{ backgroundColor: "#0f4c81" }}
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" />
             Nuevo comodato
           </button>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setTab("lista")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
-            tab === "lista"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <Package className="size-3.5" />Lista
-        </button>
-        <button
-          onClick={() => setTab("reporte")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors duration-[180ms] border ${
-            tab === "reporte"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <FileText className="size-3.5" />Reporte de exenciones
-        </button>
       </div>
 
       {/* KPIs — solo en lista */}
