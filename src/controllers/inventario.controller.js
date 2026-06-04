@@ -34,8 +34,8 @@ export async function e2eCleanup(req, res, next) {
     return res.status(403).json({ error: "No disponible en producción" });
   }
   try {
-    await InventarioService.deleteE2EMovimientos();
-    res.json({ message: "Movimientos E2E eliminados del historial" });
+    await InventarioService.deleteE2EInventario();
+    res.json({ message: "Datos E2E de inventario eliminados (artículos, movimientos y log)" });
   } catch (err) {
     next(err);
   }

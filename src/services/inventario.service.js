@@ -1,4 +1,6 @@
 import * as InventarioModel from "../models/inventario.model.js";
+import * as ArticulosModel from "../models/articulos.model.js";
+import * as ArticulosLogModel from "../models/articulos-log.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
 import { checkStockBajo } from "./notificaciones.service.js";
 
@@ -85,6 +87,12 @@ export async function getMovimientos(days = null) {
 
 /* istanbul ignore next */
 export const deleteE2EMovimientos = () => InventarioModel.deleteE2EMovimientos();
+
+export async function deleteE2EInventario() {
+  await ArticulosLogModel.deleteE2ELogs();
+  await ArticulosModel.deleteE2EArticulos();
+  await InventarioModel.deleteE2EMovimientos();
+}
 
 export async function assertArticuloSinMovimientos(idArticulo) {
   const total = await InventarioModel.countMovimientosByArticulo(idArticulo);
