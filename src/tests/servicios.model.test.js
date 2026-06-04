@@ -177,6 +177,8 @@ describe('deleteById — con consumos', () => {
     mockExecute.mockResolvedValueOnce({        // SELECT SERVICIO_ARTICULOS
       rows: [{ ID_ARTICULO: 7, CANTIDAD: 3 }],
     });
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURP: 'TEST123' }] }); // SELECT CURP FROM SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Juan Perez' }] }); // getNombreBeneficiario
     mockApplyMovimiento.mockResolvedValueOnce({});  // applyMovimiento ENTRADA
     mockExecute.mockResolvedValueOnce({});           // DELETE SERVICIO_ARTICULOS
     mockExecute.mockResolvedValueOnce({});           // DELETE SERVICIOS
@@ -198,6 +200,8 @@ describe('deleteById — con consumos', () => {
         { ID_ARTICULO: 5, CANTIDAD: 1 },
       ],
     });
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURP: 'TEST123' }] }); // SELECT CURP FROM SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Juan Perez' }] }); // getNombreBeneficiario
     mockApplyMovimiento.mockResolvedValue({});
     mockExecute.mockResolvedValueOnce({});
     mockExecute.mockResolvedValueOnce({});
@@ -211,6 +215,8 @@ describe('deleteById — con consumos', () => {
     mockExecute.mockResolvedValueOnce({
       rows: [{ ID_ARTICULO: 1, CANTIDAD: 1 }],
     });
+    mockExecute.mockResolvedValueOnce({ rows: [{ CURP: 'TEST123' }] }); // SELECT CURP FROM SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Juan Perez' }] }); // getNombreBeneficiario
     mockApplyMovimiento.mockRejectedValueOnce(new Error('ORA-20002'));
 
     await expect(ServiciosModel.deleteById(5)).rejects.toThrow('ORA-20002');
