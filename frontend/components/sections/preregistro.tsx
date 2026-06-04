@@ -226,12 +226,8 @@ export function PreregistroSection() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
-            Preregistro público
-          </h1>
-          <p className="mt-1 text-base text-foreground">
-            Gestión de solicitudes recibidas desde el portal web.
-          </p>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Preregistro público</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">Gestión de solicitudes recibidas desde el portal web.</p>
         </div>
         <Link
           href="/#seccion-registro"
