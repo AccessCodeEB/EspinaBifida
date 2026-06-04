@@ -373,51 +373,51 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     <div className="flex flex-col gap-6 pb-8">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Inventario</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">Control de artículos y materiales del almacén</p>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Inventario</h1>
+        <p className="mt-0.5 text-xs text-muted-foreground">Control de artículos y materiales del almacén</p>
+      </div>
+
+      {/* Tabs + Botón */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("articulos")}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+              activeTab === "articulos"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <Package className="size-3.5" />
+            Artículos
+          </button>
+          <button
+            onClick={() => { setActiveTab("historial"); if (!movimientos.length) loadMovimientos() }}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+              activeTab === "historial"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <Clock className="size-3.5" />
+            Historial (30d)
+          </button>
+          <button
+            onClick={() => { setActiveTab("altas-bajas"); if (!articulosLog.length) loadLog() }}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+              activeTab === "altas-bajas"
+                ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+                : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+            }`}
+          >
+            <Tag className="size-3.5" />
+            Altas/Bajas
+          </button>
         </div>
         <button onClick={() => { loadData(); if (activeTab === "historial") loadMovimientos(); if (activeTab === "altas-bajas") loadLog() }}
           className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
           <RefreshCw className="size-3.5" />Actualizar
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab("articulos")}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "articulos"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <Package className="size-3.5" />
-          Artículos
-        </button>
-        <button
-          onClick={() => { setActiveTab("historial"); if (!movimientos.length) loadMovimientos() }}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "historial"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <Clock className="size-3.5" />
-          Historial (30d)
-        </button>
-        <button
-          onClick={() => { setActiveTab("altas-bajas"); if (!articulosLog.length) loadLog() }}
-          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
-            activeTab === "altas-bajas"
-              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
-              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
-          }`}
-        >
-          <Tag className="size-3.5" />
-          Altas/Bajas
         </button>
       </div>
 
