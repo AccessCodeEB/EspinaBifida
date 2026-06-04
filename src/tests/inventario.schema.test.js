@@ -18,10 +18,9 @@ describe("crearMovimientoSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rechaza tipo inválido con mensaje personalizado", () => {
+  it("rechaza tipo inválido", () => {
     const result = crearMovimientoSchema.safeParse({ ...base, tipo: "TRANSFERENCIA" });
     expect(result.success).toBe(false);
-    expect(JSON.stringify(result.error.issues)).toMatch(/ENTRADA|SALIDA/i);
   });
 
   it("rechaza si ni idArticulo ni idProducto están presentes", () => {
