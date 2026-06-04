@@ -42,10 +42,14 @@ describe("Criterios de aceptación - inventario", () => {
       .mockResolvedValueOnce({
         rows: [{ ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Perez", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "CRED-001", TIPO_CUOTA: "A" }],
       })
+      // ArticulosModel.findById — lookup de precio por consumo (precioSegunCuota)
+      .mockResolvedValueOnce({ rows: [{ ID_ARTICULO: 1, CUOTA_RECUPERACION: 50, CUOTA_B: null, INVENTARIO_ACTUAL: 50 }] })
       // SEQ_SERVICIOS.NEXTVAL — ID para el nuevo servicio
       .mockResolvedValueOnce({ rows: [{ NEXT_ID: 10 }] })
       // INSERT INTO SERVICIOS
       .mockResolvedValueOnce({})
+      // getNombreBeneficiario — nombre para el motivo del movimiento
+      .mockResolvedValueOnce({ rows: [{ NOMBRE: "Juan Perez" }] })
       // SP_REGISTRAR_MOVIMIENTO_INVENTARIO — consumo del artículo (via applyMovimientoConConexion)
       .mockResolvedValueOnce({ outBinds: { stock_out: 47 } })
       // SEQ_SERVICIO_ARTICULOS.NEXTVAL — ID para SERVICIO_ARTICULOS
