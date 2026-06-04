@@ -29,7 +29,7 @@ import {
 
 const MOVIMIENTOS_DIAS_DEFAULT = 30
 
-type SortField = "clave" | "descripcion" | "cuota" | "cantidad"
+type SortField = "clave" | "descripcion" | "cuota" | "cuotaB" | "cantidad"
 type SortDirection = "asc" | "desc"
 const OTRA_UNIDAD_VALUE = "__OTRA_UNIDAD__"
 const NAVY  = "#0f4c81"
@@ -154,6 +154,9 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       const ac = Number(String(a.cuota).replace(/[^\d.-]/g, ""))
       const bc = Number(String(b.cuota).replace(/[^\d.-]/g, ""))
       return ((isNaN(ac) ? 0 : ac) - (isNaN(bc) ? 0 : bc)) * f
+    }
+    if (sortField === "cuotaB") {
+      return ((a.cuotaB ?? 0) - (b.cuotaB ?? 0)) * f
     }
     return (Number(a.cantidad) - Number(b.cantidad)) * f
   })
@@ -585,9 +588,9 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   </button>
                 </th>
                 <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground xl:table-cell">
-                  <span className="inline-flex items-center gap-1">
-                    <DollarSign className="size-3" />PRECIO LISTA
-                  </span>
+                  <button onClick={() => handleSort("cuotaB")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
+                    <DollarSign className="size-3" />PRECIO LISTA <SortIcon f="cuotaB" />
+                  </button>
                 </th>
                 <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button onClick={() => handleSort("cantidad")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
