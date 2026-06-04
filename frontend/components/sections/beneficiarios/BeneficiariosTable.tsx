@@ -4,7 +4,6 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import { Search, Plus, Eye, CreditCard, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { cn } from "@/lib/utils"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
@@ -66,13 +65,13 @@ export function BeneficiariosTable({
       {/* ── Toolbar administrativa ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Izquierda: buscador + filtros */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Buscador */}
           <div className="relative shrink-0">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input
+            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
               placeholder="Buscar folio, nombre, ciudad o estado..."
-              className="pl-9 h-9 w-full sm:w-80 border-border/80 bg-muted/40 text-sm placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:border-primary/50 transition-all"
+              className="h-9 w-full sm:w-72 rounded-lg border border-border/70 bg-background pl-9 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -82,7 +81,7 @@ export function BeneficiariosTable({
           <div className="hidden sm:block h-9 w-px bg-border/60" />
 
           {/* Filtros de estatus — control segmentado */}
-          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/50 p-1.5">
+          <div className="flex items-center gap-1">
             {(["Todos", "Activo", "Inactivo", "Baja"] as const).map((opcion) => {
               const activo = filtroEstatus === opcion
               const estilos = {
@@ -105,7 +104,7 @@ export function BeneficiariosTable({
                   onClick={() => setFiltroEstatus(opcion)}
                   style={activo && opcion === "Todos" ? { backgroundColor: "#0f4c81" } : undefined}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150",
+                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all duration-150",
                     estilos[opcion]
                   )}
                 >
@@ -126,14 +125,14 @@ export function BeneficiariosTable({
         </div>
 
         {/* Derecha: botón nueva alta */}
-        <Button
-          className="gap-2 shrink-0 h-9 px-4 text-sm font-semibold shadow-sm"
+        <button
+          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 shrink-0"
           style={{ backgroundColor: "#0f4c81" }}
           onClick={onNuevaAlta}
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           Nuevo Beneficiario
-        </Button>
+        </button>
       </div>
 
       {/* ── Grid de tarjetas ── */}
