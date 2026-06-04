@@ -509,8 +509,8 @@ export function DashboardSection() {
       {/* ── Resumen financiero ── */}
       <div className="rounded-xl border border-border/70 bg-card shadow-sm">
         <div className="border-b border-border/40 px-5 py-4">
-          <p className="text-sm font-semibold text-foreground">Resumen financiero</p>
-          <p className="text-[11px] text-muted-foreground">Ingresos por membresías · mes actual vs anterior</p>
+          <p className="text-sm font-semibold text-foreground">Ingresos por membresías</p>
+          <p className="text-[11px] text-muted-foreground">Pagos de membresías recibidos · mes actual vs anterior</p>
         </div>
         {loadingResumenFin ? (
           <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-5">
