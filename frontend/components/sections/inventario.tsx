@@ -236,7 +236,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     if (qty !== 0 && !motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio para registrar un movimiento."); return }
 
     setMovimientoError(null)
-    if (cuotaAChanged) { setShowPrecioConfirmDialog(true); return }
+    if (cuotaAChanged || cuotaBChanged) { setShowPrecioConfirmDialog(true); return }
     await executeSave()
   }
 
@@ -768,48 +768,66 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       </Dialog>
 
       {/* ── Dialog: Confirmación de cambio de precio ── */}
-      <Dialog open={showPrecioConfirmDialog} onOpenChange={open => { if (!open) setShowPrecioConfirmDialog(false) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold">¿Cambiar el precio?</DialogTitle>
-            <DialogDescription className="text-xs">
-              Estás a punto de modificar el precio base de <span className="font-medium text-foreground">{selectedItem?.descripcion}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 py-2">
-            <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación actual</span>
-                  <span className="font-bold text-foreground">{selectedItem?.cuota ?? "$0.00"}</span>
-                </div>
-                <span className="text-lg text-muted-foreground">→</span>
-                <div className="flex flex-col gap-0.5 text-right">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación nueva</span>
-                  <span className="font-bold text-[#0f4c81]">${Number(cuotaAEditar || 0).toFixed(2)}</span>
-                </div>
+      {(() => {
+        const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
+        const cuotaANew = Number(cuotaAEditar || 0)
+        const cuotaAChng = cuotaANew !== cuotaAOld
+        const cuotaBOld = selectedItem?.cuotaB ?? 0
+        const cuotaBNew = Number(cuotaBEditar || 0)
+        const cuotaBChng = cuotaBNew !== cuotaBOld
+        return (
+          <Dialog open={showPrecioConfirmDialog} onOpenChange={open => { if (!open) setShowPrecioConfirmDialog(false) }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="text-base font-bold">¿Confirmar cambio de precios?</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Estás a punto de modificar {cuotaAChng && cuotaBChng ? "los precios" : "el precio"} de{" "}
+                  <span className="font-medium text-foreground">{selectedItem?.descripcion}</span>.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-2 py-2">
+                {cuotaAChng && (
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-muted-foreground line-through">${cuotaAOld.toFixed(2)}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="text-sm font-bold text-[#0f4c81]">${cuotaANew.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+                {cuotaBChng && (
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-muted-foreground line-through">${cuotaBOld.toFixed(2)}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="text-sm font-bold text-[#0f4c81]">${cuotaBNew.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">Los cambios aplicarán a partir de ahora.</p>
               </div>
-            </div>
-            <p className="text-[11px] text-muted-foreground">Este cambio afectará el precio que se cobra a los beneficiarios a partir de ahora.</p>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
-            <button
-              onClick={() => setShowPrecioConfirmDialog(false)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={executeSave}
-              disabled={savingMovimiento || savingStockMinimo}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: NAVY }}
-            >
-              Sí, cambiar precio
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
+                <button
+                  onClick={() => setShowPrecioConfirmDialog(false)}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeSave}
+                  disabled={savingMovimiento || savingStockMinimo}
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  Confirmar cambios
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )
+      })()}
 
       {/* ── Dialog: Movimiento ── */}
       <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>
