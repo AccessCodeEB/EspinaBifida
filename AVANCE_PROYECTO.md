@@ -464,12 +464,20 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
 | **Mejorar UI del filtro de categorías en Inventario** | El dropdown del filtro de categorías actualmente se ve diferente al de stock. Unificar el estilo del popover de categorías para que sea igual de bonito y consistente que el filtro de stock (mismo diseño de cards, íconos, hover states, etc.). |
 
+### Prioridad media — Citas
+
+| Tarea | Descripción |
+|---|---|
+| **Posponer o cancelar cita** | En el panel de detalle de una cita, agregar dos opciones: "Posponer" y "Cancelar". Posponer muestra solo los slots disponibles del mismo especialista (misma lógica de `validarSlotEspecialidad` pero en modo descubrimiento). Al posponer, el `ID_CITA` se mantiene — solo cambia `FECHA`/`HORA`. Aplica para todas las citas sin importar si tienen servicio vinculado. Caso sutil: al validar el nuevo slot, excluir la cita que se está moviendo del conteo de capacidad para evitar falso lleno. |
+
 ### Prioridad media — Servicios
 
 | Tarea | Descripción |
 |---|---|
-| **Especificar tipo de consulta y estudio al registrar servicio** | Al registrar un servicio de tipo "Consulta médica" o "Estudio médico", actualmente es muy genérico. Agregar campo para especificar qué consulta (dental, neurología, urología…) o qué estudio, y opcionalmente con qué doctor. Evaluar si agregar sub-tipos al catálogo o un campo libre de texto. |
-| **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento, Insumos médicos o Préstamo de equipo, el formulario debe guiar mejor al usuario: por ejemplo mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre, para que Lupita no tenga que inventar qué escribir cada vez. |
+| **Especificar tipo de estudio médico** | Al registrar un servicio de tipo "Estudio médico", mostrar un Combobox con opciones sugeridas (Biometría hemática, Cistograma, TAC, Resonancia magnética, Ultrasonido, Rayos X, Electrocardiograma, Otro) más texto libre. No se integra con citas — los estudios son derivaciones externas. |
+| **Quitar monto sugerido hardcodeado + chips de precio** | Eliminar el texto "Monto sugerido para X: $Y.00" que aparece al seleccionar tipo de servicio (valor hardcodeado sin utilidad real). Reemplazar por: cuando Lupita selecciona un artículo (medicamento o insumo), mostrar dos chips clicables "Cuota de recuperación $X" y "Precio de lista $Y" — al hacer clic en uno se auto-llena el campo Monto. Para consulta médica y estudio médico: sin sugerencia, campo en blanco. Conecta `precioSegunCuota()` que ya existe pero nunca se llama. |
+| **Banner "¿agendar cita?" post-servicio** | Después de registrar un servicio de tipo "Consulta médica", mostrar un banner: "¿Quieres agendar una cita para este servicio?" con botón "Sí, agendar" que redirige a /citas con CURP, tipo de servicio y fecha pre-llenados. Solo para Consulta médica — no para Estudio médico (son externos). |
+| **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento o Insumos médicos, el formulario debe guiar mejor al usuario: mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre. |
 
 ### Prioridad media — Membresías
 
