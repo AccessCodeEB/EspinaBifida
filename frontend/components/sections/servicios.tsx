@@ -189,6 +189,7 @@ export function ServiciosSection() {
   const [montoServicio, setMontoServicio] = useState("")
   const [cantidadArticulo, setCantidadArticulo] = useState("1")
   const [descripcionOtro, setDescripcionOtro] = useState("")
+  const [tipoEstudio, setTipoEstudio] = useState("")
   const [fechaServicio, setFechaServicio] = useState(() => new Date().toISOString().split("T")[0])
   const [fechaError, setFechaError] = useState("")
   const [registroError, setRegistroError] = useState("")
@@ -278,6 +279,7 @@ export function ServiciosSection() {
   const cantidadArticuloNum = Number(cantidadArticulo)
   const cantidadArticuloValida = cantidadArticulo.trim() !== "" && Number.isInteger(cantidadArticuloNum) && cantidadArticuloNum > 0
   const requiereDescripcionOtro = tipoServicioSeleccionadoLabel === "Otros"
+  const esEstudioMedico = tipoServicioSeleccionadoLabel.toLowerCase().includes("estudio")
 
   const categoriaArticulo =
     tipoServicioSeleccionadoLabel.toLowerCase().includes("insumo") ? "Insumos Médicos" :
@@ -463,7 +465,8 @@ export function ServiciosSection() {
         curp:           beneficiarioEncontrado.curp,
         idTipoServicio: idTipoServicioNumerico,
         montoPagado:    0,
-        notas:          requiereDescripcionOtro ? `Servicio otros: ${descripcionOtro.trim()}` : undefined,
+        notas:          requiereDescripcionOtro ? `Servicio otros: ${descripcionOtro.trim()}` :
+                        (esEstudioMedico && tipoEstudio.trim()) ? `Estudio: ${tipoEstudio.trim()}` : undefined,
         estatus:        "COMPLETADO",
         fechaDevolucionEsperada: null,
         consumos: requiereArticulo && idArticuloSeleccionado
@@ -488,6 +491,7 @@ export function ServiciosSection() {
       setMontoServicio("")
       setCantidadArticulo("1")
       setDescripcionOtro("")
+      setTipoEstudio("")
       setFechaServicio(hoy)
       setIdArticuloSeleccionado("")
       setArticulosInventario([])
@@ -959,6 +963,9 @@ export function ServiciosSection() {
         montoSugerido={montoSugerido}
         tipoServicioSeleccionadoLabel={tipoServicioSeleccionadoLabel}
         requiereDescripcionOtro={requiereDescripcionOtro}
+        esEstudioMedico={esEstudioMedico}
+        tipoEstudio={tipoEstudio}
+        setTipoEstudio={setTipoEstudio}
         expedienteBloqueado={expedienteBloqueado}
         onRegistrar={handleRegistrarServicio}
         catalogoServicios={catalogoFiltrado}

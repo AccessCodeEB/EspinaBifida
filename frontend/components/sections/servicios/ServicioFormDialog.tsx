@@ -86,6 +86,9 @@ interface ServicioFormDialogProps {
   montoSugerido: number | null
   tipoServicioSeleccionadoLabel: string
   requiereDescripcionOtro: boolean
+  esEstudioMedico: boolean
+  tipoEstudio: string
+  setTipoEstudio: (v: string) => void
   expedienteBloqueado: boolean
 
   // Catálogo dinámico + artículo específico
@@ -135,6 +138,9 @@ export function ServicioFormDialog({
   montoSugerido,
   tipoServicioSeleccionadoLabel,
   requiereDescripcionOtro,
+  esEstudioMedico,
+  tipoEstudio,
+  setTipoEstudio,
   expedienteBloqueado,
   catalogoServicios,
   requiereArticulo,
@@ -393,6 +399,35 @@ export function ServicioFormDialog({
           )}
 
           
+
+          {/* Tipo de estudio médico */}
+          {esEstudioMedico && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de estudio</label>
+              <div className="relative">
+                <input
+                  list="tipos-estudio"
+                  placeholder="Ej. Biometría hemática, TAC, Ultrasonido..."
+                  className="h-10 w-full rounded-lg border border-border/70 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                  value={tipoEstudio}
+                  onChange={(e) => setTipoEstudio(e.target.value)}
+                />
+                <datalist id="tipos-estudio">
+                  <option value="Biometría hemática" />
+                  <option value="Biometría hemática completa" />
+                  <option value="Química sanguínea" />
+                  <option value="Cistograma" />
+                  <option value="TAC" />
+                  <option value="Resonancia magnética" />
+                  <option value="Ultrasonido" />
+                  <option value="Rayos X" />
+                  <option value="Electrocardiograma" />
+                  <option value="Urocultivo" />
+                  <option value="Examen general de orina" />
+                </datalist>
+              </div>
+            </div>
+          )}
 
           {/* Descripción para "Otros" */}
           {requiereDescripcionOtro && (
