@@ -38,6 +38,7 @@ function mapInventarioRow(row) {
     idArticulo:       row.ID_ARTICULO,
     descripcion:      row.DESCRIPCION,
     cuotaRecuperacion: row.CUOTA_RECUPERACION,
+    cuotaB:           row.CUOTA_B != null ? Number(row.CUOTA_B) : null,
     inventarioActual,
     stock:            inventarioActual,
     minimo:           Number(row.STOCK_MINIMO ?? 5),

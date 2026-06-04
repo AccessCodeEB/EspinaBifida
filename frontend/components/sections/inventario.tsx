@@ -581,8 +581,13 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 </th>
                 <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
                   <button onClick={() => handleSort("cuota")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
-                    <DollarSign className="size-3" />CUOTA <SortIcon f="cuota" />
+                    <DollarSign className="size-3" />CUOTA DE REC. <SortIcon f="cuota" />
                   </button>
+                </th>
+                <th className="hidden py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground xl:table-cell">
+                  <span className="inline-flex items-center gap-1">
+                    <DollarSign className="size-3" />PRECIO LISTA
+                  </span>
                 </th>
                 <th className="py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
                   <button onClick={() => handleSort("cantidad")} className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity">
@@ -595,7 +600,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             <tbody className="divide-y divide-border/30">
               {sortedFiltered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">No se encontraron artículos.</td>
+                  <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">No se encontraron artículos.</td>
                 </tr>
               ) : (
                 sortedFiltered.map((item, idx) => {
@@ -610,6 +615,9 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                       </td>
                       <td className="hidden py-3 text-center text-xs text-foreground md:table-cell">{item.unidad}</td>
                       <td className="hidden py-3 text-center text-xs text-foreground lg:table-cell">{item.cuota}</td>
+                      <td className="hidden py-3 text-center text-xs text-foreground xl:table-cell">
+                        {item.cuotaB != null ? `$${Number(item.cuotaB).toFixed(2)}` : <span className="text-muted-foreground/50">—</span>}
+                      </td>
                       <td className="py-3 text-center">
                         <span className={`text-sm font-bold tabular-nums ${
                           cero ? "text-red-600 dark:text-red-400" :
