@@ -903,7 +903,9 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 </div>
                 {/* Cantidad */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {tipoMovimientoToggle === "ENTRADA" ? "Cantidad a agregar" : "Cantidad a retirar"}
+                  </label>
                   <Input
                     className="h-9 text-sm"
                     type="number"
