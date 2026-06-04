@@ -131,3 +131,22 @@ export const deleteById = (id) =>
       );
     }
   });
+
+export const deleteE2EArticulos = () =>
+  withConnection(async (conn) => {
+    // Obtener IDs de artículos E2E
+    const { rows } = await conn.execute(
+      `SELECT ID_ARTICULO FROM ARTICULOS WHERE UPPER(DESCRIPCION) LIKE '%E2E%'`
+    );
+    if (!rows.length) return;
+
+    const ids = rows.map(r => r.ID_ARTICULO);
+    const inClause = ids.map((_, i) => `:id${i}`).join(",");
+    const binds = Object.fromEntries(ids.map((id, i) => [`id${i}`, id]));
+
+    await conn.execute(`DELETE FROM SERVICIO_ARTICULOS WHERE ID_ARTICULO IN (${inClause})`, binds);
+    await conn.execute(`DELETE FROM MOVIMIENTOS_INVENTARIO WHERE ID_ARTICULO IN (${inClause})`, binds);
+    await conn.execute(`DELETE FROM ARTICULOS_LOG WHERE ID_ARTICULO IN (${inClause})`, binds);
+    await conn.execute(`DELETE FROM ARTICULOS WHERE ID_ARTICULO IN (${inClause})`, binds);
+    await conn.commit();
+  });

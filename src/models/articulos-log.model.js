@@ -22,6 +22,14 @@ export const findAll = ({ tipo, dias } = {}) =>
     return rows.map(toCamel);
   });
 
+export const deleteE2ELogs = () =>
+  withConnection(async (conn) => {
+    await conn.execute(
+      `DELETE FROM ARTICULOS_LOG WHERE UPPER(DESCRIPCION_ARTICULO) LIKE '%E2E%'`
+    );
+    await conn.commit();
+  });
+
 export const create = ({ idArticulo, descripcionArticulo, tipo, motivo }) =>
   withConnection(async (conn) => {
     await conn.execute(
