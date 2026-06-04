@@ -84,6 +84,7 @@ export const ALTA_FORM_INICIAL = {
   notas: "",
   estatus: "Activo",
   tipo: "",
+  tipoCuota: "" as "A" | "B" | "",
 }
 
 export type BeneficiarioAltaForm = typeof ALTA_FORM_INICIAL
@@ -285,6 +286,7 @@ export function buildAltaCreatePayload(form: BeneficiarioAltaForm): Omit<Benefic
     tipo: tipoCanon,
     ciudad: formData.ciudad,
     estado: formData.estado,
+    tipoCuota: formData.tipoCuota || null,
     membresiaEstatus: "Sin membresia",
   }
 }
