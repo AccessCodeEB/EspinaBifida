@@ -61,6 +61,8 @@ router.get("/",    verifyToken,                  ArticulosController.getAll);
 
 router.get("/categorias", verifyToken,            ArticulosController.getCategorias);
 
+router.get("/log",        verifyToken,            ArticulosController.getLog);
+
 /**
  * @openapi
  * /articulos/{id}:

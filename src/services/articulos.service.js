@@ -1,4 +1,5 @@
 import * as ArticulosModel from "../models/articulos.model.js";
+import * as ArticulosLogModel from "../models/articulos-log.model.js";
 import { badRequest, conflict } from "../utils/httpErrors.js";
 import { checkStockBajo } from "./notificaciones.service.js";
 
@@ -76,7 +77,7 @@ export const getAllCategorias = () =>
 export const getById = (id) =>
   ArticulosModel.findById(id);
 
-export const create = (data) => {
+export async function create(data) {
   const normalized = normalizeData(data);
   // Asegurar que todos los binds tienen valor (null si no viene en body)
   // para que el trigger TRG_ARTICULOS_BI asigne SEQ_ARTICULOS.NEXTVAL cuando idArticulo=null
@@ -86,8 +87,15 @@ export const create = (data) => {
     manejaInventario: null, idCategoria: null, stockMinimo: null,
     ...normalized,
   };
-  return ArticulosModel.create(bindings);
-};
+  const result = await ArticulosModel.create(bindings);
+  ArticulosLogModel.create({
+    idArticulo: result?.idArticulo ?? null,
+    descripcionArticulo: normalized.descripcion ?? data.descripcion ?? "Artículo",
+    tipo: "ALTA",
+    motivo: data.motivoAlta ?? null,
+  }).catch(() => {});
+  return result;
+}
 
 export async function update(id, data) {
   const result = await ArticulosModel.update(id, normalizeData(data));
@@ -96,7 +104,7 @@ export async function update(id, data) {
   return result;
 }
 
-export async function deleteById(id) {
+export async function deleteById(id, motivo) {
   const articulo = await ArticulosModel.findById(id);
   if (!articulo) return null;
 
@@ -108,5 +116,15 @@ export async function deleteById(id) {
     );
   }
 
-  return ArticulosModel.deleteById(id);
+  const result = await ArticulosModel.deleteById(id);
+  ArticulosLogModel.create({
+    idArticulo: id,
+    descripcionArticulo: articulo.DESCRIPCION ?? "Artículo",
+    tipo: "BAJA",
+    motivo: motivo ?? null,
+  }).catch(() => {});
+  return result;
 }
+
+export const getLog = ({ tipo, dias } = {}) =>
+  ArticulosLogModel.findAll({ tipo, dias });

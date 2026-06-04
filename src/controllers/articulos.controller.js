@@ -54,8 +54,22 @@ export async function deleteById(req, res, next) {
     const existente = await ArticulosService.getById(req.params.id);
     if (!existente) return res.status(404).json({ error: "Articulo no encontrado" });
 
-    await ArticulosService.deleteById(req.params.id);
+    const motivo = req.body?.motivo ?? req.query?.motivo ?? null;
+    await ArticulosService.deleteById(req.params.id, motivo);
     res.json({ message: "Articulo eliminado exitosamente" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getLog(req, res, next) {
+  try {
+    const { tipo, dias } = req.query;
+    const rows = await ArticulosService.getLog({
+      tipo: tipo || undefined,
+      dias: dias ? Number(dias) : undefined,
+    });
+    res.json(rows);
   } catch (err) {
     next(err);
   }
