@@ -135,10 +135,6 @@ export async function createConValidacion(data) {
     costo = Number(costo.toFixed(2));
   }
 
-  if (costo === null || costo === undefined) {
-    throw badRequest("costo es requerido cuando no hay consumos");
-  }
-
   validateMontoReglas(costo, montoPagado);
 
   const payload = {
