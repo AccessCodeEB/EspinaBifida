@@ -231,7 +231,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     if (!id || isNaN(id)) { setMovimientoError("Selecciona un artículo válido."); return }
     if (isNaN(minimo) || minimo < 0) { setMovimientoError("Stock mínimo debe ser ≥ 0."); return }
     if (isNaN(cuotaANew) || cuotaANew < 0) { setMovimientoError("El precio base debe ser ≥ 0."); return }
-    if (cuotaBEditar.trim() === "" || isNaN(cuotaBNew as number) || (cuotaBNew as number) < 0) { setMovimientoError("La Cuota B es obligatoria y debe ser ≥ 0."); return }
+    if (cuotaBEditar.trim() === "" || isNaN(cuotaBNew as number) || (cuotaBNew as number) < 0) { setMovimientoError("El Precio de Lista es obligatorio y debe ser ≥ 0."); return }
     if (qty === 0 && minimo === (selectedItem?.minimo ?? 5) && !cuotaBChanged && !cuotaAChanged) { setMovimientoError("Sin cambios para guardar."); return }
     if (qty !== 0 && !motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio para registrar un movimiento."); return }
 
@@ -269,7 +269,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
       const updates: string[] = []
       if (cuotaAChanged) updates.push("Precio base actualizado")
-      if (cuotaBChanged) updates.push("Cuota B actualizada")
+      if (cuotaBChanged) updates.push("Precio de Lista actualizado")
       if (minimo !== (selectedItem?.minimo ?? 5)) updates.push("Stock mínimo actualizado")
       if (qty !== 0) updates.push(tipoMovimientoToggle === "ENTRADA" ? "Entrada registrada" : "Salida registrada")
       toast.success(updates.length > 0 ? updates.join(" • ") : "Cambios guardados")
@@ -307,7 +307,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     const unidadFinal = unidadSeleccionada === OTRA_UNIDAD_VALUE ? unidadNueva.trim() : articuloForm.unidad.trim()
     if (!unidadFinal) { setArticuloError("La unidad es obligatoria."); return }
     if (isNaN(cuota) || cuota < 0) { setArticuloError("La cuota A (precio base) debe ser ≥ 0."); return }
-    if (articuloForm.cuotaB.trim() === "" || isNaN(cuotaBVal) || cuotaBVal < 0) { setArticuloError("La Cuota B es obligatoria y debe ser ≥ 0."); return }
+    if (articuloForm.cuotaB.trim() === "" || isNaN(cuotaBVal) || cuotaBVal < 0) { setArticuloError("El Precio de Lista es obligatorio y debe ser ≥ 0."); return }
     if (isNaN(inv) || inv < 0) { setArticuloError("La cantidad inicial debe ser ≥ 0."); return }
     if (isNaN(minimo) || minimo < 0) { setArticuloError("El stock mínimo debe ser ≥ 0."); return }
     setSavingArticulo(true); setArticuloError(null)
@@ -861,7 +861,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Recuperación</span>
                   <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.cuota}</span>
                   {selectedItem.cuotaB != null && (
-                    <span className="text-[9px] text-muted-foreground">Real: ${selectedItem.cuotaB.toFixed(2)}</span>
+                    <span className="text-[9px] text-muted-foreground">Lista: ${selectedItem.cuotaB.toFixed(2)}</span>
                   )}
                 </div>
                 <div className="flex flex-col items-center gap-0.5 px-3 py-3">
@@ -943,12 +943,12 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                     <p className="text-[10px] text-muted-foreground">Precio subsidiado (recursos limitados)</p>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio real</label>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
                       <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaBEditar} onChange={e => setCuotaBEditar(e.target.value)} disabled={savingMovimiento} />
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Precio completo (cuota B)</p>
+                    <p className="text-[10px] text-muted-foreground">Precio de mercado sin subsidio</p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -1035,9 +1035,9 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                     <p className="text-[11px] text-muted-foreground">Precio subsidiado (recursos limitados).</p>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio real</label>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</label>
                     <Input className="h-10 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={articuloForm.cuotaB} onChange={e => setArticuloForm(p => ({ ...p, cuotaB: e.target.value }))} />
-                    <p className="text-[11px] text-muted-foreground">Precio completo (cuota B).</p>
+                    <p className="text-[11px] text-muted-foreground">Precio de mercado sin subsidio.</p>
                   </div>
                 </div>
 
