@@ -100,23 +100,25 @@ export function ServiciosChartsKpis({
             <p className="text-[11px] text-muted-foreground">Últimos 6 meses con base en el mes seleccionado</p>
           </div>
           <div className="px-4 pb-4 pt-2">
-            <div className="h-[260px] w-full">
+            <div className="h-[260px] w-full [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyBarData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <BarChart data={monthlyBarData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/60" />
                   <XAxis
                     dataKey="mes"
-                    className="text-xs"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                    tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis
-                    className="text-xs"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                    width={55}
+                    tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `$${Number(value).toLocaleString("es-MX")}`}
+                    tickFormatter={(value: number) => {
+                      if (value >= 1000) return `$${(value / 1000).toLocaleString("es-MX", { maximumFractionDigits: 1 })}k`
+                      return `$${value}`
+                    }}
                   />
                   <Tooltip
                     formatter={(value: number) => formatMoney(Number(value))}
@@ -150,7 +152,7 @@ export function ServiciosChartsKpis({
             <p className="text-[11px] text-muted-foreground">Distribución del mes seleccionado</p>
           </div>
           <div className="px-4 pb-4 pt-2">
-            <div className="flex h-[260px] w-full items-center justify-center">
+            <div className="flex h-[260px] w-full items-center justify-center [&_.recharts-legend-item-text]:!text-foreground">
               {donutData.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay datos en este mes.</p>
               ) : (
