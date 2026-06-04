@@ -1,7 +1,7 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-01 (Domingo) — Inventario: edición de precios con diálogo de confirmación; Auditoría QA: 3 bugs corregidos + 7 tests de regresión; 1222 tests 100% verde
-**Próxima entrega:** 2026-06-03 (Martes)
+**Actualización:** 2026-06-04 (Miércoles) — Inventario: 9 mejoras UX/funcionales + migración ARTICULOS_LOG + comodatos registran movimiento; 1351 tests 100% verde
+**Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
 ---
@@ -12,14 +12,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Indicador | Estado |
 |---|---|
-| Cobertura de pruebas (statements) | **97.24%** |
-| Cobertura de pruebas (funciones) | **95.2%** |
-| Cobertura de pruebas (ramas) | **96.75%** |
+| Cobertura de pruebas (statements) | **97.56%** |
+| Cobertura de pruebas (funciones) | **95.19%** |
+| Cobertura de pruebas (ramas) | **95.97%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
-| Migraciones de BD | 28 / 28 |
-| Archivos de prueba Jest (suites) | 55 |
-| Tests Jest | 1222 |
+| Migraciones de BD | 30 / 30 |
+| Archivos de prueba Jest (suites) | 59 |
+| Tests Jest | 1351 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
