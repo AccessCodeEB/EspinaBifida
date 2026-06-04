@@ -48,8 +48,8 @@ test(qase(32, 'TC-020: CURP se autocalcula al llenar nombre, apellidos, fecha, g
   await page.getByRole('option', { name: /masculino/i }).click();
   await page.waitForTimeout(300);
 
-  // Estado (Radix Select)
-  await page.locator('#prereg-estado').click();
+  // Estado de nacimiento (Radix Select) — campo usado para el autocalculo de CURP
+  await page.locator('#prereg-estado-nac').click();
   await page.waitForTimeout(300);
   await page.getByRole('option', { name: /nuevo le/i }).click();
 
