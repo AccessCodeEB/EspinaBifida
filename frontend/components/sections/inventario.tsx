@@ -64,7 +64,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [showAgregarDialog, setShowAgregarDialog]   = useState(false)
   const [showEliminarDialog, setShowEliminarDialog] = useState(false)
   const [articuloForm, setArticuloForm] = useState({
-    idArticulo: "", descripcion: "", unidad: "PZA.",
+    descripcion: "", unidad: "PZA.",
     cuotaRecuperacion: "0", cuotaB: "0", inventarioActual: "0", stockMinimo: "5", idCategoria: "",
   })
   const [cuotaBEditar, setCuotaBEditar] = useState<string>("")
@@ -273,7 +273,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
   function openAgregarArticulo() {
     setArticuloError(null); setSavingArticulo(false)
-    setArticuloForm({ idArticulo: "", descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", cuotaB: "", inventarioActual: "0", stockMinimo: "5", idCategoria: "" })
+    setArticuloForm({ descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", cuotaB: "", inventarioActual: "0", stockMinimo: "5", idCategoria: "" })
     setUnidadSeleccionada("PZA."); setUnidadNueva(""); setShowAgregarDialog(true)
   }
   function handleUnidadSeleccion(value: string) {
@@ -287,11 +287,10 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const findArticuloLabel  = (id: string) => { const item = inventario.find(a => String(a.clave) === id); return item ? `${item.clave} - ${item.descripcion}` : "Seleccionar artículo" }
 
   async function handleAgregarArticulo() {
-    const id = Number(articuloForm.idArticulo), cuota = Number(articuloForm.cuotaRecuperacion)
+    const cuota = Number(articuloForm.cuotaRecuperacion)
     const inv = Number(articuloForm.inventarioActual), minimo = Number(articuloForm.stockMinimo)
     const idCat = Number(articuloForm.idCategoria)
     const cuotaBVal = Number(articuloForm.cuotaB)
-    if (isNaN(id)) { setArticuloError("La clave debe ser numérica."); return }
     if (!articuloForm.descripcion.trim()) { setArticuloError("La descripción es obligatoria."); return }
     if (!articuloForm.idCategoria || isNaN(idCat)) { setArticuloError("Selecciona una categoría."); return }
     const unidadFinal = unidadSeleccionada === OTRA_UNIDAD_VALUE ? unidadNueva.trim() : articuloForm.unidad.trim()
@@ -303,7 +302,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     setSavingArticulo(true); setArticuloError(null)
     try {
       await crearArticulo({
-        ...(id > 0 ? { idArticulo: id } : {}),
         descripcion: articuloForm.descripcion.trim(),
         unidad: unidadFinal,
         cuotaRecuperacion: cuota,
@@ -971,10 +969,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Datos del artículo</p>
               <div className="space-y-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Clave del artículo</label>
-                  <Input className="h-10 text-sm" type="number" min="1" placeholder="Ej. 500" value={articuloForm.idArticulo} onChange={e => setArticuloForm(p => ({ ...p, idArticulo: e.target.value }))} />
-                </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Descripción</label>
                   <Input className="h-10 text-sm" placeholder="Nombre del artículo" value={articuloForm.descripcion} onChange={e => setArticuloForm(p => ({ ...p, descripcion: e.target.value }))} />
