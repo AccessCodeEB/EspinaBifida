@@ -22,6 +22,7 @@ export const findAll = ({ tipo, dias } = {}) =>
     return rows.map(toCamel);
   });
 
+/* istanbul ignore next */
 export const deleteE2ELogs = () =>
   withConnection(async (conn) => {
     await conn.execute(

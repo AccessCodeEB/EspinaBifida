@@ -132,6 +132,7 @@ export const deleteById = (id) =>
     }
   });
 
+/* istanbul ignore next */
 export const deleteE2EArticulos = () =>
   withConnection(async (conn) => {
     // Obtener IDs de artículos E2E

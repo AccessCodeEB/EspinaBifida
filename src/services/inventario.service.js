@@ -88,6 +88,7 @@ export async function getMovimientos(days = null) {
 /* istanbul ignore next */
 export const deleteE2EMovimientos = () => InventarioModel.deleteE2EMovimientos();
 
+/* istanbul ignore next */
 export async function deleteE2EInventario() {
   await ArticulosLogModel.deleteE2ELogs();
   await ArticulosModel.deleteE2EArticulos();
