@@ -445,6 +445,18 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ## ❌ Lo que falta por hacer
 
+### Prioridad alta — Bugs / UX críticos
+
+| Tarea | Descripción |
+|---|---|
+| **Igualar tamaño de títulos de secciones** | Los títulos de las distintas secciones del sistema tienen tamaños inconsistentes. Unificarlos para que todos usen el mismo nivel de heading y apariencia. |
+| **Quitar emojis de Beneficiarios y Administradores** | Las vistas de Beneficiarios y Administradores tienen emojis en encabezados o labels que no corresponden al estilo del sistema. Eliminarlos. |
+| **Notificaciones de membresías no se actualiza** | El panel o badge de notificaciones de membresías no refleja cambios en tiempo real (o tras una acción). Revisar el mecanismo de refresco y corregir para que el conteo/lista se actualice correctamente. |
+| **Bug de scroll en Servicios y Comodatos** | El mismo problema de scroll que se detectó al eliminar un artículo de inventario aparece también en las vistas de Servicios y Comodatos. Identificar la causa raíz (posiblemente overflow mal configurado en el modal o la lista) y aplicar la misma corrección. |
+| **Dropdown de Comodatos: mostrar stock disponible por artículo** | En el dropdown de selección de artículo al registrar un comodato, mostrar junto a cada artículo cuántas unidades están disponibles en stock, para que el operador sepa si puede prestar ese ítem sin tener que salir a revisar inventario. |
+| **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
+| **Gestión de devolución de comodatos: temprana y tardía** | Agregar alguna manera de registrar que un artículo fue devuelto antes del tiempo acordado (devolución anticipada) o que ya se pasó del tiempo límite sin devolución (préstamo vencido). Mostrar indicador visual en la lista de comodatos y permitir registrar el evento correspondiente. |
+
 ### Prioridad media — UX / UI
 
 | Tarea | Descripción |
