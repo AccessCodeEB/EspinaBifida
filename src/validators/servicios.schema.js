@@ -7,8 +7,6 @@ const consumoSchema = z.object({
   idProducto: z.number({ coerce: true }).int().positive().optional(),
   cantidad:   z.number({ coerce: true }).int().positive("cantidad debe ser entero positivo"),
 }).refine(d => d.idArticulo !== undefined || d.idProducto !== undefined, {
-  
-}).refine(d => d.idArticulo !== undefined || d.idProducto !== undefined, {
   message: "consumo debe incluir idArticulo o idProducto",
 });
 
@@ -27,6 +25,7 @@ export const crearServicioSchema = z.object({
 export const actualizarServicioSchema = z.object({
   montoPagado: z.number({ coerce: true }).nonnegative("montoPagado debe ser >= 0").optional(),
   notas:       z.string().max(1000).nullable().optional(),
-}).refine((d) => d.montoPagado !== undefined || d.notas !== undefined, {
-  message: "Envía al menos montoPagado o notas",
+  estatus:     z.enum(["PENDIENTE", "COMPLETADO"]).optional(),
+}).refine((d) => d.montoPagado !== undefined || d.notas !== undefined || d.estatus !== undefined, {
+  message: "Envía al menos montoPagado, notas o estatus",
 });
