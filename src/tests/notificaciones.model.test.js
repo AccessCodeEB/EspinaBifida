@@ -29,6 +29,7 @@ const {
   insertPreregistroNuevo,
   insertBeneficiarioBaja,
   insertReporteGenerado,
+  deleteOrphanedNotificaciones,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -410,5 +411,21 @@ describe("syncSinStockConsolidado", () => {
     mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT → vacío
     await syncSinStockConsolidado(null);
     expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── deleteOrphanedNotificaciones ─────────────────────────────────────────────
+
+describe("deleteOrphanedNotificaciones", () => {
+  it("elimina notificaciones cuyo CURP no existe en BENEFICIARIOS y retorna rowsAffected", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 2 });
+    const result = await deleteOrphanedNotificaciones();
+    expect(result).toBe(2);
+  });
+
+  it("retorna 0 cuando rowsAffected es undefined", async () => {
+    mockExecute.mockResolvedValueOnce({});
+    const result = await deleteOrphanedNotificaciones();
+    expect(result).toBe(0);
   });
 });
