@@ -1222,13 +1222,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                     <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[420px] p-0" align="start">
+                <PopoverContent className="w-[420px] p-0" align="start"
+                  onWheel={e => e.stopPropagation()}>
                   <Command shouldFilter filter={(value, search) => {
                     const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
                     return norm(value).includes(norm(search)) ? 1 : 0
                   }}>
                     <CommandInput placeholder="Clave o descripción..." />
-                    <CommandList className="max-h-[280px] overflow-y-auto">
+                    <CommandList className="max-h-[260px] overflow-y-auto">
                       <CommandEmpty>No se encontraron artículos.</CommandEmpty>
                       <CommandGroup>
                         {inventario.map((item, idx) => {
