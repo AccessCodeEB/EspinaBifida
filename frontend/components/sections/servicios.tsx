@@ -175,6 +175,7 @@ export function ServiciosSection() {
   // ── Dialogs ──
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
   const [bannerCita, setBannerCita] = useState<{ curp: string; nombre: string; idTipoServicio: number; fecha: string } | null>(null)
+  const [bannerEliminarServicio, setBannerEliminarServicio] = useState<{ nombre: string; servicio: string } | null>(null)
   const [servicioDetalle, setServicioDetalle] = useState<ServicioDetallado | null>(null)
   const [servicioParaEliminar, setServicioParaEliminar] = useState<ServicioDetallado | null>(null)
   const [eliminandoServicio, setEliminandoServicio] = useState(false)
@@ -531,6 +532,11 @@ export function ServiciosSection() {
       setPendingDelete({ servicio, timerId })
       setServicioParaEliminar(null)
       toast.success("Servicio eliminado", { description: "Tienes 8 segundos para deshacer." })
+
+      const esConsulta = servicio.servicio?.toLowerCase().includes("consulta")
+      if (esConsulta) {
+        setBannerEliminarServicio({ nombre: servicio.nombre, servicio: servicio.servicio })
+      }
     } catch (err) {
       console.error("Error al eliminar servicio:", err)
       toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
@@ -721,41 +727,52 @@ export function ServiciosSection() {
         </button>
       </div>
 
-      {/* Banner: agendar cita post-consulta */}
-      {bannerCita && (
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-[#0f4c81]/30 bg-[#0f4c81]/8 px-5 py-3.5 dark:border-blue-900/40 dark:bg-blue-950/20">
-          <div className="flex items-center gap-3">
-            <CalendarDays className="size-4 shrink-0 text-[#0f4c81] dark:text-blue-400" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">¿Quieres agendar una cita para esta consulta?</p>
-              <p className="text-[11px] text-muted-foreground">{bannerCita.nombre} · {bannerCita.fecha}</p>
+      {/* Dialog: agendar cita post-consulta */}
+      <Dialog open={Boolean(bannerCita)} onOpenChange={(open) => { if (!open) setBannerCita(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <CalendarDays className="size-4 text-[#0f4c81]" />
+              ¿Agendar cita?
+            </DialogTitle>
+          </DialogHeader>
+          {bannerCita && (
+            <div className="flex flex-col gap-4 pt-1">
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicio registrado</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{bannerCita.nombre}</p>
+                <p className="text-xs text-muted-foreground">Consulta médica · {bannerCita.fecha}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ¿Quieres programar también la cita en el calendario?
+              </p>
+              <div className="flex justify-end gap-2 border-t border-border/40 pt-2">
+                <button
+                  onClick={() => setBannerCita(null)}
+                  className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  No, gracias
+                </button>
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem(CITA_PREFILL_KEY, JSON.stringify({
+                      curp: bannerCita.curp,
+                      idTipoServicio: bannerCita.idTipoServicio,
+                      fecha: bannerCita.fecha,
+                    }))
+                    router.push("/panel?section=citas")
+                    setBannerCita(null)
+                  }}
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: "#0f4c81" }}
+                >
+                  Sí, agendar cita
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => {
-                sessionStorage.setItem(CITA_PREFILL_KEY, JSON.stringify({
-                  curp: bannerCita.curp,
-                  idTipoServicio: bannerCita.idTipoServicio,
-                  fecha: bannerCita.fecha,
-                }))
-                router.push("/panel?section=citas")
-                setBannerCita(null)
-              }}
-              className="rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#0f4c81" }}
-            >
-              Sí, agendar
-            </button>
-            <button
-              onClick={() => setBannerCita(null)}
-              className="rounded-lg border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
-            >
-              No, gracias
-            </button>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* KPIs + Charts */}
       {activeTab === "resumen" && <ServiciosChartsKpis
@@ -952,6 +969,48 @@ export function ServiciosSection() {
         setIdArticuloSeleccionado={setIdArticuloSeleccionado}
         
       />
+
+      {/* Dialog: cancelar cita post-eliminación */}
+      <Dialog open={Boolean(bannerEliminarServicio)} onOpenChange={(open) => { if (!open) setBannerEliminarServicio(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <CalendarDays className="size-4 text-[#0f4c81]" />
+              ¿Cancelar la cita?
+            </DialogTitle>
+          </DialogHeader>
+          {bannerEliminarServicio && (
+            <div className="flex flex-col gap-4 pt-1">
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicio eliminado</p>
+                <p className="mt-1 text-sm font-medium text-foreground">{bannerEliminarServicio.nombre}</p>
+                <p className="text-xs text-muted-foreground">{bannerEliminarServicio.servicio}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ¿Quieres ir a Citas para cancelar también la cita asociada?
+              </p>
+              <div className="flex justify-end gap-2 border-t border-border/40 pt-2">
+                <button
+                  onClick={() => setBannerEliminarServicio(null)}
+                  className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  No, gracias
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/panel?section=citas")
+                    setBannerEliminarServicio(null)
+                  }}
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: "#0f4c81" }}
+                >
+                  Ir a Citas
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog: Eliminar */}
       <Dialog open={Boolean(servicioParaEliminar)} onOpenChange={(open) => !open && setServicioParaEliminar(null)}>
