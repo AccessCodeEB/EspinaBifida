@@ -90,9 +90,9 @@ export async function create(data) {
   const result = await ArticulosModel.create(bindings);
   ArticulosLogModel.create({
     idArticulo: result?.idArticulo ?? null,
-    descripcionArticulo: normalized.descripcion ?? data.descripcion ?? "Artículo",
+    descripcionArticulo: normalized.descripcion ?? data?.descripcion ?? "Artículo",
     tipo: "ALTA",
-    motivo: data.motivoAlta ?? null,
+    motivo: data?.motivoAlta ?? null,
   }).catch(() => {});
   return result;
 }
