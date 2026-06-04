@@ -487,17 +487,15 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Notificaciones de membresías no se actualiza** | El panel o badge de notificaciones de membresías no refleja cambios en tiempo real (o tras una acción). Revisar el mecanismo de refresco y corregir para que el conteo/lista se actualice correctamente. |
-| **Dropdown de Comodatos: mostrar stock disponible por artículo** | En el dropdown de selección de artículo al registrar un comodato, mostrar junto a cada artículo cuántas unidades están disponibles en stock, para que el operador sepa si puede prestar ese ítem sin tener que salir a revisar inventario. |
 | **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
-| **Gestión de devolución de comodatos: temprana y tardía** | Agregar alguna manera de registrar que un artículo fue devuelto antes del tiempo acordado (devolución anticipada) o que ya se pasó del tiempo límite sin devolución (préstamo vencido). Mostrar indicador visual en la lista de comodatos y permitir registrar el evento correspondiente. |
+| **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
+| **Gestión de devolución de comodatos: temprana y tardía** | Registrar devolución anticipada o tardía (préstamo vencido). Indicador visual en la lista y evento correspondiente. |
 
 ### Prioridad media — UX / UI
 
 | Tarea | Descripción |
 |---|---|
 | **Decidir sidebar Configuración vs menú header** | Actualmente existen ambos (sidebar + header dropdown). Coordinar con el equipo cuál conservar o si mantener los dos. |
-| **Mejorar UI del filtro de categorías en Inventario** | El dropdown del filtro de categorías actualmente se ve diferente al de stock. Unificar el estilo del popover de categorías para que sea igual de bonito y consistente que el filtro de stock (mismo diseño de cards, íconos, hover states, etc.). |
 
 ### Prioridad media — Citas
 
@@ -512,11 +510,6 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 |---|---|
 | **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento o Insumos médicos, el formulario debe guiar mejor al usuario: mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre. |
 
-### Prioridad media — Membresías
-
-| Tarea | Descripción |
-|---|---|
-| **Investigar precio fijo de membresía** | Confirmar con la asociación cuánto cobran por mes de membresía, si hay precio diferente por tipo de beneficiario, y si aplican descuentos al renovar varios meses a la vez. Una vez confirmado, precargarlo como valor sugerido en el campo Monto del form de membresía. |
 
 ### Prioridad media — Notificaciones futuras
 
