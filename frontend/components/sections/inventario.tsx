@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
-  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock, Tag,
+  Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock, Tag, Pill, Stethoscope, Wrench,
   Hash, Ruler, DollarSign, Layers, ArrowUpDown,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -467,58 +467,65 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               />
             </div>
             {/* Selector de categoría */}
-            {categorias.length > 0 && (
-              <Popover open={catFilterOpen} onOpenChange={setCatFilterOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                      categoriaFilter != null
-                        ? "border-[#0f4c81]/50 bg-[#0f4c81]/5 text-[#0f4c81] dark:border-[#0f4c81]/40 dark:bg-[#0f4c81]/20"
-                        : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Tag className="size-3.5" />
-                    {categoriaFilter != null
-                      ? (categorias.find(c => c.id === categoriaFilter)?.nombre ?? "Categoría")
-                      : "Categoría"}
-                    {categoriaFilter != null && (
-                      <span
-                        onClick={e => { e.stopPropagation(); setCategoriaFilter(null) }}
-                        className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10"
-                      >
-                        <X className="size-2.5" />
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-52 p-1.5">
-                  <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-foreground">Categoría</p>
-                  <button
-                    onClick={() => { setCategoriaFilter(null); setCatFilterOpen(false) }}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                      categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Package className="size-3.5" />
-                    Todas las categorías
-                  </button>
-                  {categorias.map(cat => (
+            {categorias.length > 0 && (() => {
+              const CAT_STYLE: Record<string, { icon: React.ElementType; active: string; hover: string; iconCls: string }> = {
+                "Medicamentos":    { icon: Pill,         active: "bg-blue-50 font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",    hover: "hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:text-blue-400",    iconCls: "text-blue-500"   },
+                "Insumos Médicos": { icon: Stethoscope,  active: "bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400", hover: "hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400", iconCls: "text-emerald-500" },
+                "Equipos Médicos": { icon: Wrench,       active: "bg-orange-50 font-medium text-orange-700 dark:bg-orange-950/30 dark:text-orange-400",  hover: "hover:bg-orange-50 hover:text-orange-700 dark:hover:bg-orange-950/20 dark:hover:text-orange-400",  iconCls: "text-orange-500"  },
+              }
+              const selectedCat = categorias.find(c => c.id === categoriaFilter)
+              const selectedStyle = selectedCat ? CAT_STYLE[selectedCat.nombre] : null
+              return (
+                <Popover open={catFilterOpen} onOpenChange={setCatFilterOpen}>
+                  <PopoverTrigger asChild>
                     <button
-                      key={cat.id}
-                      onClick={() => { setCategoriaFilter(cat.id); setCatFilterOpen(false) }}
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
-                        categoriaFilter === cat.id
-                          ? "bg-[#0f4c81]/5 font-medium text-[#0f4c81] dark:bg-[#0f4c81]/20"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                        categoriaFilter != null
+                          ? "border-[#0f4c81]/50 bg-[#0f4c81]/5 text-[#0f4c81] dark:border-[#0f4c81]/40 dark:bg-[#0f4c81]/20"
+                          : "border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
-                      <Tag className="size-3.5" />
-                      {cat.nombre}
+                      {selectedStyle ? <selectedStyle.icon className={`size-3.5 ${selectedStyle.iconCls}`} /> : <Tag className="size-3.5" />}
+                      {selectedCat?.nombre ?? "Categoría"}
+                      {categoriaFilter != null && (
+                        <span onClick={e => { e.stopPropagation(); setCategoriaFilter(null) }} className="ml-0.5 flex size-4 items-center justify-center rounded-full hover:bg-black/10">
+                          <X className="size-2.5" />
+                        </span>
+                      )}
                     </button>
-                  ))}
-                </PopoverContent>
-              </Popover>
-            )}
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-52 p-1.5">
+                    <p className="px-2 pb-1.5 pt-0.5 text-[10px] font-bold uppercase tracking-widest text-foreground">Categoría</p>
+                    <button
+                      onClick={() => { setCategoriaFilter(null); setCatFilterOpen(false) }}
+                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                        categoriaFilter == null ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <Package className="size-3.5" /> Todas las categorías
+                    </button>
+                    {categorias.map(cat => {
+                      const s = CAT_STYLE[cat.nombre] ?? { icon: Tag, active: "bg-muted font-medium text-foreground", hover: "hover:bg-muted hover:text-foreground", iconCls: "" }
+                      const Icon = s.icon
+                      const count = inventario.filter(i => i.idCategoria === cat.id).length
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => { setCategoriaFilter(cat.id); setCatFilterOpen(false) }}
+                          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                            categoriaFilter === cat.id ? s.active : `text-muted-foreground ${s.hover}`
+                          }`}
+                        >
+                          <Icon className={`size-3.5 ${s.iconCls}`} />
+                          {cat.nombre}
+                          <span className="ml-auto tabular-nums font-medium">{count}</span>
+                        </button>
+                      )
+                    })}
+                  </PopoverContent>
+                </Popover>
+              )
+            })()}
             {/* Filtro de stock */}
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger asChild>
