@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Calendar, DollarSign, Tag } from "lucide-react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Calendar, DollarSign, Tag, FileText } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
 
 function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
@@ -219,6 +219,9 @@ export function ServiciosTable({
                   <Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}
                 </button>
               </th>
+              <th className="hidden py-2.5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground xl:table-cell">
+                <span className="inline-flex items-center gap-1"><FileText className="size-3" />NOTAS</span>
+              </th>
               <th className="hidden py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
                 <button className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}>
                   <DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}
@@ -242,7 +245,7 @@ export function ServiciosTable({
           <tbody className="divide-y divide-border/30">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-xs text-muted-foreground">
+                <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
                   No hay servicios para los filtros seleccionados.
                 </td>
               </tr>
@@ -270,6 +273,12 @@ export function ServiciosTable({
                   </td>
                   <td className="py-3 pr-4 text-xs text-foreground">{s.servicio}</td>
                   <td className="hidden py-3 pr-4 text-xs text-muted-foreground whitespace-nowrap lg:table-cell">{formatFecha(s.fecha)}</td>
+                  <td className="hidden py-3 pr-4 xl:table-cell">
+                    {s.notas
+                      ? <p className="max-w-[180px] truncate text-xs text-foreground" title={s.notas}>{s.notas}</p>
+                      : <span className="text-[11px] text-muted-foreground/50">—</span>
+                    }
+                  </td>
                   <td className="hidden py-3 pr-5 text-right text-xs font-semibold tabular-nums text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
                   <td className="py-3 pr-5 text-center">
                     {renderEstatusBadge(s.estatus)}

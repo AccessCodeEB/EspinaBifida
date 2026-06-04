@@ -881,12 +881,13 @@ export function ServiciosSection() {
               )}
 
               {/* Notas */}
-              {servicioDetalle.notas && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
-                  <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{servicioDetalle.notas}</p>
-                </div>
-              )}
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                {servicioDetalle.notas
+                  ? <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{servicioDetalle.notas}</p>
+                  : <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground/60">—</p>
+                }
+              </div>
 
               {/* Cambiar estatus */}
               <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
