@@ -93,15 +93,13 @@ test(qase(41, 'UAT-001: Flujo completo pre-registro y aprobación'), async ({ pa
   await page.locator('#prereg-estado').click().catch(() => {});
   await page.waitForTimeout(300);
   await page.getByRole('option', { name: /nuevo le/i }).click().catch(() => {});
+  await page.waitForTimeout(300);
 
-  // Wait for CURP autocalculation to complete before filling homoclave
-  await page.waitForFunction(
-    () => {
-      const curpField = document.querySelector('#prereg-curp') as HTMLInputElement;
-      return (curpField?.value?.length ?? 0) >= 10;
-    },
-    { timeout: 5000 }
-  ).catch(() => {});
+  // Estado de nacimiento — campo requerido para autocalculo de CURP
+  await page.locator('#prereg-estado-nac').click().catch(() => {});
+  await page.waitForTimeout(300);
+  await page.getByRole('option', { name: /nuevo le/i }).click().catch(() => {});
+  await page.waitForTimeout(500);
 
   // Ciudad/Municipio
   await page.locator('#prereg-ciudad').click().catch(() => {});
