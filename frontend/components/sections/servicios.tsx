@@ -472,7 +472,7 @@ export function ServiciosSection() {
         consumos: requiereArticulo && idArticuloSeleccionado
           ? [{ idProducto: Number(idArticuloSeleccionado), cantidad: cantidadArticuloNum }]
           : undefined,
-        costo: requiereArticulo ? undefined : montoNum,
+        costo: montoNum > 0 ? montoNum : undefined,
       })
       const updated = await getServicios()
       setServiciosRegistrados(updated)
