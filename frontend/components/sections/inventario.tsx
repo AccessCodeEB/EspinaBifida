@@ -883,24 +883,29 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
             {/* Card de estado actual */}
             {selectedItem && (
-              <div className="grid grid-cols-3 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
-                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+              <div className="grid grid-cols-4 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Stock</span>
-                  <span className={`text-2xl font-bold tabular-nums ${
+                  <span className={`text-xl font-bold tabular-nums ${
                     selectedItem.cantidad === 0 ? "text-red-500 dark:text-red-400"
                     : selectedItem.cantidad <= selectedItem.minimo ? "text-amber-500 dark:text-amber-400"
                     : "text-foreground"
                   }`}>{selectedItem.cantidad}</span>
                   <span className="text-[9px] text-muted-foreground">{selectedItem.unidad}</span>
                 </div>
-                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Recuperación</span>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Cuota Rec.</span>
                   <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.cuota}</span>
-                  {selectedItem.cuotaB != null && (
-                    <span className="text-[9px] text-muted-foreground">Lista: ${selectedItem.cuotaB.toFixed(2)}</span>
-                  )}
+                  <span className="text-[9px] text-muted-foreground">subsidiado</span>
                 </div>
-                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Precio Lista</span>
+                  <span className="text-xl font-bold text-foreground tabular-nums">
+                    {selectedItem.cuotaB != null ? `$${selectedItem.cuotaB.toFixed(2)}` : "—"}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground">de mercado</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Mínimo</span>
                   <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.minimo}</span>
                   <span className="text-[9px] text-muted-foreground">alerta</span>
