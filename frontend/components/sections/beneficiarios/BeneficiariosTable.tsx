@@ -72,7 +72,7 @@ export function BeneficiariosTable({
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Buscar folio, nombre, ciudad o estado..."
-              className="pl-9 h-9 w-full sm:w-64 border-border/80 bg-muted/40 text-sm placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:border-primary/50 transition-all"
+              className="pl-9 h-9 w-full sm:w-80 border-border/80 bg-muted/40 text-sm placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:border-primary/50 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
