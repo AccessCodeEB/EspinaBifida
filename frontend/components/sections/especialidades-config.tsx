@@ -1,10 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Settings, CalendarOff, Plus, Trash2, Edit2, Check, X, AlertCircle, Clock } from "lucide-react"
+import {
+  CalendarOff, Plus, Trash2, Edit2, Check,
+  Clock, Users, RefreshCw, Stethoscope,
+  CalendarDays, RotateCcw, CheckCircle2, XCircle,
+  AlertCircle,
+} from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -21,27 +25,39 @@ import {
 } from "@/services/especialidades-horario"
 
 const DIAS_NOMBRE = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"]
-
+const DIAS_CORTO  = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"]
 const NAVY = "#0f4c81"
+
+function formatFecha(iso: string) {
+  try {
+    const [y, m, d] = iso.split("-")
+    const fecha = new Date(Number(y), Number(m) - 1, Number(d))
+    return fecha.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+  } catch { return iso }
+}
+
+function diasHastaFecha(iso: string): number {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const [y, m, d] = iso.split("-")
+  const fecha = new Date(Number(y), Number(m) - 1, Number(d))
+  return Math.round((fecha.getTime() - hoy.getTime()) / 86_400_000)
+}
 
 export function EspecialidadesConfigSection() {
   const [especialidades, setEspecialidades] = useState<EspecialidadHorario[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<EspecialidadHorario | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [selected, setSelected]   = useState<EspecialidadHorario | null>(null)
 
-  // Excepciones del especialidad seleccionada
-  const [excepciones, setExcepciones] = useState<ExcepcionEspecialidad[]>([])
-  const [loadingExc, setLoadingExc] = useState(false)
+  const [excepciones, setExcepciones]   = useState<ExcepcionEspecialidad[]>([])
+  const [loadingExc, setLoadingExc]     = useState(false)
 
-  // Dialog de edición de horario
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [editForm, setEditForm] = useState<Partial<EspecialidadHorario>>({})
-  const [saving, setSaving] = useState(false)
+  const [editForm, setEditForm]             = useState<Partial<EspecialidadHorario>>({})
+  const [saving, setSaving]                 = useState(false)
 
-  // Dialog de agregar excepción
   const [showExcDialog, setShowExcDialog] = useState(false)
-  const [excForm, setExcForm] = useState({ fecha: "", motivo: "" })
-  const [savingExc, setSavingExc] = useState(false)
+  const [excForm, setExcForm]             = useState({ fecha: "", motivo: "" })
+  const [savingExc, setSavingExc]         = useState(false)
 
   const loadEspecialidades = useCallback(async () => {
     setLoading(true)
@@ -51,28 +67,18 @@ export function EspecialidadesConfigSection() {
       if (!selected && data.length > 0) setSelected(data[0])
     } catch (err) {
       toast.error(friendlyError(err, "No se pudieron cargar las especialidades"))
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [selected])
 
   const loadExcepciones = useCallback(async (id: number) => {
     setLoadingExc(true)
-    try {
-      const data = await getExcepciones(id)
-      setExcepciones(data)
-    } catch {
-      setExcepciones([])
-    } finally {
-      setLoadingExc(false)
-    }
+    try { setExcepciones(await getExcepciones(id)) }
+    catch { setExcepciones([]) }
+    finally { setLoadingExc(false) }
   }, [])
 
-  useEffect(() => { loadEspecialidades() }, [])
-
-  useEffect(() => {
-    if (selected) loadExcepciones(selected.idEspecialidad)
-  }, [selected, loadExcepciones])
+  useEffect(() => { loadEspecialidades() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (selected) loadExcepciones(selected.idEspecialidad) }, [selected, loadExcepciones])
 
   function openEdit(esp: EspecialidadHorario) {
     setEditForm({
@@ -91,7 +97,7 @@ export function EspecialidadesConfigSection() {
     if (!selected) return
     setSaving(true)
     try {
-      const payload: Partial<EspecialidadHorario> = {
+      await updateEspecialidadHorario(selected.idEspecialidad, {
         diaSemana:      editForm.diaSemana,
         horaInicio:     editForm.horaInicio,
         horaFin:        editForm.horaFin || null,
@@ -99,16 +105,13 @@ export function EspecialidadesConfigSection() {
         tipoFrecuencia: editForm.tipoFrecuencia,
         activo:         editForm.activo,
         notas:          editForm.notas || null,
-      }
-      await updateEspecialidadHorario(selected.idEspecialidad, payload)
+      })
       toast.success("Horario actualizado correctamente")
       setShowEditDialog(false)
       loadEspecialidades()
     } catch (err) {
       toast.error(friendlyError(err, "No se pudo guardar el horario"))
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   async function handleCrearExcepcion() {
@@ -122,9 +125,7 @@ export function EspecialidadesConfigSection() {
       loadExcepciones(selected.idEspecialidad)
     } catch (err) {
       toast.error(friendlyError(err, "No se pudo crear la excepción"))
-    } finally {
-      setSavingExc(false)
-    }
+    } finally { setSavingExc(false) }
   }
 
   async function handleEliminarExcepcion(exc: ExcepcionEspecialidad) {
@@ -138,10 +139,13 @@ export function EspecialidadesConfigSection() {
     }
   }
 
+  const proximasExcepciones = excepciones.filter(e => diasHastaFecha(e.fecha) >= 0).length
+
   if (loading) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Cargando configuración...</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+        <p className="text-xs text-muted-foreground">Cargando especialidades...</p>
       </div>
     )
   }
@@ -149,136 +153,288 @@ export function EspecialidadesConfigSection() {
   return (
     <div className="flex flex-col gap-6 pb-8">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Especialidades</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">Configura días, horarios y bloqueos por especialidad</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Configura días, horarios y bloqueos por especialidad · {especialidades.length} registradas
+          </p>
         </div>
+        <button
+          onClick={() => { loadEspecialidades(); if (selected) loadExcepciones(selected.idEspecialidad) }}
+          className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <RefreshCw className="size-3.5" />
+          Actualizar
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
 
-        {/* Panel izquierdo: lista de especialidades */}
+        {/* ── Panel izquierdo: lista ── */}
         <div className="flex flex-col gap-2">
-          {especialidades.map(esp => (
-            <button
-              key={esp.idEspecialidad}
-              onClick={() => setSelected(esp)}
-              className={`flex flex-col gap-0.5 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
-                selected?.idEspecialidad === esp.idEspecialidad
-                  ? "border-[#0f4c81] bg-[#0f4c81]/5"
-                  : "border-border/70 bg-card hover:border-[#0f4c81]/30"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground">{esp.nombre}</span>
-                <span className={`text-[10px] font-bold uppercase ${esp.activo ? "text-emerald-600" : "text-muted-foreground"}`}>
-                  {esp.activo ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-              <span className="text-[11px] text-muted-foreground">{descripcionHorario(esp)}</span>
-            </button>
-          ))}
+          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            Especialidades ({especialidades.length})
+          </p>
+
+          {especialidades.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 py-10 text-center">
+              <Stethoscope className="size-6 text-muted-foreground opacity-40" />
+              <p className="text-xs text-muted-foreground">Sin especialidades registradas</p>
+            </div>
+          ) : (
+            especialidades.map(esp => {
+              const isSelected = selected?.idEspecialidad === esp.idEspecialidad
+              return (
+                <button
+                  key={esp.idEspecialidad}
+                  onClick={() => setSelected(esp)}
+                  className={`group flex flex-col gap-2 rounded-xl border px-4 py-3 text-left transition-all ${
+                    isSelected
+                      ? "border-[#0f4c81] bg-[#0f4c81]/5 shadow-sm"
+                      : "border-border/60 bg-card hover:border-[#0f4c81]/40 hover:bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${isSelected ? "bg-[#0f4c81]/10" : "bg-muted/50"}`}>
+                        <Stethoscope className={`size-3.5 ${isSelected ? "text-[#0f4c81]" : "text-muted-foreground"}`} />
+                      </div>
+                      <span className={`truncate text-sm font-semibold ${isSelected ? "text-[#0f4c81]" : "text-foreground"}`}>
+                        {esp.nombre}
+                      </span>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      esp.activo
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {esp.activo
+                        ? <><CheckCircle2 className="size-2.5" />Activo</>
+                        : <><XCircle className="size-2.5" />Inactivo</>
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 pl-9">
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
+                      <CalendarDays className="size-3 shrink-0" />
+                      {DIAS_CORTO[esp.diaSemana]}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
+                      <Clock className="size-3 shrink-0" />
+                      {esp.horaInicio}{esp.horaFin ? `–${esp.horaFin}` : ""}
+                    </span>
+                    {esp.capacidadMax && (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
+                        <Users className="size-3 shrink-0" />
+                        {esp.capacidadMax}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })
+          )}
         </div>
 
-        {/* Panel derecho: detalle + excepciones */}
-        {selected && (
-          <div className="flex flex-col gap-4 lg:col-span-2">
+        {/* ── Panel derecho: detalle ── */}
+        {selected ? (
+          <div className="flex flex-col gap-4">
 
             {/* Tarjeta de horario */}
-            <div className="rounded-xl border border-border/70 bg-card p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-foreground">{selected.nombre}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{descripcionHorario(selected)}</p>
-                  {selected.notas && (
-                    <p className="mt-1 text-xs text-muted-foreground italic">{selected.notas}</p>
-                  )}
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              {/* Header de la tarjeta */}
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-[#0f4c81]/10">
+                    <Stethoscope className="size-4 text-[#0f4c81]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{selected.nombre}</p>
+                    <p className="text-[11px] text-muted-foreground">{descripcionHorario(selected)}</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => openEdit(selected)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:border-[#0f4c81]/50 hover:text-foreground transition-colors"
-                >
-                  <Edit2 className="size-3.5" />Editar
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    selected.activo
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {selected.activo
+                      ? <><CheckCircle2 className="size-3" />Activo</>
+                      : <><XCircle className="size-3" />Inactivo</>
+                    }
+                  </span>
+                  <button
+                    onClick={() => openEdit(selected)}
+                    className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Edit2 className="size-3.5" />
+                    Editar
+                  </button>
+                </div>
               </div>
 
-              {/* Detalles en grid */}
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {/* Datos del horario */}
+              <div className="grid grid-cols-2 divide-x divide-border/40 sm:grid-cols-4">
                 {[
-                  { label: "Día", value: DIAS_NOMBRE[selected.diaSemana] },
-                  { label: "Hora inicio", value: selected.horaInicio },
-                  { label: "Hora fin", value: selected.horaFin ?? "Sin límite" },
-                  { label: "Capacidad", value: selected.capacidadMax ? `${selected.capacidadMax} pacientes` : "Sin límite" },
-                ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-foreground">{value}</p>
+                  { icon: CalendarDays, label: "Día",        value: DIAS_NOMBRE[selected.diaSemana] },
+                  { icon: Clock,        label: "Inicio",      value: selected.horaInicio },
+                  { icon: Clock,        label: "Fin",         value: selected.horaFin ?? "Sin límite" },
+                  { icon: Users,        label: "Capacidad",   value: selected.capacidadMax ? `${selected.capacidadMax} pac.` : "Sin límite" },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex flex-col gap-1 px-5 py-4">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="size-3 text-muted-foreground" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                    </div>
+                    <p className="text-sm font-bold text-foreground tabular-nums">{value}</p>
                   </div>
                 ))}
               </div>
+
+              {/* Frecuencia + notas */}
+              {(selected.tipoFrecuencia !== "SEMANAL" || selected.notas) && (
+                <div className="flex items-center gap-4 border-t border-border/40 px-5 py-3">
+                  {selected.tipoFrecuencia !== "SEMANAL" && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                      <RotateCcw className="size-3" />
+                      Primer {DIAS_NOMBRE[selected.diaSemana].toLowerCase()} del mes
+                    </span>
+                  )}
+                  {selected.notas && (
+                    <span className="text-xs text-muted-foreground italic">{selected.notas}</span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Fechas bloqueadas */}
-            <div className="rounded-xl border border-border/70 bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
                 <div className="flex items-center gap-2">
                   <CalendarOff className="size-4 text-muted-foreground" />
-                  <h3 className="text-sm font-bold text-foreground">Fechas bloqueadas</h3>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Fechas bloqueadas</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {excepciones.length === 0
+                        ? "Sin bloqueos registrados"
+                        : `${excepciones.length} bloqueo${excepciones.length !== 1 ? "s" : ""} · ${proximasExcepciones} próximo${proximasExcepciones !== 1 ? "s" : ""}`
+                      }
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => { setExcForm({ fecha: "", motivo: "" }); setShowExcDialog(true) }}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-90"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
                   style={{ backgroundColor: NAVY }}
                 >
-                  <Plus className="size-3.5" />Agregar
+                  <Plus className="size-3.5" />
+                  Bloquear fecha
                 </button>
               </div>
 
               {loadingExc ? (
-                <p className="text-xs text-muted-foreground">Cargando...</p>
+                <div className="flex items-center gap-2 px-5 py-6">
+                  <div className="size-4 animate-spin rounded-full border-2 border-border border-t-foreground" />
+                  <p className="text-xs text-muted-foreground">Cargando bloqueos...</p>
+                </div>
               ) : excepciones.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No hay fechas bloqueadas para esta especialidad.</p>
+                <div className="flex flex-col items-center justify-center gap-2 py-10">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-muted/50">
+                    <CalendarOff className="size-4 text-muted-foreground opacity-50" />
+                  </div>
+                  <p className="text-xs font-medium text-foreground">Sin bloqueos</p>
+                  <p className="text-[11px] text-muted-foreground">Esta especialidad no tiene fechas bloqueadas</p>
+                </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {excepciones.map(exc => (
-                    <div key={exc.idExcepcion}
-                      className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
-                      <div>
-                        <span className="text-sm font-semibold text-foreground">{exc.fecha}</span>
-                        {exc.motivo && (
-                          <span className="ml-2 text-xs text-muted-foreground">{exc.motivo}</span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleEliminarExcepcion(exc)}
-                        className="rounded-lg p-1 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                        title="Eliminar excepción"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="divide-y divide-border/30">
+                  {excepciones
+                    .slice()
+                    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+                    .map(exc => {
+                      const dias = diasHastaFecha(exc.fecha)
+                      const pasada = dias < 0
+                      return (
+                        <div key={exc.idExcepcion}
+                          className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/20 ${pasada ? "opacity-50" : ""}`}
+                        >
+                          {/* Ícono de estado */}
+                          <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                            pasada ? "bg-muted/50" : "bg-red-50 dark:bg-red-950/30"
+                          }`}>
+                            <CalendarOff className={`size-3.5 ${pasada ? "text-muted-foreground" : "text-red-500"}`} />
+                          </div>
+
+                          {/* Fecha + motivo */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">{formatFecha(exc.fecha)}</p>
+                            {exc.motivo ? (
+                              <p className="text-[11px] text-muted-foreground truncate">{exc.motivo}</p>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground italic">Sin motivo especificado</p>
+                            )}
+                          </div>
+
+                          {/* Badge de proximidad */}
+                          {!pasada && (
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
+                              dias === 0
+                                ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                                : dias <= 7
+                                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                                  : "bg-muted text-muted-foreground"
+                            }`}>
+                              {dias === 0 ? "Hoy" : `${dias}d`}
+                            </span>
+                          )}
+                          {pasada && (
+                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              Pasada
+                            </span>
+                          )}
+
+                          {/* Eliminar */}
+                          <button
+                            onClick={() => handleEliminarExcepcion(exc)}
+                            className="shrink-0 flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                            title="Eliminar bloqueo"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })
+                  }
                 </div>
               )}
             </div>
 
           </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/70 py-20">
+            <div className="flex size-12 items-center justify-center rounded-full bg-muted/50">
+              <AlertCircle className="size-5 text-muted-foreground opacity-40" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Selecciona una especialidad</p>
+            <p className="text-xs text-muted-foreground">Elige una especialidad de la lista para ver su configuración</p>
+          </div>
         )}
       </div>
 
-      {/* Dialog: editar horario */}
+      {/* ── Dialog: editar horario ── */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar horario — {selected?.nombre}</DialogTitle>
-            <DialogDescription>Modifica el día, franja horaria y capacidad.</DialogDescription>
+            <DialogTitle className="text-base font-bold">Editar horario</DialogTitle>
+            <DialogDescription className="text-xs">{selected?.nombre} · Modifica el día, franja horaria y capacidad</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Día de la semana</Label>
+                <Label className="text-xs font-semibold">Día de la semana</Label>
                 <Select
                   value={String(editForm.diaSemana ?? "")}
                   onValueChange={v => setEditForm(f => ({ ...f, diaSemana: Number(v) }))}
@@ -290,7 +446,7 @@ export function EspecialidadesConfigSection() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Frecuencia</Label>
+                <Label className="text-xs font-semibold">Frecuencia</Label>
                 <Select
                   value={editForm.tipoFrecuencia ?? "SEMANAL"}
                   onValueChange={v => setEditForm(f => ({ ...f, tipoFrecuencia: v as "SEMANAL" | "MENSUAL_PRIMER_DIA" }))}
@@ -305,76 +461,88 @@ export function EspecialidadesConfigSection() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Hora inicio</Label>
-                <Input className="h-10" placeholder="09:30" value={editForm.horaInicio ?? ""}
+                <Label className="text-xs font-semibold">Hora inicio</Label>
+                <Input className="h-10 text-sm" placeholder="09:30" value={editForm.horaInicio ?? ""}
                   onChange={e => setEditForm(f => ({ ...f, horaInicio: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Hora fin <span className="text-xs font-normal opacity-60">(opcional)</span></Label>
-                <Input className="h-10" placeholder="12:00" value={editForm.horaFin ?? ""}
+                <Label className="text-xs font-semibold">
+                  Hora fin <span className="font-normal opacity-50">(opcional)</span>
+                </Label>
+                <Input className="h-10 text-sm" placeholder="12:00" value={editForm.horaFin ?? ""}
                   onChange={e => setEditForm(f => ({ ...f, horaFin: e.target.value || null }))} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Capacidad máxima <span className="text-xs font-normal opacity-60">(opcional)</span></Label>
-              <Input type="number" min={1} className="h-10" placeholder="Sin límite"
+              <Label className="text-xs font-semibold">
+                Capacidad máxima <span className="font-normal opacity-50">(opcional)</span>
+              </Label>
+              <Input type="number" min={1} className="h-10 text-sm" placeholder="Sin límite"
                 value={editForm.capacidadMax ?? ""}
                 onChange={e => setEditForm(f => ({ ...f, capacidadMax: e.target.value ? Number(e.target.value) : null }))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Notas</Label>
-              <Input className="h-10" placeholder="Ej: Dr. Lines" value={editForm.notas ?? ""}
+              <Label className="text-xs font-semibold">Notas</Label>
+              <Input className="h-10 text-sm" placeholder="Ej: Dr. Lines" value={editForm.notas ?? ""}
                 onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))} />
             </div>
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="activo-esp" checked={editForm.activo ?? true}
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={editForm.activo ?? true}
                 onChange={e => setEditForm(f => ({ ...f, activo: e.target.checked }))}
-                className="size-4 rounded border-border" />
-              <Label htmlFor="activo-esp">Especialidad activa</Label>
-            </div>
+                className="size-4 rounded border-border accent-[#0f4c81]"
+              />
+              <div>
+                <p className="text-xs font-semibold text-foreground">Especialidad activa</p>
+                <p className="text-[11px] text-muted-foreground">Permite agendar citas en este horario</p>
+              </div>
+            </label>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
             <button onClick={() => setShowEditDialog(false)} disabled={saving}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+              className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
               Cancelar
             </button>
             <button onClick={handleSaveEdit} disabled={saving}
-              className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: NAVY }}>
-              {saving ? "Guardando..." : <><Check className="size-4" />Guardar</>}
+              {saving ? "Guardando..." : <><Check className="size-3.5" />Guardar cambios</>}
             </button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog: agregar excepción */}
+      {/* ── Dialog: agregar excepción ── */}
       <Dialog open={showExcDialog} onOpenChange={setShowExcDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Bloquear fecha — {selected?.nombre}</DialogTitle>
-            <DialogDescription>El doctor no estará disponible este día.</DialogDescription>
+            <DialogTitle className="text-base font-bold">Bloquear fecha</DialogTitle>
+            <DialogDescription className="text-xs">{selected?.nombre} · El doctor no estará disponible este día</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label>Fecha</Label>
-              <Input type="date" className="h-10" value={excForm.fecha}
+              <Label className="text-xs font-semibold">Fecha</Label>
+              <Input type="date" className="h-10 text-sm" value={excForm.fecha}
                 onChange={e => setExcForm(f => ({ ...f, fecha: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Motivo <span className="text-xs font-normal opacity-60">(opcional)</span></Label>
-              <Input className="h-10" placeholder="Ej: Vacaciones, congreso..." value={excForm.motivo}
+              <Label className="text-xs font-semibold">
+                Motivo <span className="font-normal opacity-50">(opcional)</span>
+              </Label>
+              <Input className="h-10 text-sm" placeholder="Ej: Vacaciones, congreso..." value={excForm.motivo}
                 onChange={e => setExcForm(f => ({ ...f, motivo: e.target.value }))} />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
             <button onClick={() => setShowExcDialog(false)} disabled={savingExc}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+              className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
               Cancelar
             </button>
             <button onClick={handleCrearExcepcion} disabled={savingExc || !excForm.fecha}
-              className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: NAVY }}>
-              {savingExc ? "Guardando..." : <><Plus className="size-4" />Bloquear fecha</>}
+              {savingExc ? "Guardando..." : <><Plus className="size-3.5" />Bloquear fecha</>}
             </button>
           </div>
         </DialogContent>

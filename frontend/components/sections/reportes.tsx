@@ -19,12 +19,11 @@ import {
   Package,
   CalendarDays,
   Loader2,
-  TrendingUp,
   BarChart3,
   AlertCircle,
   RefreshCw,
 } from "lucide-react"
-import { downloadReporte, fetchReporteUrl, fetchReporteSheets, getHistorico, type ReporteHistorico } from "@/services/reportes"
+import { downloadReporte, fetchReporteUrl, fetchReporteSheets } from "@/services/reportes"
 import { friendlyError } from "@/lib/friendly-error"
 
 // ── Tipos de reporte ──────────────────────────────────────────────────────────
@@ -81,9 +80,6 @@ export function ReportesSection() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
-  const [historico, setHistorico]           = useState<ReporteHistorico[]>([])
-  const [loadingHistorico, setLoadingHistorico] = useState(false)
-
   const previewBlobRef = useRef<string | null>(null)
   const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Necesario para que el debounce acceda a los valores actuales sin cerrar sobre state
@@ -99,18 +95,6 @@ export function ReportesSection() {
     }
     return calcularFechas(selectedPeriod)
   }, [selectedPeriod, customInicio, customFin])
-
-  const cargarHistorico = useCallback(async () => {
-    setLoadingHistorico(true)
-    try {
-      const res = await getHistorico()
-      setHistorico(res.data)
-    } catch {
-      setHistorico([])
-    } finally {
-      setLoadingHistorico(false)
-    }
-  }, [])
 
   // ── generar vista previa ──
 
@@ -161,11 +145,6 @@ export function ReportesSection() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [selectedReport, selectedPeriod, selectedFormat, customInicio, customFin, generarPreview])
 
-  // ── carga inicial ──
-  useEffect(() => {
-    cargarHistorico()
-  }, [cargarHistorico])
-
   // ── descarga ──
 
   const handleDescargar = async () => {
@@ -184,22 +163,6 @@ export function ReportesSection() {
   const fechasCalculadas = getFechas()
   const currentReport    = reportTypes.find(r => r.id === selectedReport)
   const NAVY = "#0f4c81"
-
-  // Helper descarga historial
-  async function descargarHistorico(id: number, formato: "pdf" | "xlsx", inicio: string, fin: string) {
-    try {
-      const token = (await import("@/lib/token")).tokenStorage.get()
-      const { resolveApiFetchUrl } = await import("@/lib/api-base")
-      const url = resolveApiFetchUrl(`/api/v1/reportes/${id}/descargar?formato=${formato}`)
-      const res = await fetch(url, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      if (!res.ok) return
-      const blob = await res.blob()
-      const a = document.createElement("a")
-      a.href = URL.createObjectURL(blob)
-      a.download = `reporte-${inicio}-${fin}.${formato}`
-      a.click(); URL.revokeObjectURL(a.href)
-    } catch { /* ignorar */ }
-  }
 
   return (
     <div className="flex flex-col gap-6 pb-8" data-section="reportes">
@@ -460,78 +423,6 @@ export function ReportesSection() {
         </div>
       </div>
 
-      {/* Historial de reportes automáticos */}
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Reportes automáticos</p>
-            <p className="text-[11px] text-muted-foreground">Generados por el sistema (mensual, semestral, anual)</p>
-          </div>
-          <button onClick={cargarHistorico} disabled={loadingHistorico}
-            className="flex items-center gap-1.5 rounded-lg border border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50">
-            {loadingHistorico ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-            Actualizar
-          </button>
-        </div>
-        {loadingHistorico ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-xs text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />Cargando historial…
-          </div>
-        ) : historico.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10">
-            <TrendingUp className="size-8 opacity-20 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">No hay reportes automáticos generados aún.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/40 bg-muted/20">
-                  <th className="py-2.5 pl-5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Tipo</th>
-                  <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Periodo</th>
-                  <th className="py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">Generado</th>
-                  <th className="py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground">Descargar</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {historico.map((r) => (
-                  <tr key={r.ID_REPORTE} className="transition-colors hover:bg-muted/20">
-                    <td className="py-3 pl-5">
-                      <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold capitalize text-foreground">
-                        {r.TIPO?.toLowerCase() ?? "—"}
-                      </span>
-                    </td>
-                    <td className="py-3 text-xs text-foreground">
-                      {r.FECHA_INICIO ? fmtFecha(r.FECHA_INICIO) : "—"} — {r.FECHA_FIN ? fmtFecha(r.FECHA_FIN) : "—"}
-                    </td>
-                    <td className="py-3 text-xs text-muted-foreground">
-                      {r.FECHA_GENERACION ? new Date(r.FECHA_GENERACION).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                    </td>
-                    <td className="py-3 pr-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {r.RUTA_PDF && (
-                          <button title="Descargar PDF"
-                            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
-                            onClick={() => descargarHistorico(r.ID_REPORTE, "pdf", r.FECHA_INICIO, r.FECHA_FIN)}>
-                            <FileText className="size-3.5" />PDF
-                          </button>
-                        )}
-                        {r.RUTA_XLSX && (
-                          <button title="Descargar Excel"
-                            className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
-                            onClick={() => descargarHistorico(r.ID_REPORTE, "xlsx", r.FECHA_INICIO, r.FECHA_FIN)}>
-                            <FileSpreadsheet className="size-3.5" />Excel
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
