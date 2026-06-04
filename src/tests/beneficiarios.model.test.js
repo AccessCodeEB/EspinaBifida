@@ -125,6 +125,9 @@ describe("deactivate — rowsAffected ?? 0 (L163)", () => {
 
 describe("hardDelete — rowsAffected ?? 0 (L171)", () => {
   it("rowsAffected undefined → retorna 0", async () => {
+    // Primera llamada: DELETE FROM NOTIFICACIONES (sin rowsAffected relevante)
+    mockExecute.mockResolvedValueOnce({});
+    // Segunda llamada: DELETE FROM BENEFICIARIOS (rowsAffected undefined → 0)
     mockExecute.mockResolvedValueOnce({});
 
     const result = await hardDelete(CURP);

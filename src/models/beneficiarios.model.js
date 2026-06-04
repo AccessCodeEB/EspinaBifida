@@ -149,12 +149,17 @@ export const deactivate = (curp) =>
   );
 
 export const hardDelete = (curp) =>
-  withConnection(conn =>
-    conn.execute(
+  withConnection(async conn => {
+    await conn.execute(
+      `DELETE FROM NOTIFICACIONES WHERE CURP = :curp`,
+      { curp }
+    );
+    const result = await conn.execute(
       `DELETE FROM BENEFICIARIOS WHERE CURP = :curp`,
       { curp }, { autoCommit: true }
-    ).then(r => r.rowsAffected ?? 0)
-  );
+    );
+    return result.rowsAffected ?? 0;
+  });
 
 /**
  * Baja lógica + cancelación de membresías activas en una sola transacción.
