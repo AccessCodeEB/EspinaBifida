@@ -186,7 +186,8 @@ function AltaComodatoDialog({
                           onSelect={() => { setIdArticulo(String(a.clave)); setEquipoOpen(false) }}
                         >
                           <Check className={cn("mr-2 size-4", idArticulo === String(a.clave) ? "opacity-100" : "opacity-0")} />
-                          {a.descripcion}
+                          <span className="flex-1">{a.descripcion}</span>
+                          <span className="ml-3 text-[10px] text-muted-foreground">{a.cantidad} disp.</span>
                         </CommandItem>
                       ))}
                     </CommandGroup>
