@@ -79,10 +79,10 @@ export function BeneficiariosTable({
           </div>
 
           {/* Separador vertical */}
-          <div className="hidden sm:block h-6 w-px bg-border/60" />
+          <div className="hidden sm:block h-9 w-px bg-border/60" />
 
           {/* Filtros de estatus — control segmentado */}
-          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/50 p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/50 p-1.5">
             {(["Todos", "Activo", "Inactivo", "Baja"] as const).map((opcion) => {
               const activo = filtroEstatus === opcion
               const estilos = {
@@ -127,6 +127,7 @@ export function BeneficiariosTable({
         {/* Derecha: botón nueva alta */}
         <Button
           className="gap-2 shrink-0 h-9 px-4 text-sm font-semibold shadow-sm"
+          style={{ backgroundColor: "#0f4c81" }}
           onClick={onNuevaAlta}
         >
           <Plus className="size-4" />
