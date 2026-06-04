@@ -1,5 +1,5 @@
 import * as model from "../models/especialidades-horario.model.js";
-import { badRequest, notFound } from "../utils/httpErrors.js";
+import { badRequest, conflict, notFound } from "../utils/httpErrors.js";
 
 // ─── Helpers de validación de horario ──────────────────────────────────────
 
@@ -106,7 +106,7 @@ export const createExcepcion = async (idEspecialidad, fecha, motivo) => {
 
   const dup = await model.findExcepcionByFecha(idEspecialidad, fecha);
   if (dup) {
-    throw { statusCode: 409, message: `Ya existe una excepción para esta especialidad en la fecha ${fecha}` };
+    throw conflict(`Ya existe una excepción para esta especialidad en la fecha ${fecha}`, "EXCEPCION_DUPLICADA");
   }
 
   await model.createExcepcion(idEspecialidad, fecha, motivo);

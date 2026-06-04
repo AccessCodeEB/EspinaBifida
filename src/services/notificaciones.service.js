@@ -145,6 +145,6 @@ export async function runJob() {
     console.log(`[notificaciones-job] limpiadas ${huerfanas} notificacion(es) de beneficiarios eliminados`);
   }
 
-  console.log(`[notificaciones-job] stock_bajo=${stockBajo}, sin_stock=${sinStock}, proximas=${proximas}, vencidas=${vencidas}, citas_hoy=${citasHoy}, comodatos_por_vencer=${comodatos}`);
+  // Resultado del job disponible en el valor de retorno; no se requiere log en producción.
   return { stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos };
 }
