@@ -929,7 +929,9 @@ describe("DELETE /api/v1/beneficiarios/:curp/eliminar — hardDelete", () => {
   test("elimina permanentemente (200)", async () => {
     // findById → existe
     mockExecute.mockResolvedValueOnce({ rows: [{ CURP: CURP_VALIDA }] });
-    // DELETE
+    // DELETE FROM NOTIFICACIONES (cascade)
+    mockExecute.mockResolvedValueOnce({});
+    // DELETE FROM BENEFICIARIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)

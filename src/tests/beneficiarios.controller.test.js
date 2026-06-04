@@ -293,7 +293,9 @@ describe("DELETE /api/v1/beneficiarios/:curp/eliminar — hardDelete (rol admin)
   test("elimina beneficiario permanentemente (200)", async () => {
     // findById → existe
     mockExecute.mockResolvedValueOnce({ rows: [{ CURP, ESTATUS: "Baja" }] });
-    // DELETE
+    // DELETE FROM NOTIFICACIONES (cascade)
+    mockExecute.mockResolvedValueOnce({});
+    // DELETE FROM BENEFICIARIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
