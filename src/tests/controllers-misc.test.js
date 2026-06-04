@@ -355,6 +355,8 @@ describe("POST /api/v1/citas — crear cita", () => {
     mockExecute.mockResolvedValueOnce({ rows: [] });
     // countCitasByCurp → 0 citas previas
     mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+    // SEQ_CITAS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });
     // INSERT cita
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
