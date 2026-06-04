@@ -18,9 +18,22 @@ jest.unstable_mockModule('../models/articulos.model.js', () => ({
   deleteById: mockDeleteById,
 }));
 
+const mockLogCreate  = jest.fn();
+const mockLogFindAll = jest.fn();
+
+jest.unstable_mockModule('../models/articulos-log.model.js', () => ({
+  findAll: mockLogFindAll,
+  create:  mockLogCreate,
+}));
+
 const Service = await import('../services/articulos.service.js');
 
-beforeEach(() => jest.resetAllMocks());
+beforeEach(() => {
+  jest.resetAllMocks();
+  // Restaurar después de resetAllMocks — el log es fire-and-forget, siempre debe devolver Promise
+  mockLogCreate.mockResolvedValue(undefined);
+  mockLogFindAll.mockResolvedValue([]);
+});
 
 // ── normalizeData — ramas null/undefined de cada field validator ──────────────
 
@@ -149,33 +162,74 @@ describe('normalizeData — idArticulo undefined (L11: val===undefined branch)',
 // ── normalizeData — ramas de throw badRequest ─────────────────────────────────
 
 describe('normalizeData — throw badRequest en campos inválidos', () => {
-  it('lanza 400 si idArticulo no es numérico (NaN)', () => {
-    expect(() => Service.create({ idArticulo: 'abc' }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si idArticulo no es numérico (NaN)', async () => {
+    await expect(Service.create({ idArticulo: 'abc' }))
+      .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('lanza 400 si cuotaRecuperacion es negativa', () => {
-    expect(() => Service.create({ idArticulo: 1, cuotaRecuperacion: -1 }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si cuotaRecuperacion es negativa', async () => {
+    await expect(Service.create({ idArticulo: 1, cuotaRecuperacion: -1 }))
+      .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('lanza 400 si inventarioActual es negativo', () => {
-    expect(() => Service.create({ idArticulo: 1, inventarioActual: -1 }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si inventarioActual es negativo', async () => {
+    await expect(Service.create({ idArticulo: 1, inventarioActual: -1 }))
+      .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('lanza 400 si manejaInventario no es S ni N', () => {
-    expect(() => Service.create({ idArticulo: 1, manejaInventario: 'X' }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si manejaInventario no es S ni N', async () => {
+    await expect(Service.create({ idArticulo: 1, manejaInventario: 'X' }))
+      .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('lanza 400 si idCategoria no es numérico (NaN)', () => {
-    expect(() => Service.create({ idArticulo: 1, idCategoria: 'abc' }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si idCategoria no es numérico (NaN)', async () => {
+    await expect(Service.create({ idArticulo: 1, idCategoria: 'abc' }))
+      .rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('lanza 400 si stockMinimo es negativo', () => {
-    expect(() => Service.create({ idArticulo: 1, stockMinimo: -1 }))
-      .toThrow(expect.objectContaining({ statusCode: 400 }));
+  it('lanza 400 si stockMinimo es negativo', async () => {
+    await expect(Service.create({ idArticulo: 1, stockMinimo: -1 }))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('lanza 400 si cuotaB es negativa', async () => {
+    await expect(Service.create({ idArticulo: 1, cuotaB: -5 }))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('cuotaB null → normalizeData retorna null', async () => {
+    mockCreate.mockResolvedValueOnce({});
+    await Service.create({ idArticulo: 1, cuotaB: null });
+    const [data] = mockCreate.mock.calls[0];
+    expect(data.cuotaB).toBeNull();
+  });
+
+  it('cuotaB no enviado → bindings lo inicializa en null', async () => {
+    mockCreate.mockResolvedValueOnce({});
+    await Service.create({ idArticulo: 1 });
+    const [data] = mockCreate.mock.calls[0];
+    expect(data.cuotaB).toBeNull();
+  });
+});
+
+// ── getLog ─────────────────────────────────────────────────────────────────────
+
+describe('getLog', () => {
+  it('delega en ArticulosLogModel.findAll sin filtros', async () => {
+    mockLogFindAll.mockResolvedValueOnce([]);
+
+    const result = await Service.getLog();
+
+    expect(result).toEqual([]);
+    expect(mockLogFindAll).toHaveBeenCalledWith({ tipo: undefined, dias: undefined });
+  });
+
+  it('pasa tipo y dias a findAll', async () => {
+    mockLogFindAll.mockResolvedValueOnce([{ idLog: 1 }]);
+
+    const result = await Service.getLog({ tipo: 'ALTA', dias: 30 });
+
+    expect(result).toHaveLength(1);
+    expect(mockLogFindAll).toHaveBeenCalledWith({ tipo: 'ALTA', dias: 30 });
   });
 });
