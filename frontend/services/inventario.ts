@@ -45,6 +45,7 @@ export interface NuevoArticuloPayload {
   manejaInventario: "S" | "N"
   idCategoria: number
   stockMinimo?: number
+  motivoAlta?: string
 }
 
 function toArticuloInventario(row: Record<string, unknown>): ArticuloInventario {
@@ -111,6 +112,24 @@ export function actualizarArticulo(idArticulo: string | number, data: Partial<Nu
 }
 
 /** DELETE /articulos/:id */
-export function eliminarArticulo(idArticulo: string | number) {
-  return apiClient.delete<{ message: string }>(`/articulos/${idArticulo}`)
+export function eliminarArticulo(idArticulo: string | number, motivo?: string) {
+  const qs = motivo ? `?motivo=${encodeURIComponent(motivo)}` : ""
+  return apiClient.delete<{ message: string }>(`/articulos/${idArticulo}${qs}`)
+}
+
+export interface ArticuloLogEntry {
+  idLog: number
+  idArticulo: number | null
+  descripcionArticulo: string
+  tipo: "ALTA" | "BAJA"
+  motivo: string | null
+  fecha: string
+}
+
+/** GET /articulos/log */
+export function getArticulosLog(params?: { tipo?: string; dias?: number }) {
+  const qs = params
+    ? "?" + Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => `${k}=${v}`).join("&")
+    : ""
+  return apiClient.get<ArticuloLogEntry[]>(`/articulos/log${qs}`)
 }

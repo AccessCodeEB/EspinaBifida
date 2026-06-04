@@ -23,8 +23,8 @@ import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import {
   getInventario, registrarMovimiento, crearArticulo, eliminarArticulo, actualizarArticulo,
-  getMovimientos, getCategorias,
-  type ArticuloInventario, type MovimientoInventario, type CategoriaArticulo,
+  getMovimientos, getCategorias, getArticulosLog,
+  type ArticuloInventario, type MovimientoInventario, type CategoriaArticulo, type ArticuloLogEntry,
 } from "@/services/inventario"
 
 const MOVIMIENTOS_DIAS_DEFAULT = 30
@@ -86,9 +86,13 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [catFilterOpen, setCatFilterOpen] = useState(false)
   const [categorias, setCategorias] = useState<CategoriaArticulo[]>([])
 
-  const [activeTab, setActiveTab] = useState<"articulos" | "historial">("articulos")
+  const [activeTab, setActiveTab] = useState<"articulos" | "historial" | "altas-bajas">("articulos")
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([])
   const [loadingMovimientos, setLoadingMovimientos] = useState(false)
+  const [articulosLog, setArticulosLog] = useState<ArticuloLogEntry[]>([])
+  const [loadingLog, setLoadingLog] = useState(false)
+  const [motivoAlta, setMotivoAlta] = useState("")
+  const [motivoBaja, setMotivoBaja] = useState("")
 
   const loadData = () => {
     setLoading(true)
@@ -112,6 +116,14 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       .then(setMovimientos)
       .catch(() => setMovimientos([]))
       .finally(() => setLoadingMovimientos(false))
+  }
+
+  const loadLog = () => {
+    setLoadingLog(true)
+    getArticulosLog()
+      .then(rows => setArticulosLog(rows))
+      .catch(() => setArticulosLog([]))
+      .finally(() => setLoadingLog(false))
   }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-sm text-muted-foreground">Cargando inventario...</p></div>
@@ -284,7 +296,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   }
 
   function openAgregarArticulo() {
-    setArticuloError(null); setSavingArticulo(false)
+    setArticuloError(null); setSavingArticulo(false); setMotivoAlta("")
     setArticuloForm({ descripcion: "", unidad: "PZA.", cuotaRecuperacion: "0", cuotaB: "", inventarioActual: "0", stockMinimo: "5", idCategoria: "" })
     setUnidadSeleccionada("PZA."); setUnidadNueva(""); setShowAgregarDialog(true)
   }
@@ -293,7 +305,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     if (value !== OTRA_UNIDAD_VALUE) { setUnidadNueva(""); setArticuloForm(p => ({ ...p, unidad: value })) }
   }
   function openEliminarArticulo() {
-    setArticuloError(null); setSavingArticulo(false); setDeleteArticuloId(""); setDeletePickerOpen(false); setShowEliminarDialog(true)
+    setArticuloError(null); setSavingArticulo(false); setDeleteArticuloId(""); setDeletePickerOpen(false); setMotivoBaja(""); setShowEliminarDialog(true)
   }
   const findArticuloLabel  = (id: string) => { const item = inventario.find(a => String(a.clave) === id); return item ? `${item.clave} - ${item.descripcion}` : "Seleccionar artículo" }
 
@@ -321,6 +333,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
         manejaInventario: "S",
         idCategoria: idCat,
         stockMinimo: minimo,
+        motivoAlta: motivoAlta.trim() || undefined,
       })
       await refreshInventario(); setShowAgregarDialog(false)
       toast.success("Artículo agregado al inventario")
@@ -334,7 +347,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     if (!deleteArticuloId) { setArticuloError("Selecciona un artículo."); return }
     setSavingArticulo(true); setArticuloError(null)
     try {
-      await eliminarArticulo(deleteArticuloId)
+      await eliminarArticulo(deleteArticuloId, motivoBaja.trim() || undefined)
       toast.success("Artículo eliminado del inventario")
       await refreshInventario()
       setSearchTerm("")
@@ -365,7 +378,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
           <h1 className="text-xl font-bold tracking-tight text-foreground">Inventario</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Control de artículos y materiales del almacén</p>
         </div>
-        <button onClick={() => { loadData(); if (activeTab === "historial") loadMovimientos() }}
+        <button onClick={() => { loadData(); if (activeTab === "historial") loadMovimientos(); if (activeTab === "altas-bajas") loadLog() }}
           className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
           <RefreshCw className="size-3.5" />Actualizar
         </button>
@@ -394,6 +407,17 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
         >
           <Clock className="size-3.5" />
           Historial (30d)
+        </button>
+        <button
+          onClick={() => { setActiveTab("altas-bajas"); if (!articulosLog.length) loadLog() }}
+          className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition-colors border ${
+            activeTab === "altas-bajas"
+              ? "bg-[#0f4c81] text-white border-[#0f4c81] shadow-sm"
+              : "bg-card text-muted-foreground border-border/70 hover:border-[#0f4c81]/40 hover:text-foreground"
+          }`}
+        >
+          <Tag className="size-3.5" />
+          Altas/Bajas
         </button>
       </div>
 
@@ -727,6 +751,70 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                         </td>
                         <td className="py-3 pr-5 text-muted-foreground max-w-[16rem]">
                           <p className="truncate">{m.motivo || <span className="italic opacity-50">Sin motivo</span>}</p>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Altas/Bajas ── */}
+      {activeTab === "altas-bajas" && (
+        <div className="rounded-xl border border-border/60 bg-card shadow-sm">
+          <div className="border-b border-border/40 px-5 py-3 flex items-center justify-between">
+            <p className="text-xs font-semibold text-foreground">Historial de altas y bajas de artículos</p>
+            <button onClick={loadLog} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+              <RefreshCw className="size-3" />Actualizar
+            </button>
+          </div>
+          {loadingLog ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-xs text-muted-foreground">Cargando historial…</p>
+            </div>
+          ) : articulosLog.length === 0 ? (
+            <div className="flex h-40 flex-col items-center justify-center gap-2">
+              <Tag className="size-8 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Sin registros de altas o bajas aún</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/40 bg-muted/20">
+                    <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Clock className="size-3" />FECHA</span></th>
+                    <th className="py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Package className="size-3" />ARTÍCULO</span></th>
+                    <th className="py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Tag className="size-3" />TIPO</span></th>
+                    <th className="py-2.5 pr-5 text-left text-[10px] font-bold tracking-widest text-foreground"><span className="inline-flex items-center gap-1"><Filter className="size-3" />MOTIVO</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {articulosLog.map((entry) => {
+                    const esAlta = entry.tipo === "ALTA"
+                    const fecha = (() => {
+                      try { return new Date(entry.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) }
+                      catch { return entry.fecha }
+                    })()
+                    return (
+                      <tr key={entry.idLog} className="transition-colors hover:bg-muted/20">
+                        <td className="py-3 pl-5 text-[11px] text-muted-foreground whitespace-nowrap">{fecha}</td>
+                        <td className="py-3 max-w-[16rem]">
+                          <p className="truncate font-medium text-foreground">{entry.descripcionArticulo}</p>
+                        </td>
+                        <td className="py-3 text-center">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            esAlta
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+                          }`}>
+                            {esAlta ? "ALTA" : "BAJA"}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-5 text-muted-foreground max-w-[18rem]">
+                          <p className="truncate">{entry.motivo || <span className="italic opacity-50">Sin motivo</span>}</p>
                         </td>
                       </tr>
                     )
@@ -1098,6 +1186,10 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 </div>
               </div>
             </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Motivo del alta <span className="font-normal normal-case opacity-60">(opcional)</span></label>
+                  <Input className="h-10 text-sm" placeholder="Ej. Donación Cruz Roja, compra mensual…" value={motivoAlta} onChange={e => setMotivoAlta(e.target.value)} />
+                </div>
             {articuloError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{articuloError}</p>}
             <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
               <button onClick={() => setShowAgregarDialog(false)} disabled={savingArticulo}
@@ -1155,6 +1247,10 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   </Command>
                 </PopoverContent>
               </Popover>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Motivo de baja <span className="font-normal normal-case opacity-60">(opcional)</span></label>
+              <Input className="h-10 text-sm" placeholder="Ej. Artículo descontinuado, vencido…" value={motivoBaja} onChange={e => setMotivoBaja(e.target.value)} />
             </div>
             {articuloError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{articuloError}</p>}
             <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
