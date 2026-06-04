@@ -219,8 +219,10 @@ describe("POST /api/v1/comodatos — crear comodato", () => {
 
   test("crea comodato con membresía activa (201)", async () => {
     mockExecute
-      .mockResolvedValueOnce({ rows: [membresiaActiva] })           // check membresía
-      .mockResolvedValueOnce({ outBinds: { newId: [1] } });         // INSERT comodato
+      .mockResolvedValueOnce({ rows: [membresiaActiva] })               // check membresía
+      .mockResolvedValueOnce({ rows: [{ NOMBRE: "Juan García" }] })     // lookup nombre beneficiario
+      .mockResolvedValueOnce({ outBinds: { newId: [1] } })              // INSERT comodato
+      .mockResolvedValueOnce({ outBinds: { stock_out: 5 } });           // SP inventario SALIDA
 
     const res = await request(app)
       .post("/api/v1/comodatos")
@@ -245,8 +247,10 @@ describe("POST /api/v1/comodatos — crear comodato", () => {
 
   test("crea comodato como donación total (MONTO_TOTAL null) con estatus Pagado (201)", async () => {
     mockExecute
-      .mockResolvedValueOnce({ rows: [membresiaActiva] })
-      .mockResolvedValueOnce({ outBinds: { newId: [2] } });
+      .mockResolvedValueOnce({ rows: [membresiaActiva] })               // check membresía
+      .mockResolvedValueOnce({ rows: [{ NOMBRE: "Juan García" }] })     // lookup nombre beneficiario
+      .mockResolvedValueOnce({ outBinds: { newId: [2] } })              // INSERT comodato
+      .mockResolvedValueOnce({ outBinds: { stock_out: 5 } });           // SP inventario SALIDA
 
     const res = await request(app)
       .post("/api/v1/comodatos")
@@ -255,6 +259,21 @@ describe("POST /api/v1/comodatos — crear comodato", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data).toHaveProperty("estatus", "Pagado");
+  });
+
+  test("hace rollback si el INSERT falla con error de BD", async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [membresiaActiva] })               // check membresía
+      .mockResolvedValueOnce({ rows: [{ NOMBRE: "Juan García" }] })     // lookup nombre
+      .mockRejectedValueOnce(new Error("DB connection lost"));          // INSERT falla
+
+    const res = await request(app)
+      .post("/api/v1/comodatos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send(payload);
+
+    expect([500, 503]).toContain(res.status);
+    expect(mockRollback).toHaveBeenCalled();
   });
 
   test("devuelve 400 si falta curp o idArticulo", async () => {
@@ -444,5 +463,19 @@ describe("POST /api/v1/comodatos/:id/pagos — registrar pago", () => {
       .post("/api/v1/comodatos/1/pagos")
       .send(pagoPayload);
     expect(res.status).toBe(401);
+  });
+
+  test("hace rollback si el INSERT de pago falla con error de BD", async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{ ...comodatoRow, MONTO_PAGADO: 0, MONTO_EXENTO: 0 }] }) // check comodato
+      .mockRejectedValueOnce(new Error("DB connection lost"));                                   // INSERT falla
+
+    const res = await request(app)
+      .post("/api/v1/comodatos/1/pagos")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send(pagoPayload);
+
+    expect([500, 503]).toContain(res.status);
+    expect(mockRollback).toHaveBeenCalled();
   });
 });
