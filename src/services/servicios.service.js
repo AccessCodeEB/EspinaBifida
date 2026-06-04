@@ -123,16 +123,27 @@ export async function createConValidacion(data) {
 
   let costo = costoProvisto;
   if (consumos.length > 0) {
-    costo = 0;
-    for (const consumo of consumos) {
-      const articulo = await ArticulosModel.findById(consumo.idProducto);
-      if (!articulo) {
-        throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+    // Solo auto-calcular si el frontend no envió un costo explícito
+    if (costoProvisto === null) {
+      costo = 0;
+      for (const consumo of consumos) {
+        const articulo = await ArticulosModel.findById(consumo.idProducto);
+        if (!articulo) {
+          throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+        }
+        const precioUnitario = precioSegunCuota(articulo, beneficiario.TIPO_CUOTA);
+        costo += precioUnitario * consumo.cantidad;
       }
-      const precioUnitario = precioSegunCuota(articulo, beneficiario.TIPO_CUOTA);
-      costo += precioUnitario * consumo.cantidad;
+      costo = Number(costo.toFixed(2));
+    } else {
+      // Validar que los artículos existan aunque el costo venga del frontend
+      for (const consumo of consumos) {
+        const articulo = await ArticulosModel.findById(consumo.idProducto);
+        if (!articulo) {
+          throw notFound(`Artículo ${consumo.idProducto} no encontrado`);
+        }
+      }
     }
-    costo = Number(costo.toFixed(2));
   }
 
   validateMontoReglas(costo, montoPagado);
