@@ -4,18 +4,20 @@
  */
 import { jest } from '@jest/globals';
 
-const mockFindAll   = jest.fn();
-const mockFindById  = jest.fn();
-const mockCreate    = jest.fn();
-const mockUpdate    = jest.fn();
-const mockDeleteById = jest.fn();
+const mockFindAll         = jest.fn();
+const mockFindById        = jest.fn();
+const mockFindAllCategorias = jest.fn();
+const mockCreate          = jest.fn();
+const mockUpdate          = jest.fn();
+const mockDeleteById      = jest.fn();
 
 jest.unstable_mockModule('../models/articulos.model.js', () => ({
-  findAll:   mockFindAll,
-  findById:  mockFindById,
-  create:    mockCreate,
-  update:    mockUpdate,
-  deleteById: mockDeleteById,
+  findAll:           mockFindAll,
+  findById:          mockFindById,
+  findAllCategorias: mockFindAllCategorias,
+  create:            mockCreate,
+  update:            mockUpdate,
+  deleteById:        mockDeleteById,
 }));
 
 const mockLogCreate  = jest.fn();
@@ -231,5 +233,15 @@ describe('getLog', () => {
 
     expect(result).toHaveLength(1);
     expect(mockLogFindAll).toHaveBeenCalledWith({ tipo: 'ALTA', dias: 30 });
+  });
+});
+
+describe('getAllCategorias', () => {
+  it('delega en ArticulosModel.findAllCategorias', async () => {
+    const cats = [{ id: 1, nombre: 'Medicamentos' }];
+    mockFindAllCategorias.mockResolvedValueOnce(cats);
+    const result = await Service.getAllCategorias();
+    expect(result).toEqual(cats);
+    expect(mockFindAllCategorias).toHaveBeenCalledTimes(1);
   });
 });
