@@ -167,9 +167,22 @@ export async function create(data) {
   });
 }
 
-function normalizeConsumoMotivo(consumo, idServicio) {
+function normalizeConsumoMotivo(consumo, nombreBeneficiario) {
   if (consumo.motivo) return consumo.motivo;
-  return `Consumo por servicio ${idServicio}`;
+  return `Consumo de ${nombreBeneficiario}`;
+}
+
+async function getNombreBeneficiario(conn, curp) {
+  try {
+    const res = await conn.execute(
+      `SELECT NOMBRES || ' ' || APELLIDO_PATERNO AS NOMBRE FROM BENEFICIARIOS WHERE CURP = :curp`,
+      { curp },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return res.rows?.[0]?.NOMBRE ?? curp;
+  } catch {
+    return curp;
+  }
 }
 
 export async function createWithInventarioTransaction(data, consumos) {
@@ -215,12 +228,13 @@ export async function createWithInventarioTransaction(data, consumos) {
     console.log(`[createWithInventario] STEP 2: SERVICIOS insert OK`);
 
     // 3. Procesar consumos: movimiento de inventario + SERVICIO_ARTICULOS con ID explícito
+    const nombreBeneficiario = await getNombreBeneficiario(conn, data.curp);
     for (const consumo of consumos) {
       await applyMovimientoConConexion(conn, {
         idArticulo: consumo.idProducto,
         tipo:       "SALIDA",
         cantidad:   consumo.cantidad,
-        motivo:     normalizeConsumoMotivo(consumo, idServicio),
+        motivo:     normalizeConsumoMotivo(consumo, nombreBeneficiario),
       });
       console.log(`[createWithInventario] STEP 3a: movimiento inventario OK (artículo ${consumo.idProducto})`);
 
@@ -411,12 +425,19 @@ export async function deleteById(idServicio) {
     );
 
     // 2. Revertir cada descuento de inventario (ENTRADA)
+    const curpRes = await conn.execute(
+      `SELECT CURP FROM SERVICIOS WHERE ID_SERVICIO = :idServicio`,
+      { idServicio },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    const curpBenef = curpRes.rows?.[0]?.CURP ?? null;
+    const nombreBenef = await getNombreBeneficiario(conn, curpBenef);
     for (const consumo of consumos) {
       await applyMovimientoConConexion(conn, {
         idArticulo: consumo.ID_ARTICULO,
         tipo: 'ENTRADA',
         cantidad: consumo.CANTIDAD,
-        motivo: `Reversa por eliminación de servicio ID: ${idServicio}`,
+        motivo: `Cancelación de consumo – ${nombreBenef}`,
       });
     }
 

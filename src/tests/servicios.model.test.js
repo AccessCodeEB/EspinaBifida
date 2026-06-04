@@ -243,12 +243,13 @@ describe('create — idServicio ?? 0 (L106)', () => {
 // ── createWithInventarioTransaction — normalizeConsumoMotivo ──────────────────
 
 describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
-  it('consumo sin motivo → usa default "Consumo por servicio N"', async () => {
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 55 }] }); // SEQ_SERVICIOS.NEXTVAL
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIOS
+  it('consumo sin motivo → usa nombre del beneficiario', async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 55 }] });                    // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                                              // INSERT SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NOMBRE: 'Ana García' }] });           // getNombreBeneficiario
     mockApplyMovimiento.mockResolvedValueOnce({ stockResultante: 5 });
-    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });  // SEQ_SERVICIO_ARTICULOS.NEXTVAL
-    mockExecute.mockResolvedValueOnce({});                           // INSERT SERVICIO_ARTICULOS
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });                     // SEQ_SERVICIO_ARTICULOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({});                                              // INSERT SERVICIO_ARTICULOS
 
     const result = await ServiciosModel.createWithInventarioTransaction(
       { curp: 'X', idTipoServicio: 1, costo: 0, montoPagado: 0 },
@@ -257,7 +258,7 @@ describe('createWithInventarioTransaction — normalizeConsumoMotivo', () => {
 
     expect(result.idServicio).toBe(55);
     const [, data] = mockApplyMovimiento.mock.calls[0];
-    expect(data.motivo).toMatch(/Consumo por servicio/);
+    expect(data.motivo).toMatch(/Consumo de Ana García/);
   });
 
   it('consumo con motivo → usa el motivo proporcionado', async () => {
