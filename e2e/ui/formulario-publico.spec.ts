@@ -53,7 +53,13 @@ test(qase(32, 'TC-020: CURP se autocalcula al llenar nombre, apellidos, fecha, g
   await page.waitForTimeout(300);
   await page.getByRole('option', { name: /nuevo le/i }).click();
 
-  await page.waitForTimeout(700);
+  await page.waitForFunction(
+    () => {
+      const curpField = document.querySelector('#prereg-curp') as HTMLInputElement;
+      return (curpField?.value?.length ?? 0) >= 10;
+    },
+    { timeout: 5000 }
+  );
   const curpValue = await page.locator('#prereg-curp').inputValue();
   expect(curpValue.length).toBeGreaterThanOrEqual(10);
   expect(curpValue).toMatch(/^GAL/i);
