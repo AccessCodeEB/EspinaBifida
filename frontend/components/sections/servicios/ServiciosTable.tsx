@@ -1,7 +1,7 @@
 "use client"
 
-import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Package, Calendar, DollarSign, Tag, FileText, PencilLine } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useRef, useState } from "react"
+import { AlertTriangle, ArrowUpDown, ChevronUp, ChevronDown, Search, User, Calendar, DollarSign, Tag } from "lucide-react"
 import type { ServicioDetallado, SortField } from "./types"
 
 function sortIcon(f: SortField, active: SortField, dir: "asc" | "desc") {
@@ -15,6 +15,13 @@ function formatMoney(value: number): string {
     currency: "MXN",
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function formatFecha(raw: string | null | undefined): string {
+  if (!raw) return "—"
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return String(raw)
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
 }
 
 function renderEstatusBadge(estatus: string | null | undefined) {
@@ -77,8 +84,6 @@ interface ServiciosTableProps {
   onUndoDelete: () => void
   estatusCicloIdx: number
   onCicloEstatus: () => void
-  onUpdateEstatus: (idServicio: number, estatus: string) => void | Promise<void>
-  updatingServicioId: number | null
 }
 
 export function ServiciosTable({
@@ -111,12 +116,13 @@ export function ServiciosTable({
   onUndoDelete,
   estatusCicloIdx,
   onCicloEstatus,
-  onUpdateEstatus,
-  updatingServicioId,
 }: ServiciosTableProps) {
   const CICLO_LABELS = ["TODOS", "PENDIENTE", "COMPLETADO"] as const
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [tooltip, setTooltip] = useState<{ s: ServicioDetallado; x: number; y: number } | null>(null)
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+    <div ref={containerRef} className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
       {/* Alerta undo */}
       {pendingDeleteFolio && (
@@ -200,30 +206,27 @@ export function ServiciosTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40 bg-muted/20">
-              <th className="py-2.5 pl-5 text-left text-[10px] font-bold tracking-widest text-foreground">
+              <th className="py-2.5 pl-5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
                 <span className="inline-flex items-center gap-1"><User className="size-3" />BENEFICIARIO</span>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground md:table-cell">
-                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("servicio")}><Tag className="size-3" />SERVICIO {sortIcon("servicio", sortField, sortDirection)}</button>
+              <th className="py-2.5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+                <button className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("servicio")}>
+                  <Tag className="size-3" />SERVICIO {sortIcon("servicio", sortField, sortDirection)}
+                </button>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
-                <span className="inline-flex items-center gap-1"><Package className="size-3" />ARTÍCULO ENTREGADO</span>
+              <th className="hidden py-2.5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                <button className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("fecha")}>
+                  <Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}
+                </button>
               </th>
-              <th className="hidden py-2.5 text-center text-[10px] font-bold tracking-widest text-foreground md:table-cell">
-                <span className="inline-flex items-center gap-1"><Tag className="size-3" />CANTIDAD</span>
+              <th className="hidden py-2.5 pr-5 text-right text-[10px] font-bold uppercase tracking-widest text-foreground lg:table-cell">
+                <button className="inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}>
+                  <DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}
+                </button>
               </th>
-              <th className="hidden py-2.5 text-left text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
-                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("fecha")}><Calendar className="size-3" />FECHA {sortIcon("fecha", sortField, sortDirection)}</button>
-              </th>
-              <th className="hidden py-2.5 pr-4 text-right text-[10px] font-bold tracking-widest text-foreground lg:table-cell">
-                <button className="group inline-flex items-center gap-1 hover:opacity-70 transition-opacity" onClick={() => onSortBy("monto")}><DollarSign className="size-3" />MONTO {sortIcon("monto", sortField, sortDirection)}</button>
-              </th>
-              <th className="hidden py-2.5 pl-6 text-left text-[10px] font-bold tracking-widest text-foreground xl:table-cell">
-                <span className="inline-flex items-center gap-1"><FileText className="size-3" />NOTAS / CITA</span>
-              </th>
-              <th className="py-2.5 pr-5 text-center text-[10px] font-bold tracking-widest text-foreground">
+              <th className="py-2.5 pr-5 text-center text-[10px] font-bold uppercase tracking-widest text-foreground">
                 <button
-                  className={`group inline-flex items-center gap-1 hover:opacity-70 transition-opacity ${estatusCicloIdx > 0 ? "text-primary" : ""}`}
+                  className={`inline-flex items-center gap-1 hover:opacity-70 transition-opacity ${estatusCicloIdx > 0 ? "text-primary" : ""}`}
                   onClick={onCicloEstatus}
                 >
                   <AlertTriangle className="size-3" />
@@ -239,65 +242,54 @@ export function ServiciosTable({
           <tbody className="divide-y divide-border/30">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-xs text-muted-foreground">
+                <td colSpan={5} className="py-12 text-center text-xs text-muted-foreground">
                   No hay servicios para los filtros seleccionados.
                 </td>
               </tr>
             ) : (
               paginated.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => onRowClick(s)}
-                    className="cursor-pointer transition-colors hover:bg-muted/30"
-                  >
-                    <td className="py-3 pl-5">
-                      <p className="text-xs font-medium text-foreground">{s.nombre}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{s.folio}</p>
-                    </td>
-                    <td className="hidden py-3 text-xs text-foreground md:table-cell">{s.servicio}</td>
-                    <td className="hidden py-3 lg:table-cell">
-                      {s.articuloEntregado
-                        ? <span className="text-xs text-foreground">{s.articuloEntregado}</span>
-                        : <span className="text-[11px] text-muted-foreground/60">—</span>
-                      }
-                    </td>
-                    <td className="hidden py-3 text-center md:table-cell">
-                      {s.cantidadArticulo ? <span className="text-xs font-semibold text-foreground">{s.cantidadArticulo}</span> : <span className="text-[11px] text-muted-foreground/60">—</span>}
-                    </td>
-                    <td className="hidden py-3 text-xs text-foreground lg:table-cell">{s.fecha}</td>
-                    <td className="hidden py-3 pr-4 text-right text-xs font-semibold text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
-                    <td className="hidden py-3 pl-6 xl:table-cell">
-                      {s.notas
-                        ? <p className="max-w-[260px] truncate text-xs text-foreground" title={s.notas}>{s.notas}</p>
-                        : <span className="text-[11px] text-muted-foreground/60">—</span>
-                      }
-                    </td>
-                    <td className="py-3 pr-5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex min-w-[190px] items-center justify-end gap-2">
-                        {updatingServicioId === s.id ? (
-                          <span className="text-[11px] text-muted-foreground">Guardando...</span>
-                        ) : null}
-                        <Select
-                          value={String(s.estatus ?? "").toUpperCase() === "PENDIENTE" ? "PENDIENTE" : "COMPLETADO"}
-                          onValueChange={(value) => onUpdateEstatus(s.id, value)}
-                          disabled={updatingServicioId === s.id}
-                        >
-                          <SelectTrigger className="h-8 w-32 text-[11px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                            <SelectItem value="COMPLETADO">Completado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                <tr
+                  key={s.id}
+                  onClick={() => onRowClick(s)}
+                  onMouseEnter={(e) => {
+                    const rect = containerRef.current?.getBoundingClientRect()
+                    if (!rect) return
+                    setTooltip({ s, x: e.clientX - rect.left, y: e.clientY - rect.top })
+                  }}
+                  onMouseMove={(e) => {
+                    const rect = containerRef.current?.getBoundingClientRect()
+                    if (!rect) return
+                    setTooltip(prev => prev ? { ...prev, x: e.clientX - rect.left, y: e.clientY - rect.top } : null)
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  className="cursor-pointer transition-colors hover:bg-muted/20"
+                >
+                  <td className="py-3 pl-5 pr-4 max-w-[12rem]">
+                    <p className="truncate text-xs font-medium text-foreground" title={s.nombre}>{s.nombre}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{s.folio}</p>
+                  </td>
+                  <td className="py-3 pr-4 text-xs text-foreground">{s.servicio}</td>
+                  <td className="hidden py-3 pr-4 text-xs text-muted-foreground whitespace-nowrap lg:table-cell">{formatFecha(s.fecha)}</td>
+                  <td className="hidden py-3 pr-5 text-right text-xs font-semibold tabular-nums text-foreground lg:table-cell">{formatMoney(s.montoNumero)}</td>
+                  <td className="py-3 pr-5 text-center">
+                    {renderEstatusBadge(s.estatus)}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Tooltip flotante */}
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-xl border border-white/10 bg-slate-950/95 px-3 py-2 text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] backdrop-blur-sm"
+          style={{ left: tooltip.x, top: tooltip.y - 12 }}
+        >
+          <p className="text-xs font-medium text-white/80">Click para ver más detalles</p>
+        </div>
+      )}
 
       {/* Paginación */}
       <div className="flex items-center justify-between border-t border-border/40 px-5 py-3">

@@ -100,6 +100,13 @@ function formatMoney(value: number): string {
   }).format(value)
 }
 
+function formatDate(raw: string | null | undefined): string {
+  if (!raw) return "—"
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return String(raw)
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+}
+
 function buildLastMonths(baseMonth: string, total: number): string[] {
   const [year, month] = baseMonth.split("-").map(Number)
   const start = new Date(year, month - 1, 1)
@@ -741,49 +748,102 @@ export function ServiciosSection() {
         setPage={setPage}
         pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
         onUndoDelete={handleUndoDelete}
-        onUpdateEstatus={handleActualizarEstatusServicio}
-        updatingServicioId={updatingServicioId}
       />}
 
       {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Detalle del servicio</DialogTitle>
-            <DialogDescription className="text-xs">Información del registro seleccionado</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="size-4 text-[#0f4c81]" />
+              Detalle del servicio #{servicioDetalle?.id}
+            </DialogTitle>
           </DialogHeader>
           {servicioDetalle && (
-            <div className="space-y-3 pt-1">
-              <div className="divide-y divide-border/40 rounded-xl border border-border/60">
+            <div className="flex flex-col gap-4 py-1">
+
+              {/* Beneficiario + Servicio */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Beneficiario</p>
+                  <p className="text-sm font-medium text-foreground">{servicioDetalle.nombre}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">{servicioDetalle.folio}</p>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicio</p>
+                  <p className="text-sm font-medium text-foreground">{servicioDetalle.servicio}</p>
+                </div>
+              </div>
+
+              {/* Cards: Fecha · Monto · Estatus */}
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Beneficiario", value: servicioDetalle.nombre },
-                  { label: "CURP",         value: <span className="font-mono text-[11px]">{servicioDetalle.folio}</span> },
-                  { label: "Servicio",     value: servicioDetalle.servicio },
-                  ...(servicioDetalle.articuloEntregado
-                    ? [{ label: "Artículo", value: `${servicioDetalle.articuloEntregado}${servicioDetalle.cantidadArticulo ? ` x${servicioDetalle.cantidadArticulo}` : ""}` }]
-                    : []),
-                  { label: "Fecha",    value: servicioDetalle.fecha },
-                  { label: "Monto",    value: <span className="font-bold">{formatMoney(servicioDetalle.montoNumero)}</span> },
-                  { label: "Estatus",  value: <StatusIcon status={servicioDetalle.estatus} /> },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
-                    <span className="text-xs text-foreground">{value}</span>
+                  { label: "Fecha",   value: formatDate(servicioDetalle.fecha) },
+                  { label: "Monto",   value: formatMoney(servicioDetalle.montoNumero), bold: true },
+                  { label: "Estatus", value: servicioDetalle.estatus ?? "—" },
+                ].map(({ label, value, bold }) => (
+                  <div key={label} className="flex flex-col gap-0.5 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                    <p className={`text-sm tabular-nums text-foreground ${bold ? "font-bold" : ""}`}>{value}</p>
                   </div>
                 ))}
               </div>
-              {servicioDetalle.notas && (
-                <div className="rounded-xl border border-border/60 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
-                  <p className="mt-1 text-xs text-foreground">{servicioDetalle.notas}</p>
+
+              {/* Artículo entregado (si aplica) */}
+              {servicioDetalle.articuloEntregado && (
+                <div className={`grid gap-2 ${servicioDetalle.cantidadArticulo ? "grid-cols-3" : "grid-cols-1"}`}>
+                  <div className={`flex flex-col gap-0.5 rounded-lg border border-border/70 bg-muted/20 p-2.5 ${servicioDetalle.cantidadArticulo ? "col-span-2" : ""}`}>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Artículo entregado</p>
+                    <p className="text-sm text-foreground">{servicioDetalle.articuloEntregado}</p>
+                  </div>
+                  {servicioDetalle.cantidadArticulo && (
+                    <div className="flex flex-col gap-0.5 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</p>
+                      <p className="text-sm font-bold tabular-nums text-foreground">{servicioDetalle.cantidadArticulo}</p>
+                    </div>
+                  )}
                 </div>
               )}
-              <div className="flex justify-end border-t border-border/40 pt-3">
+
+              {/* Notas */}
+              {servicioDetalle.notas && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                  <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{servicioDetalle.notas}</p>
+                </div>
+              )}
+
+              {/* Cambiar estatus */}
+              <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cambiar estatus</p>
+                <Select
+                  value={String(servicioDetalle.estatus ?? "").toUpperCase() === "PENDIENTE" ? "PENDIENTE" : "COMPLETADO"}
+                  onValueChange={(value) => handleActualizarEstatusServicio(servicioDetalle.id, value)}
+                  disabled={updatingServicioId === servicioDetalle.id}
+                >
+                  <SelectTrigger className="h-8 w-32 text-[11px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                    <SelectItem value="COMPLETADO">Completado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Acciones */}
+              <div className="flex justify-between gap-2 border-t border-border/40 pt-2">
                 <button
                   onClick={() => { setServicioParaEliminar(servicioDetalle); setServicioDetalle(null) }}
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400"
                 >
                   Eliminar servicio
+                </button>
+                <button
+                  onClick={() => setServicioDetalle(null)}
+                  className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
