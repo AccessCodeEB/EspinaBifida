@@ -326,6 +326,44 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - Al registrar un servicio con artículo (medicamento/insumo), el costo se ingresa **manualmente** — el sistema no auto-rellena desde el precio del artículo
 - **Oportunidad identificada**: conectar `precioSegunCuota` al formulario de registro de servicios para que al seleccionar un artículo y un beneficiario, el monto se pre-rellene automáticamente según su clasificación A/B
 
+### Cambios 2026-06-04 (sesión tarde) — Servicios, Notificaciones, UX global
+
+**Servicios — tabla y diálogo rediseñados:**
+- Tabla reducida a 5 columnas (Beneficiario, Servicio, Fecha, Monto, Estatus) estilo Comodatos
+- Tooltip flotante glass al hacer hover en filas: "Click para ver más detalles"
+- Diálogo de detalle rediseñado: grid 2 cols, mini-cards para Fecha/Monto/Estatus, cards para artículo+cantidad, "Cambiar estatus" en el diálogo (no en la tabla)
+- Tooltip idéntico agregado también en tabla de Comodatos
+
+**Servicios — formulario de registro:**
+- Botón "Programar cita y registrar" eliminado (registraba sin guardar servicio); reemplazado por flujo correcto: registrar primero, luego preguntar
+- Dialog post-registro de "Consulta médica": "¿Agendar cita en el calendario?" con prefill a Citas
+- Dialog post-eliminación de servicio consulta: "¿Cancelar también la cita?"
+- Campo "Tipo de estudio médico" (datalist) cuando se selecciona "Estudio médico"
+- Chips de precio (Cuota de recuperación / Precio de lista) al seleccionar artículo; precio elegido se envía al backend
+- Backend: respeta el costo enviado por el frontend para consumibles (ya no lo sobreescribe siempre)
+- Scroll arreglado en dropdown de artículos (onWheel stopPropagation)
+
+**Citas:**
+- Dialog post-cancelación de cita: "¿Cancelar también el servicio asociado?"
+- Fix: nombre de beneficiario se auto-llena al llegar desde Servicios vía prefill
+
+**Notificaciones:**
+- Cascade delete: al eliminar un beneficiario (hardDelete), se eliminan también sus notificaciones
+- Scheduler nocturno: limpia automáticamente notificaciones huérfanas (CURP ya no existe en BENEFICIARIOS)
+
+**Inventario E2E cleanup:**
+- `DELETE /inventario/e2e-cleanup` ahora también borra artículos E2E, sus movimientos y entradas en ARTICULOS_LOG
+- `deleteE2ELogs`, `deleteE2EArticulos` agregados a modelos
+
+**UX global:**
+- Títulos de todas las secciones unificados a `text-xl font-bold tracking-tight`
+- Cajita con ícono removida de Beneficiarios y Administradores
+- "Resumen financiero" renombrado a "Ingresos por membresías" en dashboard
+- Barra de búsqueda de Beneficiarios ampliada (w-64 → w-80)
+
+**Beneficiarios:**
+- Campo "Tipo de cuota" (A/B/Sin asignar) agregado al formulario de **creación** de beneficiario (ya existía solo en edición)
+
 ### Cambios 2026-06-04 — Mejoras UX/funcionales de Inventario
 
 **Formulario de alta:**
@@ -449,10 +487,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Igualar tamaño de títulos de secciones** | Los títulos de las distintas secciones del sistema tienen tamaños inconsistentes. Unificarlos para que todos usen el mismo nivel de heading y apariencia. |
-| **Quitar emojis de Beneficiarios y Administradores** | Las vistas de Beneficiarios y Administradores tienen emojis en encabezados o labels que no corresponden al estilo del sistema. Eliminarlos. |
 | **Notificaciones de membresías no se actualiza** | El panel o badge de notificaciones de membresías no refleja cambios en tiempo real (o tras una acción). Revisar el mecanismo de refresco y corregir para que el conteo/lista se actualice correctamente. |
-| **Bug de scroll en Servicios y Comodatos** | El mismo problema de scroll que se detectó al eliminar un artículo de inventario aparece también en las vistas de Servicios y Comodatos. Identificar la causa raíz (posiblemente overflow mal configurado en el modal o la lista) y aplicar la misma corrección. |
 | **Dropdown de Comodatos: mostrar stock disponible por artículo** | En el dropdown de selección de artículo al registrar un comodato, mostrar junto a cada artículo cuántas unidades están disponibles en stock, para que el operador sepa si puede prestar ese ítem sin tener que salir a revisar inventario. |
 | **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
 | **Gestión de devolución de comodatos: temprana y tardía** | Agregar alguna manera de registrar que un artículo fue devuelto antes del tiempo acordado (devolución anticipada) o que ya se pasó del tiempo límite sin devolución (préstamo vencido). Mostrar indicador visual en la lista de comodatos y permitir registrar el evento correspondiente. |
@@ -475,9 +510,6 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Especificar tipo de estudio médico** | Al registrar un servicio de tipo "Estudio médico", mostrar un Combobox con opciones sugeridas (Biometría hemática, Cistograma, TAC, Resonancia magnética, Ultrasonido, Rayos X, Electrocardiograma, Otro) más texto libre. No se integra con citas — los estudios son derivaciones externas. |
-| **Quitar monto sugerido hardcodeado + chips de precio** | Eliminar el texto "Monto sugerido para X: $Y.00" que aparece al seleccionar tipo de servicio (valor hardcodeado sin utilidad real). Reemplazar por: cuando Lupita selecciona un artículo (medicamento o insumo), mostrar dos chips clicables "Cuota de recuperación $X" y "Precio de lista $Y" — al hacer clic en uno se auto-llena el campo Monto. Para consulta médica y estudio médico: sin sugerencia, campo en blanco. Conecta `precioSegunCuota()` que ya existe pero nunca se llama. |
-| **Banner "¿agendar cita?" post-servicio** | Después de registrar un servicio de tipo "Consulta médica", mostrar un banner: "¿Quieres agendar una cita para este servicio?" con botón "Sí, agendar" que redirige a /citas con CURP, tipo de servicio y fecha pre-llenados. Solo para Consulta médica — no para Estudio médico (son externos). |
 | **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento o Insumos médicos, el formulario debe guiar mejor al usuario: mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre. |
 
 ### Prioridad media — Membresías
