@@ -750,7 +750,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
           </DialogHeader>
           <div className="flex flex-col gap-3 pt-2">
             <button
-              onClick={() => { setSafetyNetItem(null); onNavigate?.("servicios") }}
+              onClick={() => { setSafetyNetItem(null); onNavigate?.("comodatos") }}
               className="flex flex-col items-start gap-0.5 rounded-xl border-2 border-[#0f4c81]/30 bg-[#0f4c81]/5 px-4 py-3 text-left transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/10"
             >
               <span className="text-sm font-semibold text-[#0f4c81]">Registrar comodato a un beneficiario</span>
