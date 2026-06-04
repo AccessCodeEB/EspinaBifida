@@ -520,15 +520,26 @@ export function MembresiasSection() {
                         </span>
                       </td>
                       <td className="py-3 pr-5 text-right">
-                        {b.estatus !== "Baja" && b.diasRestantes != null && (
-                          <button
-                            onClick={() => { setSelectedBenef(b); setShowPagoDialog(true) }}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
-                            style={{ backgroundColor: NAVY }}
-                          >
-                            <CreditCard className="size-3.5" />
-                            Renovar
-                          </button>
+                        {b.estatus !== "Baja" && (
+                          b.diasRestantes != null ? (
+                            <button
+                              onClick={() => { setSelectedBenef(b); setShowPagoDialog(true) }}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+                              style={{ backgroundColor: NAVY }}
+                            >
+                              <CreditCard className="size-3.5" />
+                              Renovar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => { setSelectedBenef(b); setShowPagoDialog(true) }}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+                              style={{ backgroundColor: NAVY }}
+                            >
+                              <Plus className="size-3.5" />
+                              Nueva membresía
+                            </button>
+                          )
                         )}
                       </td>
                     </tr>

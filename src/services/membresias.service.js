@@ -1,4 +1,6 @@
 import * as MembresiasModel from "../models/membresias.model.js";
+import * as ServiciosModel from "../models/servicios.model.js";
+import { withConnection } from "../config/db.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
 
@@ -141,6 +143,17 @@ function validarMontoYMetodo(data, tipo, anios = 1) {
   return { monto, metodoPago };
 }
 
+async function getIdTipoServicioMembresia() {
+  return withConnection(async (conn) => {
+    const { rows } = await conn.execute(
+      `SELECT ID_TIPO_SERVICIO FROM SERVICIOS_CATALOGO
+       WHERE UPPER(NOMBRE) = UPPER('Membresía Anual')
+         AND ROWNUM = 1`
+    );
+    return rows[0]?.ID_TIPO_SERVICIO ?? null;
+  });
+}
+
 export async function registrarMembresia(data) {
   const curp = data?.curp ? String(data.curp).trim().toUpperCase() : "";
   if (!curp) {
@@ -182,7 +195,7 @@ export async function registrarMembresia(data) {
   const { monto, metodoPago } = validarMontoYMetodo(data, tipoFinal, anios);
   const referencia = data?.referencia ?? null;
 
-  return await MembresiasModel.create({
+  const result = await MembresiasModel.create({
     curp,
     numeroCredencial,
     fechaEmision: formatISODateUTC(fechaEmision),
@@ -194,6 +207,35 @@ export async function registrarMembresia(data) {
     metodoPago,
     referencia,
   });
+
+  // Registrar la membresía también como servicio para que aparezca en Servicios Registrados
+  const idCredencial = result?.outBinds?.id_out ?? null;
+  const idTipoServicio = await getIdTipoServicioMembresia().catch(() => null);
+
+  if (idTipoServicio) {
+    const etiquetaTipo = tipoFinal === "nuevo_ingreso" ? "Nuevo ingreso" : "Re-inscripción";
+    const notasServicio = [
+      etiquetaTipo,
+      `${anios} año${anios > 1 ? "s" : ""}`,
+      data?.observaciones ? data.observaciones : null,
+    ].filter(Boolean).join(" · ");
+
+    await ServiciosModel.create({
+      curp,
+      idTipoServicio,
+      costo:         monto,
+      montoPagado:   monto,
+      referenciaId:  idCredencial,
+      referenciaTipo: "MEMBRESIA",
+      notas:         notasServicio,
+      estatus:       "COMPLETADO",
+    }).catch((err) => {
+      // No bloquear el registro de membresía si falla la inserción del servicio
+      console.error("[membresias] No se pudo crear el servicio vinculado:", err.message);
+    });
+  }
+
+  return result;
 }
 
 export async function getEstatusMembresia(curpParam) {

@@ -115,9 +115,9 @@ export function BeneficiariosOrigenMapCard({ stateCounts, loading = false }: Ben
 
   return (
     <Card className="overflow-hidden border-border/70 bg-card shadow-sm">
-      <CardHeader className="border-b border-border/40 px-5 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
+      <CardHeader className="border-b border-border/40 px-5 py-2">
+        <div className="flex flex-wrap items-start justify-between gap-1.5">
+          <div className="space-y-0">
             <CardTitle className="text-sm font-semibold text-foreground">Origen de beneficiarios</CardTitle>
             <CardDescription className="text-[11px] text-muted-foreground">
               Mapa coroplético preliminar por estado con distribución de origen

@@ -293,7 +293,7 @@ export function ServiciosSection() {
   // Catálogo filtrado: excluir tipos de equipo médico (van por Comodatos)
   const catalogoFiltrado = catalogoServicios.filter(t => t.tipoServicio !== "COMODATO")
   const expedienteBloqueado = beneficiarioEncontrado
-    ? beneficiarioEncontrado.estatus === "Inactivo" || beneficiarioEncontrado.estatus === "Baja"
+    ? beneficiarioEncontrado.estatus === "Baja"
     : false
 
   const busquedaNormalizada = busquedaBeneficiario.trim().toLowerCase()

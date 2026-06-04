@@ -261,7 +261,7 @@ export function ServicioFormDialog({
 
           {/* Tarjeta del beneficiario encontrado */}
           {beneficiarioEncontrado && (
-            <div className={`rounded-lg border p-4 ${expedienteBloqueado ? "border-destructive/50 bg-destructive/5" : "border-success/50 bg-success/5"}`}>
+            <div className={`rounded-lg border p-4 ${expedienteBloqueado ? "border-destructive/50 bg-destructive/5" : beneficiarioEncontrado.estatus === "Inactivo" ? "border-amber-400/50 bg-amber-50/50 dark:bg-amber-950/20" : "border-success/50 bg-success/5"}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-foreground">{beneficiarioEncontrado.nombre}</p>
@@ -274,10 +274,14 @@ export function ServicioFormDialog({
               </div>
               {expedienteBloqueado ? (
                 <p className="mt-2 text-sm font-medium text-destructive">
-                  Atencion: El beneficiario esta en estatus {beneficiarioEncontrado.estatus}. No se pueden registrar servicios.
+                  Atencion: El beneficiario tiene estatus Baja y no puede recibir servicios.
+                </p>
+              ) : beneficiarioEncontrado.estatus === "Inactivo" ? (
+                <p className="mt-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+                  Aviso: Membresía vencida o inactiva. Se recomienda renovar.
                 </p>
               ) : (
-                <p className="mt-2 text-sm font-medium text-success">Aviso: Membresia vigente por estatus Activo.</p>
+                <p className="mt-2 text-sm font-medium text-success">Beneficiario activo con membresía vigente.</p>
               )}
             </div>
           )}

@@ -545,30 +545,33 @@ export function BeneficiarioFormDialog({
               </div>
             </div>
 
-          </div>
-
-          {/* ── Control Interno ── */}
-          <div className="px-6 pb-4">
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Control interno</p>
-              <div className="flex flex-col gap-1.5 sm:max-w-[200px]">
-                <Label htmlFor="alta-tipo-cuota">Tipo de cuota</Label>
-                <Select
-                  value={altaForm.tipoCuota ?? ""}
-                  onValueChange={(v) => handleAltaChange("tipoCuota", v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger id="alta-tipo-cuota" className="h-10 text-sm bg-background">
-                    <SelectValue placeholder="Sin asignar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__" className="text-muted-foreground">Sin asignar</SelectItem>
-                    <SelectItem value="A">Cuota A (menor)</SelectItem>
-                    <SelectItem value="B">Cuota B (mayor)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Determina el precio aplicado al registrar servicios.</p>
+            {/* ── Control Interno ── */}
+            <div>
+              <div className="flex items-center gap-2 border-b border-border/40 bg-muted/20 px-6 py-3">
+                <Hash className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Control interno</span>
+              </div>
+              <div className="px-6 py-6">
+                <div className="flex flex-col gap-1.5 sm:max-w-[220px]">
+                  <Label htmlFor="alta-tipo-cuota">Tipo de cuota</Label>
+                  <Select
+                    value={altaForm.tipoCuota ?? ""}
+                    onValueChange={(v) => handleAltaChange("tipoCuota", v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger id="alta-tipo-cuota" className="h-10 text-sm">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-muted-foreground">Sin asignar</SelectItem>
+                      <SelectItem value="A">Cuota A (menor)</SelectItem>
+                      <SelectItem value="B">Cuota B (mayor)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Determina el precio aplicado al registrar servicios.</p>
+                </div>
               </div>
             </div>
+
           </div>
 
           {/* ── Footer ── */}

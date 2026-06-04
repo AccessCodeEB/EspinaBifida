@@ -5,22 +5,15 @@ import {
   Users, Inbox, ClipboardList, Package,
   RefreshCw, TrendingUp, TrendingDown, Minus,
   ChevronLeft, ChevronRight, MapPin, Phone,
-  Timer, CalendarDays, Banknote, CreditCard, Building2,
+  Timer, CalendarDays,
   CheckCircle2, Clock, XCircle, AlertCircle,
 } from "lucide-react"
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from "recharts"
 import type { ArticuloInventario } from "@/services/inventario"
-import type { PagoReciente }       from "@/services/membresias"
 import type { Cita }               from "@/services/citas"
 import { esSolicitudPublicaPendiente } from "@/lib/solicitud-publica-beneficiario"
 import type { Beneficiario }       from "@/services/beneficiarios"
 import { getInventario }           from "@/services/inventario"
 import { getBeneficiarios }        from "@/services/beneficiarios"
-import { getPagosRecientes }       from "@/services/membresias"
-import { getResumenFinanciero, type ResumenFinanciero } from "@/services/configuracion"
 import { getCitas }                from "@/services/citas"
 import { getServicios, type Servicio } from "@/services/servicios"
 import { conteosEstatusBeneficiarios, conteoSolicitudesPendientes } from "@/lib/beneficiarios-conteos"
@@ -33,7 +26,6 @@ const AMBER = "#E8B043"
 const INVENTARIO_BAJO_UMBRAL = 3
 const PAGE_SIZE = 5
 const MEM_PAGE = 8
-const PAGOS_FETCH_LIMIT = 500
 
 function fmtDate() {
   return new Date().toLocaleDateString("es-MX", {
@@ -47,12 +39,6 @@ function todayISO() {
 
 function mesActualISO() {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function mesAnteriorISO() {
-  const d = new Date()
-  d.setMonth(d.getMonth() - 1)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
 }
 
@@ -194,10 +180,6 @@ export function DashboardSection() {
   const [listaSolicitudes, setListaSolicitudes]       = useState<Beneficiario[]>([])
   const [loadingBenef, setLoadingBenef]               = useState(true)
   const [beneficiarios, setBeneficiarios]             = useState<Beneficiario[]>([])
-  const [pagos, setPagos]                             = useState<PagoReciente[]>([])
-  const [loadingPagos, setLoadingPagos]               = useState(true)
-  const [resumenFin, setResumenFin]                   = useState<ResumenFinanciero | null>(null)
-  const [loadingResumenFin, setLoadingResumenFin]     = useState(true)
   const [citas, setCitas]                             = useState<Cita[]>([])
   const [loadingCitas, setLoadingCitas]               = useState(true)
   const [servicios, setServicios]                     = useState<Servicio[]>([])
@@ -206,8 +188,7 @@ export function DashboardSection() {
 
   function loadData() {
     setLoadingBenef(true); setLoadingStock(true)
-    setLoadingPagos(true); setLoadingCitas(true)
-    setLoadingServicios(true)
+    setLoadingCitas(true); setLoadingServicios(true)
     setLastRefresh(new Date())
 
     getInventario()
@@ -242,16 +223,6 @@ export function DashboardSection() {
       .catch(() => { setActivosMembresia(null); setSolicitudesPendientes(null); setListaSolicitudes([]); setBeneficiarios([]) })
       .finally(() => setLoadingBenef(false))
 
-    getPagosRecientes()
-      .then(setPagos)
-      .catch(() => setPagos([]))
-      .finally(() => setLoadingPagos(false))
-
-    getResumenFinanciero()
-      .then(setResumenFin)
-      .catch(() => setResumenFin(null))
-      .finally(() => setLoadingResumenFin(false))
-
     getCitas()
       .then(setCitas)
       .catch(() => setCitas([]))
@@ -279,39 +250,6 @@ export function DashboardSection() {
       .filter((c) => (c.fecha ?? "").startsWith(hoy))
       .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
   }, [citas])
-
-  /* ── Resumen financiero (endpoint dedicado con agregación en BD) ── */
-  const financiero = useMemo(() => {
-    if (!resumenFin) return { totalActual: 0, totalAnterior: 0, diff: 0, porMetodo: { efectivo: 0, transferencia: 0, tarjeta: 0 }, count: 0 }
-    return {
-      totalActual:   resumenFin.totalActual,
-      totalAnterior: resumenFin.totalAnterior,
-      diff:          resumenFin.porcentajeCambio,
-      porMetodo:     resumenFin.desglosePorMetodo,
-      count:         resumenFin.cantidadPagos,
-    }
-  }, [resumenFin])
-
-  /* ── Datos mensuales para la gráfica (últimos 6 meses) ── */
-  const monthlyData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date()
-      d.setDate(1)
-      d.setMonth(d.getMonth() - (5 - i))
-      const key   = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-      const label = d.toLocaleDateString("es-MX", { month: "short" })
-        .replace(".", "")
-        .replace(/^\w/, (c) => c.toUpperCase())
-      const pagosDelMes = pagos.filter(
-        (p) => (p.ultimoPago ?? p.fechaEmision ?? "").startsWith(key)
-      )
-      const ingresos  = pagosDelMes.reduce((s, p) => s + (Number(p.monto) || 0), 0)
-      const miembros  = beneficiarios.filter(
-        (b) => (b.fechaAlta ?? "").startsWith(key)
-      ).length
-      return { mes: label, ingresos: parseFloat(ingresos.toFixed(2)), nuevos: miembros }
-    })
-  }, [pagos, beneficiarios])
 
   const stateCounts = useMemo(() => {
     const aprobados = beneficiarios.filter((b) => !esSolicitudPublicaPendiente(b))
@@ -352,8 +290,6 @@ export function DashboardSection() {
       trend: agotadosCount ? "down" as const : "flat" as const, loading: loadingStock,
     },
   ], [activosMembresia, solicitudesPendientes, serviciosEsteMes, mesNomCapitalizado, agotadosCount, loadingBenef, loadingServicios, loadingStock])
-
-  const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Agenda de hoy: badges con color por estatus (estilo del mockup)
   const agendaStatusStyle: Record<string, string> = {
@@ -506,59 +442,7 @@ export function DashboardSection() {
         </div>
       </div>
 
-      {/* ── Resumen financiero ── */}
-      <div className="rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="border-b border-border/40 px-5 py-4">
-          <p className="text-sm font-semibold text-foreground">Ingresos por membresías</p>
-          <p className="text-[11px] text-muted-foreground">Pagos de membresías recibidos · mes actual vs anterior</p>
-        </div>
-        {loadingResumenFin ? (
-          <div className="grid grid-cols-2 gap-px bg-border/30 sm:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-card px-6 py-5 space-y-2">
-                <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
-                <div className="h-6 w-2/3 rounded bg-muted animate-pulse" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 divide-x divide-y divide-border/40 sm:grid-cols-5 sm:divide-y-0">
-            <div className="px-6 py-5">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Este mes</p>
-              <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{fmt$(financiero.totalActual)}</p>
-              <div className="mt-1 flex items-center gap-1">
-                {financiero.diff >= 0
-                  ? <TrendingUp className="size-3 text-emerald-500" />
-                  : <TrendingDown className="size-3 text-red-500" />}
-                <span className={`text-[11px] font-medium ${financiero.diff >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                  {financiero.diff >= 0 ? "+" : ""}{financiero.diff.toFixed(1)}% vs mes anterior
-                </span>
-              </div>
-            </div>
-            <div className="px-6 py-5">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Mes anterior</p>
-              <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">{fmt$(financiero.totalAnterior)}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{financiero.count} pago{financiero.count !== 1 ? "s" : ""} este mes</p>
-            </div>
-            {[
-              { label: "Efectivo",      val: financiero.porMetodo.efectivo,      icon: Banknote,   color: "#10b981" },
-              { label: "Transferencia", val: financiero.porMetodo.transferencia, icon: Building2,  color: NAVY },
-              { label: "Tarjeta",       val: financiero.porMetodo.tarjeta,       icon: CreditCard, color: AMBER },
-            ].map(({ label, val, icon: Icon, color }) => (
-              <div key={label} className="px-6 py-5">
-                <div className="flex items-center gap-1.5">
-                  <Icon className="size-3.5" style={{ color }} />
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-                </div>
-                <p className="mt-1.5 text-xl font-bold tabular-nums text-foreground">{fmt$(val)}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {financiero.totalActual > 0 ? Math.round((val / financiero.totalActual) * 100) : 0}% del total
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <BeneficiariosOrigenMapCard stateCounts={stateCounts} loading={loadingBenef} />
 
       {/* ── Control de membresías + Artículos bajos ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -663,107 +547,6 @@ export function DashboardSection() {
         {/* Artículos bajos */}
         <ArticulosBajosPanel sinStock={sinStock} stockBajo={stockBajo} loading={loadingStock} />
       </div>
-
-      {/* ── Gráfica de rendimiento mensual ── */}
-      <div className="rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Rendimiento mensual</p>
-            <p className="text-[11px] text-muted-foreground">Ingresos y nuevos beneficiarios · últimos 6 meses</p>
-          </div>
-          <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: NAVY }} />
-              Ingresos
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block size-2.5 rounded-full" style={{ backgroundColor: AMBER }} />
-              Nuevos
-            </span>
-          </div>
-        </div>
-
-        {loadingPagos ? (
-          <div className="flex h-[220px] items-center justify-center">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-foreground" />
-          </div>
-        ) : (
-          <div className="px-2 pb-4 pt-3">
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={monthlyData} margin={{ top: 8, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid
-                  strokeDasharray="3 4"
-                  stroke="currentColor"
-                  strokeOpacity={0.07}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="mes"
-                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.45 }}
-                  axisLine={false}
-                  tickLine={false}
-                  dy={6}
-                />
-                <YAxis
-                  yAxisId="ingresos"
-                  orientation="left"
-                  tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => v === 0 ? "0" : `$${(v / 1000).toFixed(0)}k`}
-                  width={42}
-                />
-                <YAxis
-                  yAxisId="nuevos"
-                  orientation="right"
-                  tick={{ fontSize: 10, fill: "currentColor", opacity: 0.4 }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                  width={28}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "10px",
-                    border: "1px solid var(--border)",
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
-                    backgroundColor: "var(--card)",
-                    color: "var(--card-foreground)",
-                  }}
-                  formatter={(value: number, name: string) =>
-                    name === "ingresos"
-                      ? [`$${value.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, "Ingresos"]
-                      : [value, "Nuevos beneficiarios"]
-                  }
-                />
-                <Line
-                  yAxisId="ingresos"
-                  type="monotone"
-                  dataKey="ingresos"
-                  stroke={NAVY}
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: NAVY, strokeWidth: 0 }}
-                  activeDot={{ r: 5.5, fill: NAVY, strokeWidth: 2, stroke: "#fff" }}
-                />
-                <Line
-                  yAxisId="nuevos"
-                  type="monotone"
-                  dataKey="nuevos"
-                  stroke={AMBER}
-                  strokeWidth={2}
-                  strokeDasharray="5 3"
-                  dot={{ r: 3.5, fill: AMBER, strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: AMBER, strokeWidth: 2, stroke: "#fff" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      <BeneficiariosOrigenMapCard stateCounts={stateCounts} loading={loadingBenef} />
 
     </div>
   )
