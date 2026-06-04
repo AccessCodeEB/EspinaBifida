@@ -87,7 +87,7 @@ export function BeneficiariosTable({
               const activo = filtroEstatus === opcion
               const estilos = {
                 Todos: activo
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",
                 Activo: activo
                   ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500"
@@ -103,6 +103,7 @@ export function BeneficiariosTable({
                 <button
                   key={opcion}
                   onClick={() => setFiltroEstatus(opcion)}
+                  style={activo && opcion === "Todos" ? { backgroundColor: "#0f4c81" } : undefined}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150",
                     estilos[opcion]
