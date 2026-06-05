@@ -71,7 +71,8 @@ export const findMembresiasProximas = () =>
          SELECT MAX(c2.ID_CREDENCIAL) FROM CREDENCIALES c2 WHERE c2.CURP = c.CURP
        )
          AND TRUNC(c.FECHA_VIGENCIA_FIN) - TRUNC(SYSDATE) BETWEEN 0 AND 15
-         AND TRUNC(c.FECHA_VIGENCIA_FIN) >= TRUNC(SYSDATE)`
+         AND TRUNC(c.FECHA_VIGENCIA_FIN) >= TRUNC(SYSDATE)
+         AND b.ESTATUS != 'Baja'`
     ).then(r => r.rows)
   );
 
@@ -86,7 +87,8 @@ export const findMembresiasVencidas = () =>
        WHERE c.ID_CREDENCIAL = (
          SELECT MAX(c2.ID_CREDENCIAL) FROM CREDENCIALES c2 WHERE c2.CURP = c.CURP
        )
-         AND TRUNC(c.FECHA_VIGENCIA_FIN) < TRUNC(SYSDATE)`
+         AND TRUNC(c.FECHA_VIGENCIA_FIN) < TRUNC(SYSDATE)
+         AND b.ESTATUS != 'Baja'`
     ).then(r => r.rows)
   );
 
@@ -351,6 +353,22 @@ export const upsertMembresia = (curp, tipo, mensaje) =>
       `INSERT INTO NOTIFICACIONES (TIPO, CURP, REFERENCIA_TIPO, MENSAJE)
        VALUES (:tipo, :curp, 'CREDENCIAL', :msg)`,
       { tipo, curp, msg: mensaje }
+    );
+    await conn.commit();
+  });
+
+/**
+ * Cierra (marca como leída) cualquier notificación PENDIENTE de un tipo específico
+ * para una CURP dada. Se usa para limpiar MEMBRESIA_PROXIMA cuando ya se generó
+ * MEMBRESIA_VENCIDA para el mismo beneficiario, evitando notificaciones duales.
+ */
+export const closePendingMembresia = (curp, tipo) =>
+  withConnection(async conn => {
+    await conn.execute(
+      `UPDATE NOTIFICACIONES
+       SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+       WHERE TIPO = :tipo AND CURP = :curp AND ESTATUS = 'PENDIENTE'`,
+      { tipo, curp }
     );
     await conn.commit();
   });
