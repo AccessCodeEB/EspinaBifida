@@ -5,7 +5,7 @@ function esc(str) {
 
 function formatFecha(d) {
   const fecha = typeof d === 'string' ? new Date(d + 'T12:00:00') : new Date(d);
-  return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: '2-digit' });
+  return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 /**
