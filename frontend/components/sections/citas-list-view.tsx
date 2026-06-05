@@ -77,7 +77,8 @@ export function CitasListView({ citas, beneficiarios }: Props) {
 
   const filtered = useMemo(() => {
     let list = [...citas]
-    if (filterStatus !== "Todos") list = list.filter(c => c.estatus === filterStatus)
+    if (filterStatus === "Todos") list = list.filter(c => c.estatus !== "Cancelada")
+    else list = list.filter(c => c.estatus === filterStatus)
     if (filterFecha) list = list.filter(c => c.fecha === filterFecha)
     if (query.trim()) {
       const q = query.toLowerCase()

@@ -623,8 +623,9 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
   // FIX #1: only non-cancelled for the grid; citasDay already sorted
   const citasSemana=useMemo(()=>weekDates.map(d=>{
     const all=citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate())
-    // Se remueve el filtro de 'Cancelada' para que exista coherencia con el historial
-    return{date:d,layout:buildLayout(all)}
+    // FIX #1: only non-cancelled for the grid; citasDay already sorted
+    const visible=all.filter(c=>c.estatus!=="Cancelada")
+    return{date:d,layout:buildLayout(visible)}
   }),[citas,weekDates])
 
   // Navigate to cita's exact day AND open its popover
