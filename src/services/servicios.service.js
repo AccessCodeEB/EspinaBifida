@@ -72,6 +72,15 @@ function validarBeneficiario(beneficiario) {
       `No se puede asignar un servicio a un beneficiario con estatus '${beneficiario.ESTATUS}'`
     );
   }
+  // Regla de negocio: no se puede registrar un servicio si no hay membresía activa.
+  // ID_CREDENCIAL es null cuando el LEFT JOIN en findBeneficiarioActivoConMembresia
+  // no encuentra ninguna credencial vigente (SYSDATE BETWEEN FECHA_VIGENCIA_INICIO AND FECHA_VIGENCIA_FIN).
+  if (!beneficiario.ID_CREDENCIAL) {
+    throw conflict(
+      "No se puede registrar un servicio: el beneficiario no tiene membresía activa. Renueva la membresía antes de continuar.",
+      "MEMBRESIA_INACTIVA"
+    );
+  }
   if (!beneficiario.TIPO_CUOTA) {
     throw badRequest(
       "El beneficiario no tiene cuota asignada (A o B). Asígnale la cuota antes de registrar un servicio.",
@@ -164,17 +173,11 @@ export async function createConValidacion(data) {
     idServicio = await ServiciosModel.create(payload);
   }
 
-  const resultado = {
+  return {
     message: "Servicio creado exitosamente",
     idServicio,
     beneficiario: beneficiario.NOMBRES,
   };
-
-  if (beneficiario.ESTATUS === "Inactivo") {
-    resultado.warning = "El beneficiario no tiene membresía activa. Se recomienda renovar antes del próximo servicio.";
-  }
-
-  return resultado;
 }
 
 export const getByCurp = (curp) =>
