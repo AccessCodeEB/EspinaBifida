@@ -578,11 +578,8 @@ interface Props{
 export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats,onCitaCancelada}:Props){
   // Local optimistic state — initialised from props, updated immediately on action
   const[citas,setCitas]=useState<Cita[]>(citasProp)
-  // Sync only when a full reload happens (new cita created, page mount)
-  // We use a ref to avoid overwriting an in-progress optimistic update
-  const isMutating=useRef(false)
   useEffect(()=>{
-    if(!isMutating.current)setCitas(citasProp)
+    setCitas(citasProp)
   },[citasProp])
 
   const todayRef=useMemo(()=>{const d=new Date();d.setHours(0,0,0,0);return d},[])
@@ -651,8 +648,6 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
     setSelected(null)
-    // Mark as mutating BEFORE the state update so the useEffect guard works
-    isMutating.current=true
     const updater=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus}:c)
     // Optimistic: update local + parent immediately
     setCitas(updater)
@@ -670,10 +665,6 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
       toast.error("No se pudo actualizar. Cambio revertido.")
     }finally{
       setUpdatingId(null)
-      // Small delay before releasing the mutex so the useEffect triggered by
-      // onSilentUpdate (which changes citasProp reference) fires while we are
-      // still 'mutating' — preventing it from overwriting our optimistic state.
-      setTimeout(()=>{ isMutating.current=false },50)
     }
   }
 
