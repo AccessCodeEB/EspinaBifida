@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-05 (Jueves) — Especialidades: rediseño UI completo + bug fix Oracle boolean + validación citas futuras + avisos inline + mensaje 500 amigable
+**Actualización:** 2026-06-05 (Jueves) — Cobertura de pruebas llevada al 100% en servicios citas y especialidades; thresholds globales superados
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -12,14 +12,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Indicador | Estado |
 |---|---|
-| Cobertura de pruebas (statements) | **97.56%** |
-| Cobertura de pruebas (funciones) | **95.19%** |
-| Cobertura de pruebas (ramas) | **95.97%** |
+| Cobertura de pruebas (statements) | **97.71%** |
+| Cobertura de pruebas (funciones) | **95.85%** |
+| Cobertura de pruebas (ramas) | **95.78%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 30 / 30 |
 | Archivos de prueba Jest (suites) | 59 |
-| Tests Jest | 1351 |
+| Tests Jest | 1381 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -315,6 +315,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 **Mensaje de error 500:**
 - Cambiado en `api-client.ts` de "contacta a soporte técnico" a *"El sistema tuvo un error inesperado. Inténtalo más tarde."*
+
+**Cobertura de pruebas — thresholds globales superados:**
+- `especialidades-horario.service.test.js`: mock de `countCitasFuturasActivas` agregado; 16 tests nuevos para la regla de negocio de desactivación, consultas de impacto y ramas edge (`HORA_FIN null`, `motivo null`, singular vs plural)
+- `citas.service.test.js`: `mockDeleteE2ECitas` extraído a variable; 9 tests nuevos para `getAllCitas`, `deleteCita`, `deleteE2ECitas` (0% funciones antes) y ramas `??` de hora por defecto, FECHA como string, `espFinal null`, `ESTATUS null`, `curp` explícito
+- `especialidades-horario.routes.test.js`: 6 tests de integración para los endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha` (200, 400, 401, 404)
+- Resultado: **statements 97.71% · branches 95.78% · functions 95.85% · lines 97.97%** — todos ≥ 95% threshold · 1381 tests verde
 
 ---
 
