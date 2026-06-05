@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto"
 import Groq from "groq-sdk"
 import { AI_SYSTEM_PROMPT } from "@/lib/ai-knowledge-base"
 import type { ChatApiMessage } from "@/lib/ai-chat-types"
@@ -12,6 +13,26 @@ function getClient(): Groq {
     groq = new Groq({ apiKey })
   }
   return groq
+}
+
+/** Verifica un JWT firmado con HS256 usando Node.js crypto nativo. */
+function verifyJwt(token: string): boolean {
+  const secret = process.env.JWT_SECRET
+  if (!secret) return false
+  try {
+    const parts = token.split(".")
+    if (parts.length !== 3) return false
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8")) as Record<string, unknown>
+    if (typeof payload.exp === "number" && Date.now() / 1000 > payload.exp) return false
+    const computed = Buffer.from(
+      createHmac("sha256", secret).update(`${parts[0]}.${parts[1]}`).digest("base64url")
+    )
+    const provided = Buffer.from(parts[2], "base64url")
+    if (computed.length !== provided.length) return false
+    return timingSafeEqual(computed, provided)
+  } catch {
+    return false
+  }
 }
 
 const GROQ_MODEL = "llama-3.3-70b-versatile"
@@ -35,6 +56,13 @@ function validateMessages(raw: unknown): ChatApiMessage[] {
 }
 
 export async function POST(request: Request) {
+  // Validar autenticación antes de procesar el cuerpo
+  const authHeader = request.headers.get("authorization")
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null
+  if (!token || !verifyJwt(token)) {
+    return Response.json({ error: "No autenticado" }, { status: 401 })
+  }
+
   let messages: ChatApiMessage[]
 
   try {

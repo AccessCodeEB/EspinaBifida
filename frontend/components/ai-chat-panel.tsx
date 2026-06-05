@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Bot, CalendarCheck, ChevronDown, Loader2, Send, Sparkles, X } from "lucide-react"
 import { parseAction } from "@/lib/ai-action-parser"
 import type { AiAction, ChatApiMessage, ChatMessage } from "@/lib/ai-chat-types"
+import { tokenStorage } from "@/lib/token"
 import { getBeneficiarios } from "@/services/beneficiarios"
 import { createCita } from "@/services/citas"
 
@@ -197,9 +198,13 @@ export function AiChatPanel({ onAction }: { onAction: (action: AiAction) => void
       .map(({ role, content }) => ({ role, content }))
 
     try {
+      const token = tokenStorage.get()
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ messages: history }),
         signal: abortRef.current.signal,
       })
