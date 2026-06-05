@@ -12,6 +12,7 @@ const mockSyncStockBajoConsolidado     = jest.fn();
 const mockSyncCitasHoyConsolidado      = jest.fn();
 const mockSyncComodatosPorVencer       = jest.fn();
 const mockUpsertMembresia              = jest.fn();
+const mockClosePendingMembresia        = jest.fn();
 const mockFindArticulosConStockBajo    = jest.fn();
 const mockFindArticulosSinStock        = jest.fn();
 const mockSyncSinStockConsolidado      = jest.fn();
@@ -33,6 +34,7 @@ jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   syncCitasHoyConsolidado:   mockSyncCitasHoyConsolidado,
   syncComodatosPorVencer:    mockSyncComodatosPorVencer,
   upsertMembresia:           mockUpsertMembresia,
+  closePendingMembresia:     mockClosePendingMembresia,
   findArticulosConStockBajo: mockFindArticulosConStockBajo,
   findArticulosSinStock:     mockFindArticulosSinStock,
   findMembresiasProximas:    mockFindMembresiasProximas,
@@ -105,6 +107,7 @@ describe('runJob', () => {
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
+    mockClosePendingMembresia.mockResolvedValue(undefined);
     mockFindComodatosPorVencer.mockResolvedValue([]);
     mockFindArticulosSinStock.mockResolvedValue([]);
     mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
@@ -434,5 +437,71 @@ describe('checkSinStock', () => {
     expect(mockSyncSinStockConsolidado).toHaveBeenCalledWith(
       expect.stringContaining('3 artículos sin stock')
     );
+  });
+});
+
+// ── Tests de regresión ────────────────────────────────────────────────────────
+
+describe('regresión: bugs detectados en QA 2026-06-05', () => {
+  beforeEach(() => {
+    mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
+    mockSyncSinStockConsolidado.mockResolvedValue(undefined);
+    mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
+    mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockUpsertMembresia.mockResolvedValue(undefined);
+    mockClosePendingMembresia.mockResolvedValue(undefined);
+    mockFindComodatosPorVencer.mockResolvedValue([]);
+    mockFindArticulosSinStock.mockResolvedValue([]);
+    mockFindArticulosConStockBajo.mockResolvedValue([]);
+    mockFindCitasHoyProgramadas.mockResolvedValue([]);
+    mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
+  });
+
+  // Regression: ISSUE-001 — Notificación dual MEMBRESIA_PROXIMA + MEMBRESIA_VENCIDA para el mismo CURP
+  // Found by /qa on 2026-06-05
+  // Report: .gstack/qa-reports/qa-report-notificaciones-2026-06-05.md
+  it('cierra MEMBRESIA_PROXIMA antes de crear MEMBRESIA_VENCIDA para el mismo CURP', async () => {
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([
+      { CURP: 'ZZZZ000000XXXXXX00', NOMBRE: 'María López', FECHA_VIGENCIA_FIN: new Date('2025-01-01') },
+    ]);
+
+    await Service.runJob();
+
+    // closePendingMembresia debe llamarse con el CURP y tipo MEMBRESIA_PROXIMA
+    expect(mockClosePendingMembresia).toHaveBeenCalledWith('ZZZZ000000XXXXXX00', 'MEMBRESIA_PROXIMA');
+    // Y después debe crearse la MEMBRESIA_VENCIDA
+    expect(mockUpsertMembresia).toHaveBeenCalledWith(
+      'ZZZZ000000XXXXXX00', 'MEMBRESIA_VENCIDA', expect.stringContaining('María López')
+    );
+  });
+
+  // Regression: ISSUE-002 — checkMembresiasVencidas llama closePendingMembresia por cada beneficiario vencido
+  it('llama closePendingMembresia una vez por cada membresía vencida', async () => {
+    mockFindMembresiasProximas.mockResolvedValueOnce([]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([
+      { CURP: 'CURP001', NOMBRE: 'Ana García',  FECHA_VIGENCIA_FIN: new Date('2025-01-01') },
+      { CURP: 'CURP002', NOMBRE: 'Luis Martínez', FECHA_VIGENCIA_FIN: new Date('2025-03-01') },
+    ]);
+
+    await Service.runJob();
+
+    expect(mockClosePendingMembresia).toHaveBeenCalledTimes(2);
+    expect(mockClosePendingMembresia).toHaveBeenCalledWith('CURP001', 'MEMBRESIA_PROXIMA');
+    expect(mockClosePendingMembresia).toHaveBeenCalledWith('CURP002', 'MEMBRESIA_PROXIMA');
+  });
+
+  // Regression: ISSUE-003 — "vence en 0 días" confuso — debe decir "vence hoy"
+  it('usa "vence hoy" cuando DIAS_RESTANTES es 0', async () => {
+    mockFindMembresiasProximas.mockResolvedValueOnce([
+      { CURP: 'CURP003', NOMBRE: 'Pedro Ruiz', FECHA_VIGENCIA_FIN: new Date(), DIAS_RESTANTES: 0 },
+    ]);
+    mockFindMembresiasVencidas.mockResolvedValueOnce([]);
+
+    await Service.runJob();
+
+    const [, , msg] = mockUpsertMembresia.mock.calls[0];
+    expect(msg).toContain('hoy');
+    expect(msg).not.toContain('0 días');
   });
 });
