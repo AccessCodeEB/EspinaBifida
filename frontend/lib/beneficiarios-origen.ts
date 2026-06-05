@@ -19,6 +19,7 @@ const normalizedCatalog = new Map(
 
 const aliases: Record<string, string> = {
   "ciudad de mexico": "Ciudad de México",
+  "mexico city": "Ciudad de México",
   cdmx: "Ciudad de México",
   df: "Ciudad de México",
   "estado de mexico": "México",
