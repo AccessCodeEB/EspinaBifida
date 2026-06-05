@@ -37,7 +37,7 @@ export const actualizarAdminSchema = z.object({
 export const cambiarPasswordSchema = z.object({
   passwordActual: z.string().min(1, "passwordActual es requerido"),
   passwordNueva:  z.string().min(8, "passwordNueva debe tener al menos 8 caracteres"),
-  codigo:         z.string().optional(),
+  codigo:         z.string().min(1, "codigo es requerido"),
 });
 
 export const recuperarPasswordSchema = z.object({

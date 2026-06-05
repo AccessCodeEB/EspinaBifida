@@ -47,8 +47,8 @@ function validarEmail(email) {
 }
 
 function validarPassword(password) {
-  if (!password || password.length < 6) {
-    throw badRequest("La contraseña debe tener al menos 6 caracteres");
+  if (!password || password.length < 8) {
+    throw badRequest("La contraseña debe tener al menos 8 caracteres");
   }
 }
 

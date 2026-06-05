@@ -739,7 +739,7 @@ router.patch("/:idAdmin/telefono",        verifyToken, adminSelfOrSuper, validat
  *             schema:
  *               $ref: '#/components/schemas/Error404'
  */
-router.delete("/e2e-cleanup",             AdminController.e2eCleanup);
+router.delete("/e2e-cleanup",             verifyToken, checkRole(1), AdminController.e2eCleanup);
 router.delete("/:idAdmin",               verifyToken, checkRole(1),    AdminController.deactivate);
 
 export default router;

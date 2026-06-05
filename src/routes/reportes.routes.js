@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken, checkRole } from '../middleware/auth.js';
 import * as ReportesController from '../controllers/reportes.controller.js';
 
 const router = Router();
 
-router.use(verifyToken); // Todos los endpoints requieren JWT de admin
+router.use(verifyToken);
+router.use(checkRole(1, 2)); // Reportes contienen datos sensibles — mínimo rol Staff
 
 /**
  * @openapi
