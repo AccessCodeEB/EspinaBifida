@@ -64,7 +64,7 @@ export const updateEspecialidad = async (id, data) => {
 
   const { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas } = data;
 
-  // Validación básica
+  // Validación básica de formato
   if (horaInicio !== undefined && !/^\d{2}:\d{2}$/.test(horaInicio)) {
     throw badRequest("horaInicio debe tener formato HH:MM");
   }
@@ -75,9 +75,28 @@ export const updateEspecialidad = async (id, data) => {
     throw badRequest("tipoFrecuencia inválido. Valores permitidos: SEMANAL, MENSUAL_PRIMER_DIA");
   }
 
+  // Regla de negocio: no se puede desactivar una especialidad con citas futuras pendientes
+  if (activo === false && existing.ACTIVO === 1) {
+    const citasFuturas = await model.countCitasFuturasActivas(existing.NOMBRE);
+    if (citasFuturas > 0) {
+      throw badRequest(
+        `No se puede desactivar "${existing.NOMBRE}" porque tiene ${citasFuturas} cita${citasFuturas !== 1 ? "s" : ""} pendiente${citasFuturas !== 1 ? "s" : ""} próxima${citasFuturas !== 1 ? "s" : ""}. Cancélalas primero en la sección de Citas y luego desactiva la especialidad.`,
+        "ESPECIALIDAD_CON_CITAS"
+      );
+    }
+  }
+
   await model.update(id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas });
   return model.findById(id).then(mapEspecialidad);
 };
+
+// ─── Consultas de impacto ────────────────────────────────────────────────────
+
+export const countCitasFuturas = async (nombre) =>
+  model.countCitasFuturasActivas(nombre);
+
+export const countCitasEnFecha = async (nombre, fecha) =>
+  model.countCitasActivasPorFecha(nombre, fecha);
 
 // ─── Excepciones ─────────────────────────────────────────────────────────────
 
