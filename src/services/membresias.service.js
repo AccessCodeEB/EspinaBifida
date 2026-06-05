@@ -135,9 +135,9 @@ function validarMontoYMetodo(data, tipo, anios = 1) {
   }
 
   const metodoPago = data?.metodo_pago ?? data?.metodoPago ?? null;
-  const validMetodos = ["efectivo", "transferencia", "tarjeta"];
+  const validMetodos = ["efectivo", "transferencia"];
   if (!validMetodos.includes(metodoPago)) {
-    throw badRequest("metodo_pago es obligatorio. Use: efectivo, transferencia, tarjeta");
+    throw badRequest("metodo_pago es obligatorio. Use: efectivo, transferencia");
   }
 
   return { monto, metodoPago };

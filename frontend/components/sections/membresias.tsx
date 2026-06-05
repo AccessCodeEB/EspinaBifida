@@ -58,7 +58,6 @@ function formatMonto(v: number | null | undefined): string {
 function labelMetodo(m: string | null | undefined): string {
   if (m === "efectivo")      return "Efectivo"
   if (m === "transferencia") return "Transferencia"
-  if (m === "tarjeta")       return "Tarjeta"
   return "—"
 }
 
@@ -77,7 +76,7 @@ function estatusBadge(estatus: "Activa" | "Inactiva" | "Cancelada") {
 
 // ─── Dialog de membresía ─────────────────────────────────────────────────────
 
-type MetodoPago = "efectivo" | "transferencia" | "tarjeta"
+type MetodoPago = "efectivo" | "transferencia"
 
 function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
   open: boolean; beneficiario: Beneficiario | null
@@ -200,7 +199,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
                 <SelectContent>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
+
                 </SelectContent>
               </Select>
             </div>
@@ -593,7 +592,6 @@ export function MembresiasSection() {
                       <span className="inline-flex items-center justify-center gap-1.5">
                         {p.metodoPago === "efectivo"      && <Banknote  className="size-3.5 text-emerald-600" />}
                         {p.metodoPago === "transferencia" && <Building2 className="size-3.5" style={{ color: NAVY }} />}
-                        {p.metodoPago === "tarjeta"       && <CreditCard className="size-3.5" style={{ color: AMBER }} />}
                         {labelMetodo(p.metodoPago)}
                       </span>
                     </td>
