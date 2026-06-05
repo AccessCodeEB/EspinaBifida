@@ -34,14 +34,14 @@ El token se obtiene en `POST /administradores/login` y contiene:
 {
   "idAdmin": 1,
   "idRol": 1,
-  "nombreCompleto": "Super Admin",
+  "nombreCompleto": "Admin",
   "email": "admin@espinabifida.mx",
-  "nombreRol": "Super Administrador"
+  "nombreRol": "Administrador"
 }
 ```
 
 **Roles:**
-- `1` → Super Administrador (acceso total)
+- `1` → Administrador (acceso total)
 - `2` → Recepción (acceso limitado)
 
 ---

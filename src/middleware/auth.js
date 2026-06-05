@@ -21,8 +21,8 @@ export function verifyToken(req, res, next) {
 
 /**
  * checkRole(...roles) — solo deja pasar si req.user.idRol está en la lista.
- * Ejemplo: checkRole(1) → solo Super Administrador
- *          checkRole(1, 2) → Super Admin o Recepción
+ * Ejemplo: checkRole(1) → solo Administrador
+ *          checkRole(1, 2) → Admin o Recepción
  */
 export function checkRole(...rolesPermitidos) {
   return (req, res, next) => {

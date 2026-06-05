@@ -1,5 +1,5 @@
 /**
- * Permite la acción solo si el admin autenticado es el mismo :idAdmin o es rol 1 (Super Administrador).
+ * Permite la acción solo si el admin autenticado es el mismo :idAdmin o es rol 1 (Administrador).
  */
 export function adminSelfOrSuper(req, res, next) {
   const idParam = Number(req.params.idAdmin);

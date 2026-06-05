@@ -10,14 +10,14 @@ Sistema de autenticación basado en JWT con roles para el backend de EspinaBifid
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | ID_ROL | Number (PK) | Identificador del rol |
-| NOMBRE_ROL | VARCHAR2 | Nombre del rol (ej. 'Super Administrador') |
+| NOMBRE_ROL | VARCHAR2 | Nombre del rol (ej. 'Administrador') |
 | DESCRIPCION | VARCHAR2 | Descripción opcional |
 
 **Roles definidos:**
 
 | ID_ROL | NOMBRE_ROL |
 |--------|------------|
-| 1 | Super Administrador |
+| 1 | Administrador |
 | 2 | Recepción |
 
 ---
@@ -89,7 +89,7 @@ Respuesta 200 OK:
   "admin": {
     "idAdmin": 1,
     "idRol": 1,
-    "nombreRol": "Super Administrador",
+    "nombreRol": "Administrador",
     "nombreCompleto": "Juan García",
     "email": "admin@espinabifida.mx"
   }
@@ -132,10 +132,10 @@ Request con header Authorization
 Verifica que el rol del usuario esté en la lista de roles permitidos.
 
 ```javascript
-// Solo Super Administrador (idRol = 1)
+// Solo Administrador (idRol = 1)
 router.get("/", verifyToken, checkRole(1), AdminController.getAll);
 
-// Super Admin o Recepción (idRol = 1 o 2)
+// Admin o Recepción (idRol = 1 o 2)
 router.get("/:id", verifyToken, checkRole(1, 2), AdminController.getById);
 ```
 
@@ -153,19 +153,19 @@ req.user.idRol no está en rolesPermitidos
 | Método | Ruta | Token | Rol requerido |
 |--------|------|-------|---------------|
 | POST | `/administradores/login` | ❌ | Público |
-| GET | `/administradores` | ✅ | 1 (Super Admin) |
+| GET | `/administradores` | ✅ | 1 (Admin) |
 | GET | `/administradores/:idAdmin` | ✅ | 1 o 2 |
-| POST | `/administradores` | ✅ | 1 (Super Admin) |
-| PUT | `/administradores/:idAdmin` | ✅ | 1 (Super Admin) |
+| POST | `/administradores` | ✅ | 1 (Admin) |
+| PUT | `/administradores/:idAdmin` | ✅ | 1 (Admin) |
 | PATCH | `/administradores/:idAdmin/password` | ✅ | 1 o 2 (propio) |
-| DELETE | `/administradores/:idAdmin` | ✅ | 1 (Super Admin) |
+| DELETE | `/administradores/:idAdmin` | ✅ | 1 (Admin) |
 
 ### /roles
 
 | Método | Ruta | Token | Rol requerido |
 |--------|------|-------|---------------|
-| GET | `/roles` | ✅ | 1 (Super Admin) |
-| GET | `/roles/:idRol` | ✅ | 1 (Super Admin) |
+| GET | `/roles` | ✅ | 1 (Admin) |
+| GET | `/roles/:idRol` | ✅ | 1 (Admin) |
 
 ---
 

@@ -33,10 +33,10 @@ El **Sistema de Gestión Espina Bífida** es una plataforma web centralizada que
 
 | Rol | Acceso |
 |---|---|
-| **Super Administrador** | Acceso completo: configuración, gestión de cuentas, reportes, todos los módulos |
+| **Administrador** | Acceso completo: configuración, gestión de cuentas, reportes, todos los módulos |
 | **Recepción** | Beneficiarios, membresías, servicios, citas, inventario, pre-registro |
 
-> El rol de cada cuenta lo asigna el Super Administrador. Si necesitas permisos adicionales, contacta al administrador del sistema.
+> El rol de cada cuenta lo asigna el Administrador. Si necesitas permisos adicionales, contacta al administrador del sistema.
 
 ### Requisitos técnicos
 
@@ -241,11 +241,11 @@ Para cambiar el estatus:
 
 La baja es una operación definitiva que cancela todas las membresías activas del beneficiario.
 
-1. En el expediente, haz clic en **Dar de baja** (disponible solo para Super Administrador).
+1. En el expediente, haz clic en **Dar de baja** (disponible solo para Administrador).
 2. Confirma la acción en el diálogo de advertencia.
 3. El sistema cambia el estatus a **Baja** y cancela las membresías en una sola operación.
 
-> El expediente no se elimina — permanece en el sistema para consulta histórica. Si necesitas eliminarlo completamente, contacta al Super Administrador.
+> El expediente no se elimina — permanece en el sistema para consulta histórica. Si necesitas eliminarlo completamente, contacta al Administrador.
 
 ### 6.7 Foto de perfil
 
@@ -442,7 +442,7 @@ El sistema genera automáticamente ciertos reportes cada mes y los guarda para c
 
 ## 12. Gestión de administradores
 
-*Disponible solo para Super Administrador.*
+*Disponible solo para Administrador.*
 
 ### 12.1 Ver cuentas de administrador
 
@@ -487,7 +487,7 @@ No directamente. La baja es definitiva. Si el beneficiario desea reincorporarse,
 Si el stock llega a **0**, el artículo aparece como **Agotado** y no será posible registrar servicios que lo incluyan hasta reponer el inventario.
 
 **¿Puedo ver quién hizo un cambio en el sistema?**  
-Las operaciones sensibles (aprobación de pre-registro, baja de beneficiario, cambio de contraseña, etc.) quedan registradas en el sistema de auditoría. Contacta al Super Administrador para consultar el historial de operaciones.
+Las operaciones sensibles (aprobación de pre-registro, baja de beneficiario, cambio de contraseña, etc.) quedan registradas en el sistema de auditoría. Contacta al Administrador para consultar el historial de operaciones.
 
 **¿La sesión expira?**  
 Sí, la sesión expira automáticamente después de **1 hora** de inactividad. Guarda tu trabajo frecuentemente y vuelve a iniciar sesión cuando sea necesario.

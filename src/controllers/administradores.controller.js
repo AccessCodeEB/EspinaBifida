@@ -101,7 +101,7 @@ export async function changePassword(req, res, next) {
 
 export async function resetPasswordBySuper(req, res, next) {
   try {
-    await AdminService.resetPasswordBySuperAdmin(Number(req.params.idAdmin), req.body);
+    await AdminService.resetPasswordByAdmin(Number(req.params.idAdmin), req.body);
     res.json({ message: "Contraseña restablecida exitosamente" });
   } catch (err) {
     next(err);

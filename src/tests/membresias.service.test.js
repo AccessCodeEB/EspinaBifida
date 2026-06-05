@@ -105,7 +105,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
   test("sin numero_credencial ni fecha_emision → auto-genera ambos (ramas ?? del L99 y L104)", async () => {
     // numero_credencial ausente → auto-gen (L99 true-branch ya cubierto)
     // fecha_emision ausente → usa hoy (L104 true-branch ya cubierto)
-    const result = await Service.registrarMembresia({ curp: CURP });
+    const result = await Service.registrarMembresia({ curp: CURP, metodo_pago: "efectivo" });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ curp: CURP })
     );
@@ -117,6 +117,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       curp: CURP,
       numero_credencial: "MI-CRED-001",
       fecha_emision: "2026-01-01",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ numeroCredencial: "MI-CRED-001" })
@@ -127,6 +128,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     const result = await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2025-06-01",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ fechaEmision: "2025-06-01" })
@@ -138,6 +140,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ monto: 200 })
@@ -149,6 +152,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ monto: 150 })
@@ -161,6 +165,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       curp: CURP,
       fecha_emision: "2026-01-01",
       tipo: "reinscripcion",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ monto: 150 })
@@ -173,6 +178,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       curp: CURP,
       fecha_emision: "2026-01-01",
       tipo: "nuevo_ingreso",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ monto: 200 })
@@ -186,6 +192,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       fecha_emision: "2026-01-01",
       fecha_vigencia_inicio: "2026-01-01",
       anios: 2,
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -202,6 +209,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       fecha_emision: "2026-01-01",
       fecha_vigencia_inicio: "2026-01-01",
       anios: 3,
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -217,6 +225,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
       curp: CURP,
       fecha_emision: "2026-01-01",
       fecha_vigencia_inicio: "2026-01-01",
+      metodo_pago: "efectivo",
     });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ fechaVigenciaFin: "2027-01-01" })
@@ -228,6 +237,7 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     const result = await Service.registrarMembresia({
       curp: CURP,
       fecha_emision: "2026-01-01",
+      metodo_pago: "efectivo",
     });
     // fechaUltimoPago no es null → formatISODateUTC se llama (branch true)
     expect(mockCreate).toHaveBeenCalledWith(
@@ -375,6 +385,7 @@ describe("registrarMembresia — validaciones de fechas", () => {
       numero_credencial: "CRED-001",
       fecha_emision: "2026-01-01",
       observaciones: "Alta inicial",
+      metodo_pago: "efectivo",
     });
 
     expect(mockCreate).toHaveBeenCalledWith(
@@ -394,6 +405,7 @@ describe("registrarMembresia — validaciones de fechas", () => {
         numero_credencial: "CRED-002",
         fecha_emision: "2026-01-01",
         fecha_ultimo_pago: hoy,
+        metodo_pago: "efectivo",
       })
     ).resolves.toBeDefined();
   });

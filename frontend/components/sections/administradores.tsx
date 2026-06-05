@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
 const ROLES = [
-  { id: 1, label: "Super Admin" },
+  { id: 1, label: "Admin" },
   { id: 2, label: "Recepción" },
 ]
 

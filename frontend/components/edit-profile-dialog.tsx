@@ -76,7 +76,7 @@ export function EditProfileDialog({
   onProfileSaved,
   onFotoPerfilUpdated,
 }: EditProfileDialogProps) {
-  /** Super Administrador: puede editar nombre y correo (coincide con PUT backend). */
+  /** Administrador: puede editar nombre y correo (coincide con PUT backend). */
   const canEditNombreYCorreo = sessionIdRol === 1
 
   // ── Estado de carga inicial ─────────────────────────────────────────
@@ -375,7 +375,7 @@ export function EditProfileDialog({
 
                 {!canEditNombreYCorreo && (
                   <p className="text-[11px] text-muted-foreground">
-                    Solo un Super Administrador puede modificar el nombre y correo.
+                    Solo un Administrador puede modificar el nombre y correo.
                   </p>
                 )}
 

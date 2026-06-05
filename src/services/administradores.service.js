@@ -255,7 +255,7 @@ export async function changePassword(idAdmin, { passwordActual, passwordNueva, c
   await AdminModel.updatePassword(idAdmin, nuevoHash);
 }
 
-export async function resetPasswordBySuperAdmin(idAdmin, { passwordNueva }) {
+export async function resetPasswordByAdmin(idAdmin, { passwordNueva }) {
   validarPassword(passwordNueva);
   const adminRow = await AdminModel.findById(idAdmin);
   if (!adminRow) throw notFound(`Administrador con id ${idAdmin} no encontrado`);

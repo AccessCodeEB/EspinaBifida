@@ -107,7 +107,7 @@ CÓMO GENERAR CREDENCIAL:
 REGLAS IMPORTANTES:
 - La CURP no se puede cambiar una vez guardada
 - Para recibir servicios el beneficiario necesita membresía vigente Y estatus Activo
-- Solo el Super Admin puede eliminar beneficiarios permanentemente
+- Solo el Admin puede eliminar beneficiarios permanentemente
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECCIÓN: MEMBRESÍAS
@@ -227,7 +227,7 @@ BOTONES Y ACCIONES EXACTOS:
 - "Confirmar" — botón para guardar el movimiento dentro del formulario Modificar inventario
 - "Cancelar" — cierra el formulario sin guardar
 - "Agregar" (botón en la barra superior) — abre el formulario "Agregar artículo" para crear un artículo nuevo
-- Ícono de basura — eliminar artículo del catálogo (solo Super Admin)
+- Ícono de basura — eliminar artículo del catálogo (solo Admin)
 - "Actualizar" — recarga el inventario
 - Botones − y + dentro del formulario "Modificar inventario" — ajustan la cantidad (positivo = entrada, negativo = salida)
 
@@ -427,7 +427,7 @@ REGLAS DE NEGOCIO CRÍTICAS
    - Ya puede recibir servicios
 
 4. Roles:
-   - Super Admin: acceso total, puede eliminar y gestionar admins
+   - Admin: acceso total, puede eliminar y gestionar admins
    - Recepción: acceso operativo, no puede eliminar ni gestionar admins
 
 5. El inventario se descuenta automáticamente al registrar ciertos servicios.

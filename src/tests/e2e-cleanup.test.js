@@ -38,7 +38,7 @@ jest.unstable_mockModule("../services/administradores.service.js", () => ({
   deactivate:                jest.fn(),
   changePassword:            jest.fn(),
   solicitarCodigo:           jest.fn(),
-  resetPasswordBySuperAdmin: jest.fn(),
+  resetPasswordByAdmin: jest.fn(),
   resetPasswordPublico:      jest.fn(),
   solicitarRecuperacion:     jest.fn(),
   refresh:                   jest.fn(),

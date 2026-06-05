@@ -53,7 +53,7 @@ El sistema reemplaza flujos de trabajo fragmentados en hojas de cálculo Excel p
 
 El sistema tiene dos interfaces de usuario:
 
-1. **Panel administrativo interno** — para personal autorizado de la asociación (Super Administrador y Recepción).
+1. **Panel administrativo interno** — para personal autorizado de la asociación (Administrador y Recepción).
 2. **Formulario público de pre-registro** — accesible sin autenticación para pacientes y familiares.
 
 ### 1.3 Definiciones y acrónimos
@@ -148,7 +148,7 @@ La siguiente tabla lista los frameworks, librerías y estándares que conforman 
 | **Inventario** | Conjunto de artículos físicos administrados por la asociación, con seguimiento de existencias. Gestionado por las tablas `ARTICULOS` y `MOVIMIENTOS_INVENTARIO`. |
 | **Stock mínimo** | Cantidad mínima de unidades de un artículo por debajo de la cual el sistema genera una alerta de reabastecimiento. Columna `STOCK_MINIMO` en `ARTICULOS`. |
 | **OTP** | One-Time Password. Código numérico de uso único, generado criptográficamente, enviado por SMS para verificar la identidad del administrador al cambiar o recuperar contraseña. Almacenado temporalmente en memoria con TTL de 5 minutos. |
-| **RBAC** | Role-Based Access Control. Modelo de control de acceso en el que los permisos se asignan a roles y los usuarios heredan permisos a través de su rol. El sistema implementa dos roles: _Super Administrador_ y _Recepción_. |
+| **RBAC** | Role-Based Access Control. Modelo de control de acceso en el que los permisos se asignan a roles y los usuarios heredan permisos a través de su rol. El sistema implementa dos roles: _Administrador_ y _Recepción_. |
 | **JWT** | JSON Web Token. Estándar para representar afirmaciones (claims) de forma segura entre dos partes. El sistema emite tokens de acceso (corta duración) y refresh tokens (larga duración). |
 | **Refresh Token** | Token de larga duración almacenado en base de datos (`REFRESH_TOKENS`) que permite obtener nuevos tokens de acceso sin requerir autenticación completa. |
 | **Cloudflare Turnstile** | Mecanismo de verificación CAPTCHA sin fricción de Cloudflare, integrado en el formulario público para prevenir envíos automatizados. |
@@ -172,12 +172,12 @@ La siguiente tabla lista los frameworks, librerías y estándares que conforman 
 | **Intereses** | Reducir el trabajo manual, eliminar errores en registros de Excel, tener reportes actualizados para donantes e instituciones, y garantizar que el personal registre información de forma consistente. |
 | **Responsabilidades** | Proveer los flujos de negocio actuales, validar los requisitos funcionales, aprobar el diseño de formularios y reportes, y participar en las pruebas de aceptación de usuario (UAT). |
 
-#### 4.1.2 Personal Administrativo — Super Administrador
+#### 4.1.2 Personal Administrativo — Administrador
 
 | Atributo | Detalle |
 |---|---|
 | **Nombre** | Personal de dirección / coordinación de la asociación |
-| **Rol** | Super Administrador (rol en RBAC) |
+| **Rol** | Administrador (rol en RBAC) |
 | **Intereses** | Acceso completo al sistema: gestionar beneficiarios, membresías, servicios, inventario, reportes, otros administradores y configuración general. Visibilidad total de auditoría. |
 | **Responsabilidades** | Aprobar o rechazar pre-registros, dar de baja beneficiarios, gestionar cuentas de personal (Recepción), visualizar y exportar reportes, consultar el historial de auditoría. |
 
@@ -222,7 +222,7 @@ La seguridad es una preocupación transversal que afecta todos los módulos del 
 - Los refresh tokens se rotan en cada renovación para prevenir reutilización.
 
 **Control de Acceso Basado en Roles (RBAC)**
-- Dos roles: `Super Administrador` (ID 1) y `Recepción` (ID 2).
+- Dos roles: `Administrador` (ID 1) y `Recepción` (ID 2).
 - El middleware `auth.js` valida el JWT; el middleware `adminSelfOrSuper.js` verifica permisos granulares (p. ej., solo Super puede eliminar otros administradores).
 - Las rutas sensibles rechazan con HTTP 403 si el rol no es suficiente.
 
@@ -1033,7 +1033,7 @@ Catálogo de roles del sistema. PK con identity column.
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `ID_ROL` | `NUMBER` | PK (identity) | Identificador del rol |
-| `NOMBRE_ROL` | `VARCHAR2(50)` | NOT NULL, UNIQUE | Nombre del rol (`Super Administrador`, `Recepción`) |
+| `NOMBRE_ROL` | `VARCHAR2(50)` | NOT NULL, UNIQUE | Nombre del rol (`Administrador`, `Recepción`) |
 
 ---
 

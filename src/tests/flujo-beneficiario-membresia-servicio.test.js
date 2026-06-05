@@ -37,6 +37,7 @@ const membresiaBase = {
   fecha_emision:     "2026-01-01",
   fecha_vigencia_inicio: "2026-01-01",
   observaciones:     "Alta inicial test",
+  metodo_pago:       "efectivo",
 };
 
 const servicioBase = {

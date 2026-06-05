@@ -288,7 +288,7 @@ Las pruebas funcionales manuales se ejecutan sobre el ambiente de staging (idén
 
 | | Detalle |
 |---|---|
-| **Precondición** | Existe al menos una solicitud en estado `PENDIENTE`. El admin ha iniciado sesión con rol **Super Administrador** o **Administrador**. |
+| **Precondición** | Existe al menos una solicitud en estado `PENDIENTE`. El admin ha iniciado sesión con rol **Administrador** o **Administrador**. |
 | **Pasos** | 1. Iniciar sesión en el sistema de administración. 2. Navegar al módulo de Pre-registro. 3. Verificar la tabla de solicitudes pendientes. 4. Seleccionar la solicitud recién creada. 5. Revisar los datos del formulario. 6. Hacer clic en "Aprobar". 7. Confirmar la acción en el diálogo de confirmación. 8. Navegar al módulo de Beneficiarios. 9. Buscar el beneficiario recién creado por CURP o nombre. |
 | **Resultado esperado** | La solicitud desaparece de la lista de pendientes; el beneficiario aparece en el módulo de Beneficiarios con estatus `Activo`; se crea el registro en `BENEFICIARIOS`. |
 | **Criterio de éxito** | Beneficiario visible en lista con `ESTATUS='Activo'`; registro removido de pre-registro pendiente; sin errores en servidor. |
@@ -440,7 +440,7 @@ Validar que el sistema cumple los requerimientos del socio formador (Asociación
 | | Detalle |
 |---|---|
 | **Actor** | Paciente / familiar (usuario externo sin cuenta) + Personal de recepción (administrador) |
-| **Precondición** | Sistema en línea con acceso público. Admin con rol Super Administrador o Administrador tiene sesión activa. CURP de prueba no existe en el sistema. |
+| **Precondición** | Sistema en línea con acceso público. Admin con rol Administrador o Administrador tiene sesión activa. CURP de prueba no existe en el sistema. |
 | **Pasos del flujo** | **Parte 1 (Paciente):** 1. Abrir URL pública del formulario de pre-registro. 2. Completar todos los campos obligatorios (nombre, apellidos, CURP, fecha de nacimiento, género, estado/municipio, tipo de sangre). 3. Completar el widget Cloudflare Turnstile. 4. Enviar formulario. 5. Anotar el folio de confirmación mostrado en pantalla. **Parte 2 (Admin):** 6. Iniciar sesión en el sistema de administración. 7. Ir al módulo "Pre-registro". 8. Localizar la solicitud recién enviada por CURP o folio. 9. Revisar la información completa. 10. Hacer clic en "Aprobar". 11. Confirmar en el diálogo. **Verificación:** 12. Ir al módulo "Beneficiarios". 13. Buscar por la CURP de la solicitud aprobada. 14. Verificar que aparece con `ESTATUS = Activo`. |
 | **Criterio de aceptación** | El beneficiario aparece en la lista de beneficiarios con estatus Activo, los datos coinciden con los ingresados en el formulario, y la solicitud ya no aparece en pendientes. |
 | **Automatizado como** | `e2e/ui/uat.spec.ts` — test "UAT-001" con timeout 120s |
@@ -449,7 +449,7 @@ Validar que el sistema cumple los requerimientos del socio formador (Asociación
 
 | | Detalle |
 |---|---|
-| **Actor** | Personal administrativo (Administrador o Super Administrador) |
+| **Actor** | Personal administrativo (Administrador o Administrador) |
 | **Precondición** | Existen al menos 5 registros de membresías en el sistema. Admin con sesión activa. |
 | **Pasos del flujo** | 1. Navegar al módulo "Reportes". 2. Seleccionar tipo de reporte: "Membresías". 3. Ingresar fecha de inicio del período (primer día del mes actual). 4. Ingresar fecha de fin del período (fecha actual). 5. Hacer clic en "Generar reporte". 6. Esperar confirmación de generación exitosa. 7. Hacer clic en "Descargar PDF". 8. Abrir el archivo descargado. 9. Verificar que contiene datos del período seleccionado. |
 | **Criterio de aceptación** | El archivo PDF se descarga correctamente, su contenido muestra los datos de membresías del período seleccionado, y el nombre del archivo incluye la fecha de generación. |
@@ -543,7 +543,7 @@ La cobertura del 100% se mantuvo como requisito de calidad durante todo el desar
 
 **DEF-004:** Solución: aumentar el timeout de espera del widget Turnstile de 4 segundos a 12 segundos en el spec de UI.
 
-**DEF-005:** Solución: ejecutar `UPDATE ADMINISTRADORES SET ID_ROL = 1 WHERE EMAIL = 'prueba@espina.com'` en BD de producción para asignar rol Super Administrador al usuario de prueba E2E.
+**DEF-005:** Solución: ejecutar `UPDATE ADMINISTRADORES SET ID_ROL = 1 WHERE EMAIL = 'prueba@espina.com'` en BD de producción para asignar rol Administrador al usuario de prueba E2E.
 
 **DEF-007:** Solución: envolver `UPDATE BENEFICIARIOS SET ESTATUS='Baja'` y `UPDATE CREDENCIALES SET ESTATUS='Cancelada'` en una única transacción Oracle con `COMMIT` / `ROLLBACK` explícito.
 

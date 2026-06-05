@@ -100,7 +100,7 @@ const adminRow = {
   EMAIL:           "admin@test.com",
   PASSWORD_HASH:   "$2a$10$somehash",
   ACTIVO:          1,
-  NOMBRE_ROL:      "SuperAdmin",
+  NOMBRE_ROL:      "Admin",
   FOTO_PERFIL_URL: null,
 };
 
@@ -568,7 +568,7 @@ describe("create — validaciones de campos (líneas 99–107)", () => {
   test("rol no encontrado → NOT_FOUND", async () => {
     mockRolesFindById.mockResolvedValueOnce(null);
     await expect(
-      Service.create({ idRol: 99, nombreCompleto: "Admin", email: "a@b.com", password: "pass123" })
+      Service.create({ idRol: 99, nombreCompleto: "Admin", email: "a@b.com", password: "pass12345" })
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -576,7 +576,7 @@ describe("create — validaciones de campos (líneas 99–107)", () => {
     mockRolesFindById.mockResolvedValueOnce({ ID_ROL: 1, NOMBRE_ROL: "Staff" });
     mockFindByEmail.mockResolvedValueOnce(adminRow); // ya existe
     await expect(
-      Service.create({ idRol: 1, nombreCompleto: "Admin", email: "admin@test.com", password: "pass123" })
+      Service.create({ idRol: 1, nombreCompleto: "Admin", email: "admin@test.com", password: "pass12345" })
     ).rejects.toMatchObject({ statusCode: 409 });
   });
 
@@ -586,7 +586,7 @@ describe("create — validaciones de campos (líneas 99–107)", () => {
     mockBcryptHash.mockResolvedValueOnce("$2a$10$newhash");
     mockCreate.mockResolvedValueOnce({ rowsAffected: 1 });
     await expect(
-      Service.create({ idRol: 1, nombreCompleto: "Nuevo Admin", email: "nuevo@test.com", password: "pass123" })
+      Service.create({ idRol: 1, nombreCompleto: "Nuevo Admin", email: "nuevo@test.com", password: "pass12345" })
     ).resolves.toBeUndefined();
   });
 });
@@ -678,6 +678,7 @@ describe("login — rama bcrypt estándar", () => {
   });
 
   test("PASSWORD_HASH null → stored='', passwordValida=false → 401", async () => {
+    mockBcryptCompare.mockReset();
     const rowNullHash = { ...adminRow, PASSWORD_HASH: null };
     mockFindByEmail.mockResolvedValueOnce(rowNullHash);
 
@@ -763,27 +764,27 @@ describe("revokeRefreshToken", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// resetPasswordBySuperAdmin
+// resetPasswordByAdmin
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("resetPasswordBySuperAdmin", () => {
+describe("resetPasswordByAdmin", () => {
   test("cambia la contraseña cuando el admin existe y la password es válida", async () => {
     mockFindById.mockResolvedValueOnce(adminRow);
     mockUpdatePassword.mockResolvedValueOnce(undefined);
-    await Service.resetPasswordBySuperAdmin(1, { passwordNueva: "NuevaPass1!" });
+    await Service.resetPasswordByAdmin(1, { passwordNueva: "NuevaPass1!" });
     expect(mockUpdatePassword).toHaveBeenCalledTimes(1);
   });
 
   test("lanza notFound cuando el admin no existe", async () => {
     mockFindById.mockResolvedValueOnce(null);
     await expect(
-      Service.resetPasswordBySuperAdmin(999, { passwordNueva: "NuevaPass1!" })
+      Service.resetPasswordByAdmin(999, { passwordNueva: "NuevaPass1!" })
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
   test("lanza badRequest cuando la password no cumple requisitos", async () => {
     await expect(
-      Service.resetPasswordBySuperAdmin(1, { passwordNueva: "corta" })
+      Service.resetPasswordByAdmin(1, { passwordNueva: "corta" })
     ).rejects.toThrow();
   });
 });

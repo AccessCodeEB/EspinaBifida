@@ -43,7 +43,7 @@ const adminRow = {
   EMAIL:           "admin@test.com",
   PASSWORD_HASH:   "$2a$10$hash",
   ACTIVO:          1,
-  NOMBRE_ROL:      "SuperAdmin",
+  NOMBRE_ROL:      "Admin",
 };
 
 const citaRow = {
@@ -70,7 +70,7 @@ describe("GET /api/v1/roles — listar roles", () => {
   test("devuelve lista de roles (200)", async () => {
     mockExecute.mockResolvedValueOnce({
       rows: [
-        { ID_ROL: 1, NOMBRE_ROL: "SuperAdmin", DESCRIPCION: "Acceso total" },
+        { ID_ROL: 1, NOMBRE_ROL: "Admin", DESCRIPCION: "Acceso total" },
         { ID_ROL: 2, NOMBRE_ROL: "Recepción",  DESCRIPCION: "Acceso limitado" },
       ],
     });
@@ -99,7 +99,7 @@ describe("GET /api/v1/roles — listar roles", () => {
 describe("GET /api/v1/roles/:idRol — obtener rol por ID", () => {
   test("devuelve el rol cuando existe (200)", async () => {
     mockExecute.mockResolvedValueOnce({
-      rows: [{ ID_ROL: 1, NOMBRE_ROL: "SuperAdmin", DESCRIPCION: "Acceso total" }],
+      rows: [{ ID_ROL: 1, NOMBRE_ROL: "Admin", DESCRIPCION: "Acceso total" }],
     });
 
     const res = await request(app)
@@ -535,7 +535,7 @@ describe("PATCH /api/v1/administradores/:idAdmin/password — changePassword", (
     const res = await request(app)
       .patch("/api/v1/administradores/2/password")
       .set("Authorization", `Bearer ${tokenAdmin}`)
-      .send({ passwordActual: "pass123", passwordNueva: "newpass123" });
+      .send({ passwordActual: "pass123", passwordNueva: "newpass123", codigo: "123456" });
 
     expect(res.status).toBe(403);
   });

@@ -101,7 +101,7 @@ function PanelHomeContent() {
     updateSession,
   } = useAuth()
 
-  const isSuperAdmin = (session?.idRol ?? 0) === 1
+  const isAdmin = (session?.idRol ?? 0) === 1
 
   const [activeSection, setActiveSection] = useState(() => {
     const s = searchParams.get("section")
@@ -111,12 +111,12 @@ function PanelHomeContent() {
   useEffect(() => {
     const s = searchParams.get("section")
     if (!s || !VALID_SECTIONS.has(s)) return
-    if (s === "administradores" && !isSuperAdmin) {
+    if (s === "administradores" && !isAdmin) {
       router.replace("/panel?section=dashboard", { scroll: false })
       return
     }
     setActiveSection(s)
-  }, [searchParams, isSuperAdmin, router])
+  }, [searchParams, isAdmin, router])
 
   // Bloquear back/forward del navegador para que no salgan del panel de administrador
   useEffect(() => {
@@ -135,10 +135,10 @@ function PanelHomeContent() {
   }, [isAuthenticated])
 
   const handleSectionChange = useCallback((section: string) => {
-    if (section === "administradores" && !isSuperAdmin) return
+    if (section === "administradores" && !isAdmin) return
     setActiveSection(section)
     router.replace(`/panel?section=${section}`, { scroll: false })
-  }, [router, isSuperAdmin])
+  }, [router, isAdmin])
 
   const handleAiAction = useCallback((action: AiAction) => {
     if (action.type === "navigate" && VALID_SECTIONS.has(action.to)) {
