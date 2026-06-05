@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
 import { esHoraValidaFrontend, type EspecialidadHorario } from "@/services/especialidades-horario"
 
-const GRID_START=7,GRID_END=17,WORK_START=8,WORK_END=17
+const GRID_START=7,GRID_END=23,WORK_START=8,WORK_END=23
 const CELL_H=64,TOTAL_H=GRID_END-GRID_START,GRID_H=CELL_H*TOTAL_H
 const HOURS=Array.from({length:TOTAL_H+1},(_,i)=>i+GRID_START)
 const DEFAULT_MINS=60
@@ -623,9 +623,8 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
   // FIX #1: only non-cancelled for the grid; citasDay already sorted
   const citasSemana=useMemo(()=>weekDates.map(d=>{
     const all=citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate())
-    // FIX #2: Cancelled not rendered in the weekly grid
-    const visible=all.filter(c=>c.estatus!=="Cancelada")
-    return{date:d,layout:buildLayout(visible)}
+    // Se remueve el filtro de 'Cancelada' para que exista coherencia con el historial
+    return{date:d,layout:buildLayout(all)}
   }),[citas,weekDates])
 
   // Navigate to cita's exact day AND open its popover
