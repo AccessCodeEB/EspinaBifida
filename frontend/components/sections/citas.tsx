@@ -285,7 +285,7 @@ export function CitasSection() {
             daysAhead < 14 ? `en ${daysAhead} días` :
             daysAhead < 35 ? `en ${Math.round(daysAhead / 7)} semana(s)` :
             `en ~${Math.round(daysAhead / 30)} mes(es)`
-          setSmartSuggestion(`✨ Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
+          setSmartSuggestion(`Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
           toast.success("¡Horario ideal encontrado y aplicado!", { description: `${fechaStr} · ${hora}` })
           found = true
           break
@@ -613,6 +613,7 @@ export function CitasSection() {
                 onValueChange={v => {
                   setForm(f => ({ ...f, especialista: v, hora: "" }))
                   setSaveError(null)
+                  setSmartSuggestion(null)
                 }}
               >
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialidad" /></SelectTrigger>
