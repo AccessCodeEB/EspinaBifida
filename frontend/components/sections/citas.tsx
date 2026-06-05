@@ -296,6 +296,7 @@ export function CitasSection() {
     const missing: string[] = []
     if (!form.curp) missing.push("beneficiario")
     if (!form.idTipoServicio) missing.push("tipo de servicio")
+    if (!form.especialista) missing.push("especialidad")
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
@@ -317,6 +318,24 @@ export function CitasSection() {
       })
 
       const citaId = Number(citaCreada?.result?.idCita ?? 0)
+
+      // Optimistic update: add the new cita immediately so stats (hoy/semana/pendientes)
+      // update instantly without waiting for the full loadCitas() reload
+      const benef = beneficiarios.find(b => String(b.curp ?? b.folio ?? "").trim() === String(form.curp).trim())
+      const nombreBenef = benef
+        ? `${benef.nombres ?? ""} ${benef.apellidoPaterno ?? ""}`.trim()
+        : form.curp
+      const optimisticCita: Cita = {
+        id: citaId || Date.now(),
+        folio: form.curp,
+        beneficiario: nombreBenef,
+        especialista: form.especialista,
+        fecha: form.fecha,
+        hora: form.hora,
+        estatus: "Pendiente",
+        notas: form.notas || undefined,
+      }
+      setCitas(prev => [...prev, optimisticCita])
 
       let servicioRegistrado = false
       let servicioWarning: string | null = null
@@ -578,7 +597,7 @@ export function CitasSection() {
 
             {/* Especialista */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialidad <span className="font-normal normal-case tracking-normal opacity-60">(opcional)</span></label>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialidad</label>
               <Select
                 value={form.especialista}
                 onValueChange={v => {
@@ -595,7 +614,12 @@ export function CitasSection() {
               </Select>
               {espSeleccionada && (
                 <p className="text-[11px] text-muted-foreground">
-                  {descripcionHorario(espSeleccionada)}
+                  Horario: {descripcionHorario(espSeleccionada)}
+                </p>
+              )}
+              {!espSeleccionada && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  Selecciona una especialidad para ver los horarios disponibles
                 </p>
               )}
             </div>
@@ -671,13 +695,19 @@ export function CitasSection() {
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
                   <select
-                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                    className={`h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 ${
+                      !form.especialista ? "text-muted-foreground/50 cursor-not-allowed" : "text-foreground"
+                    }`}
                     value={form.hora}
+                    disabled={!form.especialista}
                     onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="">{form.especialista ? "Seleccionar hora" : "Primero elige especialidad"}</option>
                     {slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                  {form.especialista && slotsDisponibles.length === 0 && (
+                    <p className="text-[11px] text-red-600 dark:text-red-400">Sin horarios disponibles para esta especialidad</p>
+                  )}
                 </div>
               </div>
 
