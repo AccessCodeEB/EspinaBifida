@@ -81,7 +81,8 @@ async function checkMembresiasProximas() {
   const rows = await Model.findMembresiasProximas();
   for (const row of rows) {
     const dias = Number(row.DIAS_RESTANTES);
-    const msg = `Membresía de ${row.NOMBRE} (${row.CURP}) vence en ${dias} día${dias === 1 ? "" : "s"}.`;
+    const diasStr = dias === 0 ? "hoy" : `en ${dias} día${dias === 1 ? "" : "s"}`;
+    const msg = `Membresía de ${row.NOMBRE} (${row.CURP}) vence ${diasStr}.`;
     await Model.upsertMembresia(row.CURP, "MEMBRESIA_PROXIMA", msg);
   }
   return rows.length;
@@ -92,6 +93,9 @@ async function checkMembresiasVencidas() {
   for (const row of rows) {
     const fecha = new Date(row.FECHA_VIGENCIA_FIN).toLocaleDateString("es-MX");
     const msg = `Membresía de ${row.NOMBRE} (${row.CURP}) venció el ${fecha}.`;
+    // Cerrar MEMBRESIA_PROXIMA pendiente del mismo beneficiario para evitar
+    // que aparezcan ambas notificaciones simultáneamente en el panel.
+    await Model.closePendingMembresia(row.CURP, "MEMBRESIA_PROXIMA");
     await Model.upsertMembresia(row.CURP, "MEMBRESIA_VENCIDA", msg);
   }
   return rows.length;
