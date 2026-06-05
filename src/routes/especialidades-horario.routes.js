@@ -3,6 +3,8 @@ import {
   getEspecialidades,
   getEspecialidadById,
   updateEspecialidad,
+  getCitasFuturas,
+  getCitasEnFecha,
   getExcepciones,
   createExcepcion,
   deleteExcepcion,
@@ -22,6 +24,10 @@ router.get("/:id", getEspecialidadById);
 // Las rutas de modificación requieren autenticación
 router.put("/:id", verifyToken, updateEspecialidad);
 router.patch("/:id", verifyToken, updateEspecialidad);
+
+// Consultas de impacto (para avisos en el dialog antes de guardar)
+router.get("/:id/citas-futuras", verifyToken, getCitasFuturas);
+router.get("/:id/citas-en-fecha", verifyToken, getCitasEnFecha);
 
 // Excepciones (fechas bloqueadas)
 router.get("/:id/excepciones", verifyToken, getExcepciones);

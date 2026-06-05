@@ -22,6 +22,26 @@ export const updateEspecialidad = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Consultas de impacto (para avisos en frontend) ───────────────
+
+export const getCitasFuturas = async (req, res, next) => {
+  try {
+    const esp = await svc.getEspecialidadById(Number(req.params.id));
+    const count = await svc.countCitasFuturas(esp.nombre);
+    res.json({ count });
+  } catch (err) { next(err); }
+};
+
+export const getCitasEnFecha = async (req, res, next) => {
+  try {
+    const { fecha } = req.query;
+    if (!fecha) return res.status(400).json({ error: "fecha es obligatoria" });
+    const esp = await svc.getEspecialidadById(Number(req.params.id));
+    const count = await svc.countCitasEnFecha(esp.nombre, fecha);
+    res.json({ count });
+  } catch (err) { next(err); }
+};
+
 // ─── Excepciones ─────────────────────────────────────────────────
 
 export const getExcepciones = async (req, res, next) => {
