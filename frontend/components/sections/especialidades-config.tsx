@@ -5,7 +5,7 @@ import {
   CalendarOff, Plus, Trash2, Edit2, Check,
   Clock, Users, RefreshCw, Stethoscope,
   CalendarDays, RotateCcw, CheckCircle2, XCircle,
-  AlertCircle,
+  AlertCircle, AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
@@ -19,6 +19,8 @@ import {
   createExcepcion,
   deleteExcepcion,
   updateEspecialidadHorario,
+  getCitasFuturasCount,
+  getCitasEnFechaCount,
   descripcionHorario,
   type EspecialidadHorario,
   type ExcepcionEspecialidad,
@@ -59,16 +61,26 @@ export function EspecialidadesConfigSection() {
   const [excForm, setExcForm]             = useState({ fecha: "", motivo: "" })
   const [savingExc, setSavingExc]         = useState(false)
 
+  // Avisos de impacto antes de guardar
+  const [citasFuturasAviso, setCitasFuturasAviso]       = useState<number | null>(null)
+  const [checkingCitasFuturas, setCheckingCitasFuturas] = useState(false)
+  const [citasEnFechaAviso, setCitasEnFechaAviso]       = useState<number | null>(null)
+  const [checkingCitasEnFecha, setCheckingCitasEnFecha] = useState(false)
+
   const loadEspecialidades = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getEspecialidadesHorario()
+      const data = await getEspecialidadesHorario(true) // admin: incluir inactivas
       setEspecialidades(data)
-      if (!selected && data.length > 0) setSelected(data[0])
+      // Sincronizar selected con la versión fresca del array
+      setSelected(prev => {
+        if (!prev) return data.length > 0 ? data[0] : null
+        return data.find(e => e.idEspecialidad === prev.idEspecialidad) ?? (data.length > 0 ? data[0] : null)
+      })
     } catch (err) {
       toast.error(friendlyError(err, "No se pudieron cargar las especialidades"))
     } finally { setLoading(false) }
-  }, [selected])
+  }, [])
 
   const loadExcepciones = useCallback(async (id: number) => {
     setLoadingExc(true)
@@ -90,6 +102,8 @@ export function EspecialidadesConfigSection() {
       activo:         esp.activo,
       notas:          esp.notas ?? "",
     })
+    setCitasFuturasAviso(null)
+    setCheckingCitasFuturas(false)
     setShowEditDialog(true)
   }
 
@@ -140,6 +154,8 @@ export function EspecialidadesConfigSection() {
   }
 
   const proximasExcepciones = excepciones.filter(e => diasHastaFecha(e.fecha) >= 0).length
+  const activasCount   = especialidades.filter(e => e.activo).length
+  const inactivasCount = especialidades.length - activasCount
 
   if (loading) {
     return (
@@ -170,7 +186,44 @@ export function EspecialidadesConfigSection() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          {
+            label: "Registradas",
+            value: especialidades.length,
+            color: NAVY,
+            bg: `${NAVY}15`,
+            icon: Stethoscope,
+          },
+          {
+            label: "Activas",
+            value: activasCount,
+            color: "#10b981",
+            bg: "#10b98115",
+            icon: CheckCircle2,
+          },
+          {
+            label: "Inactivas",
+            value: inactivasCount,
+            color: inactivasCount > 0 ? "#f59e0b" : "#6b7280",
+            bg: inactivasCount > 0 ? "#f59e0b15" : "#6b728015",
+            icon: XCircle,
+          },
+        ].map(({ label, value, color, bg, icon: Icon }) => (
+          <div key={label} className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+              <div className="flex size-7 items-center justify-center rounded-lg" style={{ backgroundColor: bg }}>
+                <Icon className="size-3.5" style={{ color }} />
+              </div>
+            </div>
+            <span className="text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[300px_1fr]">
 
         {/* ── Panel izquierdo: lista ── */}
         <div className="flex flex-col gap-2">
@@ -190,15 +243,23 @@ export function EspecialidadesConfigSection() {
                 <button
                   key={esp.idEspecialidad}
                   onClick={() => setSelected(esp)}
-                  className={`group flex flex-col gap-2 rounded-xl border px-4 py-3 text-left transition-all ${
+                  className={`group relative flex flex-col gap-2 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all ${
                     isSelected
-                      ? "border-[#0f4c81] bg-[#0f4c81]/5 shadow-sm"
-                      : "border-border/60 bg-card hover:border-[#0f4c81]/40 hover:bg-muted/30"
+                      ? "border-[#0f4c81]/30 bg-[#0f4c81]/5 shadow-sm"
+                      : "border-border/60 bg-card hover:border-[#0f4c81]/30 hover:bg-muted/30"
                   }`}
                 >
+                  {/* Accent bar izquierda */}
+                  <div className={`absolute left-0 top-0 h-full w-[3px] rounded-l-xl transition-all ${
+                    isSelected ? "bg-[#0f4c81]" : "bg-transparent"
+                  }`} />
+
+                  {/* Fila 1: ícono + nombre + badge activo */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${isSelected ? "bg-[#0f4c81]/10" : "bg-muted/50"}`}>
+                      <div className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${
+                        isSelected ? "bg-[#0f4c81]/10" : "bg-muted/50"
+                      }`}>
                         <Stethoscope className={`size-3.5 ${isSelected ? "text-[#0f4c81]" : "text-muted-foreground"}`} />
                       </div>
                       <span className={`truncate text-sm font-semibold ${isSelected ? "text-[#0f4c81]" : "text-foreground"}`}>
@@ -208,7 +269,7 @@ export function EspecialidadesConfigSection() {
                     <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                       esp.activo
                         ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : "bg-muted text-muted-foreground"
+                        : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
                     }`}>
                       {esp.activo
                         ? <><CheckCircle2 className="size-2.5" />Activo</>
@@ -217,19 +278,41 @@ export function EspecialidadesConfigSection() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 pl-9">
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
-                      <CalendarDays className="size-3 shrink-0" />
+                  {/* Fila 2: chips de metadatos */}
+                  <div className="flex items-center gap-1.5 pl-9 flex-wrap">
+                    {/* Día */}
+                    <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                      isSelected
+                        ? "bg-[#0f4c81]/10 text-[#0f4c81]"
+                        : "bg-muted/60 text-muted-foreground"
+                    }`}>
+                      <CalendarDays className="size-2.5 shrink-0" />
                       {DIAS_CORTO[esp.diaSemana]}
                     </span>
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
-                      <Clock className="size-3 shrink-0" />
+
+                    {/* Horario */}
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${
+                      isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"
+                    }`}>
+                      <Clock className="size-2.5 shrink-0" />
                       {esp.horaInicio}{esp.horaFin ? `–${esp.horaFin}` : ""}
                     </span>
+
+                    {/* Capacidad */}
                     {esp.capacidadMax && (
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"}`}>
-                        <Users className="size-3 shrink-0" />
-                        {esp.capacidadMax}
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${
+                        isSelected ? "text-[#0f4c81]/80" : "text-muted-foreground"
+                      }`}>
+                        <Users className="size-2.5 shrink-0" />
+                        {esp.capacidadMax} pac.
+                      </span>
+                    )}
+
+                    {/* Badge mensual */}
+                    {esp.tipoFrecuencia !== "SEMANAL" && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                        <RotateCcw className="size-2.5" />
+                        Mensual
                       </span>
                     )}
                   </div>
@@ -245,49 +328,59 @@ export function EspecialidadesConfigSection() {
 
             {/* Tarjeta de horario */}
             <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-              {/* Header de la tarjeta */}
-              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-[#0f4c81]/10">
-                    <Stethoscope className="size-4 text-[#0f4c81]" />
+
+              {/* Header navy con patrón de puntos */}
+              <div className="relative overflow-hidden" style={{ backgroundColor: NAVY }}>
+                <div
+                  className="absolute inset-0 opacity-[0.07]"
+                  style={{
+                    backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
+                    backgroundSize: "18px 18px",
+                  }}
+                />
+                <div className="relative flex items-center justify-between gap-3 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-white/10">
+                      <Stethoscope className="size-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{selected.nombre}</p>
+                      <p className="text-[11px] text-white/60">{descripcionHorario(selected)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">{selected.nombre}</p>
-                    <p className="text-[11px] text-muted-foreground">{descripcionHorario(selected)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      selected.activo
+                        ? "bg-white/15 text-white"
+                        : "bg-white/10 text-white/60"
+                    }`}>
+                      {selected.activo
+                        ? <><CheckCircle2 className="size-3" />Activo</>
+                        : <><XCircle className="size-3" />Inactivo</>
+                      }
+                    </span>
+                    <button
+                      onClick={() => openEdit(selected)}
+                      className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-white/20"
+                    >
+                      <Edit2 className="size-3.5" />
+                      Editar
+                    </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    selected.activo
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {selected.activo
-                      ? <><CheckCircle2 className="size-3" />Activo</>
-                      : <><XCircle className="size-3" />Inactivo</>
-                    }
-                  </span>
-                  <button
-                    onClick={() => openEdit(selected)}
-                    className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <Edit2 className="size-3.5" />
-                    Editar
-                  </button>
                 </div>
               </div>
 
               {/* Datos del horario */}
               <div className="grid grid-cols-2 divide-x divide-border/40 sm:grid-cols-4">
                 {[
-                  { icon: CalendarDays, label: "Día",        value: DIAS_NOMBRE[selected.diaSemana] },
-                  { icon: Clock,        label: "Inicio",      value: selected.horaInicio },
-                  { icon: Clock,        label: "Fin",         value: selected.horaFin ?? "Sin límite" },
-                  { icon: Users,        label: "Capacidad",   value: selected.capacidadMax ? `${selected.capacidadMax} pac.` : "Sin límite" },
-                ].map(({ icon: Icon, label, value }) => (
+                  { icon: CalendarDays, label: "Día",      value: DIAS_NOMBRE[selected.diaSemana],                        color: NAVY },
+                  { icon: Clock,        label: "Inicio",   value: selected.horaInicio,                                    color: "#10b981" },
+                  { icon: Clock,        label: "Fin",      value: selected.horaFin ?? "Sin límite",                       color: "#f59e0b" },
+                  { icon: Users,        label: "Capacidad",value: selected.capacidadMax ? `${selected.capacidadMax} pac.` : "Sin límite", color: "#8b5cf6" },
+                ].map(({ icon: Icon, label, value, color }) => (
                   <div key={label} className="flex flex-col gap-1 px-5 py-4">
                     <div className="flex items-center gap-1.5">
-                      <Icon className="size-3 text-muted-foreground" />
+                      <Icon className="size-3" style={{ color }} />
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
                     </div>
                     <p className="text-sm font-bold text-foreground tabular-nums">{value}</p>
@@ -315,7 +408,9 @@ export function EspecialidadesConfigSection() {
             <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
               <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
                 <div className="flex items-center gap-2">
-                  <CalendarOff className="size-4 text-muted-foreground" />
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/30">
+                    <CalendarOff className="size-3.5 text-red-500" />
+                  </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground">Fechas bloqueadas</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -327,7 +422,11 @@ export function EspecialidadesConfigSection() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { setExcForm({ fecha: "", motivo: "" }); setShowExcDialog(true) }}
+                  onClick={() => {
+                    setExcForm({ fecha: "", motivo: "" })
+                    setCitasEnFechaAviso(null)
+                    setShowExcDialog(true)
+                  }}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
                   style={{ backgroundColor: NAVY }}
                 >
@@ -342,12 +441,16 @@ export function EspecialidadesConfigSection() {
                   <p className="text-xs text-muted-foreground">Cargando bloqueos...</p>
                 </div>
               ) : excepciones.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-10">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-muted/50">
-                    <CalendarOff className="size-4 text-muted-foreground opacity-50" />
+                <div className="flex items-center gap-4 px-5 py-6">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/40">
+                    <CalendarOff className="size-4 text-muted-foreground opacity-40" />
                   </div>
-                  <p className="text-xs font-medium text-foreground">Sin bloqueos</p>
-                  <p className="text-[11px] text-muted-foreground">Esta especialidad no tiene fechas bloqueadas</p>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Sin fechas bloqueadas</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ¿El doctor no estará disponible? Usa el botón para bloquear un día.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="divide-y divide-border/30">
@@ -361,14 +464,12 @@ export function EspecialidadesConfigSection() {
                         <div key={exc.idExcepcion}
                           className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/20 ${pasada ? "opacity-50" : ""}`}
                         >
-                          {/* Ícono de estado */}
                           <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
                             pasada ? "bg-muted/50" : "bg-red-50 dark:bg-red-950/30"
                           }`}>
                             <CalendarOff className={`size-3.5 ${pasada ? "text-muted-foreground" : "text-red-500"}`} />
                           </div>
 
-                          {/* Fecha + motivo */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground">{formatFecha(exc.fecha)}</p>
                             {exc.motivo ? (
@@ -378,7 +479,6 @@ export function EspecialidadesConfigSection() {
                             )}
                           </div>
 
-                          {/* Badge de proximidad */}
                           {!pasada && (
                             <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
                               dias === 0
@@ -396,7 +496,6 @@ export function EspecialidadesConfigSection() {
                             </span>
                           )}
 
-                          {/* Eliminar */}
                           <button
                             onClick={() => handleEliminarExcepcion(exc)}
                             className="shrink-0 flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
@@ -490,7 +589,20 @@ export function EspecialidadesConfigSection() {
               <input
                 type="checkbox"
                 checked={editForm.activo ?? true}
-                onChange={e => setEditForm(f => ({ ...f, activo: e.target.checked }))}
+                onChange={e => {
+                  const nuevoActivo = e.target.checked
+                  setEditForm(f => ({ ...f, activo: nuevoActivo }))
+                  if (!nuevoActivo && selected) {
+                    setCheckingCitasFuturas(true)
+                    setCitasFuturasAviso(null)
+                    getCitasFuturasCount(selected.idEspecialidad)
+                      .then(r => setCitasFuturasAviso(r.count))
+                      .catch(() => setCitasFuturasAviso(null))
+                      .finally(() => setCheckingCitasFuturas(false))
+                  } else {
+                    setCitasFuturasAviso(null)
+                  }
+                }}
                 className="size-4 rounded border-border accent-[#0f4c81]"
               />
               <div>
@@ -498,6 +610,30 @@ export function EspecialidadesConfigSection() {
                 <p className="text-[11px] text-muted-foreground">Permite agendar citas en este horario</p>
               </div>
             </label>
+
+            {/* Aviso: citas futuras pendientes al desactivar */}
+            {checkingCitasFuturas && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2.5 dark:bg-amber-950/30">
+                <div className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-amber-300 border-t-amber-600" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">Revisando citas pendientes...</p>
+              </div>
+            )}
+            {!checkingCitasFuturas && citasFuturasAviso !== null && citasFuturasAviso > 0 && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-950/30">
+                <AlertTriangle className="size-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <p className="text-xs text-amber-800 dark:text-amber-300">
+                  Esta especialidad tiene{" "}
+                  <strong>{citasFuturasAviso} cita{citasFuturasAviso !== 1 ? "s" : ""} pendiente{citasFuturasAviso !== 1 ? "s" : ""}</strong>{" "}
+                  próxima{citasFuturasAviso !== 1 ? "s" : ""}. Al desactivarla no se cancelarán automáticamente — cancélalas primero en la sección de Citas.
+                </p>
+              </div>
+            )}
+            {!checkingCitasFuturas && citasFuturasAviso === 0 && editForm.activo === false && (
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 dark:bg-emerald-950/30">
+                <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">Sin citas pendientes. Puedes desactivarla sin problema.</p>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
             <button onClick={() => setShowEditDialog(false)} disabled={saving}
@@ -523,9 +659,45 @@ export function EspecialidadesConfigSection() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Fecha</Label>
-              <Input type="date" className="h-10 text-sm" value={excForm.fecha}
-                onChange={e => setExcForm(f => ({ ...f, fecha: e.target.value }))} />
+              <Input
+                type="date"
+                className="h-10 text-sm"
+                value={excForm.fecha}
+                onChange={e => {
+                  const fecha = e.target.value
+                  setExcForm(f => ({ ...f, fecha }))
+                  if (fecha && selected) {
+                    setCheckingCitasEnFecha(true)
+                    setCitasEnFechaAviso(null)
+                    getCitasEnFechaCount(selected.idEspecialidad, fecha)
+                      .then(r => setCitasEnFechaAviso(r.count))
+                      .catch(() => setCitasEnFechaAviso(null))
+                      .finally(() => setCheckingCitasEnFecha(false))
+                  } else {
+                    setCitasEnFechaAviso(null)
+                  }
+                }}
+              />
             </div>
+
+            {/* Aviso: citas existentes en esa fecha */}
+            {checkingCitasEnFecha && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2.5 dark:bg-amber-950/30">
+                <div className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-amber-300 border-t-amber-600" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">Revisando citas para esta fecha...</p>
+              </div>
+            )}
+            {!checkingCitasEnFecha && citasEnFechaAviso !== null && citasEnFechaAviso > 0 && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-950/30">
+                <AlertTriangle className="size-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <p className="text-xs text-amber-800 dark:text-amber-300">
+                  Ya hay{" "}
+                  <strong>{citasEnFechaAviso} cita{citasEnFechaAviso !== 1 ? "s" : ""} programada{citasEnFechaAviso !== 1 ? "s" : ""}</strong>{" "}
+                  para esta fecha. Al bloquear el día no se cancelarán — ve a Citas y cancélalas manualmente.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">
                 Motivo <span className="font-normal opacity-50">(opcional)</span>
