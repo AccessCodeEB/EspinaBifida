@@ -17,8 +17,6 @@ import {
   Sun,
   LogOut,
   ChevronRight,
-  PanelLeftClose,
-  PanelLeftOpen,
   UserCog,
   HandCoins,
   Stethoscope,
@@ -49,12 +47,6 @@ export function AppSidebar({
   onEditProfile,
   onLogout,
 }: AppSidebarProps) {
-  /**
-   * collapsed = true  → modo mini (60px de base, se expande al hacer hover)
-   * collapsed = false → siempre expandido (220px fijo)
-   */
-  const [collapsed, setCollapsed] = useState(false)
-  const [hovered, setHovered]     = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
 
@@ -97,23 +89,14 @@ export function AppSidebar({
     }] : []),
   ]
 
-  // La sidebar muestra texto si: está expandida (collapsed=false) O si está en
-  // modo mini pero el ratón la está recorriendo (hovered=true)
-  const showLabels = !collapsed || hovered
-
   const initials = userName
     ? userName.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
     : "?"
 
   return (
     <aside
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setSettingsOpen(false) }}
-      className={`
-        flex h-screen shrink-0 flex-col bg-[#111827] border-r border-white/[0.06]
-        transition-[width] duration-200 ease-in-out overflow-hidden z-20
-        ${showLabels ? "w-[220px]" : "w-[60px]"}
-      `}
+      onMouseLeave={() => setSettingsOpen(false)}
+      className="flex h-screen w-[220px] shrink-0 flex-col bg-[#111827] border-r border-white/[0.06] overflow-hidden z-20"
     >
       {/* ── Branding + Toggle ── */}
       <div className="flex items-center gap-3 px-3 py-4">
@@ -123,24 +106,11 @@ export function AppSidebar({
         </div>
 
         {/* Texto de marca — visible solo cuando se muestran labels */}
-        <div className={`min-w-0 flex-1 transition-opacity duration-150 ${showLabels ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+        <div className={`min-w-0 flex-1 transition-opacity duration-150 opacity-100`}>
           <p className="truncate text-[13px] font-semibold leading-tight text-white">Espina Bífida</p>
           <p className="text-[10px] leading-tight text-white/30">Nuevo León</p>
         </div>
 
-        {/* Botón pin/unpin — visible solo cuando labels están visibles */}
-        {showLabels && (
-          <button
-            onClick={() => setCollapsed(v => !v)}
-            title={collapsed ? "Fijar sidebar expandida" : "Colapsar sidebar"}
-            className="shrink-0 rounded-lg p-1.5 text-white/30 hover:bg-white/[0.07] hover:text-white/60 transition-colors"
-          >
-            {collapsed
-              ? <PanelLeftOpen  className="size-4" />
-              : <PanelLeftClose className="size-4" />
-            }
-          </button>
-        )}
       </div>
 
       {/* ── Navegación ── */}
@@ -148,13 +118,10 @@ export function AppSidebar({
         {navGroups.map((group, gi) => (
           <div key={gi}>
             {/* Etiqueta de grupo */}
-            {group.label && showLabels && (
+            {group.label && (
               <p className="mb-1 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-white/25">
                 {group.label}
               </p>
-            )}
-            {group.label && !showLabels && gi > 0 && (
-              <div className="my-1 mx-2 h-px bg-white/[0.06]" />
             )}
 
             <div className="space-y-0.5">
@@ -165,7 +132,6 @@ export function AppSidebar({
                   <button
                     key={item.id}
                     onClick={() => onSectionChange(item.id)}
-                    title={!showLabels ? item.title : undefined}
                     className={`
                       relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm
                       transition-all duration-150
@@ -179,7 +145,7 @@ export function AppSidebar({
                       <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[#E8B043]" />
                     )}
                     <Icon className={`size-[17px] shrink-0 ${isActive ? "text-white" : "text-white/30"}`} />
-                    <span className={`truncate transition-opacity duration-150 ${showLabels ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                    <span className={`truncate transition-opacity duration-150 opacity-100`}>
                       {item.title}
                     </span>
                   </button>
@@ -195,7 +161,7 @@ export function AppSidebar({
         <div className="my-2 h-px bg-white/[0.06]" />
 
         {/* Panel de settings — solo cuando labels visibles */}
-        {settingsOpen && showLabels && (
+        {settingsOpen && (
           <div className="mb-1 overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.04]">
             <button
               onClick={() => { setSettingsOpen(false); onEditProfile?.() }}
@@ -245,18 +211,15 @@ export function AppSidebar({
 
         {/* Botón Configuración */}
         <button
-          onClick={() => { if (showLabels) { setSettingsOpen(v => !v); setConfirmLogout(false) } }}
-          title={!showLabels ? "Configuración" : undefined}
+          onClick={() => { setSettingsOpen(v => !v); setConfirmLogout(false) }}
           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150
-            ${settingsOpen && showLabels ? "bg-white/[0.09] text-white/80" : "text-white/35 hover:bg-white/[0.05] hover:text-white/60"}`}
+            ${settingsOpen ? "bg-white/[0.09] text-white/80" : "text-white/35 hover:bg-white/[0.05] hover:text-white/60"}`}
         >
           <Settings className="size-[17px] shrink-0" />
-          <span className={`flex-1 text-sm transition-opacity duration-150 ${showLabels ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+          <span className={`flex-1 text-sm transition-opacity duration-150 opacity-100`}>
             Configuración
           </span>
-          {showLabels && (
-            <ChevronRight className={`size-3.5 shrink-0 transition-transform duration-200 text-white/25 ${settingsOpen ? "-rotate-90" : ""}`} />
-          )}
+          <ChevronRight className={`size-3.5 shrink-0 transition-transform duration-200 text-white/25 ${settingsOpen ? "-rotate-90" : ""}`} />
         </button>
 
       </div>
