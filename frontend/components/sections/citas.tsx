@@ -24,7 +24,10 @@ import { CitasCalendarView, validateSlot } from "@/components/sections/citas-cal
 import { CitasListView } from "@/components/sections/citas-list-view"
 import { cn } from "@/lib/utils"
 
-const DISPONIBILIDAD_DIAS_BUSQUEDA = 7
+// Número máximo de días naturales hacia adelante para buscar disponibilidad
+const DISPONIBILIDAD_MAX_DIAS = 180
+// Número máximo de fechas válidas a evaluar en la búsqueda IA (evita loops infinitos)
+const DISPONIBILIDAD_MAX_FECHAS_VALIDAS = 52
 const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
 const CITA_PREFILL_KEY = "prefillCitaFromServicio"
 
@@ -168,10 +171,13 @@ export function CitasSection() {
   )
 
   // Filtrar slots de hora según el horario de la especialidad seleccionada
+  // Si la fecha elegida no es válida para la especialidad, no hay slots disponibles
   const slotsDisponibles = useMemo(() => {
     if (!espSeleccionada) return TIME_SLOTS
+    // Si hay fecha seleccionada y no es válida para la especialidad → sin slots
+    if (form.fecha && !esFechaValidaFrontend(espSeleccionada, form.fecha)) return []
     return TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
-  }, [espSeleccionada])
+  }, [espSeleccionada, form.fecha])
 
   // Advertencia de fecha fuera de día permitido
   const fechaFueraDeRango = useMemo(() => {
@@ -236,12 +242,24 @@ export function CitasSection() {
     setSmartSuggestion(null)
     setSaveError(null)
 
-    // Siempre buscar desde HOY, sin importar la fecha que ya esté en el form
     const now = new Date()
     const todayStart = startOfDayLocal(now)
 
+    // Slots de hora válidos para esta especialidad
+    const slotsHora = espSeleccionada
+      ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
+      : TIME_SLOTS
+
     let found = false
-    for (let dayOffset = 0; dayOffset < DISPONIBILIDAD_DIAS_BUSQUEDA && !found; dayOffset++) {
+    let fechasEvaluadas = 0
+
+    // Iterar día a día pero solo evaluar fechas válidas según reglas de la especialidad
+    // Límite: DISPONIBILIDAD_MAX_DIAS días naturales O DISPONIBILIDAD_MAX_FECHAS_VALIDAS fechas válidas
+    for (
+      let dayOffset = 0;
+      dayOffset < DISPONIBILIDAD_MAX_DIAS && !found && fechasEvaluadas < DISPONIBILIDAD_MAX_FECHAS_VALIDAS;
+      dayOffset++
+    ) {
       const d = new Date(todayStart)
       d.setDate(todayStart.getDate() + dayOffset)
       const fechaStr = [
@@ -250,22 +268,23 @@ export function CitasSection() {
         String(d.getDate()).padStart(2, "0"),
       ].join("-")
 
-      // Verificar que la fecha sea válida para la especialidad
+      // Saltar días que no coincidan con el día de semana de la especialidad
       if (espSeleccionada && !esFechaValidaFrontend(espSeleccionada, fechaStr)) continue
 
-      // Slots válidos según horario del especialista
-      const slotsABuscar = espSeleccionada
-        ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
-        : TIME_SLOTS
+      fechasEvaluadas++
 
-      for (const hora of slotsABuscar) {
-        // Hoy: solo slots a partir de la hora actual. Días futuros: todos los slots.
+      for (const hora of slotsHora) {
         if (isSlotInPast(fechaStr, hora, now)) continue
         const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
         if (!error) {
           setForm(f => ({ ...f, fecha: fechaStr, hora }))
           const daysAhead = dayOffset
-          const label = daysAhead === 0 ? "hoy" : daysAhead === 1 ? "mañana" : `en ${daysAhead} días`
+          const label =
+            daysAhead === 0 ? "hoy" :
+            daysAhead === 1 ? "mañana" :
+            daysAhead < 14 ? `en ${daysAhead} días` :
+            daysAhead < 35 ? `en ${Math.round(daysAhead / 7)} semana(s)` :
+            `en ~${Math.round(daysAhead / 30)} mes(es)`
           setSmartSuggestion(`✨ Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
           toast.success("¡Horario ideal encontrado y aplicado!", { description: `${fechaStr} · ${hora}` })
           found = true
@@ -275,7 +294,8 @@ export function CitasSection() {
     }
 
     if (!found) {
-      toast.error("No se encontró disponibilidad en los próximos 7 días.")
+      const semanas = Math.round(DISPONIBILIDAD_MAX_DIAS / 7)
+      toast.error(`No se encontró disponibilidad en los próximos ${semanas} semanas.`)
       setSmartSuggestion(null)
     }
 
@@ -686,16 +706,21 @@ export function CitasSection() {
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
                   <select
                     className={`h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 ${
-                      !form.especialista ? "text-muted-foreground/50 cursor-not-allowed" : "text-foreground"
+                      (!form.especialista || fechaFueraDeRango || slotsDisponibles.length === 0) ? "text-muted-foreground/50 cursor-not-allowed" : "text-foreground"
                     }`}
                     value={form.hora}
-                    disabled={!form.especialista}
+                    disabled={!form.especialista || !!fechaFueraDeRango || slotsDisponibles.length === 0}
                     onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
                   >
-                    <option value="">{form.especialista ? "Seleccionar hora" : "Primero elige especialidad"}</option>
+                    <option value="">
+                      {!form.especialista ? "Primero elige especialidad" :
+                       fechaFueraDeRango ? "Fecha inválida para este especialista" :
+                       slotsDisponibles.length === 0 ? "Sin horarios disponibles" :
+                       "Seleccionar hora"}
+                    </option>
                     {slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  {form.especialista && slotsDisponibles.length === 0 && (
+                  {form.especialista && slotsDisponibles.length === 0 && !fechaFueraDeRango && (
                     <p className="text-[11px] text-red-600 dark:text-red-400">Sin horarios disponibles para esta especialidad</p>
                   )}
                 </div>
