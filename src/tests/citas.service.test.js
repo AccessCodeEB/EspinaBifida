@@ -1,21 +1,22 @@
 import { jest } from "@jest/globals";
 
 // ─── Mocks del modelo ─────────────────────────────────────────────────────────
-const mockFindAll    = jest.fn();
-const mockFindById   = jest.fn();
-const mockCreate     = jest.fn();
-const mockUpdate     = jest.fn();
-const mockRemove     = jest.fn();
-const mockCountCitas = jest.fn();
+const mockFindAll        = jest.fn();
+const mockFindById       = jest.fn();
+const mockCreate         = jest.fn();
+const mockUpdate         = jest.fn();
+const mockRemove         = jest.fn();
+const mockCountCitas     = jest.fn();
+const mockDeleteE2ECitas = jest.fn();
 
 jest.unstable_mockModule("../models/citas.model.js", () => ({
-  findAll:           jest.fn(),
+  findAll:           mockFindAll,
   findById:          mockFindById,
   countCitasByCurp:  mockCountCitas,
   create:            mockCreate,
   update:            mockUpdate,
   remove:            mockRemove,
-  deleteE2ECitas:    jest.fn(),
+  deleteE2ECitas:    mockDeleteE2ECitas,
 }));
 
 // Mock de validación de horario para no depender de la DB en tests de citas
@@ -116,6 +117,17 @@ describe("createCita — costo auto-detectado", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // createCita — validaciones existentes
 // ═══════════════════════════════════════════════════════════════════════════════
+
+describe("createCita — hora por defecto", () => {
+  test("sin hora → usa '00:00' y construye datetime correcto", async () => {
+    mockCountCitas.mockResolvedValue(0);
+    mockCreate.mockResolvedValue({ rowsAffected: 1 });
+    await Service.createCita({ curp: CURP, idTipoServicio: 1, fecha: "2026-06-10" });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ fecha: "2026-06-10 00:00:00" })
+    );
+  });
+});
 
 describe("createCita — validaciones", () => {
   test("sin curp → BAD_REQUEST", async () => {
@@ -262,5 +274,84 @@ describe("regression ISSUE-003 — updateCita re-valida slot al editar cita", ()
   test("estatus inválido en PATCH → BAD_REQUEST", async () => {
     await expect(Service.updateCita(1, { estatus: "INVALIDO" }))
       .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("PATCH con especialista pero cita sin FECHA → fechaPart null → no llama validarSlot", async () => {
+    mockFindById.mockResolvedValue({ ...citaBase, FECHA: null });
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+    await Service.updateCita(1, { especialista: "Nutrición" });
+    expect(mockValidarSlot).not.toHaveBeenCalled();
+  });
+
+  test("PATCH con fecha pero sin hora → usa '00:00' como hora por defecto", async () => {
+    await Service.updateCita(1, { fecha: "2026-06-19" });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ fecha: "2026-06-19 00:00:00" })
+    );
+  });
+
+  test("cita con FECHA como string (no Date) → convierte con new Date()", async () => {
+    mockFindById.mockResolvedValue({ ...citaBase, FECHA: "2026-06-01T00:00:00.000Z" });
+    await Service.updateCita(1, { estatus: "CONFIRMADA" });
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test("PATCH con curp explícito, cita sin ESPECIALISTA ni ESTATUS → cubre ramas ?? restantes", async () => {
+    mockFindById.mockResolvedValue({
+      ...citaBase,
+      ESPECIALISTA: null,
+      ESTATUS: null,
+    });
+    await Service.updateCita(1, { fecha: "2026-06-19", curp: CURP });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ curp: CURP })
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getAllCitas
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getAllCitas", () => {
+  test("delega al modelo findAll y retorna el resultado", async () => {
+    mockFindAll.mockResolvedValue([citaBase]);
+    const result = await Service.getAllCitas();
+    expect(mockFindAll).toHaveBeenCalledTimes(1);
+    expect(result).toEqual([citaBase]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// deleteCita
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("deleteCita", () => {
+  test("cita no encontrada → notFound 404", async () => {
+    mockFindById.mockResolvedValue(undefined);
+    await expect(Service.deleteCita(999)).rejects.toMatchObject({ statusCode: 404 });
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  test("cita encontrada → llama remove con el id correcto", async () => {
+    mockFindById.mockResolvedValue(citaBase);
+    mockRemove.mockResolvedValue({ rowsAffected: 1 });
+    const result = await Service.deleteCita(1);
+    expect(mockRemove).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ rowsAffected: 1 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// deleteE2ECitas
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("deleteE2ECitas", () => {
+  test("delega al modelo deleteE2ECitas", async () => {
+    mockDeleteE2ECitas.mockResolvedValue(undefined);
+    await Service.deleteE2ECitas();
+    expect(mockDeleteE2ECitas).toHaveBeenCalledTimes(1);
   });
 });
