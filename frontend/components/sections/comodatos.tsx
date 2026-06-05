@@ -172,7 +172,7 @@ function AltaComodatoDialog({
                   <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[420px] max-h-[280px] p-0 overflow-hidden" align="start">
+              <PopoverContent className="w-[420px] p-0" align="start" onWheel={e => e.stopPropagation()}>
                 <Command shouldFilter>
                   <CommandInput placeholder="Buscar equipo médico..." />
                   <CommandList className="max-h-[240px] overflow-y-auto">
@@ -918,7 +918,7 @@ function DetalleComodatoDialog({
             {detalle && detalle.pagos.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Historial de pagos</p>
-                <div className="max-h-36 overflow-y-auto rounded-lg border border-border/70">
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-border/70" onWheel={e => e.stopPropagation()}>
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-border/40 bg-muted/30">
