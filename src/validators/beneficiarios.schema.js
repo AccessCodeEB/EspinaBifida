@@ -49,8 +49,8 @@ export const actualizarBeneficiarioSchema = z.object({
 });
 
 export const actualizarEstatusSchema = z.object({
-  estatus: z.enum(["Activo", "Inactivo", "Baja"], {
-    errorMap: () => ({ message: "estatus debe ser Activo, Inactivo o Baja" }),
+  estatus: z.enum(["Activo", "Inactivo"], {
+    errorMap: () => ({ message: "estatus debe ser Activo o Inactivo. Para dar de baja use DELETE /:curp" }),
   }),
 });
 
