@@ -4,10 +4,9 @@ import { useState, useEffect } from "react"
 import {
   Search, Plus, Minus, AlertTriangle, Package,
   Check, ChevronsUpDown, ChevronUp, ChevronDown, RefreshCw, Filter, X, Clock, Tag, Pill, Stethoscope, Wrench,
-  Hash, Ruler, DollarSign, Layers, ArrowUpDown,
+  Hash, Ruler, DollarSign, Layers, ArrowUpDown, MoreHorizontal, Settings2, TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -18,6 +17,9 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
@@ -50,7 +52,8 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [searchTerm, setSearchTerm] = useState("")
 
   const [safetyNetItem, setSafetyNetItem] = useState<ArticuloInventario | null>(null)
-  const [showMovimientoDialog, setShowMovimientoDialog] = useState(false)
+  const [showStockDialog, setShowStockDialog]   = useState(false)
+  const [showConfigDialog, setShowConfigDialog] = useState(false)
   const [selectedItem, setSelectedItem]       = useState<ArticuloInventario | null>(null)
   const [selectedArticuloId, setSelectedArticuloId] = useState<string>("")
   const [cantidadMovimiento, setCantidadMovimiento] = useState<string>("0")
@@ -58,6 +61,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
   const [motivoMovimiento, setMotivoMovimiento]   = useState<string>("")
   const [savingMovimiento, setSavingMovimiento]   = useState(false)
   const [movimientoError, setMovimientoError]     = useState<string | null>(null)
+  const [configError, setConfigError]             = useState<string | null>(null)
   const [stockMinimoEditar, setStockMinimoEditar] = useState<string>("0")
   const [savingStockMinimo, setSavingStockMinimo] = useState(false)
 
@@ -201,96 +205,144 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
     setUnidadFilterIndex(p => { const n = p + 1; return n >= unidadesDisponibles.length ? -1 : n })
   }
 
-  function openMovimiento(item: ArticuloInventario | null = null) {
+  function openStockDialog(item: ArticuloInventario) {
     // Safety net: Equipos Médicos son comodatos — preguntar intención primero
-    if (item && item.nombreCategoria === "Equipos Médicos") {
+    if (item.nombreCategoria === "Equipos Médicos") {
       setSafetyNetItem(item)
       return
     }
-    setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
-    setCantidadMovimiento(""); setTipoMovimientoToggle("ENTRADA"); setMotivoMovimiento(""); setMovimientoError(null)
-    setStockMinimoEditar(item ? String(item.minimo) : "0")
-    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "0")
-    setCuotaAEditar(item ? String(Number(String(item.cuota).replace(/[^\d.-]/g, "")) || 0) : "0")
-    setShowMovimientoDialog(true)
+    setSelectedItem(item)
+    setSelectedArticuloId(String(item.clave))
+    setCantidadMovimiento("0")
+    setTipoMovimientoToggle("ENTRADA")
+    setMotivoMovimiento("")
+    setMovimientoError(null)
+    setShowStockDialog(true)
+  }
+
+  function closeStockDialog() {
+    setShowStockDialog(false)
+    setSavingMovimiento(false)
+    setMovimientoError(null)
+    setCantidadMovimiento("0")
+    setMotivoMovimiento("")
+    setTipoMovimientoToggle("ENTRADA")
+    setSelectedItem(null)
+    setSelectedArticuloId("")
+  }
+
+  function openConfigDialog(item: ArticuloInventario) {
+    setSelectedItem(item)
+    setSelectedArticuloId(String(item.clave))
+    setCuotaAEditar(String(Number(String(item.cuota).replace(/[^\d.-]/g, "")) || 0))
+    setCuotaBEditar(item.cuotaB != null ? String(item.cuotaB) : "0")
+    setStockMinimoEditar(String(item.minimo ?? 5))
+    setConfigError(null)
+    setShowConfigDialog(true)
+  }
+
+  function closeConfigDialog() {
+    setShowConfigDialog(false)
+    setSavingStockMinimo(false)
+    setConfigError(null)
+    setCuotaAEditar("0")
+    setCuotaBEditar("")
+    setStockMinimoEditar("0")
+    setShowPrecioConfirmDialog(false)
+    setSelectedItem(null)
+    setSelectedArticuloId("")
   }
 
   function confirmarAjusteStock() {
     const item = safetyNetItem
     setSafetyNetItem(null)
-    setSelectedItem(item); setSelectedArticuloId(item ? String(item.clave) : "")
-    setCantidadMovimiento(""); setTipoMovimientoToggle("ENTRADA"); setMotivoMovimiento(""); setMovimientoError(null)
-    setStockMinimoEditar(item ? String(item.minimo) : "0")
-    setCuotaBEditar(item?.cuotaB != null ? String(item.cuotaB) : "0")
-    setCuotaAEditar(item ? String(Number(String(item.cuota).replace(/[^\d.-]/g, "")) || 0) : "0")
-    setShowMovimientoDialog(true)
+    if (!item) return
+    setSelectedItem(item)
+    setSelectedArticuloId(String(item.clave))
+    setCantidadMovimiento("0")
+    setTipoMovimientoToggle("ENTRADA")
+    setMotivoMovimiento("")
+    setMovimientoError(null)
+    setShowStockDialog(true)
   }
-  function closeMovimientoDialog() { setShowMovimientoDialog(false); setSavingMovimiento(false); setSavingStockMinimo(false); setMovimientoError(null); setStockMinimoEditar("0"); setCuotaBEditar(""); setCuotaAEditar("0"); setTipoMovimientoToggle("ENTRADA"); setShowPrecioConfirmDialog(false) }
 
   const normQty = (v: string) => { const p = Math.trunc(Number(v)); return isNaN(p) ? 0 : p }
 
-  async function handleConfirmMovimiento() {
+  async function handleGuardarStock() {
     const id = Number(selectedItem ? selectedItem.clave : selectedArticuloId)
     const qty = normQty(cantidadMovimiento)
-    const minimo = Number(stockMinimoEditar)
-    const cuotaANew = Number(cuotaAEditar)
-    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
-    const cuotaAChanged = cuotaANew !== cuotaAOld
-    const cuotaBNew = Number(cuotaBEditar)
-    const cuotaBOld = selectedItem?.cuotaB ?? 0
-    const cuotaBChanged = cuotaBNew !== cuotaBOld
-
     if (!id || isNaN(id)) { setMovimientoError("Selecciona un artículo válido."); return }
-    if (isNaN(minimo) || minimo < 0) { setMovimientoError("Stock mínimo debe ser ≥ 0."); return }
-    if (isNaN(cuotaANew) || cuotaANew < 0) { setMovimientoError("El precio base debe ser ≥ 0."); return }
-    if (cuotaBEditar.trim() === "" || isNaN(cuotaBNew as number) || (cuotaBNew as number) < 0) { setMovimientoError("El Precio de Lista es obligatorio y debe ser ≥ 0."); return }
-    if (qty === 0 && minimo === (selectedItem?.minimo ?? 5) && !cuotaBChanged && !cuotaAChanged) { setMovimientoError("Sin cambios para guardar."); return }
-    if (qty !== 0 && !motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio para registrar un movimiento."); return }
-
+    if (qty <= 0) { setMovimientoError("Ingresa una cantidad mayor a 0."); return }
+    if (!motivoMovimiento.trim()) { setMovimientoError("El motivo es obligatorio."); return }
     setMovimientoError(null)
-    if (cuotaAChanged || cuotaBChanged) { setShowPrecioConfirmDialog(true); return }
-    await executeSave()
-  }
-
-  async function executeSave() {
-    const id = Number(selectedItem ? selectedItem.clave : selectedArticuloId)
-    const qty = normQty(cantidadMovimiento)
-    const minimo = Number(stockMinimoEditar)
-    const cuotaANew = Number(cuotaAEditar)
-    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
-    const cuotaAChanged = cuotaANew !== cuotaAOld
-    const cuotaBNew = Number(cuotaBEditar)
-    const cuotaBOld = selectedItem?.cuotaB ?? 0
-    const cuotaBChanged = cuotaBNew !== cuotaBOld
-
-    setShowPrecioConfirmDialog(false)
-    setSavingMovimiento(true); setSavingStockMinimo(true); setMovimientoError(null)
+    setSavingMovimiento(true)
     try {
-      const updatePayload: Record<string, unknown> = {}
-      if (minimo !== (selectedItem?.minimo ?? 5)) updatePayload.stockMinimo = minimo
-      if (cuotaBChanged) updatePayload.cuotaB = cuotaBNew
-      if (cuotaAChanged) updatePayload.cuotaRecuperacion = cuotaANew
-      if (Object.keys(updatePayload).length > 0) {
-        await actualizarArticulo(id, updatePayload as Parameters<typeof actualizarArticulo>[1])
-      }
-      if (qty !== 0) {
-        await registrarMovimiento({ idArticulo: id, tipo: tipoMovimientoToggle, cantidad: qty, motivo: motivoMovimiento.trim() })
-      }
+      await registrarMovimiento({ idArticulo: id, tipo: tipoMovimientoToggle, cantidad: qty, motivo: motivoMovimiento.trim() })
       await refreshInventario()
-      closeMovimientoDialog()
-
-      const updates: string[] = []
-      if (cuotaAChanged) updates.push("Precio base actualizado")
-      if (cuotaBChanged) updates.push("Precio de Lista actualizado")
-      if (minimo !== (selectedItem?.minimo ?? 5)) updates.push("Stock mínimo actualizado")
-      if (qty !== 0) updates.push(tipoMovimientoToggle === "ENTRADA" ? "Entrada registrada" : "Salida registrada")
-      toast.success(updates.length > 0 ? updates.join(" • ") : "Cambios guardados")
+      closeStockDialog()
+      toast.success(tipoMovimientoToggle === "ENTRADA" ? "Entrada registrada" : "Salida registrada")
     } catch (err: unknown) {
-      const msg = friendlyError(err, "No se pudo guardar los cambios")
+      const msg = friendlyError(err, "No se pudo registrar el movimiento")
       setMovimientoError(msg)
       toast.error(msg)
     } finally {
       setSavingMovimiento(false)
+    }
+  }
+
+  async function handleGuardarConfig() {
+    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
+    const cuotaANew = Number(cuotaAEditar || 0)
+    const cuotaAChanged = cuotaANew !== cuotaAOld
+    const cuotaBOld = selectedItem?.cuotaB ?? 0
+    const cuotaBNew = Number(cuotaBEditar || 0)
+    const cuotaBChanged = cuotaBNew !== cuotaBOld
+    const minimoNew = Number(stockMinimoEditar)
+    const minimoChanged = minimoNew !== (selectedItem?.minimo ?? 5)
+
+    if (isNaN(cuotaANew) || cuotaANew < 0) { setConfigError("El precio base debe ser ≥ 0."); return }
+    if (cuotaBEditar.trim() === "" || isNaN(cuotaBNew) || cuotaBNew < 0) { setConfigError("El Precio de Lista es obligatorio y debe ser ≥ 0."); return }
+    if (isNaN(minimoNew) || minimoNew < 0) { setConfigError("Stock mínimo debe ser ≥ 0."); return }
+    if (!cuotaAChanged && !cuotaBChanged && !minimoChanged) { setConfigError("No hay cambios para guardar."); return }
+    setConfigError(null)
+    if (cuotaAChanged || cuotaBChanged) { setShowPrecioConfirmDialog(true); return }
+    await executeConfigSave()
+  }
+
+  async function executeConfigSave() {
+    const id = Number(selectedItem?.clave ?? selectedArticuloId)
+    const cuotaAOld = Number(String(selectedItem?.cuota ?? "0").replace(/[^\d.-]/g, "")) || 0
+    const cuotaANew = Number(cuotaAEditar || 0)
+    const cuotaAChanged = cuotaANew !== cuotaAOld
+    const cuotaBOld = selectedItem?.cuotaB ?? 0
+    const cuotaBNew = Number(cuotaBEditar || 0)
+    const cuotaBChanged = cuotaBNew !== cuotaBOld
+    const minimoNew = Number(stockMinimoEditar)
+    const minimoChanged = minimoNew !== (selectedItem?.minimo ?? 5)
+
+    setShowPrecioConfirmDialog(false)
+    setSavingStockMinimo(true)
+    setConfigError(null)
+    try {
+      const payload: Record<string, unknown> = {}
+      if (cuotaAChanged) payload.cuotaRecuperacion = cuotaANew
+      if (cuotaBChanged) payload.cuotaB = cuotaBNew
+      if (minimoChanged) payload.stockMinimo = minimoNew
+      if (Object.keys(payload).length > 0) {
+        await actualizarArticulo(id, payload as Parameters<typeof actualizarArticulo>[1])
+      }
+      await refreshInventario()
+      closeConfigDialog()
+      const updates: string[] = []
+      if (cuotaAChanged) updates.push("Precio base actualizado")
+      if (cuotaBChanged) updates.push("Precio de Lista actualizado")
+      if (minimoChanged) updates.push("Stock mínimo actualizado")
+      toast.success(updates.join(" • "))
+    } catch (err: unknown) {
+      const msg = friendlyError(err, "No se pudo actualizar el artículo")
+      setConfigError(msg)
+      toast.error(msg)
+    } finally {
       setSavingStockMinimo(false)
     }
   }
@@ -366,8 +418,6 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       }
     } finally { setSavingArticulo(false) }
   }
-
-  const qty = normQty(cantidadMovimiento)
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -670,10 +720,23 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                         </span>
                       </td>
                       <td className="py-3 pr-5 text-center">
-                        <button onClick={() => openMovimiento(item)}
-                          className="rounded-lg border border-border/70 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/5 hover:text-[#0f4c81]">
-                          Modificar
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="rounded-lg border border-border/70 px-2.5 py-1.5 text-muted-foreground transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/5 hover:text-[#0f4c81]">
+                              <MoreHorizontal className="size-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={() => openStockDialog(item)}>
+                              <TrendingUp className="size-3.5 mr-2" />
+                              Ajustar stock
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openConfigDialog(item)}>
+                              <Settings2 className="size-3.5 mr-2" />
+                              Configurar artículo
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   )
@@ -929,8 +992,8 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                   Cancelar
                 </button>
                 <button
-                  onClick={executeSave}
-                  disabled={savingMovimiento || savingStockMinimo}
+                  onClick={executeConfigSave}
+                  disabled={savingStockMinimo}
                   className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                   style={{ backgroundColor: NAVY }}
                 >
@@ -942,158 +1005,93 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
         )
       })()}
 
-      {/* ── Dialog: Movimiento ── */}
-      <Dialog open={showMovimientoDialog} onOpenChange={setShowMovimientoDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      {/* ── Dialog: Ajustar stock ── */}
+      <Dialog open={showStockDialog} onOpenChange={open => { if (!open) closeStockDialog() }}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <Package className="size-4 text-[#0f4c81]" />
-              {selectedItem ? selectedItem.descripcion : "Modificar artículo"}
+              <TrendingUp className="size-4 text-[#0f4c81]" />
+              Ajustar stock
             </DialogTitle>
-            {selectedItem && (
-              <DialogDescription className="text-xs text-muted-foreground">
-                Ajusta el stock, el precio o el mínimo del artículo.
-              </DialogDescription>
-            )}
+            <DialogDescription className="text-xs text-muted-foreground">
+              {selectedItem ? selectedItem.descripcion : ""}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-1">
-
-            {/* Selector de artículo (cuando se abre sin item) */}
-            {!selectedItem && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Artículo</label>
-                <Select value={selectedArticuloId} onValueChange={setSelectedArticuloId}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Seleccionar artículo" /></SelectTrigger>
-                  <SelectContent>
-                    {inventario.map((item, idx) => (
-                      <SelectItem key={`sel-${item.clave}-${idx}`} value={String(item.clave)}>
-                        {item.clave} - {item.descripcion}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             {/* Card de estado actual */}
             {selectedItem && (
-              <div className="grid grid-cols-4 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Stock</span>
-                  <span className={`text-xl font-bold tabular-nums ${
+              <div className="grid grid-cols-2 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
+                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Stock actual</span>
+                  <span className={`text-2xl font-bold tabular-nums ${
                     selectedItem.cantidad === 0 ? "text-red-500 dark:text-red-400"
                     : selectedItem.cantidad <= selectedItem.minimo ? "text-amber-500 dark:text-amber-400"
                     : "text-foreground"
                   }`}>{selectedItem.cantidad}</span>
                   <span className="text-[9px] text-muted-foreground">{selectedItem.unidad}</span>
                 </div>
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Cuota Rec.</span>
-                  <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.cuota}</span>
-                  <span className="text-[9px] text-muted-foreground">subsidiado</span>
-                </div>
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Precio Lista</span>
-                  <span className="text-xl font-bold text-foreground tabular-nums">
-                    {selectedItem.cuotaB != null ? `$${selectedItem.cuotaB.toFixed(2)}` : "—"}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground">de mercado</span>
-                </div>
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                <div className="flex flex-col items-center gap-0.5 px-3 py-3">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Mínimo</span>
-                  <span className="text-xl font-bold text-foreground tabular-nums">{selectedItem.minimo}</span>
+                  <span className="text-2xl font-bold tabular-nums text-foreground">{selectedItem.minimo}</span>
                   <span className="text-[9px] text-muted-foreground">alerta</span>
                 </div>
               </div>
             )}
 
-            {/* Sección: Movimiento de stock */}
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Movimiento de stock</p>
-              <div className="flex flex-col gap-3">
-                {/* Toggle ENTRADA / SALIDA */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTipoMovimientoToggle("ENTRADA")}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
-                      tipoMovimientoToggle === "ENTRADA"
-                        ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <Plus className="size-3.5" /> Entrada
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTipoMovimientoToggle("SALIDA")}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
-                      tipoMovimientoToggle === "SALIDA"
-                        ? "border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400"
-                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <Minus className="size-3.5" /> Salida
-                  </button>
-                </div>
-                {/* Cantidad */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {tipoMovimientoToggle === "ENTRADA" ? "Cantidad a agregar" : "Cantidad a retirar"}
-                  </label>
-                  <Input
-                    className="h-9 text-sm"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                    value={cantidadMovimiento}
-                    onChange={e => setCantidadMovimiento(e.target.value)}
-                  />
-                </div>
-                {/* Motivo */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Motivo {qty !== 0 && <span className="text-red-500 normal-case tracking-normal font-normal">*</span>}
-                  </label>
-                  <Input
-                    className="h-9 text-sm"
-                    placeholder="¿Por qué se modifica el stock?"
-                    value={motivoMovimiento}
-                    onChange={e => setMotivoMovimiento(e.target.value)}
-                  />
-                </div>
-              </div>
+            {/* Toggle ENTRADA / SALIDA */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setTipoMovimientoToggle("ENTRADA")}
+                className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                  tipoMovimientoToggle === "ENTRADA"
+                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Plus className="size-3.5" /> Entrada
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoMovimientoToggle("SALIDA")}
+                className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                  tipoMovimientoToggle === "SALIDA"
+                    ? "border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400"
+                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Minus className="size-3.5" /> Salida
+              </button>
             </div>
 
-            {/* Sección: Configuración del artículo */}
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Configuración del artículo</p>
-              <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                      <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaAEditar} onChange={e => setCuotaAEditar(e.target.value)} disabled={savingMovimiento} />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">Precio subsidiado (recursos limitados)</p>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                      <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaBEditar} onChange={e => setCuotaBEditar(e.target.value)} disabled={savingMovimiento} />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">Precio de mercado sin subsidio</p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Stock mínimo (alerta)</label>
-                  <Input className="h-9 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
-                </div>
-              </div>
+            {/* Cantidad */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                {tipoMovimientoToggle === "ENTRADA" ? "Cantidad a agregar" : "Cantidad a retirar"} <span className="text-red-500 normal-case tracking-normal font-normal">*</span>
+              </label>
+              <Input
+                className="h-9 text-sm"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="0"
+                value={cantidadMovimiento}
+                onChange={e => setCantidadMovimiento(e.target.value)}
+              />
+            </div>
+
+            {/* Motivo */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Motivo <span className="text-red-500 normal-case tracking-normal font-normal">*</span>
+              </label>
+              <Input
+                className="h-9 text-sm"
+                placeholder="¿Por qué se modifica el stock?"
+                value={motivoMovimiento}
+                onChange={e => setMotivoMovimiento(e.target.value)}
+              />
             </div>
 
             {movimientoError && (
@@ -1101,14 +1099,94 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             )}
 
             <div className="flex justify-end gap-2">
-              <button onClick={closeMovimientoDialog} disabled={savingMovimiento || savingStockMinimo}
+              <button onClick={closeStockDialog} disabled={savingMovimiento}
                 className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={handleConfirmMovimiento} disabled={savingMovimiento || savingStockMinimo}
+              <button onClick={handleGuardarStock} disabled={savingMovimiento}
                 className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: NAVY }}>
-                {savingMovimiento || savingStockMinimo ? "Guardando..." : "Guardar cambios"}
+                {savingMovimiento ? "Guardando..." : "Registrar movimiento"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Configurar artículo ── */}
+      <Dialog open={showConfigDialog} onOpenChange={open => { if (!open) closeConfigDialog() }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <Settings2 className="size-4 text-[#0f4c81]" />
+              Configurar artículo
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {selectedItem ? selectedItem.descripcion : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-1">
+            {/* Card de estado actual */}
+            {selectedItem && (
+              <div className="grid grid-cols-3 divide-x divide-border/50 rounded-xl border border-border/60 bg-muted/30 overflow-hidden">
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Cuota Rec.</span>
+                  <span className="text-lg font-bold text-foreground tabular-nums">{selectedItem.cuota}</span>
+                  <span className="text-[9px] text-muted-foreground">subsidiado</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Precio Lista</span>
+                  <span className="text-lg font-bold text-foreground tabular-nums">
+                    {selectedItem.cuotaB != null ? `$${selectedItem.cuotaB.toFixed(2)}` : "—"}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground">de mercado</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Mínimo</span>
+                  <span className="text-lg font-bold text-foreground tabular-nums">{selectedItem.minimo}</span>
+                  <span className="text-[9px] text-muted-foreground">alerta</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cuota de recuperación</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                  <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaAEditar} onChange={e => setCuotaAEditar(e.target.value)} disabled={savingStockMinimo} />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Precio subsidiado</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Precio de Lista</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                  <Input className="h-9 pl-6 text-sm" type="number" min="0" step="0.01" placeholder="0.00" value={cuotaBEditar} onChange={e => setCuotaBEditar(e.target.value)} disabled={savingStockMinimo} />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Precio de mercado</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Stock mínimo (alerta)</label>
+              <Input className="h-9 text-sm" type="number" min="0" placeholder="Ej. 5" value={stockMinimoEditar} onChange={e => setStockMinimoEditar(e.target.value)} disabled={savingStockMinimo} />
+            </div>
+
+            {configError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{configError}</p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button onClick={closeConfigDialog} disabled={savingStockMinimo}
+                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleGuardarConfig} disabled={savingStockMinimo}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: NAVY }}>
+                {savingStockMinimo ? "Guardando..." : "Guardar configuración"}
               </button>
             </div>
           </div>
