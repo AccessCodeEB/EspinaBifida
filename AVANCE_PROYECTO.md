@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-05 (Jueves) — Citas: filtro de tipos de servicio a solo Consulta Médica y Estudio Médico; bloque de costo visible únicamente al seleccionar Consulta Médica
+**Actualización:** 2026-06-05 (Jueves) — Fix: ocultar "Membresía Anual" del selector de tipo de servicio al registrar un nuevo servicio
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -321,6 +321,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `citas.service.test.js`: `mockDeleteE2ECitas` extraído a variable; 9 tests nuevos para `getAllCitas`, `deleteCita`, `deleteE2ECitas` (0% funciones antes) y ramas `??` de hora por defecto, FECHA como string, `espFinal null`, `ESTATUS null`, `curp` explícito
 - `especialidades-horario.routes.test.js`: 6 tests de integración para los endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha` (200, 400, 401, 404)
 - Resultado: **statements 97.71% · branches 95.78% · functions 95.85% · lines 97.97%** — todos ≥ 95% threshold · 1381 tests verde
+
+### Cambios 2026-06-05 — Fix: Membresía Anual oculta en registro de servicios
+
+**Bug fix — formulario de registro de servicios (`frontend/components/sections/servicios.tsx`):**
+- "Membresía Anual" ya no aparece como opción en el selector de tipo de servicio al registrar un nuevo servicio
+- Causa raíz: migración 031 insertó "Membresía Anual" en `SERVICIOS_CATALOGO` con `TIPO_SERVICIO = 'SERVICIO'` para vincularla al historial de servicios; el filtro anterior solo excluía `COMODATO`
+- Fix: se agrega `!/membresia/i.test(t.nombre)` al `catalogoFiltrado` — sin cambios en backend ni BD
+- "Membresía Anual" sigue visible en el historial de servicios registrados (comportamiento correcto)
 
 ### Cambios 2026-06-05 — Citas: filtro de tipos de servicio y bloque de costo condicional
 
