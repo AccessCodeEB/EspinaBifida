@@ -1050,7 +1050,7 @@ export function ServiciosSection() {
             <div className="space-y-4 pt-1">
               <div className="divide-y divide-border/40 rounded-xl border border-border/60">
                 {[
-                  { label: "Folio",        value: <span className="font-mono text-xs">{servicioParaEliminar.folio}</span> },
+                  { label: "CURP",         value: <span className="font-mono text-xs">{servicioParaEliminar.folio}</span> },
                   { label: "Beneficiario", value: servicioParaEliminar.nombre },
                   { label: "Servicio",     value: servicioParaEliminar.servicio },
                   { label: "Monto",        value: <span className="font-bold">{formatMoney(servicioParaEliminar.montoNumero)}</span> },
