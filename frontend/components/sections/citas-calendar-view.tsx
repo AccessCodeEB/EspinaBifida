@@ -651,6 +651,7 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
 
   async function doUpdate(id:number,estatus:Cita["estatus"]){
     setSelected(null)
+    // Mark as mutating BEFORE the state update so the useEffect guard works
     isMutating.current=true
     const updater=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus}:c)
     // Optimistic: update local + parent immediately
@@ -667,7 +668,13 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats
       setCitas(revert)
       onSilentUpdate(revert)
       toast.error("No se pudo actualizar. Cambio revertido.")
-    }finally{setUpdatingId(null);isMutating.current=false}
+    }finally{
+      setUpdatingId(null)
+      // Small delay before releasing the mutex so the useEffect triggered by
+      // onSilentUpdate (which changes citasProp reference) fires while we are
+      // still 'mutating' — preventing it from overwriting our optimistic state.
+      setTimeout(()=>{ isMutating.current=false },50)
+    }
   }
 
   return(
