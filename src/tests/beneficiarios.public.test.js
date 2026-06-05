@@ -175,7 +175,16 @@ describe("DELETE /beneficiarios/:curp/pre-registro — rejectPreRegistro", () =>
   test("rechaza solicitud pendiente y devuelve 200", async () => {
     // findById → pendiente
     mockExecute.mockResolvedValueOnce({ rows: [pendienteRow] });
-    // DELETE FROM NOTIFICACIONES (cascade)
+    // hardDelete cascade: COMODATOS_PAGOS, COMODATOS, SERVICIO_ARTICULOS, SERVICIOS, CREDENCIALES, CITAS
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    // BENEFICIARIO_PADECIMIENTOS (usa .catch pero conn.execute debe devolver Promise)
+    mockExecute.mockResolvedValueOnce({});
+    // DELETE FROM NOTIFICACIONES
     mockExecute.mockResolvedValueOnce({});
     // DELETE FROM BENEFICIARIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });

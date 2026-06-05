@@ -929,7 +929,16 @@ describe("DELETE /api/v1/beneficiarios/:curp/eliminar — hardDelete", () => {
   test("elimina permanentemente (200)", async () => {
     // findById → existe
     mockExecute.mockResolvedValueOnce({ rows: [{ CURP: CURP_VALIDA }] });
-    // DELETE FROM NOTIFICACIONES (cascade)
+    // hardDelete cascade: COMODATOS_PAGOS, COMODATOS, SERVICIO_ARTICULOS, SERVICIOS, CREDENCIALES, CITAS
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    mockExecute.mockResolvedValueOnce({});
+    // BENEFICIARIO_PADECIMIENTOS (usa .catch pero conn.execute debe devolver Promise)
+    mockExecute.mockResolvedValueOnce({});
+    // DELETE FROM NOTIFICACIONES
     mockExecute.mockResolvedValueOnce({});
     // DELETE FROM BENEFICIARIOS
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
