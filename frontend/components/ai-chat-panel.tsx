@@ -19,14 +19,14 @@ function newId(): string {
 
 /** Oculta el bloque de acción mientras el texto llega en streaming */
 function stripActionBlock(text: string): string {
-  return text.replace(/\{\{ACTION:[\s\S]*\}\}/g, "").trimEnd()
+  return text.replace(/\{\{ACTION:[\s\S]*?\}\}/g, "").trimEnd()
 }
 
 function normalizeStr(s: string): string {
   return s
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
 }
 
