@@ -16,7 +16,7 @@ export const crearCitaSchema = z.object({
   hora:        z.string().regex(HORA_REGEX, "hora debe ser HH:MM").optional(),
   estatus:     estatusEnum.optional(),
   notas:       z.string().max(1000).nullable().optional(),
-  idTipoServicio: z.number({ coerce: true }).int().positive().optional(),
+  idTipoServicio: z.number({ coerce: true }).int().positive("idTipoServicio es obligatorio"),
   costo:       z.number({ coerce: true }).nonnegative("costo debe ser >= 0").optional(),
 });
 
