@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-04 (Miércoles) — Inventario: 9 mejoras UX/funcionales + migración ARTICULOS_LOG + comodatos registran movimiento; 1351 tests 100% verde
+**Actualización:** 2026-06-05 (Jueves) — Especialidades: rediseño UI completo + bug fix Oracle boolean + validación citas futuras + avisos inline + mensaje 500 amigable
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -56,19 +56,15 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
 | **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus, flechas de sort dinámicas, ciclo filtro por estatus |
-<<<<<<< HEAD
-| **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm |
-| **Inventario** | ✅ Completo — filtro por categoría (Medicamentos/Insumos/Equipos), selector de categoría al agregar artículo, búsqueda se limpia al eliminar artículo, encabezados con íconos y flechas de sort; **edición de precios** (cuota de recuperación + precio real) con diálogo de confirmación al cambiar precio base; **rediseño diálogo "Modificar artículo"**: card de estado actual (stock/precio/mínimo), toggle ENTRADA/SALIDA, secciones agrupadas con tarjeta; ambas cuotas obligatorias al crear y editar |
-=======
 | **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm, especialidades dinámicas con filtro de slots |
 | **Inventario** | ✅ Completo — filtro por categoría, columna Precio de Lista, card de estado 4 columnas, diálogo confirmación precios rediseñado, tab Altas/Bajas con log, búsqueda normalizada (ñ/acentos), label dinámico cantidad, safety net redirige a Comodatos, comodatos registran SALIDA en inventario |
->>>>>>> 36569a4 (feat(citas): restricciones de horario y gestión de especialidades (SCRUM-212))
 | **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
 | **Login** | ✅ Completo |
 | **Gestión de admins** | ✅ Completo — incluye SMS OTP para cambio de contraseña, recuperación de contraseña y teléfono editable |
 | **Comodatos** | ✅ Completo — alta, seguimiento de pagos, reporte de exenciones, integrado en sidebar |
 | **Notificaciones** | ✅ Completo — campana con badge en header, panel desplegable, íconos por tipo, marcar leída / todas, **cards especiales para comodatos por vencer con días restantes** |
+| **Especialidades** | ✅ Completo — rediseño UI (KPI cards, lista con acento visual y badges de frecuencia, header navy con patrón de puntos, empty state accionable), especialidades inactivas visibles en vista admin, sincronización del panel derecho tras actualizar, avisos inline de citas afectadas antes de desactivar o bloquear fecha |
 
 ### Seguridad (completado 2026-05-21 al 2026-05-22)
 
@@ -295,6 +291,31 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `test(inventario)`: deleteE2EMovimientos en modelo
 - `test(e2e-cleanup)`: nuevo archivo con tests de e2eCleanup para citas, inventario y administradores
 
+### Cambios 2026-06-05 — Especialidades: rediseño UI + bug fixes + validaciones
+
+**Rediseño UI `EspecialidadesConfigSection`:**
+- 3 KPI cards al tope: Registradas / Activas / Inactivas (calculadas del array, no hardcodeadas)
+- Lista de especialidades: barra de acento navy izquierda en ítem seleccionado, chip de día coloreado, badge "Mensual" en ámbar para frecuencia `MENSUAL_PRIMER_DIA`, badge Inactivo en ámbar (antes gris)
+- Panel derecho: header navy con patrón de puntos (mismo estilo que dialog de Citas), íconos de los 4 bloques con color propio
+- Empty state de "Fechas bloqueadas": horizontal + mensaje accionable ("¿El doctor no estará disponible? Usa el botón...")
+- Vista admin carga con `?todos=true` — especialidades inactivas visibles para poder reactivarlas
+- `setSelected` sincroniza con versión fresca del array tras recargar (fix: panel derecho ya no muestra estado obsoleto)
+
+**Bug fix crítico — Oracle:**
+- `activo: activo ?? null` → `activo: activo == null ? null : (activo ? 1 : 0)` en `especialidades-horario.model.js`. Oracle espera `NUMBER` (0/1) para `ACTIVO`; recibir un boolean JavaScript causaba error 500 al desactivar.
+
+**Validación de negocio — desactivar especialidad:**
+- `countCitasFuturasActivas(nombre)` en model: cuenta citas futuras no canceladas/completadas
+- Antes de desactivar, si hay citas pendientes → `HTTP 400` con mensaje claro: *"No se puede desactivar 'X' porque tiene N citas pendientes próximas. Cancélalas primero en la sección de Citas."*
+
+**Avisos inline antes de guardar:**
+- Nuevos endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha?fecha=` (con `verifyToken`)
+- Al desmarcar "Especialidad activa" en el dialog de edición → spinner + banner ámbar con conteo de citas afectadas (o banner verde si no hay)
+- Al seleccionar fecha en "Bloquear fecha" → spinner + banner ámbar si ya hay citas ese día
+
+**Mensaje de error 500:**
+- Cambiado en `api-client.ts` de "contacta a soporte técnico" a *"El sistema tuvo un error inesperado. Inténtalo más tarde."*
+
 ---
 
 ## 🔄 En progreso / Parcialmente terminado
@@ -487,7 +508,6 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
 | **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
 | **Gestión de devolución de comodatos: temprana y tardía** | Registrar devolución anticipada o tardía (préstamo vencido). Indicador visual en la lista y evento correspondiente. |
 
