@@ -230,51 +230,42 @@ export function CitasSection() {
   }
 
   function handleSuggestSmartSlot() {
-    // Guard - button should already be visually disabled, but double-check
     if (!form.curp || !form.especialista) return
 
     setIsFindingSlot(true)
     setSmartSuggestion(null)
     setSaveError(null)
 
-    // Paso B: Búsqueda iterativa — solo desde hoy y horarios futuros (hora local)
+    // Siempre buscar desde HOY, sin importar la fecha que ya esté en el form
     const now = new Date()
     const todayStart = startOfDayLocal(now)
-    let anchor = form.fecha
-      ? startOfDayLocal(new Date(form.fecha + "T12:00:00"))
-      : todayStart
-    if (anchor < todayStart) anchor = todayStart
 
     let found = false
     for (let dayOffset = 0; dayOffset < DISPONIBILIDAD_DIAS_BUSQUEDA && !found; dayOffset++) {
-      const d = new Date(anchor)
-      d.setDate(anchor.getDate() + dayOffset)
+      const d = new Date(todayStart)
+      d.setDate(todayStart.getDate() + dayOffset)
       const fechaStr = [
         d.getFullYear(),
         String(d.getMonth() + 1).padStart(2, "0"),
         String(d.getDate()).padStart(2, "0"),
       ].join("-")
 
-      // Solo iterar slots que cumplan el horario de la especialidad seleccionada
+      // Verificar que la fecha sea válida para la especialidad
+      if (espSeleccionada && !esFechaValidaFrontend(espSeleccionada, fechaStr)) continue
+
+      // Slots válidos según horario del especialista
       const slotsABuscar = espSeleccionada
         ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
         : TIME_SLOTS
 
-      // Verificar que la fecha sea válida para la especialidad
-      if (espSeleccionada && !esFechaValidaFrontend(espSeleccionada, fechaStr)) continue
-
       for (const hora of slotsABuscar) {
+        // Hoy: solo slots a partir de la hora actual. Días futuros: todos los slots.
         if (isSlotInPast(fechaStr, hora, now)) continue
         const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
         if (!error) {
-          // Paso C: Hallazgo — aplicar al formulario
           setForm(f => ({ ...f, fecha: fechaStr, hora }))
-          const daysAhead = Math.round(
-            (startOfDayLocal(parseSlotLocal(fechaStr, "08:00")).getTime() - todayStart.getTime()) /
-              86400000,
-          )
-          const label =
-            daysAhead === 0 ? "hoy" : daysAhead === 1 ? "mañana" : `en ${daysAhead} días`
+          const daysAhead = dayOffset
+          const label = daysAhead === 0 ? "hoy" : daysAhead === 1 ? "mañana" : `en ${daysAhead} días`
           setSmartSuggestion(`✨ Horario ideal encontrado: ${fechaStr} a las ${hora} (${label})`)
           toast.success("¡Horario ideal encontrado y aplicado!", { description: `${fechaStr} · ${hora}` })
           found = true
@@ -283,7 +274,6 @@ export function CitasSection() {
       }
     }
 
-    // Paso D: Fallback si no encontró nada en 7 días
     if (!found) {
       toast.error("No se encontró disponibilidad en los próximos 7 días.")
       setSmartSuggestion(null)
