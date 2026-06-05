@@ -79,6 +79,16 @@ export const deleteCita = async (req, res, next) => {
   }
 };
 
+export const hardDeleteCita = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await citasService.hardDeleteCita(id);
+    res.status(200).json({ message: "Cita eliminada permanentemente" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const e2eCleanup = async (req, res, next) => {
   if (process.env.NODE_ENV === "production") {
     return res.status(403).json({ error: "No disponible en producción" });

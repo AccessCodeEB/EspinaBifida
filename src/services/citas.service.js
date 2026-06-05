@@ -115,4 +115,14 @@ export const deleteCita = async (id) => {
   return await citasModel.remove(id);
 };
 
+export const hardDeleteCita = async (id) => {
+  const cita = await citasModel.findById(id);
+
+  if (!cita) {
+    throw notFound("Cita no encontrada");
+  }
+
+  return await citasModel.hardRemove(id);
+};
+
 export const deleteE2ECitas = () => citasModel.deleteE2ECitas();

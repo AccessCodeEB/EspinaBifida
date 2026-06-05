@@ -46,7 +46,11 @@ export function updateEstatusCita(id: number, estatus: Cita["estatus"]) {
   return apiClient.patch<{ message: string }>(`/citas/${id}`, { estatus })
 }
 
-/** PUT /citas/:id — actualización completa */
 export function updateCita(id: number, data: Partial<NuevaCitaPayload & { estatus: string }>) {
   return apiClient.put<{ message: string }>(`/citas/${id}`, data)
+}
+
+/** DELETE /citas/:id/permanent — eliminación física (hard delete) */
+export function deleteCitaPermanente(id: number) {
+  return apiClient.delete<{ message: string }>(`/citas/${id}/permanent`)
 }

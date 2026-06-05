@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
-import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle, Hash, Stethoscope } from "lucide-react"
-import type { Cita } from "@/services/citas"
+import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle, Hash, Stethoscope, MoreVertical, Trash2 } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import { type Cita, deleteCitaPermanente } from "@/services/citas"
 import type { Beneficiario } from "@/services/beneficiarios"
 
 interface Props {
   citas: Cita[]
   beneficiarios: Beneficiario[]
+  onReload?: () => void
 }
 
 type SortField = "fecha" | "beneficiario" | "especialista" | "estatus"
@@ -49,7 +52,7 @@ function SortIndicator({ field, current, dir }: { field: SortField; current: Sor
 
 const STATUSES: FilterEstatus[] = ["Todos", "Pendiente", "Confirmada", "Completada", "Cancelada"]
 
-export function CitasListView({ citas, beneficiarios }: Props) {
+export function CitasListView({ citas, beneficiarios, onReload }: Props) {
   const [query, setQuery]               = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterEstatus>("Todos")
   const [filterFecha, setFilterFecha]   = useState("")
@@ -114,6 +117,20 @@ export function CitasListView({ citas, beneficiarios }: Props) {
     setFilterStatus("Todos")
     setFilterFecha("")
     setQuery("")
+  }
+
+  async function handleDelete(id: number) {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta cita del sistema? Esta acción no se puede deshacer.")) {
+      return
+    }
+    try {
+      await deleteCitaPermanente(id)
+      toast.success("Cita eliminada permanentemente")
+      onReload?.()
+    } catch (err) {
+      toast.error("Error al eliminar la cita")
+      console.error(err)
+    }
   }
 
   return (
@@ -277,7 +294,27 @@ export function CitasListView({ citas, beneficiarios }: Props) {
                         <p className="text-xs text-foreground">{cita.fecha}</p>
                         <p className="text-[10px] text-muted-foreground">{cita.hora}</p>
                       </td>
-                      <td className="py-3 pl-2 pr-5"><StatusPill status={cita.estatus} /></td>
+                      <td className="py-3 pl-2 pr-5">
+                        <div className="flex items-center justify-between">
+                          <StatusPill status={cita.estatus} />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                                <MoreVertical className="size-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem 
+                                className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950 dark:focus:text-red-400 cursor-pointer"
+                                onClick={() => handleDelete(cita.id)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Eliminar permanentemente
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })

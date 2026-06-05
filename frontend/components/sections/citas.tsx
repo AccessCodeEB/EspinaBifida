@@ -497,7 +497,7 @@ export function CitasSection() {
               onCitaCancelada={() => setBannerCancelarServicio(true)}
             />
           ) : (
-            <CitasListView citas={citas} beneficiarios={beneficiarios} />
+            <CitasListView citas={citas} beneficiarios={beneficiarios} onReload={() => loadCitas()} />
           )}
         </div>
       )}

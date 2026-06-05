@@ -80,6 +80,15 @@ export const remove = (id) =>
     )
   );
 
+export const hardRemove = (id) =>
+  withConnection(conn =>
+    conn.execute(
+      `DELETE FROM CITAS WHERE ID_CITA = :id`,
+      { id },
+      { autoCommit: true }
+    )
+  );
+
 export const deleteE2ECitas = () =>
   withConnection(async conn => {
     await conn.execute(
