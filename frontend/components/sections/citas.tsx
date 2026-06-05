@@ -539,8 +539,8 @@ export function CitasSection() {
               )}
             </div>
 
-            {/* Costo auto-detectado (solo lectura) */}
-            {form.curp && (() => {
+            {/* Costo auto-detectado (solo lectura) — solo para Consulta Médica */}
+            {form.curp && /consulta/i.test(catalogoServicios.find(t => String(t.idTipoServicio) === form.idTipoServicio)?.nombre ?? "") && (() => {
               const previas = citas.filter(c => c.folio === form.curp && c.estatus !== "Cancelada").length
               const esPrimera = previas === 0
               const costo = esPrimera ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA
@@ -568,7 +568,7 @@ export function CitasSection() {
               <Select value={form.idTipoServicio} onValueChange={v => { if (bloqueadoDesdeServicios) return; setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }} disabled={bloqueadoDesdeServicios}>
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
-                  {catalogoServicios.map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
+                  {catalogoServicios.filter(t => /consulta/i.test(t.nombre) || /estudio/i.test(t.nombre)).map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
               {bloqueadoDesdeServicios && (
