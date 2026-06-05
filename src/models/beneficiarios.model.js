@@ -148,18 +148,39 @@ export const deactivate = (curp) =>
     ).then(r => r.rowsAffected ?? 0)
   );
 
-export const hardDelete = (curp) =>
-  withConnection(async conn => {
+export async function hardDelete(curp) {
+  let conn;
+  try {
+    conn = await getConnection();
+    // Cascade manual: borrar hijos de COMODATOS
     await conn.execute(
-      `DELETE FROM NOTIFICACIONES WHERE CURP = :curp`,
+      `DELETE FROM COMODATOS_PAGOS WHERE ID_COMODATO IN (SELECT ID_COMODATO FROM COMODATOS WHERE CURP = :curp)`,
       { curp }
     );
-    const result = await conn.execute(
-      `DELETE FROM BENEFICIARIOS WHERE CURP = :curp`,
-      { curp }, { autoCommit: true }
+    await conn.execute(`DELETE FROM COMODATOS WHERE CURP = :curp`, { curp });
+    // Borrar hijos de SERVICIOS
+    await conn.execute(
+      `DELETE FROM SERVICIO_ARTICULOS WHERE ID_SERVICIO IN (SELECT ID_SERVICIO FROM SERVICIOS WHERE CURP = :curp)`,
+      { curp }
     );
+    await conn.execute(`DELETE FROM SERVICIOS WHERE CURP = :curp`, { curp });
+    // Demás hijos directos de BENEFICIARIOS
+    await conn.execute(`DELETE FROM CREDENCIALES WHERE CURP = :curp`, { curp });
+    await conn.execute(`DELETE FROM CITAS WHERE CURP = :curp`, { curp });
+    await conn.execute(`DELETE FROM BENEFICIARIO_PADECIMIENTOS WHERE CURP = :curp`, { curp }).catch(() => {});
+    await conn.execute(`DELETE FROM NOTIFICACIONES WHERE CURP = :curp`, { curp });
+    const result = await conn.execute(
+      `DELETE FROM BENEFICIARIOS WHERE CURP = :curp`, { curp }
+    );
+    await conn.commit();
     return result.rowsAffected ?? 0;
-  });
+  } catch (err) {
+    if (conn) await conn.rollback().catch(() => {});
+    throw err;
+  } finally {
+    if (conn) await conn.close().catch(() => {});
+  }
+}
 
 /**
  * Baja lógica + cancelación de membresías activas en una sola transacción.

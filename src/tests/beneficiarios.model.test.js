@@ -125,9 +125,10 @@ describe("deactivate — rowsAffected ?? 0 (L163)", () => {
 
 describe("hardDelete — rowsAffected ?? 0 (L171)", () => {
   it("rowsAffected undefined → retorna 0", async () => {
-    // Primera llamada: DELETE FROM NOTIFICACIONES (sin rowsAffected relevante)
-    mockExecute.mockResolvedValueOnce({});
-    // Segunda llamada: DELETE FROM BENEFICIARIOS (rowsAffected undefined → 0)
+    // 8 deletes previos (COMODATOS_PAGOS, COMODATOS, SERVICIO_ARTICULOS, SERVICIOS,
+    // CREDENCIALES, CITAS, BENEFICIARIO_PADECIMIENTOS, NOTIFICACIONES)
+    for (let i = 0; i < 8; i++) mockExecute.mockResolvedValueOnce({});
+    // Último DELETE FROM BENEFICIARIOS con rowsAffected undefined → 0
     mockExecute.mockResolvedValueOnce({});
 
     const result = await hardDelete(CURP);
