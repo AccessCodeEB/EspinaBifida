@@ -292,7 +292,7 @@ export function ServiciosSection() {
 
   // Catálogo filtrado: excluir COMADATOs (van por Comodatos) y Membresía Anual (se gestiona desde Membresías)
   const catalogoFiltrado = catalogoServicios.filter(
-    t => t.tipoServicio !== "COMODATO" && !/membresia/i.test(t.nombre)
+    t => t.tipoServicio !== "COMODATO" && !/membres[ií]a/i.test(t.nombre)
   )
   const expedienteBloqueado = beneficiarioEncontrado
     ? beneficiarioEncontrado.estatus === "Baja"
