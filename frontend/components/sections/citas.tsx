@@ -377,7 +377,7 @@ export function CitasSection() {
       }
 
       setShowDialog(false)
-      loadCitas()
+      loadCitas(true)
       if (servicioRegistrado) {
         toast.success("Cita agendada y servicio registrado correctamente", {
           description: `${form.fecha} · ${form.hora}`,
