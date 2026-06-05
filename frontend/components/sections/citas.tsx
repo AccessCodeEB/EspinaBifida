@@ -43,6 +43,11 @@ function startOfDayLocal(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
+/** Returns "YYYY-MM-DD" using local time (not UTC), matching Oracle TO_CHAR output. */
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 function parseSlotLocal(fecha: string, hora: string): Date {
   const [y, mo, day] = fecha.split("-").map(Number)
   const [h, mi] = hora.split(":").map(Number)
@@ -189,18 +194,24 @@ export function CitasSection() {
   }, [espSeleccionada, form.fecha])
 
   const stats = useMemo(() => {
-    const todayStr = today.toISOString().split("T")[0]
-    const hoy = citas.filter(c => c.fecha === todayStr).length
+    // Use local date string — Oracle returns TO_CHAR(FECHA,'YYYY-MM-DD') in local time.
+    // toISOString() is UTC and would show wrong day for users between 6pm-midnight.
+    const todayStr = toLocalDateStr(today)
+    const hoy = citas.filter(c => c.fecha === todayStr && c.estatus !== "Cancelada").length
+
+    // Compute Mon–Sun of the current week using local dates.
+    // Fix: base each day off `mon` (not `today`) to avoid month-boundary errors where
+    // d.setDate(mon.getDate() + i) would operate on today's month instead of mon's month.
+    const day = today.getDay()
+    const mon = new Date(today)
+    mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1))
     const weekDates: string[] = []
     for (let i = 0; i < 7; i++) {
-      const d = new Date(today)
-      const day = today.getDay()
-      const mon = new Date(today)
-      mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1))
+      const d = new Date(mon)
       d.setDate(mon.getDate() + i)
-      weekDates.push(d.toISOString().split("T")[0])
+      weekDates.push(toLocalDateStr(d))
     }
-    const semana = citas.filter(c => weekDates.includes(c.fecha)).length
+    const semana = citas.filter(c => weekDates.includes(c.fecha) && c.estatus !== "Cancelada").length
     const pendientes = citas.filter(c => c.estatus === "Pendiente").length
     return { hoy, semana, pendientes }
   }, [citas, today])
