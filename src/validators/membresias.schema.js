@@ -8,12 +8,15 @@ export const crearMembresiaSchema = z.object({
   tipo: z.enum(["nuevo_ingreso", "reinscripcion"]).optional(),
   anios: z.number({ coerce: true }).int().positive("anios debe ser un entero positivo").optional(),
   monto: z.number({ coerce: true }).nonnegative("monto debe ser >= 0").optional(),
-  metodo_pago: z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
-  metodoPago:  z.enum(["efectivo", "transferencia", "tarjeta"]).nullable().optional(),
+  metodo_pago: z.enum(["efectivo", "transferencia", "tarjeta"]).optional(),
+  metodoPago:  z.enum(["efectivo", "transferencia", "tarjeta"]).optional(),
   referencia:       z.string().max(200).nullable().optional(),
   observaciones:    z.string().trim().min(1, "Las observaciones son obligatorias").max(500),
   numero_credencial: z.string().max(50).optional(),
   fecha_emision:          z.string().regex(FECHA_REGEX, "fecha_emision debe ser YYYY-MM-DD").optional(),
   fecha_vigencia_inicio:  z.string().regex(FECHA_REGEX, "fecha_vigencia_inicio debe ser YYYY-MM-DD").optional(),
   fecha_ultimo_pago:      z.string().regex(FECHA_REGEX, "fecha_ultimo_pago debe ser YYYY-MM-DD").optional(),
-});
+}).refine(
+  (d) => (d.metodo_pago ?? d.metodoPago) != null,
+  { message: "metodo_pago es obligatorio (efectivo, transferencia, tarjeta)", path: ["metodo_pago"] }
+);
