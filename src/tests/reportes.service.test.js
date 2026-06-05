@@ -43,6 +43,7 @@ jest.unstable_mockModule('../utils/reporteTemplate.js', () => ({
 
 const mockPdfFn        = jest.fn();
 const mockSetContentFn = jest.fn();
+const mockPageClose    = jest.fn();
 const mockNewPageFn    = jest.fn();
 const mockBrowserClose = jest.fn();
 const mockLaunch       = jest.fn();
@@ -84,11 +85,13 @@ beforeEach(() => {
 
   // Defaults reutilizables para puppeteer
   mockBrowserClose.mockResolvedValue(undefined);
+  mockPageClose.mockResolvedValue(undefined);
   mockSetContentFn.mockResolvedValue(undefined);
   mockPdfFn.mockResolvedValue(Buffer.from('%PDF-'));
   mockNewPageFn.mockResolvedValue({
     setContent: mockSetContentFn,
     pdf: mockPdfFn,
+    close: mockPageClose,
   });
   mockLaunch.mockResolvedValue({
     newPage:  mockNewPageFn,
@@ -208,22 +211,22 @@ describe('generarPDF', () => {
     });
   });
 
-  it('cierra el browser incluso cuando page.pdf() falla', async () => {
+  it('cierra la page incluso cuando page.pdf() falla', async () => {
     mockPdfFn.mockRejectedValueOnce(new Error('Chrome error'));
 
     await expect(generarPDF(DATA, PERIODO.inicio, PERIODO.fin))
       .rejects.toThrow('Chrome error');
 
-    expect(mockBrowserClose).toHaveBeenCalledTimes(1);
+    expect(mockPageClose).toHaveBeenCalledTimes(1);
   });
 
-  it('cierra el browser incluso cuando setContent() falla', async () => {
+  it('cierra la page incluso cuando setContent() falla', async () => {
     mockSetContentFn.mockRejectedValueOnce(new Error('Navigation timeout'));
 
     await expect(generarPDF(DATA, PERIODO.inicio, PERIODO.fin))
       .rejects.toThrow('Navigation timeout');
 
-    expect(mockBrowserClose).toHaveBeenCalledTimes(1);
+    expect(mockPageClose).toHaveBeenCalledTimes(1);
   });
 });
 

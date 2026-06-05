@@ -11,29 +11,30 @@ export const ESTUDIOS_IDS = [];
 // ── 1. Resumen estadístico del periodo ────────────────────────────────────────
 // Nota: usa :ff (fecha fin del periodo) para grupos de edad — NO SYSDATE.
 // Un paciente que cumplió 18 en febrero no debe aparecer como Adulto en enero.
-export const getResumenPeriodo = (fechaInicio, fechaFin) =>
-  withConnection(async conn => {
-    const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
-    const fi  = new Date(fechaInicio);
-    const ff  = new Date(fechaFin);
+export const getResumenPeriodo = (fechaInicio, fechaFin) => {
+  const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
+  const fi = new Date(fechaInicio);
+  const ff = new Date(fechaFin);
 
-    // ORA-00937: Oracle no permite mezclar subconsulta escalar con funciones de grupo
-    // en el mismo SELECT sin GROUP BY — se separa en dos queries sobre la misma conexión.
-    const credRes = await conn.execute(
+  // Las dos queries son independientes — se ejecutan en conexiones paralelas.
+  const credPromise = withConnection(conn =>
+    conn.execute(
       `SELECT COUNT(*) AS CANT_CREDENCIALES FROM CREDENCIALES
        WHERE FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff`,
       { fi, ff },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+    ).then(r => r.rows[0]?.CANT_CREDENCIALES ?? 0)
+  );
 
-    const statsRes = await conn.execute(`
+  const statsPromise = withConnection(conn =>
+    conn.execute(`
       SELECT
         COUNT(S.ID_SERVICIO)                              AS CANT_SERVICIOS,
         COUNT(CASE WHEN S.MONTO_PAGADO = 0 THEN 1 END)   AS EXENTOS,
         COUNT(CASE WHEN S.MONTO_PAGADO > 0 THEN 1 END)   AS CON_CUOTA,
 
-        COUNT(DISTINCT CASE WHEN B.GENERO = 'Masculino' THEN B.CURP END) AS HOMBRES,
-        COUNT(DISTINCT CASE WHEN B.GENERO = 'Femenino'  THEN B.CURP END) AS MUJERES,
+        COUNT(DISTINCT CASE WHEN B.GENERO IN ('M', 'Masculino') THEN B.CURP END) AS HOMBRES,
+        COUNT(DISTINCT CASE WHEN B.GENERO IN ('F', 'Femenino')  THEN B.CURP END) AS MUJERES,
 
         COUNT(DISTINCT CASE WHEN B.MUNICIPIO IN (${ammPH})
                              THEN B.CURP END)             AS URBANO,
@@ -58,13 +59,15 @@ export const getResumenPeriodo = (fechaInicio, fechaFin) =>
       WHERE S.FECHA BETWEEN :fi AND :ff
     `,
     { fi, ff, ffr: ff, ...ammBinds },
-    { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    ).then(r => r.rows[0])
+  );
 
-    return {
-      CANT_CREDENCIALES: credRes.rows[0]?.CANT_CREDENCIALES ?? 0,
-      ...statsRes.rows[0],
-    };
-  });
+  return Promise.all([credPromise, statsPromise]).then(([CANT_CREDENCIALES, stats]) => ({
+    CANT_CREDENCIALES,
+    ...stats,
+  }));
+};
 
 // ── 2. Detalle de servicios consumidos (artículos + tipos de servicio) ────────
 // UNION ALL: artículos con cantidades + tipos de servicio sin artículos (consultas)

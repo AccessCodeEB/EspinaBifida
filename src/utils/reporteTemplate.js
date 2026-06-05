@@ -149,8 +149,8 @@ function generarHTMLEstadisticas(data, { fechaInicio, fechaFin }) {
 
 function generarHTMLBeneficiarios({ filas }, { fechaInicio, fechaFin }) {
   const total    = filas.length;
-  const hombres  = filas.filter(r => r.GENERO === 'Masculino').length;
-  const mujeres  = filas.filter(r => r.GENERO === 'Femenino').length;
+  const hombres  = filas.filter(r => r.GENERO === 'M' || r.GENERO === 'Masculino').length;
+  const mujeres  = filas.filter(r => r.GENERO === 'F' || r.GENERO === 'Femenino').length;
   const activos  = filas.filter(r => r.ESTATUS === 'Activo').length;
   const inactivos = filas.filter(r => r.ESTATUS !== 'Activo').length;
 

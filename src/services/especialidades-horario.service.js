@@ -75,6 +75,13 @@ export const updateEspecialidad = async (id, data) => {
     throw badRequest("tipoFrecuencia inválido. Valores permitidos: SEMANAL, MENSUAL_PRIMER_DIA");
   }
 
+  // Validar que horaFin > horaInicio cuando ambas están presentes
+  const inicioEfectivo = horaInicio !== undefined ? horaInicio : existing.HORA_INICIO;
+  const finEfectivo    = horaFin    !== undefined ? horaFin    : existing.HORA_FIN;
+  if (finEfectivo && inicioEfectivo && finEfectivo <= inicioEfectivo) {
+    throw badRequest("La hora de fin debe ser posterior a la hora de inicio.");
+  }
+
   // Regla de negocio: no se puede desactivar una especialidad con citas futuras pendientes
   if (activo === false && existing.ACTIVO === 1) {
     const citasFuturas = await model.countCitasFuturasActivas(existing.NOMBRE);

@@ -43,8 +43,7 @@ beforeEach(() => resetMocks());
 
 describe('getResumenPeriodo', () => {
   it('retorna la primera fila del resultado', async () => {
-    // getResumenPeriodo usa 2 queries separadas (ORA-00937: no se puede mezclar
-    // subconsulta escalar con GROUP BY en un solo SELECT).
+    // getResumenPeriodo usa 2 queries en paralelo (2 conexiones distintas).
     const credRow  = { CANT_CREDENCIALES: 5 };
     const statsRow = {
       CANT_SERVICIOS: 20, EXENTOS: 5, CON_CUOTA: 15,
@@ -58,7 +57,8 @@ describe('getResumenPeriodo', () => {
 
     expect(result).toEqual({ ...credRow, ...statsRow });
     expect(mockExecute).toHaveBeenCalledTimes(2);
-    expect(mockClose).toHaveBeenCalledTimes(1);
+    // 2 conexiones paralelas → close se llama 2 veces
+    expect(mockClose).toHaveBeenCalledTimes(2);
   });
 
   it('CANT_CREDENCIALES null → ?? 0 (L64 right-side branch)', async () => {
@@ -70,13 +70,16 @@ describe('getResumenPeriodo', () => {
     expect(result.CANT_CREDENCIALES).toBe(0);
   });
 
-  it('cierra la conexión aunque execute lance', async () => {
+  it('cierra las 2 conexiones aunque execute lance', async () => {
+    // La query de credenciales falla; la de stats se mockea para que resuelva.
     mockExecute.mockRejectedValueOnce(new Error('ORA-00942'));
+    mockExecute.mockResolvedValueOnce({ rows: [{}] });
 
     await expect(getResumenPeriodo(PERIODO.inicio, PERIODO.fin))
       .rejects.toThrow('ORA-00942');
 
-    expect(mockClose).toHaveBeenCalledTimes(1);
+    // Ambas conexiones deben cerrarse aunque una falle (finally en withConnection)
+    expect(mockClose).toHaveBeenCalledTimes(2);
   });
 });
 

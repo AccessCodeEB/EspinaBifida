@@ -22,8 +22,10 @@ export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas
       return { tipo, filas };
     }
     case 'inventario': {
-      const articulos   = await ReportesModel.getArticulosStock();
-      const movimientos = await ReportesModel.getMovimientosPeriodo(fechaInicio, fechaFin);
+      const [articulos, movimientos] = await Promise.all([
+        ReportesModel.getArticulosStock(),
+        ReportesModel.getMovimientosPeriodo(fechaInicio, fechaFin),
+      ]);
       return { tipo, articulos, movimientos };
     }
     case 'citas': {
@@ -31,31 +33,49 @@ export async function generarReporte(fechaInicio, fechaFin, tipo = 'estadisticas
       return { tipo, filas };
     }
     default: { // 'estadisticas'
-      const resumen  = await ReportesModel.getResumenPeriodo(fechaInicio, fechaFin);
-      const detalle  = await ReportesModel.getDetalleServicios(fechaInicio, fechaFin);
-      const ciudades = await ReportesModel.getDistribucionCiudades(fechaInicio, fechaFin);
-      const estudios = await ReportesModel.getEstudios(fechaInicio, fechaFin);
-      const porMes   = await ReportesModel.getAtencionesPorMes(fechaInicio, fechaFin);
+      const [resumen, detalle, ciudades, estudios, porMes] = await Promise.all([
+        ReportesModel.getResumenPeriodo(fechaInicio, fechaFin),
+        ReportesModel.getDetalleServicios(fechaInicio, fechaFin),
+        ReportesModel.getDistribucionCiudades(fechaInicio, fechaFin),
+        ReportesModel.getEstudios(fechaInicio, fechaFin),
+        ReportesModel.getAtencionesPorMes(fechaInicio, fechaFin),
+      ]);
       return { tipo: 'estadisticas', resumen, detalle, ciudades, estudios, porMes };
     }
   }
 }
 
+// Singleton del browser — se lanza una sola vez y se reutiliza entre peticiones.
+// Si el proceso de Chrome cae (browser.connected = false), se relanza automáticamente.
+let _browser = null;
+
+async function getBrowser() {
+  if (!_browser || !_browser.connected) {
+    _browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-dev-shm-usage', // evita OOM en VMs con /dev/shm limitado
+      ],
+    });
+  }
+  return _browser;
+}
+
 /**
  * Genera PDF usando Puppeteer (Chrome headless).
- * browser.close() está en finally para evitar que Chrome quede colgado si falla.
+ * Reutiliza el browser singleton — solo abre/cierra una Page, no un Chrome entero.
  */
 export async function generarPDF(data, fechaInicio, fechaFin) {
   const html    = generarHTML(data, { fechaInicio, fechaFin });
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await getBrowser();
+  const page    = await browser.newPage();
   try {
-    const page = await browser.newPage();
     // 'load' es correcto para HTML estático sin recursos externos.
     // 'networkidle0' agrega ~500ms de espera innecesaria en este caso.
     await page.setContent(html, { waitUntil: 'load' });
     return await page.pdf({ format: 'Letter', printBackground: true });
   } finally {
-    await browser.close();
+    await page.close();
   }
 }
 
