@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-05 (Jueves) — Cobertura de pruebas llevada al 100% en servicios citas y especialidades; thresholds globales superados
+**Actualización:** 2026-06-05 (Jueves) — Citas: filtro de tipos de servicio a solo Consulta Médica y Estudio Médico; bloque de costo visible únicamente al seleccionar Consulta Médica
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -56,7 +56,7 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | **Beneficiarios** | ✅ Completo |
 | **Membresías** | ✅ Completo — botón **Nueva Membresía**, tab **Historial de pagos** (últimos 30 días), monto y método de pago reales, observaciones obligatorias, ícono por método de pago, scroll en form de beneficiario |
 | **Servicios** | ✅ Completo — tabla rediseñada (fila clickeable, columna artículo entregado, eliminar desde detalle), form con selector de artículo buscable, catálogo 100% dinámico sin hardcode, badges de estatus, flechas de sort dinámicas, ciclo filtro por estatus |
-| **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm, especialidades dinámicas con filtro de slots |
+| **Citas** | ✅ Completo — rediseño UI: KPIs cards, tabs Agenda/Historial estilo inventario, colores pasteles por estatus, fecha humanizada, mini-cal sincronizado, horario 7am–5pm, especialidades dinámicas con filtro de slots; selector de tipo de servicio filtrado a solo Consulta Médica y Estudio Médico; bloque de costo (primera/subsecuente) oculto para Estudio Médico |
 | **Inventario** | ✅ Completo — filtro por categoría, columna Precio de Lista, card de estado 4 columnas, diálogo confirmación precios rediseñado, tab Altas/Bajas con log, búsqueda normalizada (ñ/acentos), label dinámico cantidad, safety net redirige a Comodatos, comodatos registran SALIDA en inventario |
 | **Reportes** | ✅ Completo — rediseño UI: barra de config en una fila, panel izquierdo h-full, botones más altos, rango de fechas en subtítulo del preview |
 | **Pre-registro** | ✅ Completo |
@@ -321,6 +321,22 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `citas.service.test.js`: `mockDeleteE2ECitas` extraído a variable; 9 tests nuevos para `getAllCitas`, `deleteCita`, `deleteE2ECitas` (0% funciones antes) y ramas `??` de hora por defecto, FECHA como string, `espFinal null`, `ESTATUS null`, `curp` explícito
 - `especialidades-horario.routes.test.js`: 6 tests de integración para los endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha` (200, 400, 401, 404)
 - Resultado: **statements 97.71% · branches 95.78% · functions 95.85% · lines 97.97%** — todos ≥ 95% threshold · 1381 tests verde
+
+### Cambios 2026-06-05 — Citas: filtro de tipos de servicio y bloque de costo condicional
+
+**Selector de tipo de servicio filtrado (`frontend/components/sections/citas.tsx`):**
+- El Select de "Tipo de servicio" en el formulario de agendar cita ahora muestra únicamente las opciones que contienen "consulta" o "estudio" en su nombre (regex case-insensitive)
+- Se eliminan de la vista: Medicamento, Insumos Médicos, Otros y Membresía Anual — tipos que no aplican para citas
+- El filtro usa `.filter(t => /consulta/i.test(t.nombre) || /estudio/i.test(t.nombre))` sobre el catálogo dinámico ya cargado desde la API — sin cambios en backend
+
+**Bloque de costo condicional:**
+- El bloque "Tipo de consulta / Costo" (Primera cita $350 / Subsecuente $300) solo se renderiza cuando el tipo seleccionado coincide con `/consulta/i`
+- Para "Estudio Médico" el bloque no aparece — no hay tarifa diferenciada por número de consultas previas
+- La condición evalúa el nombre del tipo seleccionado en el catálogo para mantenerlo desacoplado del ID de BD
+
+| Archivo | Qué hace |
+|---|---|
+| `frontend/components/sections/citas.tsx` | Filtro de tipos de servicio (solo Consulta/Estudio) y visibilidad condicional del bloque de costo |
 
 ---
 
