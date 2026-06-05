@@ -51,7 +51,7 @@ export const update = (id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoF
        WHERE ID_ESPECIALIDAD = :id`,
       { id, diaSemana: diaSemana ?? null, horaInicio: horaInicio ?? null, horaFin: horaFin ?? null,
         capacidadMax: capacidadMax ?? null, tipoFrecuencia: tipoFrecuencia ?? null,
-        activo: activo ?? null, notas: notas ?? null },
+        activo: activo == null ? null : (activo ? 1 : 0), notas: notas ?? null },
       { autoCommit: true }
     )
   );
@@ -66,6 +66,19 @@ export const countCitasActivasPorFecha = (nombre, fecha) =>
          AND TRUNC(FECHA)        = TO_DATE(:fecha, 'YYYY-MM-DD')
          AND ESTATUS            <> 'CANCELADA'`,
       { nombre, fecha }
+    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
+  );
+
+/** Cuenta citas futuras pendientes (no canceladas ni completadas) de una especialidad. */
+export const countCitasFuturasActivas = (nombre) =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT COUNT(1) AS TOTAL
+       FROM CITAS
+       WHERE UPPER(ESPECIALISTA) = UPPER(:nombre)
+         AND TRUNC(FECHA)       >= TRUNC(SYSDATE)
+         AND ESTATUS NOT IN ('CANCELADA', 'COMPLETADA')`,
+      { nombre }
     ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
   );
 
