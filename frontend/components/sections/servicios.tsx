@@ -880,14 +880,31 @@ export function ServiciosSection() {
                 </div>
               )}
 
+              {/* Motivo de membresía (solo servicios de tipo MEMBRESIA) */}
+              {servicioDetalle.referenciaTipo === "MEMBRESIA" && (() => {
+                const partes = (servicioDetalle.notas ?? "").split(" · ")
+                const motivo = partes.length > 2 ? partes.slice(2).join(" · ").trim() : null
+                return (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Motivo</p>
+                    {motivo
+                      ? <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{motivo}</p>
+                      : <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground/60">—</p>
+                    }
+                  </div>
+                )
+              })()}
+
               {/* Notas */}
-              <div className="flex flex-col gap-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
-                {servicioDetalle.notas
-                  ? <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{servicioDetalle.notas}</p>
-                  : <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground/60">—</p>
-                }
-              </div>
+              {servicioDetalle.referenciaTipo !== "MEMBRESIA" && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Notas</p>
+                  {servicioDetalle.notas
+                    ? <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-foreground">{servicioDetalle.notas}</p>
+                    : <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground/60">—</p>
+                  }
+                </div>
+              )}
 
               {/* Cambiar estatus */}
               <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">

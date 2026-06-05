@@ -26,6 +26,7 @@ export const findAll = () =>
               s.COSTO,
               s.MONTO_PAGADO,
               s.NOTAS,
+              s.REFERENCIA_TIPO,
               ${buildEstatusServicioSql("cita")},
               NVL(b.ESTATUS, 'Activo') AS ESTATUS_BENEFICIARIO,
               (SELECT LISTAGG(a.DESCRIPCION, ', ') WITHIN GROUP (ORDER BY a.DESCRIPCION)
