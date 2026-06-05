@@ -61,9 +61,10 @@ export function esHoraValidaFrontend(esp: EspecialidadHorario, hora: string): bo
   return hora >= esp.horaInicio && hora <= esp.horaFin
 }
 
-/** GET /especialidades-horario */
-export function getEspecialidadesHorario() {
-  return apiClient.get<EspecialidadHorario[]>("/especialidades-horario")
+/** GET /especialidades-horario — admin: todos=true incluye inactivas */
+export function getEspecialidadesHorario(todos = false) {
+  const qs = todos ? "?todos=true" : ""
+  return apiClient.get<EspecialidadHorario[]>(`/especialidades-horario${qs}`)
 }
 
 /** PUT /especialidades-horario/:id */
@@ -93,5 +94,17 @@ export function createExcepcion(idEspecialidad: number, fecha: string, motivo?: 
 export function deleteExcepcion(idEspecialidad: number, idExcepcion: number) {
   return apiClient.delete<{ message: string }>(
     `/especialidades-horario/${idEspecialidad}/excepciones/${idExcepcion}`
+  )
+}
+
+/** GET /especialidades-horario/:id/citas-futuras — cuántas citas pendientes tiene la especialidad */
+export function getCitasFuturasCount(idEspecialidad: number) {
+  return apiClient.get<{ count: number }>(`/especialidades-horario/${idEspecialidad}/citas-futuras`)
+}
+
+/** GET /especialidades-horario/:id/citas-en-fecha?fecha=YYYY-MM-DD — cuántas citas hay ese día */
+export function getCitasEnFechaCount(idEspecialidad: number, fecha: string) {
+  return apiClient.get<{ count: number }>(
+    `/especialidades-horario/${idEspecialidad}/citas-en-fecha?fecha=${fecha}`
   )
 }
