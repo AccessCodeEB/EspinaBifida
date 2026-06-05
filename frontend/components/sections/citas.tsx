@@ -756,7 +756,7 @@ export function CitasSection() {
 
       {/* Dialog: cancelar servicio post-cancelación de cita */}
       <Dialog open={bannerCancelarServicio} onOpenChange={(open) => { if (!open) setBannerCancelarServicio(false) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <CalendarDays className="size-4 text-[#0f4c81]" />

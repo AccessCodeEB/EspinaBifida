@@ -898,7 +898,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
       {/* ── Dialog: Safety net Equipos Médicos ── */}
       <Dialog open={safetyNetItem != null} onOpenChange={open => { if (!open) setSafetyNetItem(null) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">¿Qué deseas hacer?</DialogTitle>
             <DialogDescription className="text-xs">
@@ -935,7 +935,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
         const cuotaBChng = cuotaBNew !== cuotaBOld
         return (
           <Dialog open={showPrecioConfirmDialog} onOpenChange={open => { if (!open) setShowPrecioConfirmDialog(false) }}>
-            <DialogContent className="max-w-sm">
+            <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-base font-bold">¿Confirmar cambio de precios?</DialogTitle>
                 <DialogDescription className="text-xs">
@@ -1007,7 +1007,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
       {/* ── Dialog: Ajustar stock ── */}
       <Dialog open={showStockDialog} onOpenChange={open => { if (!open) closeStockDialog() }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <TrendingUp className="size-4 text-[#0f4c81]" />
@@ -1115,7 +1115,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
       {/* ── Dialog: Configurar artículo ── */}
       <Dialog open={showConfigDialog} onOpenChange={open => { if (!open) closeConfigDialog() }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <Settings2 className="size-4 text-[#0f4c81]" />
@@ -1291,7 +1291,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
       {/* ── Dialog: Eliminar artículo ── */}
       <Dialog open={showEliminarDialog} onOpenChange={setShowEliminarDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Eliminar artículo</DialogTitle>
             <DialogDescription className="text-xs">Selecciona el artículo que deseas eliminar del inventario.</DialogDescription>

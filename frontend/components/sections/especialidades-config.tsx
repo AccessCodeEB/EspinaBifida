@@ -525,7 +525,7 @@ export function EspecialidadesConfigSection() {
 
       {/* ── Dialog: editar horario ── */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Editar horario</DialogTitle>
             <DialogDescription className="text-xs">{selected?.nombre} · Modifica el día, franja horaria y capacidad</DialogDescription>
@@ -651,7 +651,7 @@ export function EspecialidadesConfigSection() {
 
       {/* ── Dialog: agregar excepción ── */}
       <Dialog open={showExcDialog} onOpenChange={setShowExcDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Bloquear fecha</DialogTitle>
             <DialogDescription className="text-xs">{selected?.nombre} · El doctor no estará disponible este día</DialogDescription>

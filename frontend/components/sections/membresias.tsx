@@ -137,7 +137,7 @@ function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold">Registrar membresía anual</DialogTitle>
           <DialogDescription className="text-xs">
@@ -258,7 +258,7 @@ function NuevaMembresiaDialog({ open, sinMembresia, onSelect, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold">Nueva membresía</DialogTitle>
           <DialogDescription className="text-xs">

@@ -735,7 +735,7 @@ export function ServiciosSection() {
 
       {/* Dialog: agendar cita post-consulta */}
       <Dialog open={Boolean(bannerCita)} onOpenChange={(open) => { if (!open) setBannerCita(null) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <CalendarDays className="size-4 text-[#0f4c81]" />
@@ -829,7 +829,7 @@ export function ServiciosSection() {
 
       {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="size-4 text-[#0f4c81]" />
@@ -999,7 +999,7 @@ export function ServiciosSection() {
 
       {/* Dialog: cancelar cita post-eliminación */}
       <Dialog open={Boolean(bannerEliminarServicio)} onOpenChange={(open) => { if (!open) setBannerEliminarServicio(null) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <CalendarDays className="size-4 text-[#0f4c81]" />
@@ -1041,7 +1041,7 @@ export function ServiciosSection() {
 
       {/* Dialog: Eliminar */}
       <Dialog open={Boolean(servicioParaEliminar)} onOpenChange={(open) => !open && setServicioParaEliminar(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Eliminar servicio</DialogTitle>
             <DialogDescription className="text-xs">Esta acción no se puede deshacer.</DialogDescription>
