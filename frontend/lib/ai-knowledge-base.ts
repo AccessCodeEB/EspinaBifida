@@ -307,7 +307,7 @@ SECCIÓN: REPORTES
 Genera reportes estadísticos y operativos.
 
 BOTONES Y ACCIONES EXACTOS:
-- "Descargar PDF" o "Descargar XLSX" — genera y descarga el reporte en el formato elegido
+- "Generar PDF" o "Generar XLSX" (botón azul navy, esquina superior derecha de la barra de configuración) — genera y descarga el reporte en el formato elegido
 - "Actualizar" — recarga el historial de reportes generados
 - Botón de descarga PDF o Excel en el historial — vuelve a descargar un reporte anterior
 
@@ -320,10 +320,10 @@ TIPOS DE REPORTES:
 
 CÓMO GENERAR UN REPORTE:
 1. Ve a la sección Reportes
-2. Selecciona el tipo de reporte que quieres
-3. Elige el rango de fechas (Desde / Hasta)
-4. Selecciona el formato: PDF o Excel (XLSX)
-5. Haz clic en "Descargar PDF" o "Descargar XLSX" según lo que elegiste
+2. Selecciona el tipo de reporte en el panel izquierdo
+3. Elige el periodo (Mes actual, Mes anterior, Trimestre, Semestre, Año anterior o Personalizado)
+4. Selecciona el formato con los botones PDF o Excel
+5. Haz clic en "Generar PDF" o "Generar XLSX" (botón navy, barra de configuración)
 6. El archivo se descarga automáticamente
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
