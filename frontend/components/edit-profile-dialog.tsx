@@ -186,17 +186,13 @@ export function EditProfileDialog({
     }
   }
 
-  // ── Cambiar contraseña — paso 1: solicitar código SMS ──────────────
+  // ── Cambiar contraseña — paso 1: solicitar código por correo ──────────────
   async function handleSolicitarCodigo() {
     if (!admin) return
     if (!pwForm.passwordActual)                    { setPwError("Ingresa tu contraseña actual"); return }
     if (!pwForm.passwordNueva)                     { setPwError("Ingresa la nueva contraseña");  return }
     if (pwForm.passwordNueva.length < 6)           { setPwError("Mínimo 6 caracteres");          return }
     if (pwForm.passwordNueva !== pwForm.confirmar) { setPwError("Las contraseñas no coinciden"); return }
-    if (!admin.telefono) {
-      setPwError("Registra un número de teléfono en tu perfil antes de cambiar la contraseña.")
-      return
-    }
 
     setPwSaving(true); setPwError(null)
     try {
@@ -205,10 +201,10 @@ export function EditProfileDialog({
       if (res.codigoDev) {
         setPwDevMode(true)
         setPwForm((p) => ({ ...p, codigo: res.codigoDev! }))
-        toast.info(`Modo desarrollo: código ${res.codigoDev} (sin SMS real)`)
+        toast.info(`Modo desarrollo: código ${res.codigoDev} (sin correo real)`)
       } else {
         setPwDevMode(false)
-        toast.success("Código enviado a tu número registrado")
+        toast.success("Código enviado a tu correo electrónico")
       }
     } catch (err: unknown) {
       setPwError(err instanceof Error ? err.message : "Error al enviar el código")
@@ -220,7 +216,7 @@ export function EditProfileDialog({
   // ── Cambiar contraseña — paso 2: confirmar con código ──────────────
   async function handleConfirmarCodigo() {
     if (!admin) return
-    if (!pwForm.codigo.trim()) { setPwError("Ingresa el código SMS"); return }
+    if (!pwForm.codigo.trim()) { setPwError("Ingresa el código de verificación"); return }
 
     setPwSaving(true); setPwError(null); setPwOk(false)
     try {
