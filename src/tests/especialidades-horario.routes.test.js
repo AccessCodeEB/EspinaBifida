@@ -224,3 +224,60 @@ describe("DELETE /especialidades-horario/:id/excepciones/:idExc", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /especialidades-horario/:id/citas-futuras
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /especialidades-horario/:id/citas-futuras", () => {
+  test("200 — retorna count de citas futuras pendientes", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [ESP_ROW] });         // findById
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 3 }] });    // countCitasFuturasActivas
+    const res = await request(app)
+      .get("/especialidades-horario/1/citas-futuras")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(3);
+  });
+
+  test("404 — especialidad no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get("/especialidades-horario/999/citas-futuras")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+
+  test("401 — sin token", async () => {
+    const res = await request(app).get("/especialidades-horario/1/citas-futuras");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /especialidades-horario/:id/citas-en-fecha
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /especialidades-horario/:id/citas-en-fecha", () => {
+  test("200 — retorna count de citas en la fecha dada", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [ESP_ROW] });         // findById
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 1 }] });    // countCitasActivasPorFecha
+    const res = await request(app)
+      .get("/especialidades-horario/1/citas-en-fecha?fecha=2026-06-05")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(1);
+  });
+
+  test("400 — sin parámetro fecha", async () => {
+    const res = await request(app)
+      .get("/especialidades-horario/1/citas-en-fecha")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  test("401 — sin token", async () => {
+    const res = await request(app).get("/especialidades-horario/1/citas-en-fecha?fecha=2026-06-05");
+    expect(res.status).toBe(401);
+  });
+});
