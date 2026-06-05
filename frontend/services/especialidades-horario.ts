@@ -57,8 +57,11 @@ export function esFechaValidaFrontend(esp: EspecialidadHorario, fecha: string): 
  * Devuelve true si la hora 'HH:MM' cae dentro del rango de la especialidad.
  */
 export function esHoraValidaFrontend(esp: EspecialidadHorario, hora: string): boolean {
-  if (!esp.horaFin) return hora >= esp.horaInicio
-  return hora >= esp.horaInicio && hora <= esp.horaFin
+  const norm = (t: string) => t.split(":").map((p, i) => i === 0 ? p.padStart(2, "0") : p).join(":")
+  const h = norm(hora)
+  const inicio = norm(esp.horaInicio)
+  if (!esp.horaFin) return h >= inicio
+  return h >= inicio && h < norm(esp.horaFin)
 }
 
 /** GET /especialidades-horario — admin: todos=true incluye inactivas */

@@ -286,7 +286,7 @@ export function CitasSection() {
 
       for (const hora of slotsHora) {
         if (isSlotInPast(fechaStr, hora, now)) continue
-        const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp)
+        const error = validateSlot(citas, fechaStr, hora, form.especialista, form.curp, espSeleccionada)
         if (!error) {
           setForm(f => ({ ...f, fecha: fechaStr, hora }))
           const daysAhead = dayOffset
@@ -325,7 +325,7 @@ export function CitasSection() {
       setSaveError("No puedes agendar una cita en un horario que ya pasó.")
       return
     }
-    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp)
+    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp, espSeleccionada)
     if (slotError) { setSaveError(slotError); return }
     setSaving(true); setSaveError(null)
     try {
@@ -494,7 +494,6 @@ export function CitasSection() {
               citas={citas}
               onReload={()=>loadCitas(true)}
               onSilentUpdate={silentUpdate}
-              stats={stats}
               onCitaCancelada={() => setBannerCancelarServicio(true)}
             />
           ) : (

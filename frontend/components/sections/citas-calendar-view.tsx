@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle, CheckCi
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
+import { esHoraValidaFrontend, type EspecialidadHorario } from "@/services/especialidades-horario"
 
 const GRID_START=7,GRID_END=17,WORK_START=8,WORK_END=17
 const CELL_H=64,TOTAL_H=GRID_END-GRID_START,GRID_H=CELL_H*TOTAL_H
@@ -85,9 +86,13 @@ function buildLayout(dayCitas:Cita[]):LItem[]{
 }
 
 // ── Validator ─────────────────────────────────────────────────────────────────
-export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string):string|null{
+export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string,espSeleccionada?:EspecialidadHorario|null):string|null{
   const s=snap30(toMins(hora)),e=s+DEFAULT_MINS
   if(s/60<WORK_START||s/60>=WORK_END)return`Horario fuera del rango (${WORK_START}:00–${WORK_END}:00)`
+  if(espSeleccionada&&!esHoraValidaFrontend(espSeleccionada,hora)){
+    const hasta=espSeleccionada.horaFin?` a ${espSeleccionada.horaFin}`:" en adelante"
+    return`${espSeleccionada.nombre} atiende desde las ${espSeleccionada.horaInicio}${hasta}`
+  }
   // FIX #3: both doctor AND patient checked with range intersection
   const day=citas.filter(c=>c.fecha===fecha&&c.estatus!=="Cancelada")
   for(const c of day){
@@ -396,7 +401,7 @@ function ActionCenter({
   onNavigate:(c:Cita)=>void
 }){
   const[page,setPage]=useState(0)
-  const pending=citas.filter(c=>c.estatus==="Pendiente")
+  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
   const totalPages=Math.max(1,Math.ceil(pending.length/PAGE_SIZE))
   const safePage=Math.min(page,totalPages-1)
   const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
@@ -571,11 +576,10 @@ interface Props{
   onReload:()=>void
   /** Called after a successful status update — updates parent citas array without setLoading(true) */
   onSilentUpdate:(updater:(prev:Cita[])=>Cita[])=>void
-  stats:{hoy:number;semana:number;pendientes:number}
   onCitaCancelada?:()=>void
 }
 
-export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,stats,onCitaCancelada}:Props){
+export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCitaCancelada}:Props){
   // Local optimistic state — initialised from props, updated immediately on action
   const[citas,setCitas]=useState<Cita[]>(citasProp)
   useEffect(()=>{

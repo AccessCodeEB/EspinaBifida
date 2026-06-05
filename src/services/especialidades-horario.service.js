@@ -33,8 +33,11 @@ export function esFechaValida(esp, fecha) {
  */
 export function esDentroDeHorario(esp, hora) {
   if (!hora) return false;
-  if (!esp.HORA_FIN) return hora >= esp.HORA_INICIO;
-  return hora >= esp.HORA_INICIO && hora <= esp.HORA_FIN;
+  const norm = (t) => t.split(":").map((p, i) => i === 0 ? p.padStart(2, "0") : p).join(":");
+  const h = norm(hora);
+  const inicio = norm(esp.HORA_INICIO);
+  if (!esp.HORA_FIN) return h >= inicio;
+  return h >= inicio && h < norm(esp.HORA_FIN);
 }
 
 // ─── Servicios CRUD ─────────────────────────────────────────────────────────
