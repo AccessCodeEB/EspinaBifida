@@ -1,26 +1,28 @@
 import { jest } from "@jest/globals";
 
 // ─── Mocks del modelo ─────────────────────────────────────────────────────────
-const mockFindAll             = jest.fn();
-const mockFindById            = jest.fn();
-const mockFindByNombre        = jest.fn();
-const mockUpdate              = jest.fn();
-const mockCountCitasActivas   = jest.fn();
-const mockFindExcepciones     = jest.fn();
-const mockFindExcepcionByFecha = jest.fn();
-const mockCreateExcepcion     = jest.fn();
-const mockDeleteExcepcion     = jest.fn();
+const mockFindAll                   = jest.fn();
+const mockFindById                  = jest.fn();
+const mockFindByNombre              = jest.fn();
+const mockUpdate                    = jest.fn();
+const mockCountCitasActivas         = jest.fn();
+const mockCountCitasFuturasActivas  = jest.fn();
+const mockFindExcepciones           = jest.fn();
+const mockFindExcepcionByFecha      = jest.fn();
+const mockCreateExcepcion           = jest.fn();
+const mockDeleteExcepcion           = jest.fn();
 
 jest.unstable_mockModule("../models/especialidades-horario.model.js", () => ({
-  findAll:                  mockFindAll,
-  findById:                 mockFindById,
-  findByNombre:             mockFindByNombre,
-  update:                   mockUpdate,
+  findAll:                   mockFindAll,
+  findById:                  mockFindById,
+  findByNombre:              mockFindByNombre,
+  update:                    mockUpdate,
   countCitasActivasPorFecha: mockCountCitasActivas,
-  findExcepciones:          mockFindExcepciones,
-  findExcepcionByFecha:     mockFindExcepcionByFecha,
-  createExcepcion:          mockCreateExcepcion,
-  deleteExcepcion:          mockDeleteExcepcion,
+  countCitasFuturasActivas:  mockCountCitasFuturasActivas,
+  findExcepciones:           mockFindExcepciones,
+  findExcepcionByFecha:      mockFindExcepcionByFecha,
+  createExcepcion:           mockCreateExcepcion,
+  deleteExcepcion:           mockDeleteExcepcion,
 }));
 
 const Svc = await import("../services/especialidades-horario.service.js");
@@ -217,6 +219,24 @@ describe("validarSlotEspecialidad", () => {
       Svc.validarSlotEspecialidad("Cirugía", "2026-06-03", "09:00")
     ).resolves.toBeUndefined();
     expect(mockCountCitasActivas).not.toHaveBeenCalled();
+  });
+
+  test("horario fuera de rango con HORA_FIN null → error incluye 'en adelante'", async () => {
+    mockFindByNombre.mockResolvedValue(ESP_CIRUGIA); // HORA_FIN: null
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    // 2026-06-03 = primer miércoles de junio, hora 07:30 < 08:00
+    await expect(
+      Svc.validarSlotEspecialidad("Cirugía", "2026-06-03", "07:30")
+    ).rejects.toMatchObject({ statusCode: 400, code: "HORARIO_NO_PERMITIDO" });
+  });
+
+  test("fecha bloqueada sin motivo → error sin sufijo de motivo (motivo vacío)", async () => {
+    mockFindByNombre.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepcionByFecha.mockResolvedValue({ ID_EXCEPCION: 2, MOTIVO: null });
+    // 2026-06-05 = viernes, hora válida, pero fecha bloqueada sin motivo
+    await expect(
+      Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "10:00")
+    ).rejects.toMatchObject({ statusCode: 400, code: "FECHA_BLOQUEADA" });
   });
 });
 
@@ -443,5 +463,75 @@ describe("regression ISSUE-001 — updateEspecialidad persiste diaSemana", () =>
     const [, payload] = mockUpdate.mock.calls[0];
     // diaSemana debe llegar como undefined (NVL en Oracle mantendrá el valor actual)
     expect(payload.diaSemana).toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateEspecialidad — regla de negocio: no desactivar con citas futuras
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateEspecialidad — regla de negocio: no desactivar con citas pendientes", () => {
+  test("activo=false, ACTIVO=1 y tiene citas futuras → 400 ESPECIALIDAD_CON_CITAS", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA); // ACTIVO = 1
+    mockCountCitasFuturasActivas.mockResolvedValue(2);
+    await expect(Svc.updateEspecialidad(3, { activo: false }))
+      .rejects.toMatchObject({ statusCode: 400, code: "ESPECIALIDAD_CON_CITAS" });
+    expect(mockCountCitasFuturasActivas).toHaveBeenCalledWith("Psicología");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("activo=false, ACTIVO=1, exactamente 1 cita futura → mensaje en singular", async () => {
+    mockFindById.mockResolvedValue(ESP_PSICOLOGIA);
+    mockCountCitasFuturasActivas.mockResolvedValue(1);
+    const err = await Svc.updateEspecialidad(3, { activo: false }).catch(e => e);
+    expect(err.statusCode).toBe(400);
+    expect(err.message).toMatch(/1 cita pendiente/);
+  });
+
+  test("activo=false, ACTIVO=1 y sin citas futuras → procede normalmente", async () => {
+    mockFindById
+      .mockResolvedValueOnce(ESP_PSICOLOGIA)
+      .mockResolvedValueOnce(ESP_PSICOLOGIA);
+    mockCountCitasFuturasActivas.mockResolvedValue(0);
+    mockUpdate.mockResolvedValue(undefined);
+    await expect(Svc.updateEspecialidad(3, { activo: false })).resolves.toBeDefined();
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  test("activo=false con especialidad ya inactiva (ACTIVO=0) → no consulta citas futuras", async () => {
+    const inactiva = { ...ESP_PSICOLOGIA, ACTIVO: 0 };
+    mockFindById.mockResolvedValueOnce(inactiva).mockResolvedValueOnce(inactiva);
+    mockUpdate.mockResolvedValue(undefined);
+    await Svc.updateEspecialidad(3, { activo: false });
+    expect(mockCountCitasFuturasActivas).not.toHaveBeenCalled();
+  });
+
+  test("activo=true → no consulta citas futuras", async () => {
+    mockFindById
+      .mockResolvedValueOnce(ESP_PSICOLOGIA)
+      .mockResolvedValueOnce(ESP_PSICOLOGIA);
+    mockUpdate.mockResolvedValue(undefined);
+    await Svc.updateEspecialidad(3, { activo: true });
+    expect(mockCountCitasFuturasActivas).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// countCitasFuturas y countCitasEnFecha — consultas de impacto
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("countCitasFuturas y countCitasEnFecha", () => {
+  test("countCitasFuturas delega al modelo con el nombre y retorna el resultado", async () => {
+    mockCountCitasFuturasActivas.mockResolvedValue(3);
+    const result = await Svc.countCitasFuturas("Psicología");
+    expect(mockCountCitasFuturasActivas).toHaveBeenCalledWith("Psicología");
+    expect(result).toBe(3);
+  });
+
+  test("countCitasEnFecha delega al modelo con nombre y fecha", async () => {
+    mockCountCitasActivas.mockResolvedValue(1);
+    const result = await Svc.countCitasEnFecha("Psicología", "2026-06-05");
+    expect(mockCountCitasActivas).toHaveBeenCalledWith("Psicología", "2026-06-05");
+    expect(result).toBe(1);
   });
 });
