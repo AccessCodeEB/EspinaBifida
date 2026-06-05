@@ -84,7 +84,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
       else if (typeof parsed?.error === "string") message = parsed.error
       if (typeof parsed?.code === "string") code = parsed.code
     } catch { /* usar texto crudo */ }
-    if (res.status >= 500) message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
+    if (res.status >= 500) message = "El sistema tuvo un error inesperado. Inténtalo más tarde."
     throw new ApiError(res.status, message, code)
   }
 
@@ -152,7 +152,7 @@ async function requestFormData<T>(path: string, form: FormData, init: RequestIni
       /* usar texto crudo */
     }
     if (res.status >= 500) {
-      message = "Ocurrió un error interno. Por favor contacta a soporte técnico."
+      message = "El sistema tuvo un error inesperado. Inténtalo más tarde."
     }
     throw new ApiError(res.status, message, code)
   }
