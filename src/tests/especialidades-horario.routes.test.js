@@ -36,6 +36,13 @@ const ESP_ROW = {
   TIPO_FRECUENCIA: "SEMANAL", ACTIVO: 1, NOTAS: null,
 };
 
+// Especialidad con 1 slot (10:00–11:00, 60min) para tests de /slots
+const ESP_CON_SLOT = {
+  ID_ESPECIALIDAD: 2, NOMBRE: "Psicología", DIA_SEMANA: 5,
+  HORA_INICIO: "10:00", HORA_FIN: "11:00", CAPACIDAD_MAX: 2,
+  TIPO_FRECUENCIA: "SEMANAL", ACTIVO: 1, NOTAS: null, DURACION_CITA: 60,
+};
+
 beforeEach(() => resetMocks());
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -279,5 +286,60 @@ describe("GET /especialidades-horario/:id/citas-en-fecha", () => {
   test("401 — sin token", async () => {
     const res = await request(app).get("/especialidades-horario/1/citas-en-fecha?fecha=2026-06-05");
     expect(res.status).toBe(401);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /especialidades-horario/:id/slots
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("GET /especialidades-horario/:id/slots", () => {
+  test("200 — retorna slots con disponibilidad", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [ESP_CON_SLOT] }); // findById
+    mockExecute.mockResolvedValueOnce({ rows: [] });              // findExcepcionByFecha → no bloqueada
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] }); // countCitasBySlot → 10:00
+
+    const res = await request(app)
+      .get("/especialidades-horario/2/slots?fecha=2026-06-05")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.slots).toBeDefined();
+    expect(res.body.slots[0]).toMatchObject({ hora: "10:00", ocupados: 0, lleno: false });
+  });
+
+  test("400 — sin parámetro fecha", async () => {
+    const res = await request(app)
+      .get("/especialidades-horario/2/slots")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(400);
+  });
+
+  test("401 — sin token", async () => {
+    const res = await request(app).get("/especialidades-horario/2/slots?fecha=2026-06-05");
+    expect(res.status).toBe(401);
+  });
+
+  test("200 — especialidad inactiva → { inactiva: true }", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ...ESP_CON_SLOT, ACTIVO: 0 }] });
+    const res = await request(app)
+      .get("/especialidades-horario/2/slots?fecha=2026-06-05")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.inactiva).toBe(true);
+  });
+
+  test("200 — fecha bloqueada por excepción → { bloqueada: true, motivo }", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [ESP_CON_SLOT] }); // findById
+    mockExecute.mockResolvedValueOnce({ rows: [{               // findExcepcionByFecha
+      ID_EXCEPCION: 5, ID_ESPECIALIDAD: 2,
+      FECHA: "2026-06-05", MOTIVO: "Feriado", CREATED_AT: "2026-06-01",
+    }]});
+    const res = await request(app)
+      .get("/especialidades-horario/2/slots?fecha=2026-06-05")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.bloqueada).toBe(true);
+    expect(res.body.motivo).toBe("Feriado");
   });
 });

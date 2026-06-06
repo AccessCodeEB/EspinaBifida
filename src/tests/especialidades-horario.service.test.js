@@ -7,6 +7,7 @@ const mockFindByNombre              = jest.fn();
 const mockUpdate                    = jest.fn();
 const mockCountCitasActivas         = jest.fn();
 const mockCountCitasFuturasActivas  = jest.fn();
+const mockCountCitasBySlot          = jest.fn();
 const mockFindExcepciones           = jest.fn();
 const mockFindExcepcionByFecha      = jest.fn();
 const mockCreateExcepcion           = jest.fn();
@@ -19,6 +20,7 @@ jest.unstable_mockModule("../models/especialidades-horario.model.js", () => ({
   update:                    mockUpdate,
   countCitasActivasPorFecha: mockCountCitasActivas,
   countCitasFuturasActivas:  mockCountCitasFuturasActivas,
+  countCitasBySlot:          mockCountCitasBySlot,
   findExcepciones:           mockFindExcepciones,
   findExcepcionByFecha:      mockFindExcepcionByFecha,
   createExcepcion:           mockCreateExcepcion,
@@ -97,8 +99,8 @@ describe("esDentroDeHorario", () => {
     expect(Svc.esDentroDeHorario(ESP_PSICOLOGIA, "11:30")).toBe(true);
   });
 
-  test("12:00 en el límite de 10:00-12:00 → válido (límite incluido)", () => {
-    expect(Svc.esDentroDeHorario(ESP_PSICOLOGIA, "12:00")).toBe(true);
+  test("12:00 en el límite superior de 10:00-12:00 → inválido (fin exclusivo)", () => {
+    expect(Svc.esDentroDeHorario(ESP_PSICOLOGIA, "12:00")).toBe(false);
   });
 
   test("09:30 antes de 10:00 → inválido", () => {
@@ -178,7 +180,7 @@ describe("validarSlotEspecialidad", () => {
   test("capacidad llena (3/3) → 400 CAPACIDAD_LLENA", async () => {
     mockFindByNombre.mockResolvedValue(ESP_PSICOLOGIA);
     mockFindExcepcionByFecha.mockResolvedValue(null);
-    mockCountCitasActivas.mockResolvedValue(3); // ya llenas las 3 plazas
+    mockCountCitasBySlot.mockResolvedValue(3); // ya llenas las 3 plazas
     await expect(
       Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "10:00")
     ).rejects.toMatchObject({ statusCode: 400, code: "CAPACIDAD_LLENA" });
@@ -187,7 +189,7 @@ describe("validarSlotEspecialidad", () => {
   test("capacidad parcial (2/3) → válido", async () => {
     mockFindByNombre.mockResolvedValue(ESP_PSICOLOGIA);
     mockFindExcepcionByFecha.mockResolvedValue(null);
-    mockCountCitasActivas.mockResolvedValue(2);
+    mockCountCitasBySlot.mockResolvedValue(2);
     await expect(
       Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "10:00")
     ).resolves.toBeUndefined();
@@ -533,5 +535,187 @@ describe("countCitasFuturas y countCitasEnFecha", () => {
     const result = await Svc.countCitasEnFecha("Psicología", "2026-06-05");
     expect(mockCountCitasActivas).toHaveBeenCalledWith("Psicología", "2026-06-05");
     expect(result).toBe(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// generateSlots
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("generateSlots", () => {
+  test("Urología 09:30–12:00, duracion=30 → 5 slots", () => {
+    const esp = { HORA_INICIO: "09:30", HORA_FIN: "12:00", DURACION_CITA: 30 };
+    expect(Svc.generateSlots(esp)).toEqual(["09:30", "10:00", "10:30", "11:00", "11:30"]);
+  });
+
+  test("Psicología 10:00–12:00, duracion=60 → 2 slots", () => {
+    const esp = { HORA_INICIO: "10:00", HORA_FIN: "12:00", DURACION_CITA: 60 };
+    expect(Svc.generateSlots(esp)).toEqual(["10:00", "11:00"]);
+  });
+
+  test("Gastro 10:00–12:00, duracion=30 → 4 slots", () => {
+    const esp = { HORA_INICIO: "10:00", HORA_FIN: "12:00", DURACION_CITA: 30 };
+    expect(Svc.generateSlots(esp)).toEqual(["10:00", "10:30", "11:00", "11:30"]);
+  });
+
+  test("sin HORA_FIN, duracion=45 desde 08:00 → usa 240min máximo → 5 slots", () => {
+    // endMins = 480 + 240 = 720, latestStart = 720 - 45 = 675 = 11:15
+    // slots: 480(08:00), 525(08:45), 570(09:30), 615(10:15), 660(11:00) → 660 <= 675 ✓
+    // siguiente: 705 > 675 ✗ → stop
+    const esp = { HORA_INICIO: "08:00", HORA_FIN: null, DURACION_CITA: 45 };
+    expect(Svc.generateSlots(esp)).toEqual(["08:00", "08:45", "09:30", "10:15", "11:00"]);
+  });
+
+  test("HORA_FIN = HORA_INICIO → [] (latestStart < startMins)", () => {
+    const esp = { HORA_INICIO: "09:00", HORA_FIN: "09:00", DURACION_CITA: 30 };
+    expect(Svc.generateSlots(esp)).toEqual([]);
+  });
+
+  test("DURACION_CITA = 0 → []", () => {
+    const esp = { HORA_INICIO: "09:00", HORA_FIN: "12:00", DURACION_CITA: 0 };
+    expect(Svc.generateSlots(esp)).toEqual([]);
+  });
+
+  test("DURACION_CITA = null → []", () => {
+    const esp = { HORA_INICIO: "09:00", HORA_FIN: "12:00", DURACION_CITA: null };
+    expect(Svc.generateSlots(esp)).toEqual([]);
+  });
+
+  test("DURACION_CITA = undefined → []", () => {
+    const esp = { HORA_INICIO: "09:00", HORA_FIN: "12:00", DURACION_CITA: undefined };
+    expect(Svc.generateSlots(esp)).toEqual([]);
+  });
+
+  test("Cirugía sin HORA_FIN, duracion=45 desde 08:00 → mismo que caso anterior", () => {
+    const esp = { ...ESP_CIRUGIA, DURACION_CITA: 45 };
+    expect(Svc.generateSlots(esp)).toEqual(["08:00", "08:45", "09:30", "10:15", "11:00"]);
+  });
+
+  test("ventana no divisible exacta: duracion=90, ventana 09:00–11:00 → solo 09:00", () => {
+    // latestStart = 660 - 90 = 570 = 09:30; pero 09:00+90=10:30<=660... espera
+    // startMins=540, endMins=660, latestStart=660-90=570
+    // 540<=570 → slot 09:00; 540+90=630>570 → stop → [09:00]
+    const esp = { HORA_INICIO: "09:00", HORA_FIN: "11:00", DURACION_CITA: 90 };
+    expect(Svc.generateSlots(esp)).toEqual(["09:00"]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getSlotsConDisponibilidad
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ESP_SLOTS_BASE = {
+  ID_ESPECIALIDAD: 3,
+  NOMBRE: "Psicología",
+  DIA_SEMANA: 5,
+  HORA_INICIO: "10:00",
+  HORA_FIN: "12:00",
+  CAPACIDAD_MAX: 2,
+  TIPO_FRECUENCIA: "SEMANAL",
+  ACTIVO: 1,
+  NOTAS: null,
+  DURACION_CITA: 60,
+};
+
+describe("getSlotsConDisponibilidad", () => {
+  test("especialidad no encontrada → 404", async () => {
+    mockFindById.mockResolvedValue(null);
+    await expect(Svc.getSlotsConDisponibilidad(99, "2026-06-05"))
+      .rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  test("especialidad inactiva → { inactiva: true }", async () => {
+    mockFindById.mockResolvedValue({ ...ESP_SLOTS_BASE, ACTIVO: 0 });
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r).toEqual({ inactiva: true });
+    expect(mockFindExcepcionByFecha).not.toHaveBeenCalled();
+  });
+
+  test("fecha bloqueada con motivo → { bloqueada: true, motivo }", async () => {
+    mockFindById.mockResolvedValue(ESP_SLOTS_BASE);
+    mockFindExcepcionByFecha.mockResolvedValue({ MOTIVO: "Festivo" });
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r).toEqual({ bloqueada: true, motivo: "Festivo" });
+    expect(mockCountCitasBySlot).not.toHaveBeenCalled();
+  });
+
+  test("fecha bloqueada sin motivo → { bloqueada: true, motivo: null }", async () => {
+    mockFindById.mockResolvedValue(ESP_SLOTS_BASE);
+    mockFindExcepcionByFecha.mockResolvedValue({ MOTIVO: null });
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r).toEqual({ bloqueada: true, motivo: null });
+  });
+
+  test("slots disponibles parcialmente llenos", async () => {
+    mockFindById.mockResolvedValue(ESP_SLOTS_BASE); // cap=2, slots: 10:00, 11:00
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCountCitasBySlot.mockResolvedValue(1); // 1 ocupado en cada slot
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r.slots).toEqual([
+      { hora: "10:00", ocupados: 1, capacidad: 2, lleno: false },
+      { hora: "11:00", ocupados: 1, capacidad: 2, lleno: false },
+    ]);
+  });
+
+  test("slot lleno cuando ocupados >= capacidad", async () => {
+    mockFindById.mockResolvedValue(ESP_SLOTS_BASE); // cap=2
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCountCitasBySlot.mockResolvedValue(2); // lleno
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r.slots[0].lleno).toBe(true);
+    expect(r.slots[1].lleno).toBe(true);
+  });
+
+  test("sin capacidad (CAPACIDAD_MAX=null) → lleno siempre false", async () => {
+    mockFindById.mockResolvedValue({ ...ESP_SLOTS_BASE, CAPACIDAD_MAX: null });
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCountCitasBySlot.mockResolvedValue(99);
+    const r = await Svc.getSlotsConDisponibilidad(3, "2026-06-05");
+    expect(r.slots.every(s => s.lleno === false)).toBe(true);
+    expect(r.slots[0].capacidad).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// validarSlotEspecialidad — SLOT_NO_VALIDO (nueva validación)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("validarSlotEspecialidad — SLOT_NO_VALIDO", () => {
+  const ESP_CON_SLOTS = {
+    ...ESP_PSICOLOGIA,
+    HORA_INICIO: "09:30",
+    HORA_FIN: "12:00",
+    DURACION_CITA: 30,
+    // slots válidos: 09:30, 10:00, 10:30, 11:00, 11:30
+  };
+
+  test("hora 09:47 no es slot válido (30min desde 09:30) → SLOT_NO_VALIDO", async () => {
+    mockFindByNombre.mockResolvedValue(ESP_CON_SLOTS);
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    // 2026-06-05 = viernes, válido para Psicología
+    await expect(
+      Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "09:47")
+    ).rejects.toMatchObject({ statusCode: 400, code: "SLOT_NO_VALIDO" });
+  });
+
+  test("hora 09:30 es slot válido → pasa validación de slot", async () => {
+    mockFindByNombre.mockResolvedValue(ESP_CON_SLOTS);
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCountCitasBySlot.mockResolvedValue(0);
+    // No debe lanzar SLOT_NO_VALIDO
+    await expect(
+      Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "09:30")
+    ).resolves.toBeUndefined();
+  });
+
+  test("especialidad sin DURACION_CITA → sin slots generados, no valida slot exacto", async () => {
+    // ESP_PSICOLOGIA no tiene DURACION_CITA → generateSlots devuelve []
+    mockFindByNombre.mockResolvedValue(ESP_PSICOLOGIA);
+    mockFindExcepcionByFecha.mockResolvedValue(null);
+    mockCountCitasBySlot.mockResolvedValue(0);
+    // Hora arbitraria dentro del horario, no debe lanzar SLOT_NO_VALIDO
+    await expect(
+      Svc.validarSlotEspecialidad("Psicología", "2026-06-05", "10:17")
+    ).resolves.toBeUndefined();
   });
 });

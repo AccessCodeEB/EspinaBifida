@@ -101,6 +101,7 @@ export function EspecialidadesConfigSection() {
       tipoFrecuencia: esp.tipoFrecuencia,
       activo:         esp.activo,
       notas:          esp.notas ?? "",
+      duracionCita:   esp.duracionCita ?? 30,
     })
     setCitasFuturasAviso(null)
     setCheckingCitasFuturas(false)
@@ -119,6 +120,7 @@ export function EspecialidadesConfigSection() {
         tipoFrecuencia: editForm.tipoFrecuencia,
         activo:         editForm.activo,
         notas:          editForm.notas || null,
+        duracionCita:   editForm.duracionCita ?? 30,
       })
       toast.success("Horario actualizado correctamente")
       setShowEditDialog(false)
@@ -579,6 +581,20 @@ export function EspecialidadesConfigSection() {
               <Input type="number" min={1} className="h-10 text-sm" placeholder="Sin límite"
                 value={editForm.capacidadMax ?? ""}
                 onChange={e => setEditForm(f => ({ ...f, capacidadMax: e.target.value ? Number(e.target.value) : null }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Duración de cita (min)</Label>
+              <Select
+                value={String(editForm.duracionCita ?? 30)}
+                onValueChange={v => setEditForm(f => ({ ...f, duracionCita: Number(v) }))}
+              >
+                <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[15, 20, 30, 45, 60, 90].map(m => (
+                    <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Notas</Label>
