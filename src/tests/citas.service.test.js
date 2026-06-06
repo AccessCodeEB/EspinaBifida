@@ -245,7 +245,7 @@ describe("regression ISSUE-003 — updateCita re-valida slot al editar cita", ()
     await Service.updateCita(1, { fecha: "2026-06-19", hora: "10:00" });
     expect(mockValidarSlot).toHaveBeenCalledTimes(1);
     expect(mockValidarSlot).toHaveBeenCalledWith(
-      citaBase.ESPECIALISTA, "2026-06-19", "10:00"
+      citaBase.ESPECIALISTA, "2026-06-19", "10:00", 1
     );
   });
 

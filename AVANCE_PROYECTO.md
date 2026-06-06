@@ -322,6 +322,14 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `especialidades-horario.routes.test.js`: 6 tests de integración para los endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha` (200, 400, 401, 404)
 - Resultado: **statements 97.71% · branches 95.78% · functions 95.85% · lines 97.97%** — todos ≥ 95% threshold · 1381 tests verde
 
+### Cambios 2026-06-06 — Devolución de comodatos: temprana y tardía
+
+**Devolución física de equipo en comodatos (`PATCH /comodatos/:id/devolucion`):**
+- Migración 033: agrega columna `FECHA_DEVOLUCION_REAL DATE` (nullable) a `COMODATOS`
+- El endpoint detecta automáticamente el tipo: `anticipada` (antes de fecha esperada), `tarde` (después), `aTiempo` (en la fecha) o `sinFechaEsperada`
+- Responde 409 si el comodato ya tiene una devolución registrada
+- Frontend: botón "Devolver equipo" visible solo cuando `estatus === "Activo"` y sin devolución previa; muestra badge con tipo de devolución y fecha real tras confirmar
+
 ### Cambios 2026-06-06 — Rediseño UX: Registrar Pago / Perdonar Deuda en Comodatos
 
 **Rediseño completo del flujo `PagoDialog` (`frontend/components/sections/comodatos.tsx`):**
@@ -548,9 +556,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad alta — Bugs / UX críticos
 
-| Tarea | Descripción |
-|---|---|
-| **Gestión de devolución de comodatos: temprana y tardía** | Registrar devolución anticipada o tardía (préstamo vencido). Indicador visual en la lista y evento correspondiente. |
+*(Sin ítems pendientes en esta prioridad)*
 
 ### Prioridad media — UX / UI
 
@@ -560,16 +566,11 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad media — Citas
 
-| Tarea | Descripción |
-|---|---|
-| **Posponer o cancelar cita** | En el panel de detalle de una cita, agregar dos opciones: "Posponer" y "Cancelar". Posponer muestra solo los slots disponibles del mismo especialista (misma lógica de `validarSlotEspecialidad` pero en modo descubrimiento). Al posponer, el `ID_CITA` se mantiene — solo cambia `FECHA`/`HORA`. Aplica para todas las citas sin importar si tienen servicio vinculado. Caso sutil: al validar el nuevo slot, excluir la cita que se está moviendo del conteo de capacidad para evitar falso lleno. |
-| **Vínculo BD entre Servicios y Citas** | Actualmente al cancelar una cita/servicio el dialog solo redirige a la otra sección sin saber cuál registro cancelar exactamente. Para que la cancelación sea directa y automática se necesita: (1) migración — agregar `ID_CITA NUMBER NULL` como FK en `SERVICIOS`; (2) backend — guardar el vínculo al crear servicio de tipo consulta; (3) cascade — al cancelar servicio → cancelar cita vinculada automáticamente, y viceversa. Por ahora los dialogs de redirección cubren el caso de uso aunque requieren búsqueda manual. |
+*(Sin ítems pendientes en esta prioridad)*
 
 ### Prioridad media — Servicios
 
-| Tarea | Descripción |
-|---|---|
-| **Motivos más amigables al registrar servicio con inventario** | Al registrar un servicio de tipo Medicamento o Insumos médicos, el formulario debe guiar mejor al usuario: mostrar un selector con motivos sugeridos ("Entrega mensual", "Receta médica", "Primera entrega", etc.) en lugar de un campo de texto libre. |
+*(Sin ítems pendientes en esta prioridad)*
 
 
 ### Prioridad media — Notificaciones futuras
