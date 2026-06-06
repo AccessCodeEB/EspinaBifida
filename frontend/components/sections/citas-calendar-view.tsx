@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { updateEstatusCita, type Cita } from "@/services/citas"
 import { esHoraValidaFrontend, type EspecialidadHorario } from "@/services/especialidades-horario"
 
-const GRID_START=7,GRID_END=23,WORK_START=8,WORK_END=23
+const GRID_START=7,GRID_END=16,WORK_START=8,WORK_END=16
 const CELL_H=64,TOTAL_H=GRID_END-GRID_START,GRID_H=CELL_H*TOTAL_H
 const HOURS=Array.from({length:TOTAL_H+1},(_,i)=>i+GRID_START)
 const DEFAULT_MINS=60

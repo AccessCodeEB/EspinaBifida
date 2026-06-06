@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { Search, SlidersHorizontal, Calendar, User, ChevronUp, ChevronDown, X, CheckCircle2, Clock, XCircle, Hash, Stethoscope, MoreVertical, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { type Cita, deleteCitaPermanente } from "@/services/citas"
 import type { Beneficiario } from "@/services/beneficiarios"
@@ -56,10 +57,12 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
   const [query, setQuery]               = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterEstatus>("Todos")
   const [filterFecha, setFilterFecha]   = useState("")
+  const [showFilters, setShowFilters]   = useState(false)
   const [sortField, setSortField]       = useState<SortField>("fecha")
   const [sortDir, setSortDir]           = useState<SortDir>("desc")
-  const [showFilters, setShowFilters]   = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
 
   // Close panel on outside click
   useEffect(() => {
@@ -120,12 +123,10 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
   }
 
   async function handleDelete(id: number) {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta cita del sistema? Esta acción no se puede deshacer.")) {
-      return
-    }
     try {
       await deleteCitaPermanente(id)
       toast.success("Cita eliminada permanentemente")
+      setDeleteConfirmId(null)
       onReload?.()
     } catch (err) {
       toast.error("Error al eliminar la cita")
@@ -303,13 +304,13 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
                                 <MoreVertical className="size-4" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="end" className="w-56">
                               <DropdownMenuItem 
-                                className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950 dark:focus:text-red-400 cursor-pointer"
-                                onClick={() => handleDelete(cita.id)}
+                                className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950 dark:focus:text-red-400 cursor-pointer flex items-center"
+                                onClick={() => setDeleteConfirmId(cita.id)}
                               >
-                                <Trash2 className="mr-2 size-4" />
-                                Eliminar permanentemente
+                                <Trash2 className="mr-2 size-4 shrink-0" />
+                                <span className="truncate">Borrar permanentemente</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -327,6 +328,29 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
           <p className="text-[11px] text-muted-foreground">{filtered.length} de {citas.length} citas</p>
         </div>
       </div>
+
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={(o) => !o && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar cita permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto borrará la cita de forma definitiva de la base de datos y ya no aparecerá en el historial ni en las métricas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                if (deleteConfirmId !== null) handleDelete(deleteConfirmId)
+              }}
+              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
+            >
+              Borrar permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
