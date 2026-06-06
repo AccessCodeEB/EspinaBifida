@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-05 (Jueves) — Fix: ocultar "Membresía Anual" del selector de tipo de servicio al registrar un nuevo servicio
+**Actualización:** 2026-06-06 (Viernes) — Rediseño UX flujo de registrar pago/exención en Comodatos
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -322,6 +322,18 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `especialidades-horario.routes.test.js`: 6 tests de integración para los endpoints `GET /:id/citas-futuras` y `GET /:id/citas-en-fecha` (200, 400, 401, 404)
 - Resultado: **statements 97.71% · branches 95.78% · functions 95.85% · lines 97.97%** — todos ≥ 95% threshold · 1381 tests verde
 
+### Cambios 2026-06-06 — Rediseño UX: Registrar Pago / Perdonar Deuda en Comodatos
+
+**Rediseño completo del flujo `PagoDialog` (`frontend/components/sections/comodatos.tsx`):**
+- Reemplaza checkbox de "exención" por dos tarjetas visuales clickeables: **💳 Pago recibido** y **🎁 Perdonar deuda** — obliga a Lupita a elegir conscientemente
+- Barra de progreso con **Total · Cubierto · Saldo** y porcentaje completado visible de un vistazo
+- Botón **"Saldo completo ($$)"** para rellenar el monto pendiente con un solo clic
+- **Preview dinámico**: muestra cuánto quedará pendiente después del movimiento, o "¡Comodato liquidado!" si queda en cero
+- Validación en tiempo real: bloquea el envío si el monto supera el saldo
+- Lenguaje llano: "Perdonar deuda" en lugar de "exención"; aviso explicativo en ámbar
+- Caso donación total (`montoTotal null`) manejado con banner verde en lugar de progress bar
+- Fix: notas del pago ahora se muestran en el historial de pagos del diálogo de detalle con prefijo "Nota:" en negrita para mayor visibilidad
+
 ### Cambios 2026-06-05 — Fix: Membresía Anual oculta en registro de servicios
 
 **Bug fix — formulario de registro de servicios (`frontend/components/sections/servicios.tsx`):**
@@ -538,7 +550,6 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Mejorar UI/UX de Registrar Pago / Exención** | El flujo actual de registrar pago o exención es confuso y poco amigable. Rediseñar la interfaz para que sea clara, guiada y fácil de entender para usuarios sin experiencia técnica. Simplificar pasos, mejorar etiquetas, y reducir fricción. |
 | **Gestión de devolución de comodatos: temprana y tardía** | Registrar devolución anticipada o tardía (préstamo vencido). Indicador visual en la lista y evento correspondiente. |
 
 ### Prioridad media — UX / UI
