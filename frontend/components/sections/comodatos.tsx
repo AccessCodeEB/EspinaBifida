@@ -279,102 +279,217 @@ function PagoDialog({
   onClose: () => void
   onPaid: () => void
 }) {
-  const [monto, setMonto]       = useState("")
-  const [esExento, setEsExento] = useState(false)
-  const [notas, setNotas]       = useState("")
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+  type Modo = "pago" | "exencion"
+  const [modo, setModo]     = useState<Modo>("pago")
+  const [monto, setMonto]   = useState("")
+  const [notas, setNotas]   = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState<string | null>(null)
 
-  const reset = () => { setMonto(""); setEsExento(false); setNotas(""); setError(null) }
+  const reset = () => { setModo("pago"); setMonto(""); setNotas(""); setError(null) }
   const handleClose = () => { reset(); onClose() }
+
+  const esDonacion = comodato?.montoTotal == null
+  const total      = comodato?.montoTotal ?? 0
+  const pagado     = comodato?.montoPagado ?? 0
+  const exento     = comodato?.montoExento ?? 0
+  const saldo      = esDonacion ? 0 : Math.max(0, total - pagado - exento)
+  const porcentaje = total > 0 ? Math.min(100, Math.round(((pagado + exento) / total) * 100)) : 0
+
+  const montoNum      = parseFloat(monto) || 0
+  const saldoDespues  = Math.max(0, saldo - montoNum)
+  const quedaLiquidado = montoNum > 0 && saldoDespues === 0
+  const superaSaldo    = montoNum > saldo && saldo > 0
 
   async function handleSubmit() {
     if (!comodato) return
-    if (!monto || Number(monto) <= 0) { setError("El monto debe ser mayor a 0"); return }
+    if (!monto || montoNum <= 0) { setError("Ingresa un monto mayor a 0"); return }
+    if (superaSaldo) { setError(`El monto no puede superar el saldo pendiente (${fmt(saldo)})`); return }
     setSaving(true); setError(null)
     try {
       const res = await registrarPago(comodato.idComodato, {
-        monto: Number(monto),
-        esExento,
+        monto: montoNum,
+        esExento: modo === "exencion",
         notas: notas || undefined,
       })
       const msg = res.data.estatusResultante === "Pagado"
-        ? "Pago registrado — comodato liquidado"
-        : esExento ? "Exención registrada exitosamente" : "Pago registrado exitosamente"
+        ? "¡Comodato liquidado completamente!"
+        : modo === "exencion" ? "Deuda perdonada exitosamente" : "Pago registrado exitosamente"
       toast.success(msg)
       reset(); onPaid()
     } catch (e) {
-      setError(friendlyError(e, "No se pudo registrar el pago"))
+      setError(friendlyError(e, "No se pudo registrar"))
     } finally { setSaving(false) }
   }
-
-  const pendiente = comodato?.montoTotal != null
-    ? comodato.montoTotal - comodato.montoPagado - comodato.montoExento
-    : null
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) handleClose() }}>
       <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Registrar pago / exención</DialogTitle>
+          <DialogTitle>Registrar movimiento</DialogTitle>
           {comodato && (
             <DialogDescription>
-              {comodato.articulo ?? "Equipo"} · Pendiente: {fmt(pendiente)}
+              {comodato.articulo ?? "Equipo"} · {comodato.beneficiario ?? comodato.curp}
             </DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</Label>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={monto}
-              onChange={e => setMonto(e.target.value)}
-              placeholder="0.00"
-              className="h-9 w-full rounded-lg border border-border/70 bg-background px-3 text-xs outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-            />
+        {comodato && (
+          <div className="flex flex-col gap-4 py-2">
+            {/* Resumen financiero */}
+            {esDonacion ? (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400">
+                <Gift className="size-4 shrink-0" />
+                <span>Este comodato es una donación total — no tiene monto de recuperación.</span>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { label: "Total",  value: fmt(total),          color: "text-foreground" },
+                    { label: "Cubierto", value: fmt(pagado + exento), color: "text-emerald-600 dark:text-emerald-400" },
+                    { label: "Saldo",  value: fmt(saldo),           color: "text-foreground font-bold" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="flex flex-col gap-0.5">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+                      <p className={`text-sm tabular-nums ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${porcentaje}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground text-right">{porcentaje}% completado</p>
+              </div>
+            )}
+
+            {/* Elección de tipo */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">¿Qué vas a registrar?</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setModo("pago"); setError(null) }}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 px-2 text-xs font-semibold transition-all ${
+                    modo === "pago"
+                      ? "border-[#0f4c81] bg-[#0f4c81]/5 text-[#0f4c81] dark:text-blue-400"
+                      : "border-border/70 bg-card text-muted-foreground hover:border-[#0f4c81]/40 hover:bg-muted/30"
+                  }`}
+                >
+                  <CreditCard className="size-5" />
+                  <span>Pago recibido</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setModo("exencion"); setError(null) }}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border-2 py-3 px-2 text-xs font-semibold transition-all ${
+                    modo === "exencion"
+                      ? "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "border-border/70 bg-card text-muted-foreground hover:border-amber-400/40 hover:bg-muted/30"
+                  }`}
+                >
+                  <Gift className="size-5" />
+                  <span>Perdonar deuda</span>
+                </button>
+              </div>
+              {modo === "exencion" && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-400">
+                  Este monto se perdonará y no se le cobrará al beneficiario.
+                </p>
+              )}
+            </div>
+
+            {/* Monto */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</Label>
+                {saldo > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMonto(saldo.toFixed(2))}
+                    className="text-[10px] font-semibold text-[#0f4c81] hover:underline dark:text-blue-400"
+                  >
+                    Saldo completo ({fmt(saldo)})
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground select-none">$</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={monto}
+                  onChange={e => { setMonto(e.target.value); setError(null) }}
+                  placeholder="0.00"
+                  className="h-9 w-full rounded-lg border border-border/70 bg-background pl-6 pr-3 text-xs outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                />
+              </div>
+            </div>
+
+            {/* Preview dinámico */}
+            {montoNum > 0 && !superaSaldo && (
+              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                quedaLiquidado
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
+                  : "border-border/70 bg-muted/20 text-foreground"
+              }`}>
+                {quedaLiquidado
+                  ? <CheckCircle2 className="size-3.5 shrink-0" />
+                  : <AlertCircle className="size-3.5 shrink-0 text-muted-foreground" />
+                }
+                <span>
+                  {quedaLiquidado
+                    ? "¡El comodato quedará completamente liquidado!"
+                    : `Quedará pendiente: ${fmt(saldoDespues)}`
+                  }
+                </span>
+              </div>
+            )}
+            {superaSaldo && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+                <AlertCircle className="size-3.5 shrink-0" />
+                <span>El monto supera el saldo pendiente ({fmt(saldo)})</span>
+              </div>
+            )}
+
+            {/* Notas */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Notas <span className="normal-case font-normal">(opcional)</span>
+              </Label>
+              <textarea
+                rows={2}
+                value={notas}
+                onChange={e => setNotas(e.target.value)}
+                className="w-full resize-none rounded-lg border border-border/70 bg-background px-3 py-2 text-xs outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                placeholder={modo === "exencion" ? "Motivo del perdón de deuda..." : "Observaciones del pago..."}
+              />
+            </div>
+
+            {error && <p className="text-xs text-destructive">{error}</p>}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={saving || montoNum <= 0 || superaSaldo}
+                className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: modo === "exencion" ? "#d97706" : NAVY }}
+              >
+                {saving
+                  ? "Registrando..."
+                  : modo === "exencion" ? "Perdonar deuda" : "Registrar pago"
+                }
+              </button>
+            </div>
           </div>
-
-          <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              checked={esExento}
-              onChange={e => setEsExento(e.target.checked)}
-              className="size-3.5 rounded"
-            />
-            Este monto es una exención (monto perdonado por Lupita)
-          </label>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Notas (opcional)</Label>
-            <textarea
-              rows={2}
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              className="w-full resize-none rounded-lg border border-border/70 bg-background px-3 py-2 text-xs outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-              placeholder="Motivo del pago o exención..."
-            />
-          </div>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="rounded-lg px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: esExento ? "#6b7280" : NAVY }}
-            >
-              {saving ? "Registrando..." : esExento ? "Registrar exención" : "Registrar pago"}
-            </button>
-          </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -829,6 +944,7 @@ function DetalleComodatoDialog({
     : null
 
   async function handleCancelar() {
+    if (!comodato) return
     try {
       await cancelarComodato(comodato.idComodato)
       toast.success("Comodato cancelado")
