@@ -6,7 +6,7 @@ export const findAll = ({ soloActivos = true } = {}) =>
     conn.execute(`
       SELECT
         ID_ESPECIALIDAD, NOMBRE, DIA_SEMANA, HORA_INICIO, HORA_FIN,
-        CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS
+        CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS, DURACION_CITA
       FROM ESPECIALIDADES_HORARIO
       ${soloActivos ? "WHERE ACTIVO = 1" : ""}
       ORDER BY ID_ESPECIALIDAD
@@ -18,7 +18,7 @@ export const findByNombre = (nombre) =>
   withConnection(conn =>
     conn.execute(
       `SELECT ID_ESPECIALIDAD, NOMBRE, DIA_SEMANA, HORA_INICIO, HORA_FIN,
-              CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS
+              CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS, DURACION_CITA
        FROM ESPECIALIDADES_HORARIO
        WHERE UPPER(NOMBRE) = UPPER(:nombre)`,
       { nombre }
@@ -30,14 +30,14 @@ export const findById = (id) =>
   withConnection(conn =>
     conn.execute(
       `SELECT ID_ESPECIALIDAD, NOMBRE, DIA_SEMANA, HORA_INICIO, HORA_FIN,
-              CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS
+              CAPACIDAD_MAX, TIPO_FRECUENCIA, ACTIVO, NOTAS, DURACION_CITA
        FROM ESPECIALIDADES_HORARIO WHERE ID_ESPECIALIDAD = :id`,
       { id }
     ).then(r => r.rows?.[0] ?? null)
   );
 
 /** Actualiza el horario base de una especialidad. */
-export const update = (id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas }) =>
+export const update = (id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas, duracionCita }) =>
   withConnection(conn =>
     conn.execute(
       `UPDATE ESPECIALIDADES_HORARIO SET
@@ -47,11 +47,13 @@ export const update = (id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoF
         CAPACIDAD_MAX   = :capacidadMax,
         TIPO_FRECUENCIA = NVL(:tipoFrecuencia, TIPO_FRECUENCIA),
         ACTIVO          = NVL(:activo,         ACTIVO),
-        NOTAS           = :notas
+        NOTAS           = :notas,
+        DURACION_CITA   = NVL(:duracionCita,   DURACION_CITA)
        WHERE ID_ESPECIALIDAD = :id`,
       { id, diaSemana: diaSemana ?? null, horaInicio: horaInicio ?? null, horaFin: horaFin ?? null,
         capacidadMax: capacidadMax ?? null, tipoFrecuencia: tipoFrecuencia ?? null,
-        activo: activo == null ? null : (activo ? 1 : 0), notas: notas ?? null },
+        activo: activo == null ? null : (activo ? 1 : 0), notas: notas ?? null,
+        duracionCita: duracionCita ?? null },
       { autoCommit: true }
     )
   );
@@ -79,6 +81,20 @@ export const countCitasFuturasActivas = (nombre) =>
          AND TRUNC(FECHA)       >= TRUNC(SYSDATE)
          AND ESTATUS NOT IN ('CANCELADA', 'COMPLETADA')`,
       { nombre }
+    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
+  );
+
+/** Cuenta citas activas en un slot específico (especialidad + fecha + hora). */
+export const countCitasBySlot = (nombre, fecha, hora) =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT COUNT(1) AS TOTAL
+       FROM CITAS
+       WHERE UPPER(ESPECIALISTA) = UPPER(:nombre)
+         AND TRUNC(FECHA) = TO_DATE(:fecha, 'YYYY-MM-DD')
+         AND TO_CHAR(FECHA, 'HH24:MI') = LPAD(TRIM(:hora), 5, '0')
+         AND ESTATUS NOT IN ('CANCELADA','COMPLETADA')`,
+      { nombre, fecha, hora }
     ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
   );
 
