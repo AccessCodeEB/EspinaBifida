@@ -328,6 +328,53 @@ export const syncComodatosPorVencer = (mensaje) =>
     await conn.commit();
   });
 
+export const findPreregistrosPendientes = (dias = 3) =>
+  withConnection(conn =>
+    conn.execute(
+      `SELECT CURP,
+              NOMBRES || ' ' || APELLIDO_PATERNO AS NOMBRE,
+              FECHA_ALTA,
+              TRUNC(SYSDATE) - TRUNC(FECHA_ALTA) AS DIAS_PENDIENTE
+       FROM BENEFICIARIOS
+       WHERE ESTATUS = 'Inactivo'
+         AND NOTAS LIKE '[SOLICITUD_PUBLICA_PRE_REG]%'
+         AND TRUNC(SYSDATE) - TRUNC(FECHA_ALTA) > :dias
+       ORDER BY FECHA_ALTA`,
+      { dias }
+    ).then(r => r.rows)
+  );
+
+export const syncPreregistroPendiente = (mensaje) =>
+  withConnection(async conn => {
+    const { rows } = await conn.execute(
+      `SELECT ID_NOTIFICACION FROM NOTIFICACIONES
+       WHERE TIPO = 'PREREGISTRO_PENDIENTE' AND ESTATUS = 'PENDIENTE'
+       FETCH FIRST 1 ROWS ONLY`
+    );
+    if (rows.length > 0) {
+      if (mensaje) {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES
+           SET MENSAJE = :msg, FECHA_CREACION = SYSDATE
+           WHERE ID_NOTIFICACION = :id`,
+          { msg: mensaje, id: rows[0].ID_NOTIFICACION }
+        );
+      } else {
+        await conn.execute(
+          `UPDATE NOTIFICACIONES SET ESTATUS = 'LEIDA', FECHA_LECTURA = SYSDATE
+           WHERE TIPO = 'PREREGISTRO_PENDIENTE' AND ESTATUS = 'PENDIENTE'`
+        );
+      }
+    } else if (mensaje) {
+      await conn.execute(
+        `INSERT INTO NOTIFICACIONES (TIPO, REFERENCIA_TIPO, MENSAJE)
+         VALUES ('PREREGISTRO_PENDIENTE', 'BENEFICIARIO', :msg)`,
+        { msg: mensaje }
+      );
+    }
+    await conn.commit();
+  });
+
 export const deleteE2ENotificaciones = () =>
   withConnection(async conn => {
     await conn.execute(

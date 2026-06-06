@@ -134,14 +134,36 @@ async function checkComodatosPorVencer() {
   return rows.length;
 }
 
+export async function checkPreregistroPendiente(dias = 3) {
+  const rows = await Model.findPreregistrosPendientes(dias);
+  if (rows.length === 0) {
+    await Model.syncPreregistroPendiente(null);
+    return 0;
+  }
+  let msg;
+  if (rows.length === 1) {
+    const r = rows[0];
+    const d = Number(r.DIAS_PENDIENTE);
+    msg = `Pre-registro de ${trimNombre(r.NOMBRE)} lleva ${d} día${d === 1 ? "" : "s"} sin revisarse.`;
+  } else {
+    const lista = rows.slice(0, 3).map(r => trimNombre(r.NOMBRE, 25)).join(", ");
+    const extra = rows.length > 3 ? ` y ${rows.length - 3} más` : "";
+    msg = `${rows.length} pre-registros sin revisar por más de ${dias} día${dias === 1 ? "" : "s"}: ${lista}${extra}.`;
+  }
+  msg = truncar(msg);
+  await Model.syncPreregistroPendiente(msg);
+  return rows.length;
+}
+
 export async function runJob() {
-  const [stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos] = await Promise.all([
+  const [stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos, preregistros] = await Promise.all([
     checkStockBajo(),
     checkSinStock(),
     checkMembresiasProximas(),
     checkMembresiasVencidas(),
     checkCitasHoy(),
     checkComodatosPorVencer(),
+    checkPreregistroPendiente(),
   ]);
 
   const huerfanas = await Model.deleteOrphanedNotificaciones().catch(() => 0);
@@ -149,6 +171,5 @@ export async function runJob() {
     console.log(`[notificaciones-job] limpiadas ${huerfanas} notificacion(es) de beneficiarios eliminados`);
   }
 
-  // Resultado del job disponible en el valor de retorno; no se requiere log en producción.
-  return { stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos };
+  return { stockBajo, sinStock, proximas, vencidas, citasHoy, comodatos, preregistros };
 }
