@@ -308,5 +308,6 @@ function mapEspecialidad(r) {
     tipoFrecuencia:  r.TIPO_FRECUENCIA,
     activo:          r.ACTIVO === 1,
     notas:           r.NOTAS ?? null,
+    duracionCita:    r.DURACION_CITA ?? null,
   };
 }
