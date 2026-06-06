@@ -10,6 +10,7 @@ export interface Comodato {
   estatus: "Activo" | "Pagado" | "Cancelado"
   fechaAlta: string
   fechaDevolucionEsperada?: string | null
+  fechaDevolucionReal?: string | null
   notas: string | null
   beneficiario?: string
   articulo?: string
@@ -94,6 +95,14 @@ export function actualizarNotas(id: number, notas: string) {
 /** DELETE /comodatos/:id */
 export function cancelarComodato(id: number) {
   return apiClient.delete<{ message: string }>(`/comodatos/${id}`)
+}
+
+/** PATCH /comodatos/:id/devolucion */
+export function registrarDevolucion(id: number) {
+  return apiClient.patch<{
+    message: string
+    data: { idComodato: number; fechaDevolucionReal: string; tipo: "anticipada" | "tarde" | "aTiempo" | "sinFechaEsperada" }
+  }>(`/comodatos/${id}/devolucion`, {})
 }
 
 /** POST /comodatos/:id/pagos */

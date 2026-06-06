@@ -5,7 +5,7 @@ import {
   Package, Plus, CreditCard, CheckCircle2, XCircle,
   Search, RefreshCw, ChevronDown, FileText, AlertCircle,
   Hash, User, DollarSign, Banknote, Gift, Tag,
-  ArrowUpDown, ChevronUp, Check, ChevronsUpDown,
+  ArrowUpDown, ChevronUp, Check, ChevronsUpDown, RotateCcw,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -24,7 +24,7 @@ import { friendlyError } from "@/lib/friendly-error"
 
 import {
   getComodatos, crearComodato, registrarPago, cancelarComodato,
-  getReporteExenciones, getComodatoById,
+  getReporteExenciones, getComodatoById, registrarDevolucion,
   type Comodato, type ComodatoDetalle, type ExencionReporte,
 } from "@/services/comodatos"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
@@ -935,13 +935,26 @@ function DetalleComodatoDialog({
 }) {
   if (!comodato) return null
 
+  const [devolviendo, setDevolviendo] = useState(false)
+
   const data = detalle ?? comodato
   const saldoPendiente = (data.montoTotal ?? 0) - data.montoPagado - data.montoExento
 
-  const fechaDev = data.fechaDevolucionEsperada ? new Date(data.fechaDevolucionEsperada) : null
-  const diasDev = fechaDev
+  const fechaDev     = data.fechaDevolucionEsperada ? new Date(data.fechaDevolucionEsperada) : null
+  const fechaDevReal = data.fechaDevolucionReal     ? new Date(data.fechaDevolucionReal)     : null
+  const diasDev      = fechaDev && !fechaDevReal
     ? Math.ceil((fechaDev.getTime() - Date.now()) / 86400000)
     : null
+
+  // Calcular tipo de devolución para el badge
+  const tipoDev = fechaDevReal && fechaDev
+    ? (() => {
+        const diff = Math.round((fechaDevReal.getTime() - fechaDev.getTime()) / 86400000)
+        if (diff < -1) return "anticipada"
+        if (diff > 1)  return "tarde"
+        return "aTiempo"
+      })()
+    : fechaDevReal ? "sinFechaEsperada" : null
 
   async function handleCancelar() {
     if (!comodato) return
@@ -952,6 +965,20 @@ function DetalleComodatoDialog({
       onReload()
     } catch (e) {
       toast.error(friendlyError(e, "No se pudo cancelar"))
+    }
+  }
+
+  async function handleDevolucion() {
+    if (!comodato) return
+    setDevolviendo(true)
+    try {
+      const res = await registrarDevolucion(comodato.idComodato)
+      toast.success(res.message)
+      onReload()
+    } catch (e) {
+      toast.error(friendlyError(e, "No se pudo registrar la devolución"))
+    } finally {
+      setDevolviendo(false)
     }
   }
 
@@ -985,7 +1012,23 @@ function DetalleComodatoDialog({
             </div>
 
             {/* Fecha devolución */}
-            {fechaDev && (
+            {fechaDevReal ? (
+              // Ya fue devuelto
+              <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                tipoDev === "tarde"
+                  ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
+              }`}>
+                <CheckCircle2 className="size-3.5 shrink-0" />
+                <span>
+                  Equipo devuelto el <strong>{fechaDevReal.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                  {tipoDev === "anticipada" && " — devolución anticipada"}
+                  {tipoDev === "tarde"      && " — devolución tardía"}
+                  {tipoDev === "aTiempo"    && " — a tiempo"}
+                </span>
+              </div>
+            ) : fechaDev ? (
+              // Pendiente de devolución
               <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
                 diasDev !== null && diasDev < 0
                   ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400"
@@ -1005,7 +1048,7 @@ function DetalleComodatoDialog({
                   )}
                 </span>
               </div>
-            )}
+            ) : null}
 
             {/* Montos */}
             <div className="grid grid-cols-4 gap-2">
@@ -1085,6 +1128,16 @@ function DetalleComodatoDialog({
                 <button onClick={onClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
                   Cerrar
                 </button>
+                {data.estatus === "Activo" && !data.fechaDevolucionReal && (
+                  <button
+                    onClick={handleDevolucion}
+                    disabled={devolviendo}
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                  >
+                    <RotateCcw className="size-3.5" />
+                    {devolviendo ? "Registrando..." : "Registrar devolución"}
+                  </button>
+                )}
                 {data.estatus === "Activo" && (
                   <button
                     onClick={() => onPagar(comodato)}
