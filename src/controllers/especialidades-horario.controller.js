@@ -46,11 +46,14 @@ export const getCitasEnFecha = async (req, res, next) => {
 
 export const getSlotsHandler = async (req, res, next) => {
   try {
-    const { fecha } = req.query;
+    const { fecha, excludeId } = req.query;
     if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
       return res.status(400).json({ error: "fecha es obligatoria y debe tener formato YYYY-MM-DD" });
     }
-    const result = await svc.getSlotsConDisponibilidad(Number(req.params.id), fecha);
+    const result = await svc.getSlotsConDisponibilidad(
+      Number(req.params.id), fecha,
+      excludeId != null ? Number(excludeId) : null
+    );
     res.json(result);
   } catch (err) { next(err); }
 };

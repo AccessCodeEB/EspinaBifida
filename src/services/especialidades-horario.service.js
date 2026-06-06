@@ -181,10 +181,10 @@ export const deleteExcepcion = async (idExcepcion) => {
  * @param {string} fecha   - 'YYYY-MM-DD'
  * @param {string} hora    - 'HH:MM'
  */
-async function validarCapacidad(esp, fecha, hora) {
+async function validarCapacidad(esp, fecha, hora, excludeId = null) {
   if (esp.CAPACIDAD_MAX == null) return;
   if (!hora) return; // sin hora = sin validación de slot
-  const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora);
+  const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, excludeId);
   if (ocupados >= esp.CAPACIDAD_MAX) {
     throw badRequest(
       `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el slot de las ${hora} del ${fecha}.`,
@@ -193,7 +193,7 @@ async function validarCapacidad(esp, fecha, hora) {
   }
 }
 
-export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) => {
+export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora, excludeId = null) => {
   if (!nombreEspecialidad) return; // Especialista opcional: sin restricción
 
   const esp = await model.findByNombre(nombreEspecialidad);
@@ -254,7 +254,7 @@ export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) =
   }
 
   // 4. Verificar capacidad
-  await validarCapacidad(esp, fecha, hora);
+  await validarCapacidad(esp, fecha, hora, excludeId);
 };
 
 // ─── Disponibilidad de slots ─────────────────────────────────────────────────
@@ -267,7 +267,7 @@ export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) =
  * @param {string} fecha - 'YYYY-MM-DD'
  * @returns {object} { slots } | { inactiva: true } | { bloqueada: true, motivo }
  */
-export const getSlotsConDisponibilidad = async (idEspecialidad, fecha) => {
+export const getSlotsConDisponibilidad = async (idEspecialidad, fecha, excludeId = null) => {
   const esp = await model.findById(idEspecialidad);
   if (!esp) throw notFound(`Especialidad con ID ${idEspecialidad} no encontrada`);
 
@@ -285,7 +285,7 @@ export const getSlotsConDisponibilidad = async (idEspecialidad, fecha) => {
 
   const slots = await Promise.all(
     slotHoras.map(async (hora) => {
-      const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora);
+      const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, excludeId);
       const capacidad = esp.CAPACIDAD_MAX ?? null;
       const lleno = capacidad != null && ocupados >= capacidad;
       return { hora, ocupados, capacidad, lleno };

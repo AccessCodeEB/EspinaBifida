@@ -84,7 +84,7 @@ export const updateCita = async (id, data) => {
     const fechaPart = data.fecha ?? (fechaFinal ? fechaFinal.slice(0, 10) : null);
     const horaPart  = (data.hora ?? (fechaFinal ? fechaFinal.slice(11, 16) : "00:00"));
     const espFinal  = data.especialista ?? cita.ESPECIALISTA ?? null;
-    if (fechaPart) await validarSlotEspecialidad(espFinal, fechaPart, horaPart);
+    if (fechaPart) await validarSlotEspecialidad(espFinal, fechaPart, horaPart, id);
   }
 
   const estatus = data.estatus

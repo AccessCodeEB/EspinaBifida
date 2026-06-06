@@ -72,10 +72,11 @@ export interface SlotDisponibilidad {
   lleno:       boolean
 }
 
-/** GET /especialidades-horario/:id/slots?fecha=YYYY-MM-DD */
-export function getSlotsDisponibles(idEspecialidad: number, fecha: string) {
+/** GET /especialidades-horario/:id/slots?fecha=YYYY-MM-DD[&excludeId=N] */
+export function getSlotsDisponibles(idEspecialidad: number, fecha: string, excludeId?: number) {
+  const qs = excludeId != null ? `&excludeId=${excludeId}` : ""
   return apiClient.get<{ slots: SlotDisponibilidad[]; bloqueada?: boolean; motivo?: string; inactiva?: boolean }>(
-    `/especialidades-horario/${idEspecialidad}/slots?fecha=${fecha}`
+    `/especialidades-horario/${idEspecialidad}/slots?fecha=${fecha}${qs}`
   )
 }
 

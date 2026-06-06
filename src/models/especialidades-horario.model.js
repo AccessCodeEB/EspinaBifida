@@ -84,19 +84,20 @@ export const countCitasFuturasActivas = (nombre) =>
     ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
   );
 
-/** Cuenta citas activas en un slot específico (especialidad + fecha + hora). */
-export const countCitasBySlot = (nombre, fecha, hora) =>
-  withConnection(conn =>
-    conn.execute(
-      `SELECT COUNT(1) AS TOTAL
+/** Cuenta citas activas en un slot específico (especialidad + fecha + hora).
+ *  excludeId: omite esa cita del conteo (para reprogramación sin falso "lleno"). */
+export const countCitasBySlot = (nombre, fecha, hora, excludeId = null) =>
+  withConnection(conn => {
+    const sql = `SELECT COUNT(1) AS TOTAL
        FROM CITAS
        WHERE UPPER(ESPECIALISTA) = UPPER(:nombre)
          AND TRUNC(FECHA) = TO_DATE(:fecha, 'YYYY-MM-DD')
          AND TO_CHAR(FECHA, 'HH24:MI') = LPAD(TRIM(:hora), 5, '0')
-         AND ESTATUS NOT IN ('CANCELADA','COMPLETADA')`,
-      { nombre, fecha, hora }
-    ).then(r => Number(r.rows?.[0]?.TOTAL ?? 0))
-  );
+         AND ESTATUS NOT IN ('CANCELADA','COMPLETADA')
+         ${excludeId != null ? "AND ID_CITA != :excludeId" : ""}`;
+    const binds = { nombre, fecha, hora, ...(excludeId != null ? { excludeId } : {}) };
+    return conn.execute(sql, binds).then(r => Number(r.rows?.[0]?.TOTAL ?? 0));
+  });
 
 // ─── Excepciones ────────────────────────────────────────────────
 
