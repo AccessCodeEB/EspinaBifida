@@ -6,6 +6,7 @@ const mockFindById       = jest.fn();
 const mockCreate         = jest.fn();
 const mockUpdate         = jest.fn();
 const mockRemove         = jest.fn();
+const mockHardRemove     = jest.fn();
 const mockCountCitas     = jest.fn();
 const mockDeleteE2ECitas = jest.fn();
 
@@ -16,6 +17,7 @@ jest.unstable_mockModule("../models/citas.model.js", () => ({
   create:            mockCreate,
   update:            mockUpdate,
   remove:            mockRemove,
+  hardRemove:        mockHardRemove,
   deleteE2ECitas:    mockDeleteE2ECitas,
 }));
 
@@ -353,5 +355,51 @@ describe("deleteE2ECitas", () => {
     mockDeleteE2ECitas.mockResolvedValue(undefined);
     await Service.deleteE2ECitas();
     expect(mockDeleteE2ECitas).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// hardDeleteCita
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("hardDeleteCita", () => {
+  test("cita no encontrada → notFound 404", async () => {
+    mockFindById.mockResolvedValue(undefined);
+    await expect(Service.hardDeleteCita(999)).rejects.toMatchObject({ statusCode: 404 });
+    expect(mockHardRemove).not.toHaveBeenCalled();
+  });
+
+  test("cita encontrada → llama hardRemove con el id correcto", async () => {
+    mockFindById.mockResolvedValue(citaBase);
+    mockHardRemove.mockResolvedValue({ rowsAffected: 1 });
+    const result = await Service.hardDeleteCita(1);
+    expect(mockHardRemove).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ rowsAffected: 1 });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateCita — COMPLETADA con cita sin FECHA (CITA_SIN_FECHA)
+// updateCita — COMPLETADA mismo día pero hora futura (CITA_FUTURA)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateCita — COMPLETADA edge cases", () => {
+  test("cita sin FECHA → BAD_REQUEST CITA_SIN_FECHA", async () => {
+    mockFindById.mockResolvedValue({ ...citaBase, FECHA: null });
+    await expect(
+      Service.updateCita(1, { estatus: "COMPLETADA" })
+    ).rejects.toMatchObject({ statusCode: 400, code: "CITA_SIN_FECHA" });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("cita mismo día pero hora futura → BAD_REQUEST CITA_FUTURA", async () => {
+    // Construye una fecha para hoy pero con hora dentro de 2 minutos
+    const futuro = new Date();
+    futuro.setMinutes(futuro.getMinutes() + 2);
+    mockFindById.mockResolvedValue({ ...citaBase, FECHA: futuro });
+    await expect(
+      Service.updateCita(1, { estatus: "COMPLETADA" })
+    ).rejects.toMatchObject({ statusCode: 400, code: "CITA_FUTURA" });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

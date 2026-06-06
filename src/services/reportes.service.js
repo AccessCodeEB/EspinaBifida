@@ -62,8 +62,11 @@ async function getBrowser() {
 }
 
 // Cierra el browser al apagar el proceso para evitar procesos Chrome huérfanos.
+/* istanbul ignore next */
 const _closeBrowser = () => { _browser?.close().catch(() => {}); };
+/* istanbul ignore next */
 process.once('exit',   _closeBrowser);
+/* istanbul ignore next */
 process.once('SIGTERM', _closeBrowser);
 
 /**

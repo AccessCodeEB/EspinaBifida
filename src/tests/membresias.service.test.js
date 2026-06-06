@@ -27,6 +27,16 @@ jest.unstable_mockModule("../models/membresias.model.js", () => ({
   countCredencialesByCurp:   mockCountCredenciales,
 }));
 
+const mockServiciosCreate = jest.fn();
+jest.unstable_mockModule("../models/servicios.model.js", () => ({
+  create: mockServiciosCreate,
+}));
+
+const mockWithConnection = jest.fn();
+jest.unstable_mockModule("../config/db.js", () => ({
+  withConnection: mockWithConnection,
+}));
+
 // Importaciones después de los mocks (ESM)
 const Service = await import("../services/membresias.service.js");
 
@@ -243,6 +253,70 @@ describe("registrarMembresia — ramas de auto-generación (numero_credencial y 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ fechaUltimoPago: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
     );
+  });
+
+  test("idTipoServicio encontrado → crea servicio vinculado (branch if idTipoServicio)", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
+    mockCreate.mockResolvedValue({ outBinds: { id_out: 42 } });
+    // withConnection llama el callback con una conexión mock para cubrir la función interna
+    mockWithConnection.mockImplementation(async (fn) => {
+      const conn = { execute: jest.fn().mockResolvedValue({ rows: [{ ID_TIPO_SERVICIO: 5 }] }) };
+      return fn(conn);
+    });
+    mockServiciosCreate.mockResolvedValue({});
+
+    await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      fecha_vigencia_inicio: "2026-01-01",
+      metodo_pago: "efectivo",
+      observaciones: "Primera vez",
+    });
+
+    expect(mockServiciosCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        curp: CURP,
+        idTipoServicio: 5,
+        referenciaId: 42,
+        referenciaTipo: "MEMBRESIA",
+      })
+    );
+  });
+
+  test("getIdTipoServicioMembresia falla → continúa sin crear servicio vinculado", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
+    mockCreate.mockResolvedValue({ outBinds: { id_out: 1 } });
+    mockWithConnection.mockRejectedValue(new Error("DB error"));
+
+    await expect(
+      Service.registrarMembresia({
+        curp: CURP,
+        fecha_emision: "2026-01-01",
+        metodo_pago: "efectivo",
+      })
+    ).resolves.not.toThrow();
+
+    expect(mockServiciosCreate).not.toHaveBeenCalled();
+  });
+
+  test("ServiciosModel.create falla → catch interno no bloquea la membresía", async () => {
+    mockCountCredenciales.mockResolvedValue(0);
+    mockCreate.mockResolvedValue({ outBinds: { id_out: 10 } });
+    mockWithConnection.mockImplementation(async (fn) => {
+      const conn = { execute: jest.fn().mockResolvedValue({ rows: [{ ID_TIPO_SERVICIO: 5 }] }) };
+      return fn(conn);
+    });
+    mockServiciosCreate.mockRejectedValue(new Error("insert failed"));
+
+    // La membresía debe completarse aunque el servicio vinculado falle
+    const result = await Service.registrarMembresia({
+      curp: CURP,
+      fecha_emision: "2026-01-01",
+      metodo_pago: "efectivo",
+    });
+
+    expect(result).toBeDefined();
+    expect(mockServiciosCreate).toHaveBeenCalled();
   });
 });
 

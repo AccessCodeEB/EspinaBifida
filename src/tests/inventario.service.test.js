@@ -113,6 +113,19 @@ describe('getInventarioActual', () => {
 
     expect(result[0].stock).toBe(0);
   });
+
+  it('CUOTA_B null → cuotaB null; ID_CATEGORIA null → idCategoria undefined', async () => {
+    mockFindInventarioActual.mockResolvedValueOnce([
+      { ID_ARTICULO: 4, DESCRIPCION: 'Test', UNIDAD: 'pza',
+        CUOTA_RECUPERACION: 0, INVENTARIO_ACTUAL: 1, STOCK_MINIMO: 2,
+        CUOTA_B: null, ID_CATEGORIA: null },
+    ]);
+
+    const result = await Service.getInventarioActual();
+
+    expect(result[0].cuotaB).toBeNull();
+    expect(result[0].idCategoria).toBeUndefined();
+  });
 });
 
 // ── getMovimientos ────────────────────────────────────────────────────────────

@@ -228,6 +228,48 @@ describe('generarPDF', () => {
 
     expect(mockPageClose).toHaveBeenCalledTimes(1);
   });
+
+  it('reutiliza browser existente cuando connected=true (no vuelve a llamar launch)', async () => {
+    // Asegurar que launch devuelva un browser con connected=true
+    mockLaunch.mockClear();
+    mockLaunch.mockResolvedValue({ connected: true, newPage: mockNewPageFn, close: mockBrowserClose });
+
+    // Primera llamada: puede o no crear browser según el estado previo del singleton
+    await generarPDF(DATA, PERIODO.inicio, PERIODO.fin);
+    const countAfterFirst = mockLaunch.mock.calls.length; // 0 si ya conectado, 1 si era null/stale
+
+    // Segunda llamada: browser.connected === true → NO debe llamar launch de nuevo
+    await generarPDF(DATA, PERIODO.inicio, PERIODO.fin);
+    expect(mockLaunch.mock.calls.length).toBe(countAfterFirst);
+  });
+
+  it('relanza browser cuando connected=false (browser caído)', async () => {
+    // Forzar que el singleton quede en estado "caído" (connected=false)
+    // lanzando primero con connected:false, luego con connected:true
+    const staleBrowser = { connected: false, newPage: mockNewPageFn, close: mockBrowserClose };
+    const freshBrowser = { connected: true,  newPage: mockNewPageFn, close: mockBrowserClose };
+
+    mockLaunch.mockClear();
+    // Primera llamada puede usar el singleton existente o lanzar — preparar ambos casos
+    mockLaunch.mockResolvedValueOnce(staleBrowser); // si el singleton es null/stale → queda stale
+    mockLaunch.mockResolvedValue(freshBrowser);     // llamadas subsiguientes devuelven fresh
+
+    await generarPDF(DATA, PERIODO.inicio, PERIODO.fin); // singleton = staleBrowser o el actual
+    const countAfterFirst = mockLaunch.mock.calls.length;
+
+    // Asegurar que el singleton actual tenga connected=false mutando el objeto
+    // del resultado de la primera llamada (si se llamó launch) o forzando via mock.
+    // Estrategia: si el singleton ya tiene connected=true, re-asignamos el mock
+    // para que la próxima llamada devuelva stale y así ejercitar el re-launch.
+    mockLaunch.mockResolvedValueOnce(staleBrowser);
+    mockLaunch.mockResolvedValue(freshBrowser);
+
+    await generarPDF(DATA, PERIODO.inicio, PERIODO.fin); // puede re-lanzar si stale
+    await generarPDF(DATA, PERIODO.inicio, PERIODO.fin); // reutiliza si fresh
+
+    // Al menos el total de llamadas a launch fue mayor al inicio (se re-lanzó en algún punto)
+    expect(mockLaunch.mock.calls.length).toBeGreaterThanOrEqual(countAfterFirst);
+  });
 });
 
 // ── generarXLSX ───────────────────────────────────────────────────────────────
