@@ -13,16 +13,16 @@ export const ESTUDIOS_IDS = [];
 // Un paciente que cumplió 18 en febrero no debe aparecer como Adulto en enero.
 export const getResumenPeriodo = (fechaInicio, fechaFin) => {
   const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
-  // Usar strings con TO_DATE evita el bug de zona horaria: new Date("YYYY-MM-DD")
-  // crea midnight UTC, que node-oracledb envía como día anterior a las 18:00 en UTC-6,
-  // haciendo que el último día del periodo quede fuera del BETWEEN.
-  const fi = new Date(fechaInicio);
-  const ff = new Date(fechaFin);
 
-  // Las dos queries son independientes — se ejecutan en conexiones paralelas.
+  // Todas las comparaciones usan TO_DATE con strings para evitar el bug de timezone:
+  // new Date("YYYY-MM-DD") crea midnight UTC → node-oracledb lo envía como día
+  // anterior a las 18:00 en UTC-6, corriendo el rango un día.
+
+  // credenciales: COUNT DISTINCT CURP para que muestre beneficiarios únicos,
+  // no múltiples registros si la misma persona renovó varias veces en el periodo.
   const credPromise = withConnection(conn =>
     conn.execute(
-      `SELECT COUNT(*) AS CANT_CREDENCIALES FROM CREDENCIALES
+      `SELECT COUNT(DISTINCT CURP) AS CANT_CREDENCIALES FROM CREDENCIALES
        WHERE TRUNC(FECHA_VIGENCIA_INICIO) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')`,
       { fi: fechaInicio, ff: fechaFin },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -36,32 +36,35 @@ export const getResumenPeriodo = (fechaInicio, fechaFin) => {
         COUNT(CASE WHEN S.MONTO_PAGADO = 0 THEN 1 END)   AS EXENTOS,
         COUNT(CASE WHEN S.MONTO_PAGADO > 0 THEN 1 END)   AS CON_CUOTA,
 
-        COUNT(DISTINCT CASE WHEN B.GENERO IN ('M', 'Masculino') THEN B.CURP END) AS HOMBRES,
-        COUNT(DISTINCT CASE WHEN B.GENERO IN ('F', 'Femenino')  THEN B.CURP END) AS MUJERES,
+        COUNT(DISTINCT CASE WHEN UPPER(B.GENERO) IN ('M', 'MASCULINO', 'HOMBRE', 'MALE')
+                             THEN B.CURP END)             AS HOMBRES,
+        COUNT(DISTINCT CASE WHEN UPPER(B.GENERO) IN ('F', 'FEMENINO', 'MUJER', 'FEMALE')
+                             THEN B.CURP END)             AS MUJERES,
 
         COUNT(DISTINCT CASE WHEN B.MUNICIPIO IN (${ammPH})
                              THEN B.CURP END)             AS URBANO,
-        COUNT(DISTINCT CASE WHEN B.MUNICIPIO NOT IN (${ammPH})
+        -- NULL municipio se incluye en RURAL para que URBANO + RURAL = total atendidos
+        COUNT(DISTINCT CASE WHEN B.MUNICIPIO IS NULL OR B.MUNICIPIO NOT IN (${ammPH})
                              THEN B.CURP END)             AS RURAL,
 
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 0 AND 2
+          TRUNC(MONTHS_BETWEEN(TO_DATE(:ffr, 'YYYY-MM-DD'), B.FECHA_NACIMIENTO)/12) BETWEEN 0 AND 2
           THEN B.CURP END)                                AS LACTANTES,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 3 AND 11
+          TRUNC(MONTHS_BETWEEN(TO_DATE(:ffr, 'YYYY-MM-DD'), B.FECHA_NACIMIENTO)/12) BETWEEN 3 AND 11
           THEN B.CURP END)                                AS NINOS,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) BETWEEN 12 AND 17
+          TRUNC(MONTHS_BETWEEN(TO_DATE(:ffr, 'YYYY-MM-DD'), B.FECHA_NACIMIENTO)/12) BETWEEN 12 AND 17
           THEN B.CURP END)                                AS ADOLESCENTES,
         COUNT(DISTINCT CASE WHEN
-          TRUNC(MONTHS_BETWEEN(:ffr, B.FECHA_NACIMIENTO)/12) >= 18
+          TRUNC(MONTHS_BETWEEN(TO_DATE(:ffr, 'YYYY-MM-DD'), B.FECHA_NACIMIENTO)/12) >= 18
           THEN B.CURP END)                                AS ADULTOS
 
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
-      WHERE S.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
     `,
-    { fi, ff, ffr: ff, ...ammBinds },
+    { fi: fechaInicio, ff: fechaFin, ffr: fechaFin, ...ammBinds },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows[0])
   );
@@ -82,7 +85,7 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
         FROM SERVICIO_ARTICULOS SA
         JOIN ARTICULOS A ON SA.ID_ARTICULO = A.ID_ARTICULO
         JOIN SERVICIOS S  ON SA.ID_SERVICIO = S.ID_SERVICIO
-        WHERE S.FECHA BETWEEN :fi AND :ff
+        WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
         GROUP BY A.DESCRIPCION, A.UNIDAD
 
         UNION ALL
@@ -90,13 +93,13 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
         SELECT SC.NOMBRE, COUNT(S.ID_SERVICIO) AS CANTIDAD, 'CITA' AS UNIDAD
         FROM SERVICIOS S
         JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-        WHERE S.FECHA BETWEEN :fi AND :ff
+        WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
           AND S.ID_SERVICIO NOT IN (SELECT ID_SERVICIO FROM SERVICIO_ARTICULOS)
         GROUP BY SC.NOMBRE
       )
       ORDER BY CANTIDAD DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -105,14 +108,14 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
 export const getDistribucionCiudades = (fechaInicio, fechaFin) =>
   withConnection(conn =>
     conn.execute(`
-      SELECT B.MUNICIPIO AS CIUDAD, COUNT(DISTINCT B.CURP) AS CANTIDAD
+      SELECT NVL(B.MUNICIPIO, 'Sin datos') AS CIUDAD, COUNT(DISTINCT B.CURP) AS CANTIDAD
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
-      WHERE S.FECHA BETWEEN :fi AND :ff
-      GROUP BY B.MUNICIPIO
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      GROUP BY NVL(B.MUNICIPIO, 'Sin datos')
       ORDER BY CANTIDAD DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -126,11 +129,11 @@ export const getAtencionesPorMes = (fechaInicio, fechaFin) =>
         COUNT(DISTINCT S.CURP)                    AS PACIENTES,
         COUNT(S.ID_SERVICIO)                      AS SERVICIOS
       FROM SERVICIOS S
-      WHERE S.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
       GROUP BY TRUNC(S.FECHA, 'MM')
       ORDER BY TRUNC(S.FECHA, 'MM')
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -146,12 +149,12 @@ export const getEstudios = (fechaInicio, fechaFin) => {
       SELECT SC.NOMBRE, COUNT(S.ID_SERVICIO) AS CANTIDAD
       FROM SERVICIOS S
       JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE S.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
         AND S.ID_TIPO_SERVICIO IN (${placeholders})
       GROUP BY SC.NOMBRE
       ORDER BY CANTIDAD DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin), ...binds },
+    { fi: fechaInicio, ff: fechaFin, ...binds },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows);
   });
@@ -172,10 +175,10 @@ export const getBeneficiariosPeriodo = (fechaInicio, fechaFin) =>
         B.ESTATUS
       FROM BENEFICIARIOS B
       JOIN SERVICIOS S ON B.CURP = S.CURP
-      WHERE S.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
       ORDER BY B.APELLIDO_PATERNO, B.NOMBRES
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -200,12 +203,12 @@ export const getMembresias = (fechaInicio, fechaFin) =>
         END AS ESTADO
       FROM CREDENCIALES C
       JOIN BENEFICIARIOS B ON C.CURP = B.CURP
-      WHERE C.FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff
-         OR C.FECHA_VIGENCIA_FIN    BETWEEN :fi AND :ff
-         OR (C.FECHA_VIGENCIA_INICIO <= :fi AND C.FECHA_VIGENCIA_FIN >= :ff)
+      WHERE TRUNC(C.FECHA_VIGENCIA_INICIO) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+         OR TRUNC(C.FECHA_VIGENCIA_FIN)    BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+         OR (TRUNC(C.FECHA_VIGENCIA_INICIO) <= TO_DATE(:fi, 'YYYY-MM-DD') AND TRUNC(C.FECHA_VIGENCIA_FIN) >= TO_DATE(:ff, 'YYYY-MM-DD'))
       ORDER BY C.FECHA_VIGENCIA_FIN DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -225,10 +228,10 @@ export const getServiciosPeriodo = (fechaInicio, fechaFin) =>
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
       JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE S.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
       ORDER BY S.FECHA DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -266,10 +269,10 @@ export const getMovimientosPeriodo = (fechaInicio, fechaFin) =>
         M.MOTIVO
       FROM MOVIMIENTOS_INVENTARIO M
       JOIN ARTICULOS A ON M.ID_ARTICULO = A.ID_ARTICULO
-      WHERE M.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(M.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
       ORDER BY M.FECHA DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
@@ -288,10 +291,10 @@ export const getCitasPeriodo = (fechaInicio, fechaFin) =>
       FROM CITAS C
       JOIN BENEFICIARIOS B ON C.CURP = B.CURP
       JOIN SERVICIOS_CATALOGO SC ON C.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE C.FECHA BETWEEN :fi AND :ff
+      WHERE TRUNC(C.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
       ORDER BY C.FECHA DESC
     `,
-    { fi: new Date(fechaInicio), ff: new Date(fechaFin) },
+    { fi: fechaInicio, ff: fechaFin },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows)
   );
