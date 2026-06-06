@@ -87,13 +87,13 @@ function buildLayout(dayCitas:Cita[]):LItem[]{
 
 // ── Future cita check ────────────────────────────────────────────────────────
 function isCitaFutura(cita: Cita): boolean {
-  const todayStr = new Date().toISOString().slice(0, 10)
   const now = new Date()
-  const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
-  return (
-    cita.fecha > todayStr ||
-    (cita.fecha === todayStr && (cita.hora ?? "00:00") > currentTimeStr)
-  )
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  const currentTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+  if (!cita.fecha) return false
+  if (cita.fecha > todayStr) return true
+  if (cita.fecha === todayStr && (cita.hora || "00:00") > currentTimeStr) return true
+  return false
 }
 
 // ── Validator ─────────────────────────────────────────────────────────────────

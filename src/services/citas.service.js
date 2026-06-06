@@ -97,15 +97,18 @@ export const updateCita = async (id, data) => {
 
   // Bloquear marcar como COMPLETADA si la cita es futura
   if (estatus === "COMPLETADA") {
+    if (!cita.FECHA) {
+      throw badRequest("La cita no tiene fecha registrada", "CITA_SIN_FECHA");
+    }
     const now = new Date();
     const citaDate = cita.FECHA instanceof Date ? cita.FECHA : new Date(cita.FECHA);
-    const todayStr = now.toISOString().slice(0, 10);
-    const citaDateStr = citaDate.toISOString().slice(0, 10);
-    const nowTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const citaTimeStr = `${String(citaDate.getHours()).padStart(2, "0")}:${String(citaDate.getMinutes()).padStart(2, "0")}`;
+    const nowDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const nowTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const citaDateStr = `${citaDate.getFullYear()}-${String(citaDate.getMonth()+1).padStart(2,'0')}-${String(citaDate.getDate()).padStart(2,'0')}`;
+    const citaTimeStr = `${String(citaDate.getHours()).padStart(2,'0')}:${String(citaDate.getMinutes()).padStart(2,'0')}`;
     const isFuture =
-      citaDateStr > todayStr ||
-      (citaDateStr === todayStr && citaTimeStr > nowTimeStr);
+      citaDateStr > nowDateStr ||
+      (citaDateStr === nowDateStr && citaTimeStr > nowTimeStr);
     if (isFuture) {
       throw badRequest("No se puede marcar como completada una cita futura", "CITA_FUTURA");
     }
