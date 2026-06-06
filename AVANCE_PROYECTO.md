@@ -575,11 +575,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad media — Notificaciones futuras
 
-| Tarea | Descripción |
-|---|---|
-| **Notificación: pre-registro pendiente** | Avisar cuando hay pre-registros en estado PENDIENTE sin revisar por más de N días. |
-| **Notificación: beneficiario sin membresía activa** | Avisar cuando un beneficiario activo lleva más de X días sin membresía vigente. |
-| **Notificación: reporte automático generado** | Confirmar en el panel cuando el scheduler nocturno generó el reporte mensual exitosamente. |
+*(Sin ítems pendientes en esta prioridad)*
 
 ### Prioridad media — Calidad de código
 

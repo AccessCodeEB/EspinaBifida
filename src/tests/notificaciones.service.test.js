@@ -21,6 +21,8 @@ const mockFindMembresiasVencidas       = jest.fn();
 const mockFindCitasHoyProgramadas      = jest.fn();
 const mockFindComodatosPorVencer           = jest.fn();
 const mockDeleteOrphanedNotificaciones     = jest.fn();
+const mockFindPreregistrosPendientes       = jest.fn();
+const mockSyncPreregistroPendiente         = jest.fn();
 
 jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findAll:                   mockFindAll,
@@ -42,6 +44,8 @@ jest.unstable_mockModule('../models/notificaciones.model.js', () => ({
   findCitasHoyProgramadas:   mockFindCitasHoyProgramadas,
   findComodatosPorVencer:             mockFindComodatosPorVencer,
   deleteOrphanedNotificaciones:       mockDeleteOrphanedNotificaciones,
+  findPreregistrosPendientes:         mockFindPreregistrosPendientes,
+  syncPreregistroPendiente:           mockSyncPreregistroPendiente,
 }));
 
 const Service = await import('../services/notificaciones.service.js');
@@ -106,10 +110,12 @@ describe('runJob', () => {
     mockSyncSinStockConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockSyncPreregistroPendiente.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockClosePendingMembresia.mockResolvedValue(undefined);
     mockFindComodatosPorVencer.mockResolvedValue([]);
     mockFindArticulosSinStock.mockResolvedValue([]);
+    mockFindPreregistrosPendientes.mockResolvedValue([]);
     mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
   });
 
@@ -124,7 +130,7 @@ describe('runJob', () => {
     const res = await Service.runJob();
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('Silla'));
-    expect(res).toEqual({ stockBajo: 1, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 1, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0, preregistros: 0 });
   });
 
   it('llama upsertMembresia MEMBRESIA_PROXIMA con mensaje de días', async () => {
@@ -182,7 +188,7 @@ describe('runJob', () => {
 
     const res = await Service.runJob();
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(null);
-    expect(res).toEqual({ stockBajo: 0, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 0, sinStock: 0, proximas: 0, vencidas: 0, citasHoy: 0, comodatos: 0, preregistros: 0 });
   });
 
   it('genera mensaje consolidado y llama syncStockBajoConsolidado una vez para múltiples artículos', async () => {
@@ -201,7 +207,7 @@ describe('runJob', () => {
 
     expect(mockSyncStockBajoConsolidado).toHaveBeenCalledWith(expect.stringContaining('2 artículos'));
     expect(mockUpsertMembresia).toHaveBeenCalledTimes(2);
-    expect(res).toEqual({ stockBajo: 2, sinStock: 0, proximas: 2, vencidas: 0, citasHoy: 0, comodatos: 0 });
+    expect(res).toEqual({ stockBajo: 2, sinStock: 0, proximas: 2, vencidas: 0, citasHoy: 0, comodatos: 0, preregistros: 0 });
   });
 
   it('genera mensaje para una sola cita de hoy sin confirmar', async () => {
@@ -319,12 +325,14 @@ describe('checkComodatosPorVencer (via runJob)', () => {
     mockSyncSinStockConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockSyncPreregistroPendiente.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockFindArticulosConStockBajo.mockResolvedValue([]);
     mockFindArticulosSinStock.mockResolvedValue([]);
     mockFindMembresiasProximas.mockResolvedValue([]);
     mockFindMembresiasVencidas.mockResolvedValue([]);
     mockFindCitasHoyProgramadas.mockResolvedValue([]);
+    mockFindPreregistrosPendientes.mockResolvedValue([]);
     mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
   });
 
@@ -448,12 +456,14 @@ describe('regresión: bugs detectados en QA 2026-06-05', () => {
     mockSyncSinStockConsolidado.mockResolvedValue(undefined);
     mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
     mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockSyncPreregistroPendiente.mockResolvedValue(undefined);
     mockUpsertMembresia.mockResolvedValue(undefined);
     mockClosePendingMembresia.mockResolvedValue(undefined);
     mockFindComodatosPorVencer.mockResolvedValue([]);
     mockFindArticulosSinStock.mockResolvedValue([]);
     mockFindArticulosConStockBajo.mockResolvedValue([]);
     mockFindCitasHoyProgramadas.mockResolvedValue([]);
+    mockFindPreregistrosPendientes.mockResolvedValue([]);
     mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
   });
 
@@ -503,5 +513,94 @@ describe('regresión: bugs detectados en QA 2026-06-05', () => {
     const [, , msg] = mockUpsertMembresia.mock.calls[0];
     expect(msg).toContain('hoy');
     expect(msg).not.toContain('0 días');
+  });
+});
+
+// ── checkPreregistroPendiente ─────────────────────────────────────────────────
+
+describe('checkPreregistroPendiente', () => {
+  beforeEach(() => {
+    mockSyncPreregistroPendiente.mockResolvedValue(undefined);
+  });
+
+  it('sincroniza con null cuando no hay pre-registros pendientes', async () => {
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([]);
+    const result = await Service.checkPreregistroPendiente();
+    expect(result).toBe(0);
+    expect(mockSyncPreregistroPendiente).toHaveBeenCalledWith(null);
+  });
+
+  it('genera mensaje singular para un solo pre-registro pendiente', async () => {
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([
+      { CURP: 'CURP01', NOMBRE: 'Juan García', FECHA_ALTA: new Date(), DIAS_PENDIENTE: 5 },
+    ]);
+    const result = await Service.checkPreregistroPendiente();
+    expect(result).toBe(1);
+    expect(mockSyncPreregistroPendiente).toHaveBeenCalledWith(
+      expect.stringContaining('Juan García')
+    );
+    expect(mockSyncPreregistroPendiente).toHaveBeenCalledWith(
+      expect.stringContaining('5 días')
+    );
+  });
+
+  it('usa "día" singular cuando lleva exactamente 1 día pendiente', async () => {
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([
+      { CURP: 'CURP02', NOMBRE: 'Ana López', FECHA_ALTA: new Date(), DIAS_PENDIENTE: 1 },
+    ]);
+    await Service.checkPreregistroPendiente();
+    const msg = mockSyncPreregistroPendiente.mock.calls[0][0];
+    expect(msg).toMatch(/1 día[^s]/);
+  });
+
+  it('genera mensaje consolidado para múltiples pre-registros', async () => {
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([
+      { CURP: 'C1', NOMBRE: 'Ana López',    FECHA_ALTA: new Date(), DIAS_PENDIENTE: 4 },
+      { CURP: 'C2', NOMBRE: 'Luis Martínez', FECHA_ALTA: new Date(), DIAS_PENDIENTE: 6 },
+      { CURP: 'C3', NOMBRE: 'María Ruiz',    FECHA_ALTA: new Date(), DIAS_PENDIENTE: 7 },
+    ]);
+    const result = await Service.checkPreregistroPendiente();
+    expect(result).toBe(3);
+    expect(mockSyncPreregistroPendiente).toHaveBeenCalledWith(
+      expect.stringContaining('3 pre-registros')
+    );
+  });
+
+  it('incluye "y N más" cuando hay más de 3 pre-registros', async () => {
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      CURP: `C${i}`, NOMBRE: `Persona ${i}`, FECHA_ALTA: new Date(), DIAS_PENDIENTE: 4,
+    }));
+    mockFindPreregistrosPendientes.mockResolvedValueOnce(rows);
+    await Service.checkPreregistroPendiente();
+    const msg = mockSyncPreregistroPendiente.mock.calls[0][0];
+    expect(msg).toContain('y 2 más');
+  });
+
+  it('usa el parámetro dias al llamar al modelo', async () => {
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([]);
+    await Service.checkPreregistroPendiente(7);
+    expect(mockFindPreregistrosPendientes).toHaveBeenCalledWith(7);
+  });
+
+  it('runJob incluye preregistros en el resultado', async () => {
+    mockSyncStockBajoConsolidado.mockResolvedValue(undefined);
+    mockSyncSinStockConsolidado.mockResolvedValue(undefined);
+    mockSyncCitasHoyConsolidado.mockResolvedValue(undefined);
+    mockSyncComodatosPorVencer.mockResolvedValue(undefined);
+    mockUpsertMembresia.mockResolvedValue(undefined);
+    mockClosePendingMembresia.mockResolvedValue(undefined);
+    mockFindArticulosConStockBajo.mockResolvedValue([]);
+    mockFindArticulosSinStock.mockResolvedValue([]);
+    mockFindMembresiasProximas.mockResolvedValue([]);
+    mockFindMembresiasVencidas.mockResolvedValue([]);
+    mockFindCitasHoyProgramadas.mockResolvedValue([]);
+    mockFindComodatosPorVencer.mockResolvedValue([]);
+    mockDeleteOrphanedNotificaciones.mockResolvedValue(0);
+    mockFindPreregistrosPendientes.mockResolvedValueOnce([
+      { CURP: 'C1', NOMBRE: 'Ana López', FECHA_ALTA: new Date(), DIAS_PENDIENTE: 5 },
+    ]);
+
+    const res = await Service.runJob();
+    expect(res.preregistros).toBe(1);
   });
 });
