@@ -61,6 +61,11 @@ async function getBrowser() {
   return _browser;
 }
 
+// Cierra el browser al apagar el proceso para evitar procesos Chrome huérfanos.
+const _closeBrowser = () => { _browser?.close().catch(() => {}); };
+process.once('exit',   _closeBrowser);
+process.once('SIGTERM', _closeBrowser);
+
 /**
  * Genera PDF usando Puppeteer (Chrome headless).
  * Reutiliza el browser singleton — solo abre/cierra una Page, no un Chrome entero.

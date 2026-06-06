@@ -13,6 +13,9 @@ export const ESTUDIOS_IDS = [];
 // Un paciente que cumplió 18 en febrero no debe aparecer como Adulto en enero.
 export const getResumenPeriodo = (fechaInicio, fechaFin) => {
   const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
+  // Usar strings con TO_DATE evita el bug de zona horaria: new Date("YYYY-MM-DD")
+  // crea midnight UTC, que node-oracledb envía como día anterior a las 18:00 en UTC-6,
+  // haciendo que el último día del periodo quede fuera del BETWEEN.
   const fi = new Date(fechaInicio);
   const ff = new Date(fechaFin);
 
@@ -20,8 +23,8 @@ export const getResumenPeriodo = (fechaInicio, fechaFin) => {
   const credPromise = withConnection(conn =>
     conn.execute(
       `SELECT COUNT(*) AS CANT_CREDENCIALES FROM CREDENCIALES
-       WHERE FECHA_VIGENCIA_INICIO BETWEEN :fi AND :ff`,
-      { fi, ff },
+       WHERE TRUNC(FECHA_VIGENCIA_INICIO) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')`,
+      { fi: fechaInicio, ff: fechaFin },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows[0]?.CANT_CREDENCIALES ?? 0)
   );
