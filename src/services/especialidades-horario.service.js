@@ -40,6 +40,30 @@ export function esDentroDeHorario(esp, hora) {
   return h >= inicio && h < norm(esp.HORA_FIN);
 }
 
+/**
+ * Genera los slots de tiempo válidos para una especialidad según su horario y duración.
+ * Garantiza que el último slot cabe completamente dentro de la ventana.
+ *
+ * @param {object} esp - Fila de ESPECIALIDADES_HORARIO
+ * @returns {string[]} - Array de strings 'HH:MM'
+ */
+export function generateSlots(esp) {
+  if (!esp.DURACION_CITA || esp.DURACION_CITA <= 0) return [];
+  const [startH, startM] = esp.HORA_INICIO.split(":").map(Number);
+  const startMins = startH * 60 + startM;
+  const endMins = esp.HORA_FIN
+    ? (() => { const [h, m] = esp.HORA_FIN.split(":").map(Number); return h * 60 + m; })()
+    : startMins + 240; // 4h máximo si no hay HORA_FIN
+  // latestStart garantiza que el slot completo cabe en la ventana
+  const latestStart = endMins - esp.DURACION_CITA;
+  const slots = [];
+  for (let m = startMins; m <= latestStart; m += esp.DURACION_CITA) {
+    const h = Math.floor(m / 60), min = m % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
+  }
+  return slots;
+}
+
 // ─── Servicios CRUD ─────────────────────────────────────────────────────────
 
 /** Lista todas las especialidades (solo activas por defecto). */
@@ -157,12 +181,13 @@ export const deleteExcepcion = async (idExcepcion) => {
  * @param {string} fecha   - 'YYYY-MM-DD'
  * @param {string} hora    - 'HH:MM'
  */
-async function validarCapacidad(esp, fecha) {
+async function validarCapacidad(esp, fecha, hora) {
   if (esp.CAPACIDAD_MAX == null) return;
-  const ocupados = await model.countCitasActivasPorFecha(esp.NOMBRE, fecha);
+  if (!hora) return; // sin hora = sin validación de slot
+  const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora);
   if (ocupados >= esp.CAPACIDAD_MAX) {
     throw badRequest(
-      `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el ${fecha}.`,
+      `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el slot de las ${hora} del ${fecha}.`,
       "CAPACIDAD_LLENA"
     );
   }
@@ -207,6 +232,17 @@ export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) =
     );
   }
 
+  // 2.5 Validar que hora corresponde a un slot válido
+  if (hora) {
+    const slots = generateSlots(esp);
+    if (slots.length > 0 && !slots.includes(hora)) {
+      throw badRequest(
+        `${esp.NOMBRE} solo acepta citas en intervalos de ${esp.DURACION_CITA} min a partir de las ${esp.HORA_INICIO}. Slots válidos: ${slots.join(", ")}.`,
+        "SLOT_NO_VALIDO"
+      );
+    }
+  }
+
   // 3. Verificar excepción (doctor ausente)
   const excepcion = await model.findExcepcionByFecha(esp.ID_ESPECIALIDAD, fecha);
   if (excepcion) {
@@ -218,7 +254,45 @@ export const validarSlotEspecialidad = async (nombreEspecialidad, fecha, hora) =
   }
 
   // 4. Verificar capacidad
-  await validarCapacidad(esp, fecha);
+  await validarCapacidad(esp, fecha, hora);
+};
+
+// ─── Disponibilidad de slots ─────────────────────────────────────────────────
+
+/**
+ * Devuelve todos los slots de una especialidad para una fecha dada,
+ * indicando cuántos lugares están ocupados y si el slot está lleno.
+ *
+ * @param {number} idEspecialidad
+ * @param {string} fecha - 'YYYY-MM-DD'
+ * @returns {object} { slots } | { inactiva: true } | { bloqueada: true, motivo }
+ */
+export const getSlotsConDisponibilidad = async (idEspecialidad, fecha) => {
+  const esp = await model.findById(idEspecialidad);
+  if (!esp) throw notFound(`Especialidad con ID ${idEspecialidad} no encontrada`);
+
+  if (!esp.ACTIVO) {
+    return { inactiva: true };
+  }
+
+  // Verificar excepción (fecha bloqueada)
+  const excepcion = await model.findExcepcionByFecha(esp.ID_ESPECIALIDAD, fecha);
+  if (excepcion) {
+    return { bloqueada: true, motivo: excepcion.MOTIVO ?? null };
+  }
+
+  const slotHoras = generateSlots(esp);
+
+  const slots = await Promise.all(
+    slotHoras.map(async (hora) => {
+      const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora);
+      const capacidad = esp.CAPACIDAD_MAX ?? null;
+      const lleno = capacidad != null && ocupados >= capacidad;
+      return { hora, ocupados, capacidad, lleno };
+    })
+  );
+
+  return { slots };
 };
 
 // ─── Mapper ──────────────────────────────────────────────────────────────────
