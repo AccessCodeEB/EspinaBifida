@@ -1046,10 +1046,13 @@ function DetalleComodatoDialog({
                     <tbody className="divide-y divide-border/20">
                       {detalle.pagos.map(p => (
                         <tr key={p.idPago} className="hover:bg-muted/10">
-                          <td className="py-2 pl-3 text-muted-foreground">
-                            <p>{new Date(p.fecha).toLocaleDateString("es-MX")}</p>
+                          <td className="py-2 pl-3">
+                            <p className="text-muted-foreground">{new Date(p.fecha).toLocaleDateString("es-MX")}</p>
                             {p.notas && (
-                              <p className="mt-0.5 text-[10px] italic text-muted-foreground/70">{p.notas}</p>
+                              <p className="mt-0.5 text-[10px] text-foreground/80">
+                                <span className="font-semibold text-muted-foreground">Nota: </span>
+                                {p.notas}
+                              </p>
                             )}
                           </td>
                           <td className={`py-2 text-right tabular-nums ${p.esExento === "S" ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>{fmt(p.monto)}</td>
