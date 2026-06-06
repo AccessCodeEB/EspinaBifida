@@ -18,6 +18,7 @@ router.get("/:id", ctrl.getById);
 router.post(  "/",          checkRole(1, 2), ctrl.create);
 router.patch( "/:id",       checkRole(1, 2), ctrl.updateNotas);
 router.delete("/:id",       checkRole(1, 2), ctrl.cancel);
-router.post(  "/:id/pagos", checkRole(1, 2), ctrl.addPago);
+router.post(  "/:id/pagos",      checkRole(1, 2), ctrl.addPago);
+router.patch( "/:id/devolucion", checkRole(1, 2), ctrl.registerDevolucion);
 
 export default router;

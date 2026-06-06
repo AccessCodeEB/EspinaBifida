@@ -88,6 +88,27 @@ export async function cancel(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// ─── PATCH /comodatos/:id/devolucion ─────────────────────────────────────────
+export async function registerDevolucion(req, res, next) {
+  try {
+    const idComodato = Number(req.params.id);
+    const data = await ComodatosModel.registrarDevolucion(idComodato);
+
+    if (data === null) return res.status(404).json({ error: "Comodato no encontrado" });
+    if (data.yaDevuelto) {
+      return res.status(409).json({ error: "Este comodato ya tiene una devolución registrada" });
+    }
+
+    const mensajes = {
+      anticipada:       "Devolución anticipada registrada exitosamente",
+      tarde:            "Devolución tardía registrada exitosamente",
+      aTiempo:          "Devolución registrada exitosamente",
+      sinFechaEsperada: "Devolución registrada exitosamente",
+    };
+    res.json({ message: mensajes[data.tipo] ?? "Devolución registrada", data });
+  } catch (err) { next(err); }
+}
+
 // ─── POST /comodatos/:id/pagos ────────────────────────────────────────────────
 export async function addPago(req, res, next) {
   try {

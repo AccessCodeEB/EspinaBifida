@@ -18,7 +18,9 @@ export function findAll({ page = 1, limit = 20, estatus, curp } = {}) {
 
   return withConnection(async (conn) => {
     const { rows } = await conn.execute(
-      `SELECT c.*,
+      `SELECT c.ID_COMODATO, c.CURP, c.ID_ARTICULO, c.MONTO_TOTAL,
+              c.MONTO_PAGADO, c.MONTO_EXENTO, c.ESTATUS, c.NOTAS,
+              c.FECHA_ALTA, c.FECHA_DEVOLUCION_ESPERADA, c.FECHA_DEVOLUCION_REAL,
               b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS BENEFICIARIO,
               a.DESCRIPCION AS ARTICULO
        FROM COMODATOS c
@@ -39,7 +41,9 @@ export function findAll({ page = 1, limit = 20, estatus, curp } = {}) {
 export function findById(idComodato) {
   return withConnection(async (conn) => {
     const { rows: comodatos } = await conn.execute(
-      `SELECT c.*,
+      `SELECT c.ID_COMODATO, c.CURP, c.ID_ARTICULO, c.MONTO_TOTAL,
+              c.MONTO_PAGADO, c.MONTO_EXENTO, c.ESTATUS, c.NOTAS,
+              c.FECHA_ALTA, c.FECHA_DEVOLUCION_ESPERADA, c.FECHA_DEVOLUCION_REAL,
               b.NOMBRES || ' ' || b.APELLIDO_PATERNO AS BENEFICIARIO,
               a.DESCRIPCION AS ARTICULO
        FROM COMODATOS c
@@ -236,6 +240,73 @@ export async function addPago(idComodato, { monto, esExento, notas }) {
 
     await conn.commit();
     return { idPago, estatusResultante: nuevoEstatus };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    await conn.close();
+  }
+}
+
+/**
+ * Registra la devolución física del equipo.
+ * - Guarda FECHA_DEVOLUCION_REAL en COMODATOS
+ * - Registra una ENTRADA en MOVIMIENTOS_INVENTARIO
+ *
+ * Retorna:
+ *   null                — comodato no encontrado
+ *   { yaDevuelto: true }— ya tenía fecha de devolución registrada
+ *   { idComodato, fechaDevolucionReal, tipo } — éxito
+ *     tipo: 'anticipada' | 'tarde' | 'aTiempo' | 'sinFechaEsperada'
+ */
+export async function registrarDevolucion(idComodato) {
+  const conn = await (await import("../config/db.js")).getConnection();
+  try {
+    const { rows } = await conn.execute(
+      `SELECT ID_COMODATO, ID_ARTICULO, CURP,
+              FECHA_DEVOLUCION_ESPERADA, FECHA_DEVOLUCION_REAL, ESTATUS
+       FROM COMODATOS WHERE ID_COMODATO = :id`,
+      { id: idComodato }
+    );
+    if (!rows.length) return null;
+
+    const com = toCamel(rows[0]);
+    if (com.fechaDevolucionReal) return { yaDevuelto: true };
+
+    const hoy = new Date();
+    await conn.execute(
+      `UPDATE COMODATOS SET FECHA_DEVOLUCION_REAL = :hoy WHERE ID_COMODATO = :id`,
+      { hoy, id: idComodato },
+      { autoCommit: false }
+    );
+
+    // Obtener nombre del beneficiario para el motivo del movimiento
+    const benefRes = await conn.execute(
+      `SELECT NOMBRES || ' ' || APELLIDO_PATERNO AS NOMBRE FROM BENEFICIARIOS WHERE CURP = :curp`,
+      { curp: com.curp }
+    );
+    const nombreBenef = benefRes.rows?.[0]?.NOMBRE ?? com.curp;
+
+    await applyMovimientoConConexion(conn, {
+      idArticulo: com.idArticulo,
+      tipo: "ENTRADA",
+      cantidad: 1,
+      motivo: `Devolución de comodato — ${nombreBenef}`,
+    });
+
+    await conn.commit();
+
+    // Calcular tipo de devolución
+    let tipo = "sinFechaEsperada";
+    if (com.fechaDevolucionEsperada) {
+      const esperada = new Date(com.fechaDevolucionEsperada);
+      const diffDias = Math.round((hoy - esperada) / 86400000);
+      if (diffDias < -1)      tipo = "anticipada";
+      else if (diffDias > 1)  tipo = "tarde";
+      else                    tipo = "aTiempo";
+    }
+
+    return { idComodato, fechaDevolucionReal: hoy.toISOString().slice(0, 10), tipo };
   } catch (err) {
     await conn.rollback();
     throw err;
