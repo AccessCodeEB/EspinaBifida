@@ -10,6 +10,7 @@ export interface EspecialidadHorario {
   tipoFrecuencia:  "SEMANAL" | "MENSUAL_PRIMER_DIA"
   activo:          boolean
   notas:           string | null
+  duracionCita:    number   // minutos por cita, ej. 30
 }
 
 export interface ExcepcionEspecialidad {
@@ -62,6 +63,20 @@ export function esHoraValidaFrontend(esp: EspecialidadHorario, hora: string): bo
   const inicio = norm(esp.horaInicio)
   if (!esp.horaFin) return h >= inicio
   return h >= inicio && h < norm(esp.horaFin)
+}
+
+export interface SlotDisponibilidad {
+  hora:        string        // "HH:MM"
+  ocupados:    number
+  capacidad:   number | null // null = sin límite
+  lleno:       boolean
+}
+
+/** GET /especialidades-horario/:id/slots?fecha=YYYY-MM-DD */
+export function getSlotsDisponibles(idEspecialidad: number, fecha: string) {
+  return apiClient.get<{ slots: SlotDisponibilidad[]; bloqueada?: boolean; motivo?: string; inactiva?: boolean }>(
+    `/especialidades-horario/${idEspecialidad}/slots?fecha=${fecha}`
+  )
 }
 
 /** GET /especialidades-horario — admin: todos=true incluye inactivas */

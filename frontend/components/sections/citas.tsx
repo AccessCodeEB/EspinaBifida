@@ -15,10 +15,12 @@ import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { createServicio, getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
 import {
   getEspecialidadesHorario,
+  getSlotsDisponibles,
   esFechaValidaFrontend,
   esHoraValidaFrontend,
   descripcionHorario,
   type EspecialidadHorario,
+  type SlotDisponibilidad,
 } from "@/services/especialidades-horario"
 import { CitasCalendarView, validateSlot } from "@/components/sections/citas-calendar-view"
 import { CitasListView } from "@/components/sections/citas-list-view"
@@ -101,6 +103,9 @@ export function CitasSection() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [smartSuggestion, setSmartSuggestion] = useState<string | null>(null)
   const [isFindingSlot, setIsFindingSlot] = useState(false)
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [apiSlots, setApiSlots] = useState<SlotDisponibilidad[] | null>(null)
+  const [slotsError, setSlotsError] = useState<string | null>(null)
 
   // Beneficiarios
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
@@ -179,10 +184,12 @@ export function CitasSection() {
   // Si la fecha elegida no es válida para la especialidad, no hay slots disponibles
   const slotsDisponibles = useMemo(() => {
     if (!espSeleccionada) return TIME_SLOTS
-    // Si hay fecha seleccionada y no es válida para la especialidad → sin slots
     if (form.fecha && !esFechaValidaFrontend(espSeleccionada, form.fecha)) return []
+    // Use API slots when available
+    if (apiSlots !== null) return apiSlots.filter(s => !s.lleno).map(s => s.hora)
+    // Fallback to TIME_SLOTS filtered by window
     return TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
-  }, [espSeleccionada, form.fecha])
+  }, [espSeleccionada, form.fecha, apiSlots])
 
   // Advertencia de fecha fuera de día permitido
   const fechaFueraDeRango = useMemo(() => {
@@ -191,6 +198,40 @@ export function CitasSection() {
       return descripcionHorario(espSeleccionada)
     }
     return null
+  }, [espSeleccionada, form.fecha])
+
+  // Load slots from API when specialty + fecha are selected
+  useEffect(() => {
+    if (!espSeleccionada || !form.fecha || !esFechaValidaFrontend(espSeleccionada, form.fecha)) {
+      setApiSlots(null)
+      setSlotsError(null)
+      return
+    }
+    let cancelled = false
+    setLoadingSlots(true)
+    setApiSlots(null)
+    setSlotsError(null)
+    getSlotsDisponibles(espSeleccionada.idEspecialidad, form.fecha)
+      .then(data => {
+        if (cancelled) return
+        if (data.bloqueada) {
+          setSlotsError(`${espSeleccionada.nombre} no atiende el ${form.fecha}${data.motivo ? ': ' + data.motivo : ''}`)
+          setApiSlots([])
+        } else if (data.inactiva) {
+          setSlotsError(`${espSeleccionada.nombre} no está activa actualmente`)
+          setApiSlots([])
+        } else {
+          setApiSlots(data.slots ?? [])
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // Fallback silently — slotsDisponibles will use TIME_SLOTS
+          setApiSlots(null)
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingSlots(false) })
+    return () => { cancelled = true }
   }, [espSeleccionada, form.fecha])
 
   const stats = useMemo(() => {
@@ -243,6 +284,8 @@ export function CitasSection() {
     setSmartSuggestion(null)
     setBuscaBenef("")
     setShowBenefList(false)
+    setApiSlots(null)
+    setSlotsError(null)
     setShowDialog(true)
   }
 
@@ -257,9 +300,11 @@ export function CitasSection() {
     const todayStart = startOfDayLocal(now)
 
     // Slots de hora válidos para esta especialidad
-    const slotsHora = espSeleccionada
-      ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
-      : TIME_SLOTS
+    const slotsHora = apiSlots !== null
+      ? apiSlots.filter(s => !s.lleno).map(s => s.hora)
+      : espSeleccionada
+        ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
+        : TIME_SLOTS
 
     let found = false
     let fechasEvaluadas = 0
@@ -624,6 +669,8 @@ export function CitasSection() {
                   setForm(f => ({ ...f, especialista: v, hora: "" }))
                   setSaveError(null)
                   setSmartSuggestion(null)
+                  setApiSlots(null)
+                  setSlotsError(null)
                 }}
               >
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialidad" /></SelectTrigger>
@@ -717,22 +764,36 @@ export function CitasSection() {
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
                   <select
                     className={`h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 ${
-                      (!form.especialista || fechaFueraDeRango || slotsDisponibles.length === 0) ? "text-muted-foreground/50 cursor-not-allowed" : "text-foreground"
+                      (!form.especialista || !!fechaFueraDeRango || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots))
+                        ? "text-muted-foreground/50 cursor-not-allowed"
+                        : "text-foreground"
                     }`}
                     value={form.hora}
-                    disabled={!form.especialista || !!fechaFueraDeRango || slotsDisponibles.length === 0}
+                    disabled={!form.especialista || !!fechaFueraDeRango || loadingSlots || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots)}
                     onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
                   >
                     <option value="">
                       {!form.especialista ? "Primero elige especialidad" :
                        fechaFueraDeRango ? "Fecha inválida para este especialista" :
-                       slotsDisponibles.length === 0 ? "Sin horarios disponibles" :
+                       loadingSlots ? "Cargando disponibilidad..." :
+                       slotsError ? "Fecha bloqueada" :
+                       (apiSlots !== null && apiSlots.length === 0) ? "Sin horarios disponibles" :
                        "Seleccionar hora"}
                     </option>
-                    {slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
+                    {apiSlots !== null
+                      ? apiSlots.map(s => (
+                          <option key={s.hora} value={s.hora} disabled={s.lleno}>
+                            {s.hora}{s.lleno ? " (Lleno)" : s.capacidad != null ? ` (${s.ocupados}/${s.capacidad})` : ""}
+                          </option>
+                        ))
+                      : slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)
+                    }
                   </select>
-                  {form.especialista && slotsDisponibles.length === 0 && !fechaFueraDeRango && (
+                  {form.especialista && slotsDisponibles.length === 0 && !fechaFueraDeRango && !loadingSlots && !slotsError && (
                     <p className="text-[11px] text-red-600 dark:text-red-400">Sin horarios disponibles para esta especialidad</p>
+                  )}
+                  {slotsError && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">{slotsError}</p>
                   )}
                 </div>
               </div>
