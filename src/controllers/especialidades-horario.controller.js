@@ -42,6 +42,19 @@ export const getCitasEnFecha = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Slots de disponibilidad ──────────────────────────────────────
+
+export const getSlotsHandler = async (req, res, next) => {
+  try {
+    const { fecha } = req.query;
+    if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return res.status(400).json({ error: "fecha es obligatoria y debe tener formato YYYY-MM-DD" });
+    }
+    const result = await svc.getSlotsConDisponibilidad(Number(req.params.id), fecha);
+    res.json(result);
+  } catch (err) { next(err); }
+};
+
 // ─── Excepciones ─────────────────────────────────────────────────
 
 export const getExcepciones = async (req, res, next) => {

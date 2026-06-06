@@ -5,6 +5,7 @@ import {
   updateEspecialidad,
   getCitasFuturas,
   getCitasEnFecha,
+  getSlotsHandler,
   getExcepciones,
   createExcepcion,
   deleteExcepcion,
@@ -28,6 +29,7 @@ router.patch("/:id", verifyToken, updateEspecialidad);
 // Consultas de impacto (para avisos en el dialog antes de guardar)
 router.get("/:id/citas-futuras", verifyToken, getCitasFuturas);
 router.get("/:id/citas-en-fecha", verifyToken, getCitasEnFecha);
+router.get("/:id/slots", verifyToken, getSlotsHandler);
 
 // Excepciones (fechas bloqueadas)
 router.get("/:id/excepciones", verifyToken, getExcepciones);
