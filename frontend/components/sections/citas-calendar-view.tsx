@@ -85,6 +85,17 @@ function buildLayout(dayCitas:Cita[]):LItem[]{
   return result
 }
 
+// ── Future cita check ────────────────────────────────────────────────────────
+function isCitaFutura(cita: Cita): boolean {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
+  return (
+    cita.fecha > todayStr ||
+    (cita.fecha === todayStr && (cita.hora ?? "00:00") > currentTimeStr)
+  )
+}
+
 // ── Validator ─────────────────────────────────────────────────────────────────
 export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string,espSeleccionada?:EspecialidadHorario|null):string|null{
   const s=snap30(toMins(hora)),e=s+DEFAULT_MINS
@@ -352,13 +363,15 @@ function CitaPopover({cita,blockRect,onClose,onAction,updatingId}:{
                 </button>
               </>}
               {cita.estatus === "Confirmada" && <>
-                <button
-                  disabled={isUpdating}
-                  onClick={() => requestAction(cita.id, "Completada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  <Check className="size-3.5"/>Completar
-                </button>
+                {!isCitaFutura(cita) && (
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => requestAction(cita.id, "Completada")}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Check className="size-3.5"/>Completar
+                  </button>
+                )}
                 <button
                   disabled={isUpdating}
                   onClick={() => requestAction(cita.id, "Cancelada")}
@@ -543,10 +556,12 @@ function CitaDetailPanel({selected,onClose,onAction,updatingId}:{
               </button>
             </>}
             {cita.estatus==="Confirmada"&&<>
-              <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Completada")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
-                <Check className="size-3.5"/>Completar
-              </button>
+              {!isCitaFutura(cita)&&(
+                <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Completada")}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
+                  <Check className="size-3.5"/>Completar
+                </button>
+              )}
               <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Cancelada")}
                 className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                 <X className="size-3.5"/>Cancelar

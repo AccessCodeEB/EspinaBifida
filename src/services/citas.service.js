@@ -95,6 +95,22 @@ export const updateCita = async (id, data) => {
     throw badRequest("Estatus no válido");
   }
 
+  // Bloquear marcar como COMPLETADA si la cita es futura
+  if (estatus === "COMPLETADA") {
+    const now = new Date();
+    const citaDate = cita.FECHA instanceof Date ? cita.FECHA : new Date(cita.FECHA);
+    const todayStr = now.toISOString().slice(0, 10);
+    const citaDateStr = citaDate.toISOString().slice(0, 10);
+    const nowTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const citaTimeStr = `${String(citaDate.getHours()).padStart(2, "0")}:${String(citaDate.getMinutes()).padStart(2, "0")}`;
+    const isFuture =
+      citaDateStr > todayStr ||
+      (citaDateStr === todayStr && citaTimeStr > nowTimeStr);
+    if (isFuture) {
+      throw badRequest("No se puede marcar como completada una cita futura", "CITA_FUTURA");
+    }
+  }
+
   return await citasModel.update(id, {
     curp:          data.curp          ? data.curp.toUpperCase() : cita.CURP,
     idTipoServicio: data.idTipoServicio ?? cita.ID_TIPO_SERVICIO,
