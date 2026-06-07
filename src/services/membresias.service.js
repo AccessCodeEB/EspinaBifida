@@ -3,9 +3,22 @@ import * as ServiciosModel from "../models/servicios.model.js";
 import { withConnection } from "../config/db.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 import { parseISODate } from "../utils/validators.js";
+import { getValorNumerico } from "./configuracion.service.js";
 
-const MONTO_NUEVO_INGRESO = 200;
-const MONTO_REINSCRIPCION = 150;
+// Fallback si CONFIGURACION no tiene el valor aún
+const MONTO_NUEVO_INGRESO_DEFAULT = 200;
+const MONTO_REINSCRIPCION_DEFAULT = 150;
+
+async function getPreciosMembresia() {
+  const [r1, r2] = await Promise.allSettled([
+    getValorNumerico("PRECIO_MEMBRESIA_NUEVO_INGRESO"),
+    getValorNumerico("PRECIO_MEMBRESIA_REINSCRIPCION"),
+  ]);
+  return {
+    nuevoIngreso:  r1.status === "fulfilled" && r1.value != null ? r1.value : MONTO_NUEVO_INGRESO_DEFAULT,
+    reinscripcion: r2.status === "fulfilled" && r2.value != null ? r2.value : MONTO_REINSCRIPCION_DEFAULT,
+  };
+}
 
 function formatISODateUTC(date) {
   const y = date.getUTCFullYear();
@@ -122,8 +135,8 @@ function parsarFechasMembresia(data, hoy, hoyStr, fechaEmisionStr) {
   return { fechaEmision, fechaVigenciaInicio, fechaUltimoPago };
 }
 
-function validarMontoYMetodo(data, tipo, anios = 1) {
-  const montoBase = tipo === "reinscripcion" ? MONTO_REINSCRIPCION : MONTO_NUEVO_INGRESO;
+function validarMontoYMetodo(data, tipo, anios = 1, precios = { nuevoIngreso: MONTO_NUEVO_INGRESO_DEFAULT, reinscripcion: MONTO_REINSCRIPCION_DEFAULT }) {
+  const montoBase = tipo === "reinscripcion" ? precios.reinscripcion : precios.nuevoIngreso;
   let monto;
   if (data?.monto == null) {
     monto = anios * montoBase;
@@ -194,7 +207,8 @@ export async function registrarMembresia(data) {
   const anios = Math.max(1, Math.round(Number(data?.anios ?? 1)) || 1);
   const fechaVigenciaFin = addMonthsUTC(fechaVigenciaInicio, anios * 12);
 
-  const { monto, metodoPago } = validarMontoYMetodo(data, tipoFinal, anios);
+  const precios = await getPreciosMembresia();
+  const { monto, metodoPago } = validarMontoYMetodo(data, tipoFinal, anios, precios);
   const referencia = data?.referencia ?? null;
 
   const result = await MembresiasModel.create({
