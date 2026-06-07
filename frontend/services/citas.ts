@@ -22,6 +22,7 @@ export interface NuevaCitaPayload {
   fecha: string
   hora: string
   notas?: string
+  costo?: number
 }
 
 export interface CreateCitaResponse {

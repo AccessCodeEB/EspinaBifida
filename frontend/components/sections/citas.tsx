@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X } from "lucide-react"
+import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
@@ -101,6 +101,9 @@ export function CitasSection() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [costoOverride, setCostoOverride] = useState<number | null>(null)
+  const [showCostoDialog, setShowCostoDialog] = useState(false)
+  const [costoInput, setCostoInput] = useState("")
   const [smartSuggestion, setSmartSuggestion] = useState<string | null>(null)
   const [isFindingSlot, setIsFindingSlot] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -286,6 +289,9 @@ export function CitasSection() {
     setShowBenefList(false)
     setApiSlots(null)
     setSlotsError(null)
+    setCostoOverride(null)
+    setShowCostoDialog(false)
+    setCostoInput("")
     setShowDialog(true)
   }
 
@@ -381,6 +387,7 @@ export function CitasSection() {
         fecha: form.fecha,
         hora: form.hora,
         notas: form.notas || undefined,
+        ...(costoOverride !== null && { costo: costoOverride }),
       })
 
       const citaId = Number(citaCreada?.result?.idCita ?? 0)
@@ -609,7 +616,7 @@ export function CitasSection() {
                   {benefFiltrados.map(b => (
                     <button key={b.folio} type="button"
                       className="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-muted transition-colors"
-                      onClick={() => { setForm(f => ({ ...f, curp: b.folio })); setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`); setShowBenefList(false); setSaveError(null) }}>
+                      onClick={() => { setForm(f => ({ ...f, curp: b.folio })); setBuscaBenef(`${b.nombres} ${b.apellidoPaterno} (${b.folio})`); setShowBenefList(false); setSaveError(null); setCostoOverride(null) }}>
                       <span className="font-semibold text-foreground">{b.nombres} {b.apellidoPaterno}</span>
                       <span className="font-mono text-muted-foreground">{b.folio}</span>
                     </button>
@@ -623,26 +630,119 @@ export function CitasSection() {
               )}
             </div>
 
-            {/* Costo auto-detectado (solo lectura) — solo para Consulta Médica */}
+            {/* Costo auto-detectado — solo para Consulta Médica */}
             {form.curp && /consulta/i.test(catalogoServicios.find(t => String(t.idTipoServicio) === form.idTipoServicio)?.nombre ?? "") && (() => {
               const previas = citas.filter(c => c.folio === form.curp && c.estatus !== "Cancelada").length
               const esPrimera = previas === 0
-              const costo = esPrimera ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA
+              const costoBase = esPrimera ? COSTO_PRIMERA_CITA : COSTO_SUBSECUENTE_CITA
+              const costoFinal = costoOverride ?? costoBase
+
               return (
-                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/30 px-4 py-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de consulta</p>
-                    <p className="mt-0.5 text-sm font-semibold text-foreground">
-                      {esPrimera ? "Primera cita" : "Cita subsecuente"}
-                    </p>
+                <>
+                  {/* Tarjeta de costo */}
+                  <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de consulta</p>
+                        <p className="mt-0.5 text-sm font-semibold text-foreground">
+                          {esPrimera ? "Primera cita" : "Cita subsecuente"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Costo</p>
+                        <p className="mt-0.5 text-base font-bold text-foreground">
+                          ${costoFinal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                        </p>
+                        {costoOverride !== null && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400">Precio ajustado</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Botón visible para Lupita */}
+                    <button
+                      type="button"
+                      onClick={() => { setCostoInput(String(costoFinal)); setShowCostoDialog(true) }}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-[#0f4c81] hover:bg-[#0f4c81]/5 hover:text-[#0f4c81] dark:hover:border-blue-400 dark:hover:text-blue-400"
+                    >
+                      <Pencil className="size-3.5" />
+                      Cambiar costo de esta cita
+                    </button>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Costo</p>
-                    <p className="mt-0.5 text-sm font-semibold text-foreground">
-                      ${costo.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
+
+                  {/* Dialog para cambiar el costo */}
+                  <Dialog open={showCostoDialog} onOpenChange={setShowCostoDialog}>
+                    <DialogContent showCloseButton={false} className="max-w-sm p-0 gap-0 overflow-hidden">
+                      {/* Header */}
+                      <div className="relative shrink-0 overflow-hidden" style={{ background: NAVY }}>
+                        <div className="absolute inset-0 opacity-[0.06]"
+                          style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                        <div className="relative flex items-center justify-between gap-3 px-5 py-4">
+                          <div>
+                            <DialogTitle className="text-sm font-bold text-white">Cambiar costo de la cita</DialogTitle>
+                            <DialogDescription className="mt-0.5 text-[11px] text-white/60">
+                              {esPrimera ? "Primera cita" : "Cita subsecuente"} · precio sugerido ${costoBase.toLocaleString("es-MX")}
+                            </DialogDescription>
+                          </div>
+                          <button onClick={() => setShowCostoDialog(false)}
+                            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors">
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Cuerpo */}
+                      <div className="space-y-4 px-5 py-5">
+                        <p className="text-sm text-muted-foreground">
+                          Puedes ajustar el costo si el paciente tiene una situación especial. El precio sugerido es <strong>${costoBase.toLocaleString("es-MX")}</strong>.
+                        </p>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                            Nuevo costo (MXN)
+                          </Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={costoInput}
+                              onChange={e => setCostoInput(e.target.value)}
+                              className="pl-7 text-base font-semibold"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => { setShowCostoDialog(false); setCostoInput("") }}
+                            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = parseFloat(costoInput)
+                              if (!isNaN(val) && val >= 0) {
+                                setCostoOverride(val === costoBase ? null : val)
+                              }
+                              setShowCostoDialog(false)
+                              setCostoInput("")
+                            }}
+                            className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: NAVY }}
+                          >
+                            Confirmar costo
+                          </button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )
             })()}
 
