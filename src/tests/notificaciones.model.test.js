@@ -30,6 +30,9 @@ const {
   insertBeneficiarioBaja,
   insertReporteGenerado,
   deleteOrphanedNotificaciones,
+  findPreregistrosPendientes,
+  syncPreregistroPendiente,
+  deleteE2ENotificaciones,
 } = await import("../models/notificaciones.model.js");
 
 beforeEach(() => resetMocks());
@@ -427,5 +430,88 @@ describe("deleteOrphanedNotificaciones", () => {
     mockExecute.mockResolvedValueOnce({});
     const result = await deleteOrphanedNotificaciones();
     expect(result).toBe(0);
+  });
+});
+
+// ── findPreregistrosPendientes ────────────────────────────────────────────────
+
+describe("findPreregistrosPendientes", () => {
+  it("retorna pre-registros pendientes con el parámetro de días por defecto", async () => {
+    const rows = [{ CURP: "ABCD900101HXYZRL01", NOMBRE: "Juan", DIAS_PENDIENTE: 4 }];
+    mockExecute.mockResolvedValueOnce({ rows });
+    const result = await findPreregistrosPendientes();
+    expect(result).toEqual(rows);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("SOLICITUD_PUBLICA_PRE_REG"),
+      { dias: 3 }
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("acepta parámetro de días personalizado", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+    await findPreregistrosPendientes(7);
+    expect(mockExecute).toHaveBeenCalledWith(expect.any(String), { dias: 7 });
+  });
+});
+
+// ── syncPreregistroPendiente ──────────────────────────────────────────────────
+
+describe("syncPreregistroPendiente", () => {
+  it("inserta nueva notificación cuando no hay PENDIENTE y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin PENDIENTE
+    mockExecute.mockResolvedValueOnce({});           // INSERT
+
+    await syncPreregistroPendiente("5 pre-registros sin revisar más de 3 días.");
+
+    const insertSql = mockExecute.mock.calls[1][0];
+    expect(insertSql).toMatch(/INSERT INTO NOTIFICACIONES/i);
+    expect(insertSql).toMatch(/PREREGISTRO_PENDIENTE/);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("actualiza la existente cuando hay PENDIENTE y hay mensaje", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 12 }] }); // SELECT
+    mockExecute.mockResolvedValueOnce({});                                   // UPDATE
+
+    await syncPreregistroPendiente("Nuevo mensaje preregistro");
+
+    const updateSql = mockExecute.mock.calls[1][0];
+    expect(updateSql).toMatch(/UPDATE NOTIFICACIONES/i);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("marca como leída cuando hay PENDIENTE pero mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ ID_NOTIFICACION: 8 }] }); // SELECT
+    mockExecute.mockResolvedValueOnce({});                                  // UPDATE LEIDA
+
+    await syncPreregistroPendiente(null);
+
+    const updateSql = mockExecute.mock.calls[1][0];
+    expect(updateSql).toMatch(/LEIDA/);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("no hace nada cuando no hay PENDIENTE y mensaje es null", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] }); // SELECT — sin PENDIENTE
+
+    await syncPreregistroPendiente(null);
+
+    expect(mockExecute).toHaveBeenCalledTimes(1); // solo el SELECT
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── deleteE2ENotificaciones ───────────────────────────────────────────────────
+
+describe("deleteE2ENotificaciones", () => {
+  it("ejecuta DELETE de notificaciones E2E y hace commit", async () => {
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 5 });
+    await deleteE2ENotificaciones();
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM NOTIFICACIONES")
+    );
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 });

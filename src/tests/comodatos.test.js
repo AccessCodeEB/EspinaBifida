@@ -479,3 +479,135 @@ describe("POST /api/v1/comodatos/:id/pagos — registrar pago", () => {
     expect(mockRollback).toHaveBeenCalled();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 9. PATCH /api/v1/comodatos/:id/devolucion — registrar devolución física
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PATCH /api/v1/comodatos/:id/devolucion — registrar devolución física", () => {
+  const baseRow = {
+    ID_COMODATO: 1,
+    ID_ARTICULO: 4,
+    CURP: "ABCD123456HDFABC01",
+    FECHA_DEVOLUCION_ESPERADA: null,
+    FECHA_DEVOLUCION_REAL: null,
+    ESTATUS: "Activo",
+  };
+
+  const mockDevolucionOk = (esperada = null, nombreRows = [{ NOMBRE: "Juan García" }]) => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [{ ...baseRow, FECHA_DEVOLUCION_ESPERADA: esperada }] }) // SELECT comodato
+      .mockResolvedValueOnce({ rowsAffected: 1 })                                              // UPDATE fecha_devolucion_real
+      .mockResolvedValueOnce({ rows: nombreRows })                                             // SELECT beneficiario
+      .mockResolvedValueOnce({ outBinds: { stock_out: 5 } });                                 // applyMovimientoConConexion
+  };
+
+  test("registra devolución sin fecha esperada — tipo sinFechaEsperada (200)", async () => {
+    mockDevolucionOk(null);
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("sinFechaEsperada");
+    expect(res.body.message).toMatch(/registrada exitosamente/i);
+  });
+
+  test("registra devolución anticipada (200)", async () => {
+    const fechaFutura = new Date(Date.now() + 10 * 86400000);
+    mockDevolucionOk(fechaFutura);
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("anticipada");
+    expect(res.body.message).toMatch(/anticipada/i);
+  });
+
+  test("registra devolución tardía (200)", async () => {
+    const fechaPasada = new Date(Date.now() - 10 * 86400000);
+    mockDevolucionOk(fechaPasada);
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("tarde");
+    expect(res.body.message).toMatch(/tardía/i);
+  });
+
+  test("registra devolución a tiempo (200)", async () => {
+    mockDevolucionOk(new Date());
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.tipo).toBe("aTiempo");
+  });
+
+  test("usa CURP como fallback si el beneficiario no se encuentra (200)", async () => {
+    mockDevolucionOk(null, []); // SELECT beneficiario devuelve filas vacías
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveProperty("tipo", "sinFechaEsperada");
+  });
+
+  test("devuelve 404 si el comodato no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/999/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/no encontrado/i);
+  });
+
+  test("devuelve 409 si el comodato ya tiene devolución registrada", async () => {
+    mockExecute.mockResolvedValueOnce({
+      rows: [{ ...baseRow, FECHA_DEVOLUCION_REAL: "2026-01-20" }],
+    });
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/ya tiene una devolución/i);
+  });
+
+  test("hace rollback si el UPDATE falla con error de BD (500)", async () => {
+    mockExecute
+      .mockResolvedValueOnce({ rows: [baseRow] })
+      .mockRejectedValueOnce(new Error("DB connection lost"));
+
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect([500, 503]).toContain(res.status);
+    expect(mockRollback).toHaveBeenCalled();
+  });
+
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).patch("/api/v1/comodatos/1/devolucion");
+    expect(res.status).toBe(401);
+  });
+
+  test("rol lectura no puede registrar devolución (403)", async () => {
+    const res = await request(app)
+      .patch("/api/v1/comodatos/1/devolucion")
+      .set("Authorization", `Bearer ${tokenLectura}`);
+    expect(res.status).toBe(403);
+  });
+});

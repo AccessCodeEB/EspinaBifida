@@ -105,7 +105,7 @@ export async function registerDevolucion(req, res, next) {
       aTiempo:          "Devolución registrada exitosamente",
       sinFechaEsperada: "Devolución registrada exitosamente",
     };
-    res.json({ message: mensajes[data.tipo] ?? "Devolución registrada", data });
+    res.json({ message: mensajes[data.tipo], data });
   } catch (err) { next(err); }
 }
 

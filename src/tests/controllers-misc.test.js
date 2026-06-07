@@ -1360,3 +1360,72 @@ describe("POST /api/v1/administradores/logout — cerrar sesión", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CITAS — hardDeleteCita y e2eCleanup (funciones sin cobertura)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("DELETE /api/v1/citas/:id/permanent — hardDeleteCita", () => {
+  test("elimina permanentemente una cita existente (200)", async () => {
+    // findById → existe
+    mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
+    // hardRemove → DELETE
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(app)
+      .delete("/api/v1/citas/1/permanent")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/permanentemente/i);
+  });
+
+  test("devuelve 404 si la cita no existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete("/api/v1/citas/999/permanent")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  test("DB error → next(error) → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB timeout hardDelete"));
+
+    const res = await request(app)
+      .delete("/api/v1/citas/1/permanent")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+
+  test("devuelve 401 sin token", async () => {
+    const res = await request(app).delete("/api/v1/citas/1/permanent");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("DELETE /api/v1/citas/e2e-cleanup — e2eCleanup catch path", () => {
+  test("limpia citas E2E exitosamente (200)", async () => {
+    // deleteE2ECitas → DELETE + commit
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 3 });
+
+    const res = await request(app)
+      .delete("/api/v1/citas/e2e-cleanup")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/E2E/i);
+  });
+
+  test("DB error en e2eCleanup → next(err) → 500", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("DB e2e cleanup error"));
+
+    const res = await request(app)
+      .delete("/api/v1/citas/e2e-cleanup")
+      .set("Authorization", `Bearer ${tokenAdmin}`);
+
+    expect(res.status).toBe(500);
+  });
+});
