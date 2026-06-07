@@ -151,6 +151,7 @@ export function ServicioFormDialog({
   onRegistrar,
 }: ServicioFormDialogProps) {
   const [articuloPickerOpen, setArticuloPickerOpen] = useState(false)
+  const [estudioPickerOpen, setEstudioPickerOpen] = useState(false)
   const [intentoEnvio, setIntentoEnvio] = useState(false)
   const router = useRouter()
 
@@ -443,28 +444,57 @@ export function ServicioFormDialog({
           {esEstudioMedico && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de estudio</label>
-              <div className="relative">
-                <input
-                  list="tipos-estudio"
-                  placeholder="Ej. Biometría hemática, TAC, Ultrasonido..."
-                  className="h-10 w-full rounded-lg border border-border/70 bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-                  value={tipoEstudio}
-                  onChange={(e) => setTipoEstudio(e.target.value)}
-                />
-                <datalist id="tipos-estudio">
-                  <option value="Biometría hemática" />
-                  <option value="Biometría hemática completa" />
-                  <option value="Química sanguínea" />
-                  <option value="Cistograma" />
-                  <option value="TAC" />
-                  <option value="Resonancia magnética" />
-                  <option value="Ultrasonido" />
-                  <option value="Rayos X" />
-                  <option value="Electrocardiograma" />
-                  <option value="Urocultivo" />
-                  <option value="Examen general de orina" />
-                </datalist>
-              </div>
+              <Popover open={estudioPickerOpen} onOpenChange={setEstudioPickerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    role="combobox"
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-border/70 bg-background px-3 text-sm text-left outline-none hover:border-[#0f4c81]/50 focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                  >
+                    <span className={tipoEstudio ? "text-foreground" : "text-muted-foreground"}>
+                      {tipoEstudio || "Ej. Biometría hemática, TAC, Ultrasonido..."}
+                    </span>
+                    <span className="ml-2 shrink-0 text-muted-foreground">▼</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[440px] max-h-[280px] p-0 overflow-hidden" align="start">
+                  <Command shouldFilter>
+                    <CommandInput
+                      placeholder="Buscar o escribir tipo de estudio..."
+                      value={tipoEstudio}
+                      onValueChange={setTipoEstudio}
+                    />
+                    <CommandList className="max-h-[240px] overflow-y-auto">
+                      <CommandEmpty>
+                        <span className="text-xs text-muted-foreground">Se usará el texto ingresado</span>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {[
+                          "Biometría hemática",
+                          "Biometría hemática completa",
+                          "Química sanguínea",
+                          "Cistograma",
+                          "TAC",
+                          "Resonancia magnética",
+                          "Ultrasonido",
+                          "Rayos X",
+                          "Electrocardiograma",
+                          "Urocultivo",
+                          "Examen general de orina",
+                        ].map((estudio) => (
+                          <CommandItem
+                            key={estudio}
+                            value={estudio}
+                            onSelect={(val) => { setTipoEstudio(val); setEstudioPickerOpen(false) }}
+                          >
+                            {estudio}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
