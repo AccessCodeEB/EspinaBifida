@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-07 (Sábado) — Tests scheduler completados; citas con precio ajustable; auditoría hardcodes en curso
+**Actualización:** 2026-06-07 (Sábado) — Fix Estudio Médico en citas completado; membresías: editor de tarifas en progreso
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -379,7 +379,16 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `src/config/precios.js` — nueva fuente central para precios base de citas (`PRECIO_PRIMERA_CITA = 350`, `PRECIO_SUBSECUENTE_CITA = 300`); `citas.service.js` importa desde ahí
 - UI formulario nueva cita: botón "Cambiar costo de esta cita" visible a todo el ancho con ícono de lápiz; al pulsar abre dialog con campo de monto grande, botones Cancelar/Confirmar; badge "Precio ajustado" en ámbar si el staff modificó el costo
 - Override se resetea al cambiar beneficiario o cerrar el dialog; el backend ya aceptaba `costo` opcional, sin cambios en lógica de negocio
-- Bug detectado pendiente de fix: Estudio Médico no tiene campo de precio manual y muestra especialidades que corresponden a Consulta Médica
+
+### Cambios 2026-06-07 — Fix Estudio Médico en formulario de citas
+
+- Derivados booleanos `esConsulta` / `esEstudio` calculados con `useMemo` sobre el nombre del tipo seleccionado
+- Selector de especialidad: oculto completamente para Estudio Médico (solo aparece en Consulta Médica)
+- Campo de precio manual: visible solo para Estudio Médico — input numérico libre con prefijo `$`
+- Botón Smart Slot: envuelto en `{esConsulta && ...}`, invisible para estudios
+- Selector de hora: condicional — `<Input type="time">` libre para estudios; `<select>` con disponibilidad de slots para consultas
+- Validación `handleGuardar`: especialista y `validateSlot` solo se exigen para consultas
+- Total: 1451 tests en 58 suites — 100% verde
 
 ### Cambios 2026-06-07 — Tests casos borde scheduler de reportes
 
@@ -569,9 +578,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad alta — Bugs / UX críticos
 
-| Tarea | Descripción |
-|---|---|
-| **Fix Estudio Médico en form citas** | No muestra campo de precio manual (debería ser libre); muestra especialidades de Consulta Médica que no aplican para estudios |
+*(Sin ítems pendientes — Fix Estudio Médico completado 2026-06-07)*
 
 ### Prioridad media — UX / UI
 
@@ -596,7 +603,8 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| **Auditar y corregir valores hardcodeados** | Revisar todo el código (frontend y backend) en busca de valores que deberían ser configurables o dinámicos pero están escritos fijos: precios, umbrales, límites de paginación, textos de estado, emails de prueba, colores, etc. Centralizar en constantes o en la tabla `CONFIGURACION` según corresponda. |
+| **Editor de tarifas de membresías** | Los precios $200 (nuevo ingreso) y $150 (reinscripción) están hardcodeados en `membresias.service.js`. Implementar: leer desde tabla `CONFIGURACION` en BD + endpoint `PATCH /configuracion/:clave` + card "Tarifas vigentes" en la sección Membresías con diálogo de confirmación para que el admin pueda cambiar los precios sin tocar código. |
+| **Auditar y corregir valores hardcodeados restantes** | Grupos B y C pendientes: umbral de días para pre-registros pendientes (`> 3`), límite de paginación (`limit: 200`). Evaluar si centralizar en CONFIGURACION o dejar como constantes. |
 
 ### Prioridad baja (nice-to-have)
 

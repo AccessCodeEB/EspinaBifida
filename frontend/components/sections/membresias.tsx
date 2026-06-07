@@ -6,13 +6,18 @@ import { friendlyError } from "@/lib/friendly-error"
 import {
   Search, CreditCard, Building2, RefreshCw,
   Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, Plus,
-  Banknote, History, Hash, MapPin, Clock, DollarSign, FileText,
+  Banknote, History, Hash, MapPin, Clock, DollarSign, FileText, Settings2,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -21,7 +26,9 @@ import {
   getPagosRecientes, registrarPago, syncEstados,
   MONTO_NUEVO_INGRESO, MONTO_REINSCRIPCION, type PagoReciente,
 } from "@/services/membresias"
+import { getConfiguracion, updateConfiguracion } from "@/services/configuracion"
 import { conteosEstatusBeneficiarios } from "@/lib/beneficiarios-conteos"
+import { useAuth } from "@/hooks/useAuth"
 
 const NAVY  = "#0f4c81"
 const AMBER = "#E8B043"
@@ -78,14 +85,15 @@ function estatusBadge(estatus: "Activa" | "Inactiva" | "Cancelada") {
 
 type MetodoPago = "efectivo" | "transferencia"
 
-function PagoDialog({ open, beneficiario, onClose, onSuccess }: {
+function PagoDialog({ open, beneficiario, onClose, onSuccess, precioNuevo, precioReinsc }: {
   open: boolean; beneficiario: Beneficiario | null
   onClose: () => void; onSuccess: () => void
+  precioNuevo: number; precioReinsc: number
 }) {
   // Tipo auto-detectado: sin membresía previa → nuevo ingreso, con historial → re-inscripción
   const esNuevo   = beneficiario?.membresiaEstatus === "Sin membresia"
   const tipoLabel = esNuevo ? "Nuevo ingreso" : "Re-inscripción"
-  const montoBase = esNuevo ? MONTO_NUEVO_INGRESO : MONTO_REINSCRIPCION
+  const montoBase = esNuevo ? precioNuevo : precioReinsc
 
   const [anios, setAnios]           = useState(1)
   const [metodoPago, setMetodoPago] = useState<MetodoPago | "">("")
@@ -314,6 +322,9 @@ function NuevaMembresiaDialog({ open, sinMembresia, onSelect, onClose }: {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function MembresiasSection() {
+  const { session } = useAuth()
+  const esAdmin = session?.idRol === 1
+
   const [todosBeneficiarios, setTodosBeneficiarios] = useState<Beneficiario[]>([])
   const [pagos, setPagos]         = useState<PagoReciente[]>([])
   const [loading, setLoading]     = useState(true)
@@ -325,13 +336,70 @@ export function MembresiasSection() {
   const [showNuevaDialog, setShowNuevaDialog] = useState(false)
   const [activeTab, setActiveTab]             = useState<"membresias" | "historial">("membresias")
 
+  // Tarifas vigentes
+  const [precioNuevo, setPrecioNuevo]     = useState<number>(MONTO_NUEVO_INGRESO)
+  const [precioReinsc, setPrecioReinsc]   = useState<number>(MONTO_REINSCRIPCION)
+  const [showTarifaDialog, setShowTarifaDialog] = useState(false)
+  const [editandoClave, setEditandoClave] = useState<"PRECIO_MEMBRESIA_NUEVO_INGRESO" | "PRECIO_MEMBRESIA_REINSCRIPCION" | null>(null)
+  const [nuevoValorInput, setNuevoValorInput] = useState("")
+  const [confirmandoTarifa, setConfirmandoTarifa] = useState(false)
+  const [savingTarifa, setSavingTarifa]   = useState(false)
+  const [tarifaError, setTarifaError]     = useState<string | null>(null)
+
+  const precioActualEditar = editandoClave === "PRECIO_MEMBRESIA_REINSCRIPCION" ? precioReinsc : precioNuevo
+  const labelEditar = editandoClave === "PRECIO_MEMBRESIA_REINSCRIPCION" ? "Re-inscripción" : "Nuevo ingreso"
+
+  function abrirEditorTarifa(clave: "PRECIO_MEMBRESIA_NUEVO_INGRESO" | "PRECIO_MEMBRESIA_REINSCRIPCION") {
+    setEditandoClave(clave)
+    setNuevoValorInput(String(clave === "PRECIO_MEMBRESIA_REINSCRIPCION" ? precioReinsc : precioNuevo))
+    setTarifaError(null)
+    setConfirmandoTarifa(false)
+    setShowTarifaDialog(true)
+  }
+
+  function pedirConfirmacionTarifa() {
+    const val = parseFloat(nuevoValorInput)
+    if (isNaN(val) || val <= 0) {
+      setTarifaError("Ingresa un monto válido mayor a $0")
+      return
+    }
+    setTarifaError(null)
+    setShowTarifaDialog(false)
+    setConfirmandoTarifa(true)
+  }
+
+  async function ejecutarCambioTarifa() {
+    if (!editandoClave) return
+    const val = parseFloat(nuevoValorInput)
+    setSavingTarifa(true); setTarifaError(null)
+    try {
+      await updateConfiguracion(editandoClave, val)
+      if (editandoClave === "PRECIO_MEMBRESIA_NUEVO_INGRESO") setPrecioNuevo(val)
+      else setPrecioReinsc(val)
+      toast.success(`Tarifa de ${labelEditar} actualizada a $${val.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`)
+      setShowTarifaDialog(false)
+      setConfirmandoTarifa(false)
+    } catch (e: unknown) {
+      setTarifaError(friendlyError(e, "No se pudo actualizar la tarifa"))
+      setConfirmandoTarifa(false)
+    } finally { setSavingTarifa(false) }
+  }
+
   const cargarDatos = useCallback(async () => {
     setLoading(true); setError(null)
     try {
       await syncEstados().catch(() => {})
-      const [benef, pagosData] = await Promise.all([getBeneficiarios(), getPagosRecientes()])
+      const [benef, pagosData, config] = await Promise.all([
+        getBeneficiarios(),
+        getPagosRecientes(),
+        getConfiguracion().catch(() => ({} as Record<string, string>)),
+      ])
       setTodosBeneficiarios(benef)
       setPagos(pagosData)
+      const n = Number(config.PRECIO_MEMBRESIA_NUEVO_INGRESO)
+      const r = Number(config.PRECIO_MEMBRESIA_REINSCRIPCION)
+      if (!isNaN(n) && n > 0) setPrecioNuevo(n)
+      if (!isNaN(r) && r > 0) setPrecioReinsc(r)
     } catch (err: unknown) {
       setError(friendlyError(err, "No se pudo cargar la información de membresías"))
     } finally { setLoading(false) }
@@ -373,7 +441,7 @@ export function MembresiasSection() {
       <div>
         <h1 className="text-xl font-bold tracking-tight text-foreground">Membresías</h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Membresía anual · Nuevo ingreso ${MONTO_NUEVO_INGRESO} · Re-inscripción ${MONTO_REINSCRIPCION}
+          Membresía anual · Nuevo ingreso ${precioNuevo.toLocaleString("es-MX")} · Re-inscripción ${precioReinsc.toLocaleString("es-MX")}
         </p>
       </div>
 
@@ -409,6 +477,15 @@ export function MembresiasSection() {
             <RefreshCw className="size-3.5" />
             Actualizar
           </button>
+          {esAdmin && (
+            <button
+              onClick={() => abrirEditorTarifa("PRECIO_MEMBRESIA_NUEVO_INGRESO")}
+              className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Settings2 className="size-3.5" />
+              Tarifas
+            </button>
+          )}
           <button
             onClick={() => setShowNuevaDialog(true)}
             disabled={sinMembresia.length === 0}
@@ -444,6 +521,102 @@ export function MembresiasSection() {
         ))}
       </div>
       )}
+
+      {/* Dialog edición de tarifa */}
+      <Dialog open={showTarifaDialog} onOpenChange={(v) => { if (!v) setShowTarifaDialog(false) }}>
+        <DialogContent className="max-w-sm overflow-hidden p-0">
+          {/* Header navy con título adentro */}
+          <div className="relative flex h-14 items-center gap-3 rounded-t-2xl px-6" style={{ backgroundColor: NAVY }}>
+            <div className="absolute inset-0 rounded-t-2xl opacity-10"
+              style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+            <div className="relative z-10">
+              <DialogTitle className="text-base font-bold text-white">Cambiar tarifa</DialogTitle>
+              <DialogDescription className="text-[11px] text-white/70">
+                {labelEditar} · precio actual: ${precioActualEditar.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-6">
+            <div className="grid grid-cols-2 gap-2">
+              {(["PRECIO_MEMBRESIA_NUEVO_INGRESO", "PRECIO_MEMBRESIA_REINSCRIPCION"] as const).map((clave) => {
+                const label = clave === "PRECIO_MEMBRESIA_NUEVO_INGRESO" ? "Nuevo ingreso" : "Re-inscripción"
+                const precio = clave === "PRECIO_MEMBRESIA_NUEVO_INGRESO" ? precioNuevo : precioReinsc
+                const activa = editandoClave === clave
+                return (
+                  <button key={clave}
+                    onClick={() => { setEditandoClave(clave); setNuevoValorInput(String(precio)); setTarifaError(null) }}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all ${activa ? "border-[#0f4c81] bg-[#0f4c81]/8 ring-1 ring-[#0f4c81]/20" : "border-border/70 bg-muted/20 hover:border-[#0f4c81]/40"}`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+                    <span className="text-lg font-bold tabular-nums text-foreground">${precio.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Nuevo precio — {labelEditar}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">$</span>
+                <Input
+                  type="number" min="1" step="0.01"
+                  className="pl-7 text-lg font-bold tabular-nums"
+                  placeholder="0.00"
+                  value={nuevoValorInput}
+                  onChange={e => { setNuevoValorInput(e.target.value); setTarifaError(null) }}
+                  onKeyDown={e => e.key === "Enter" && pedirConfirmacionTarifa()}
+                />
+              </div>
+              {tarifaError && <p className="text-[11px] text-red-600 dark:text-red-400">{tarifaError}</p>}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setShowTarifaDialog(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={pedirConfirmacionTarifa}
+                style={{ backgroundColor: NAVY }} className="text-white hover:opacity-90">
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog de confirmación */}
+      <AlertDialog open={confirmandoTarifa} onOpenChange={(v) => { if (!v && !savingTarifa) setConfirmandoTarifa(false) }}>
+        <AlertDialogContent className="w-72 max-w-[90vw]">
+          <AlertDialogHeader className="items-center text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <AlertTriangle className="size-7 text-amber-600 dark:text-amber-400" />
+            </div>
+            <AlertDialogTitle className="text-center text-lg font-bold">¿Deseas cambiar el precio?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-xs text-muted-foreground">{labelEditar}</AlertDialogDescription>
+            <div className="flex w-full items-center justify-center gap-3 rounded-xl border border-border/70 bg-muted/30 py-4">
+              <span className="text-sm font-bold tabular-nums text-muted-foreground line-through">
+                ${precioActualEditar.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </span>
+              <span className="text-muted-foreground/50">→</span>
+              <span className="text-base font-bold tabular-nums text-foreground">
+                ${parseFloat(nuevoValorInput || "0").toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </AlertDialogHeader>
+          {tarifaError && <p className="text-center text-[11px] text-red-600 dark:text-red-400">{tarifaError}</p>}
+          <AlertDialogFooter className="sm:justify-center gap-2">
+            <AlertDialogCancel disabled={savingTarifa} className="flex-1">No</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={ejecutarCambioTarifa}
+              disabled={savingTarifa}
+              style={{ backgroundColor: NAVY }}
+              className="flex-1 text-white hover:opacity-90"
+            >
+              {savingTarifa ? "Guardando..." : "Sí, cambiar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Tab: Membresías ── */}
       {activeTab === "membresias" && (
@@ -619,6 +792,8 @@ export function MembresiasSection() {
         beneficiario={selectedBenef}
         onClose={() => setShowPagoDialog(false)}
         onSuccess={cargarDatos}
+        precioNuevo={precioNuevo}
+        precioReinsc={precioReinsc}
       />
     </div>
   )

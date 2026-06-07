@@ -54,3 +54,11 @@ export function getTiposServicio() {
 export function getEspecialistas() {
   return apiClient.get<Especialista[]>("/especialistas")
 }
+
+/** PATCH /configuracion/:clave — solo admins (idRol=1) */
+export function updateConfiguracion(clave: string, valor: number) {
+  return apiClient.patch<{ data: { clave: string; valor: number }; message: string }>(
+    `/configuracion/${encodeURIComponent(clave)}`,
+    { valor }
+  )
+}
