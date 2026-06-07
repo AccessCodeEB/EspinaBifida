@@ -1,11 +1,12 @@
 import * as citasModel from "../models/citas.model.js";
 import { validarSlotEspecialidad } from "./especialidades-horario.service.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
+import { PRECIO_PRIMERA_CITA, PRECIO_SUBSECUENTE_CITA } from "../config/precios.js";
 
 const ESTATUS_VALIDOS = new Set(["PROGRAMADA", "CONFIRMADA", "COMPLETADA", "CANCELADA"]);
 
-export const COSTO_PRIMERA_CITA     = 350;
-export const COSTO_SUBSECUENTE_CITA = 300;
+export const COSTO_PRIMERA_CITA     = PRECIO_PRIMERA_CITA;
+export const COSTO_SUBSECUENTE_CITA = PRECIO_SUBSECUENTE_CITA;
 
 export const getAllCitas = async () => {
   return await citasModel.findAll();
