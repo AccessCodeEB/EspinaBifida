@@ -26,7 +26,7 @@ export interface Beneficiario {
   notas?: string
   fechaAlta?: string
   numeroCredencial?: string
-  tipo: string
+  tipo?: string
   estatus: string
   membresiaEstatus: string
   diasRestantes?: number | null
