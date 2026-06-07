@@ -95,6 +95,8 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
         JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
         WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
           AND S.ID_SERVICIO NOT IN (SELECT ID_SERVICIO FROM SERVICIO_ARTICULOS)
+          -- Excluir membresías: ya se cuentan en CANT_CREDENCIALES del resumen
+          AND UPPER(SC.NOMBRE) NOT LIKE '%MEMBRES%'
         GROUP BY SC.NOMBRE
       )
       ORDER BY CANTIDAD DESC
