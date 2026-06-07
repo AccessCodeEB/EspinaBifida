@@ -275,3 +275,159 @@ describe("generarAutomatico — notificación REPORTE_GENERADO", () => {
     await expect(callback()).resolves.toBeUndefined();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// calcularPeriodo — casos borde de meses
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("calcularPeriodo — MENSUAL año bisiesto", () => {
+  test("1 de marzo 2024 → febrero con 29 días", () => {
+    const { fechaInicio, fechaFin } = calcularPeriodo("MENSUAL", new Date(2024, 2, 1));
+    expect(fechaInicio).toBe("2024-02-01");
+    expect(fechaFin).toBe("2024-02-29");
+  });
+});
+
+describe("calcularPeriodo — MENSUAL meses con 30 días", () => {
+  test("1 de mayo → abril (30 días)", () => {
+    const { fechaInicio, fechaFin } = calcularPeriodo("MENSUAL", new Date(2026, 4, 1));
+    expect(fechaInicio).toBe("2026-04-01");
+    expect(fechaFin).toBe("2026-04-30");
+  });
+
+  test("1 de diciembre → noviembre (30 días)", () => {
+    const { fechaInicio, fechaFin } = calcularPeriodo("MENSUAL", new Date(2026, 11, 1));
+    expect(fechaInicio).toBe("2026-11-01");
+    expect(fechaFin).toBe("2026-11-30");
+  });
+});
+
+describe("calcularPeriodo — MENSUAL meses con 31 días", () => {
+  test("1 de abril → marzo (31 días)", () => {
+    const { fechaInicio, fechaFin } = calcularPeriodo("MENSUAL", new Date(2026, 3, 1));
+    expect(fechaInicio).toBe("2026-03-01");
+    expect(fechaFin).toBe("2026-03-31");
+  });
+
+  test("1 de agosto → julio (31 días)", () => {
+    const { fechaInicio, fechaFin } = calcularPeriodo("MENSUAL", new Date(2026, 7, 1));
+    expect(fechaInicio).toBe("2026-07-01");
+    expect(fechaFin).toBe("2026-07-31");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// generarAutomatico — errores intermedios (no deben crashear el scheduler)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("generarAutomatico — error en generarPDF", () => {
+  test("captura el error sin relanzar y no escribe archivos", async () => {
+    process.env.REPORT_MENSUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockRejectedValueOnce(new Error("PDF generation failed"));
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    initScheduler();
+    await expect(mockSchedule.mock.calls[0][1]()).resolves.toBeUndefined();
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[scheduler]"),
+      expect.any(Error)
+    );
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+describe("generarAutomatico — error en fs.mkdir", () => {
+  test("captura el error sin relanzar y no llega a escribir archivos", async () => {
+    process.env.REPORT_SEMESTRAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockRejectedValueOnce(new Error("EACCES: permission denied"));
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    initScheduler();
+    await expect(mockSchedule.mock.calls[0][1]()).resolves.toBeUndefined();
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[scheduler]"),
+      expect.any(Error)
+    );
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+describe("generarAutomatico — error en guardarRegistro", () => {
+  test("captura el error sin relanzar y no dispara la notificación", async () => {
+    process.env.REPORT_ANUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockResolvedValueOnce(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+    mockGuardarRegistro.mockRejectedValueOnce(new Error("ORA-00001: unique constraint"));
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    initScheduler();
+    await expect(mockSchedule.mock.calls[0][1]()).resolves.toBeUndefined();
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("[scheduler]"),
+      expect.any(Error)
+    );
+    // Si guardarRegistro falla, la notificación no debe dispararse
+    expect(mockInsertReporteGenerado).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// generarAutomatico — verificación de rutas y log de éxito
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("generarAutomatico — formato de rutas en guardarRegistro", () => {
+  test("rutaPdf y rutaXlsx contienen tipo y fechaInicio", async () => {
+    process.env.REPORT_MENSUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockResolvedValueOnce(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+    mockGuardarRegistro.mockResolvedValueOnce({});
+
+    initScheduler();
+    await mockSchedule.mock.calls[0][1]();
+
+    const { fechaInicio, rutaPdf, rutaXlsx } = mockGuardarRegistro.mock.calls[0][0];
+    expect(rutaPdf).toContain("reporte-mensual-");
+    expect(rutaXlsx).toContain("reporte-mensual-");
+    expect(rutaPdf).toContain(fechaInicio);
+    expect(rutaXlsx).toContain(fechaInicio);
+    expect(rutaPdf).toMatch(/\.pdf$/);
+    expect(rutaXlsx).toMatch(/\.xlsx$/);
+  });
+});
+
+describe("generarAutomatico — console.log en éxito", () => {
+  test("registra mensaje con 'generado' en consola", async () => {
+    process.env.REPORT_MENSUAL = "true";
+    mockGenerarReporte.mockResolvedValueOnce({});
+    mockGenerarPDF.mockResolvedValueOnce(Buffer.from(""));
+    mockGenerarXLSX.mockResolvedValueOnce(Buffer.from(""));
+    mockMkdir.mockResolvedValueOnce(undefined);
+    mockWriteFile.mockResolvedValue(undefined);
+    mockGuardarRegistro.mockResolvedValueOnce({});
+    const spy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    initScheduler();
+    await mockSchedule.mock.calls[0][1]();
+
+    // initScheduler también logea "activado"; el callback debe loguear "generado"
+    const mensajes = spy.mock.calls.map((c) => c[0]);
+    expect(mensajes.some((m) => m.includes("generado"))).toBe(true);
+    spy.mockRestore();
+  });
+});
