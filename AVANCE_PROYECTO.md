@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-06 (Viernes) — Rediseño UX flujo de registrar pago/exención en Comodatos
+**Actualización:** 2026-06-07 (Sábado) — Tests scheduler completados; citas con precio ajustable; auditoría hardcodes en curso
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -18,8 +18,8 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 30 / 30 |
-| Archivos de prueba Jest (suites) | 59 |
-| Tests Jest | 1381 |
+| Archivos de prueba Jest (suites) | 58 |
+| Tests Jest | 1451 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -372,7 +372,20 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 | Área | Detalle | Prioridad |
 |---|---|---|
-| **Scheduler de reportes** | Funcional pero pruebas de los casos borde del cron aún incompletas | Media |
+| **Auditoría de hardcodes** | Revisión de valores fijos en frontend y backend; centralización en constantes o tabla CONFIGURACION | Media |
+
+### Cambios 2026-06-07 — Auditoría hardcodes: citas
+
+- `src/config/precios.js` — nueva fuente central para precios base de citas (`PRECIO_PRIMERA_CITA = 350`, `PRECIO_SUBSECUENTE_CITA = 300`); `citas.service.js` importa desde ahí
+- UI formulario nueva cita: botón "Cambiar costo de esta cita" visible a todo el ancho con ícono de lápiz; al pulsar abre dialog con campo de monto grande, botones Cancelar/Confirmar; badge "Precio ajustado" en ámbar si el staff modificó el costo
+- Override se resetea al cambiar beneficiario o cerrar el dialog; el backend ya aceptaba `costo` opcional, sin cambios en lógica de negocio
+- Bug detectado pendiente de fix: Estudio Médico no tiene campo de precio manual y muestra especialidades que corresponden a Consulta Médica
+
+### Cambios 2026-06-07 — Tests casos borde scheduler de reportes
+
+- `reporteScheduler.test.js`: 11 tests nuevos — año bisiesto (feb-29), meses de 30 y 31 días, error en `generarPDF`/`fs.mkdir`/`guardarRegistro` (verificando que el scheduler no crashea), formato de rutas `rutaPdf`/`rutaXlsx`, `console.log` de éxito
+- Total: **1451 tests** en **58 suites** — 100% verde
+- Scheduler de reportes marcado como **completado**
 
 ### Cambios 2026-06-01 — Inventario: edición de precios + rediseño diálogo
 
@@ -556,7 +569,9 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad alta — Bugs / UX críticos
 
-*(Sin ítems pendientes en esta prioridad)*
+| Tarea | Descripción |
+|---|---|
+| **Fix Estudio Médico en form citas** | No muestra campo de precio manual (debería ser libre); muestra especialidades de Consulta Médica que no aplican para estudios |
 
 ### Prioridad media — UX / UI
 
