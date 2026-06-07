@@ -35,6 +35,7 @@ import { runMigration031 } from "./migrations/031_membresia_tipo_servicio.js";
 import { runMigration032 } from "./migrations/032_add_duracion_cita.js";
 import { runMigration033 } from "./migrations/033_comodatos_devolucion_real.js";
 import { runMigration034 } from "./migrations/034_notificaciones_preregistro_pendiente.js";
+import { runMigration035 } from "./migrations/035_precios_membresia_configuracion.js";
 import { initScheduler }  from "./utils/reporteScheduler.js";
 import { initNotificacionesScheduler } from "./utils/notificacionesScheduler.js";
 
@@ -113,6 +114,7 @@ async function initOracle() {
   await runMigration032();
   await runMigration033();
   await runMigration034();
+  await runMigration035();
   initScheduler();
   initNotificacionesScheduler();
 }

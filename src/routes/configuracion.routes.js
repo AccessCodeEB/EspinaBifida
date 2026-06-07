@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { verifyToken } from "../middleware/auth.js";
+import { verifyToken, checkRole } from "../middleware/auth.js";
 import {
   getConfiguracion,
   getCuentasBancarias,
   getResumenFinanciero,
+  patchConfiguracion,
 } from "../controllers/configuracion.controller.js";
 
 const router = Router();
@@ -158,5 +159,8 @@ router.get("/cuentas-bancarias", getCuentasBancarias);
  *               $ref: '#/components/schemas/Error500'
  */
 router.get("/resumen-financiero", verifyToken, getResumenFinanciero);
+
+/** PATCH /configuracion/:clave — solo Administrador (idRol=1) */
+router.patch("/:clave", verifyToken, checkRole(1), patchConfiguracion);
 
 export default router;

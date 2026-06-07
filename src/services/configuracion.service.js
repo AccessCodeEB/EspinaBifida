@@ -1,4 +1,57 @@
 import { withConnection } from "../config/db.js";
+import { badRequest, notFound } from "../utils/httpErrors.js";
+
+// Claves que el endpoint PATCH /configuracion/:clave puede modificar
+const CLAVES_EDITABLES = new Set([
+  "PRECIO_MEMBRESIA_NUEVO_INGRESO",
+  "PRECIO_MEMBRESIA_REINSCRIPCION",
+]);
+
+/**
+ * Lee el valor numérico de una clave de CONFIGURACION.
+ * Devuelve null si la clave no existe.
+ */
+export async function getValorNumerico(clave) {
+  return withConnection(async (conn) => {
+    const { rows } = await conn.execute(
+      `SELECT VALOR FROM CONFIGURACION WHERE CLAVE = :clave`,
+      { clave }
+    );
+    if (!rows.length) return null;
+    const n = Number(rows[0].VALOR);
+    return Number.isNaN(n) ? null : n;
+  });
+}
+
+/**
+ * Actualiza el VALOR de una clave en CONFIGURACION.
+ * Solo acepta claves en CLAVES_EDITABLES.
+ * El valor debe ser un número positivo.
+ */
+export async function updateValor(clave, valor) {
+  if (!CLAVES_EDITABLES.has(clave)) {
+    throw badRequest(`La clave '${clave}' no es editable`);
+  }
+  const num = Number(valor);
+  if (Number.isNaN(num) || num <= 0) {
+    throw badRequest("El valor debe ser un número positivo");
+  }
+  return withConnection(async (conn) => {
+    const { rows } = await conn.execute(
+      `SELECT CLAVE FROM CONFIGURACION WHERE CLAVE = :clave`,
+      { clave }
+    );
+    if (!rows.length) {
+      throw notFound(`Clave '${clave}' no encontrada en CONFIGURACION`);
+    }
+    await conn.execute(
+      `UPDATE CONFIGURACION SET VALOR = :valor WHERE CLAVE = :clave`,
+      { valor: String(num), clave }
+    );
+    await conn.commit();
+    return { clave, valor: num };
+  });
+}
 
 /**
  * Retorna todos los pares CLAVE/VALOR de CONFIGURACION como un objeto plano.
