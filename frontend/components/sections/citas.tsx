@@ -177,6 +177,14 @@ export function CitasSection() {
 
   const today = useMemo(() => new Date(), [])
 
+  // Tipo de servicio seleccionado y sus flags
+  const tipoServicioSeleccionado = useMemo(
+    () => catalogoServicios.find(t => String(t.idTipoServicio) === form.idTipoServicio) ?? null,
+    [catalogoServicios, form.idTipoServicio]
+  )
+  const esConsulta = /consulta/i.test(tipoServicioSeleccionado?.nombre ?? "")
+  const esEstudio  = /estudio/i.test(tipoServicioSeleccionado?.nombre ?? "")
+
   // Especialidad seleccionada y sus restricciones
   const espSeleccionada = useMemo(
     () => especialidades.find(e => e.nombre === form.especialista) ?? null,
@@ -368,7 +376,7 @@ export function CitasSection() {
     const missing: string[] = []
     if (!form.curp) missing.push("beneficiario")
     if (!form.idTipoServicio) missing.push("tipo de servicio")
-    if (!form.especialista) missing.push("especialidad")
+    if (esConsulta && !form.especialista) missing.push("especialidad")
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
@@ -376,8 +384,10 @@ export function CitasSection() {
       setSaveError("No puedes agendar una cita en un horario que ya pasó.")
       return
     }
-    const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp, espSeleccionada)
-    if (slotError) { setSaveError(slotError); return }
+    if (esConsulta) {
+      const slotError = validateSlot(citas, form.fecha, form.hora, form.especialista, form.curp, espSeleccionada)
+      if (slotError) { setSaveError(slotError); return }
+    }
     setSaving(true); setSaveError(null)
     try {
       const citaCreada = await createCita({
@@ -749,7 +759,7 @@ export function CitasSection() {
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de servicio</label>
-              <Select value={form.idTipoServicio} onValueChange={v => { if (bloqueadoDesdeServicios) return; setForm(f => ({ ...f, idTipoServicio: v })); setSaveError(null) }} disabled={bloqueadoDesdeServicios}>
+              <Select value={form.idTipoServicio} onValueChange={v => { if (bloqueadoDesdeServicios) return; setForm(f => ({ ...f, idTipoServicio: v, especialista: "", hora: "" })); setCostoOverride(null); setSaveError(null) }} disabled={bloqueadoDesdeServicios}>
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
                   {catalogoServicios.filter(t => /consulta/i.test(t.nombre) || /estudio/i.test(t.nombre)).map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
@@ -760,42 +770,69 @@ export function CitasSection() {
               )}
             </div>
 
-            {/* Especialista */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialidad</label>
-              <Select
-                value={form.especialista}
-                onValueChange={v => {
-                  setForm(f => ({ ...f, especialista: v, hora: "" }))
-                  setSaveError(null)
-                  setSmartSuggestion(null)
-                  setApiSlots(null)
-                  setSlotsError(null)
-                }}
-              >
-                <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialidad" /></SelectTrigger>
-                <SelectContent>
-                  {especialidades.map(e => (
-                    <SelectItem key={e.idEspecialidad} value={e.nombre}>{e.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {espSeleccionada && (
-                <p className="text-[11px] text-muted-foreground">
-                  Horario: {descripcionHorario(espSeleccionada)}
-                </p>
-              )}
-              {!espSeleccionada && (
-                <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                  Selecciona una especialidad para ver los horarios disponibles
-                </p>
-              )}
-            </div>
+            {/* Especialidad — solo Consulta Médica */}
+            {esConsulta && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especialidad</label>
+                <Select
+                  value={form.especialista}
+                  onValueChange={v => {
+                    setForm(f => ({ ...f, especialista: v, hora: "" }))
+                    setSaveError(null)
+                    setSmartSuggestion(null)
+                    setApiSlots(null)
+                    setSlotsError(null)
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar especialidad" /></SelectTrigger>
+                  <SelectContent>
+                    {especialidades.map(e => (
+                      <SelectItem key={e.idEspecialidad} value={e.nombre}>{e.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {espSeleccionada && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Horario: {descripcionHorario(espSeleccionada)}
+                  </p>
+                )}
+                {!espSeleccionada && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                    Selecciona una especialidad para ver los horarios disponibles
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Costo — solo Estudio Médico (precio libre) */}
+            {esEstudio && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Costo del estudio <span className="font-normal normal-case text-muted-foreground/70">(opcional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={costoOverride !== null ? String(costoOverride) : ""}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value)
+                      setCostoOverride(isNaN(val) || e.target.value === "" ? null : val)
+                    }}
+                    className="pl-7 text-sm"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">Ingresa el costo acordado con el paciente para este estudio.</p>
+              </div>
+            )}
 
             {/* Fecha y Hora + Smart Slot */}
             <div className="space-y-2">
-              {/* Botón IA — gradiente siempre visible, gris cuando está bloqueado */}
-              {(() => {
+              {/* Botón IA — solo para Consulta Médica */}
+              {esConsulta && (() => {
                 const isUnlocked = !!(form.curp && form.especialista)
                 return (
                   <button
@@ -862,38 +899,49 @@ export function CitasSection() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>
-                  <select
-                    className={`h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 ${
-                      (!form.especialista || !!fechaFueraDeRango || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots))
-                        ? "text-muted-foreground/50 cursor-not-allowed"
-                        : "text-foreground"
-                    }`}
-                    value={form.hora}
-                    disabled={!form.especialista || !!fechaFueraDeRango || loadingSlots || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots)}
-                    onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
-                  >
-                    <option value="">
-                      {!form.especialista ? "Primero elige especialidad" :
-                       fechaFueraDeRango ? "Fecha inválida para este especialista" :
-                       loadingSlots ? "Cargando disponibilidad..." :
-                       slotsError ? "Fecha bloqueada" :
-                       (apiSlots !== null && apiSlots.length === 0) ? "Sin horarios disponibles" :
-                       "Seleccionar hora"}
-                    </option>
-                    {apiSlots !== null
-                      ? apiSlots.map(s => (
-                          <option key={s.hora} value={s.hora} disabled={s.lleno}>
-                            {s.hora}{s.lleno ? " (Lleno)" : s.capacidad != null ? ` (${s.ocupados}/${s.capacidad})` : ""}
-                          </option>
-                        ))
-                      : slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)
-                    }
-                  </select>
-                  {form.especialista && slotsDisponibles.length === 0 && !fechaFueraDeRango && !loadingSlots && !slotsError && (
-                    <p className="text-[11px] text-red-600 dark:text-red-400">Sin horarios disponibles para esta especialidad</p>
-                  )}
-                  {slotsError && (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400">{slotsError}</p>
+                  {esEstudio ? (
+                    <Input
+                      type="time"
+                      className="h-10 text-sm"
+                      value={form.hora}
+                      onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null) }}
+                    />
+                  ) : (
+                    <>
+                      <select
+                        className={`h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10 ${
+                          (!form.especialista || !!fechaFueraDeRango || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots))
+                            ? "text-muted-foreground/50 cursor-not-allowed"
+                            : "text-foreground"
+                        }`}
+                        value={form.hora}
+                        disabled={!form.especialista || !!fechaFueraDeRango || loadingSlots || (apiSlots !== null && apiSlots.length === 0 && !loadingSlots)}
+                        onChange={e => { setForm(f => ({ ...f, hora: e.target.value })); setSaveError(null); setSmartSuggestion(null) }}
+                      >
+                        <option value="">
+                          {!form.especialista ? "Primero elige especialidad" :
+                           fechaFueraDeRango ? "Fecha inválida para este especialista" :
+                           loadingSlots ? "Cargando disponibilidad..." :
+                           slotsError ? "Fecha bloqueada" :
+                           (apiSlots !== null && apiSlots.length === 0) ? "Sin horarios disponibles" :
+                           "Seleccionar hora"}
+                        </option>
+                        {apiSlots !== null
+                          ? apiSlots.map(s => (
+                              <option key={s.hora} value={s.hora} disabled={s.lleno}>
+                                {s.hora}{s.lleno ? " (Lleno)" : s.capacidad != null ? ` (${s.ocupados}/${s.capacidad})` : ""}
+                              </option>
+                            ))
+                          : slotsDisponibles.map(t => <option key={t} value={t}>{t}</option>)
+                        }
+                      </select>
+                      {form.especialista && slotsDisponibles.length === 0 && !fechaFueraDeRango && !loadingSlots && !slotsError && (
+                        <p className="text-[11px] text-red-600 dark:text-red-400">Sin horarios disponibles para esta especialidad</p>
+                      )}
+                      {slotsError && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400">{slotsError}</p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
