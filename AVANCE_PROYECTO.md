@@ -601,10 +601,7 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 ### Prioridad media — Calidad de código
 
-| Tarea | Descripción |
-|---|---|
-| **Editor de tarifas de membresías** | Los precios $200 (nuevo ingreso) y $150 (reinscripción) están hardcodeados en `membresias.service.js`. Implementar: leer desde tabla `CONFIGURACION` en BD + endpoint `PATCH /configuracion/:clave` + card "Tarifas vigentes" en la sección Membresías con diálogo de confirmación para que el admin pueda cambiar los precios sin tocar código. |
-| **Auditar y corregir valores hardcodeados restantes** | Grupos B y C pendientes: umbral de días para pre-registros pendientes (`> 3`), límite de paginación (`limit: 200`). Evaluar si centralizar en CONFIGURACION o dejar como constantes. |
+*(Sin ítems pendientes — hardcodes de precios resueltos con CONFIGURACION; umbrales restantes son constantes de negocio estables)*
 
 ### Prioridad baja (nice-to-have)
 
