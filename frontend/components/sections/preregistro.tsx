@@ -22,6 +22,7 @@ import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -354,18 +355,22 @@ export function PreregistroSection() {
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="size-12 rounded-full border-2 border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                      onClick={() => {
-                        setSelected(solicitudRapida)
-                        setShowDetalleDialog(true)
-                      }}
-                      title="Ver detalles completos"
-                    >
-                      <Info className="size-6 stroke-[2]" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="size-12 rounded-full border-2 border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                          onClick={() => {
+                            setSelected(solicitudRapida)
+                            setShowDetalleDialog(true)
+                          }}
+                        >
+                          <Info className="size-6 stroke-[2]" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ver detalles</TooltipContent>
+                    </Tooltip>
 
                     <div
                       className={cn(
@@ -376,36 +381,44 @@ export function PreregistroSection() {
                         "[&:has(.quick-review-approve:hover)_.quick-review-reject]:scale-100 [&:has(.quick-review-approve:hover)_.quick-review-reject]:border-transparent [&:has(.quick-review-approve:hover)_.quick-review-reject]:bg-transparent [&:has(.quick-review-approve:hover)_.quick-review-reject]:text-slate-500 [&:has(.quick-review-approve:hover)_.quick-review-reject]:shadow-none dark:[&:has(.quick-review-approve:hover)_.quick-review-reject]:text-slate-400"
                       )}
                     >
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="quick-review-reject size-12 rounded-xl border-transparent bg-destructive/10 text-destructive shadow-md shadow-destructive/15 transition-all hover:scale-105 hover:border-transparent hover:bg-destructive/15 hover:text-destructive active:scale-95 dark:border-transparent dark:bg-destructive/15 dark:shadow-destructive/20 dark:hover:bg-destructive/20"
-                        disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
-                        onClick={() => {
-                          setSelected(solicitudRapida)
-                          setConfirmRechazar(true)
-                        }}
-                        title="Rechazar solicitud"
-                      >
-                        <X className="size-6 stroke-[2.5]" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="quick-review-reject size-12 rounded-xl border-transparent bg-destructive/10 text-destructive shadow-md shadow-destructive/15 transition-all hover:scale-105 hover:border-transparent hover:bg-destructive/15 hover:text-destructive active:scale-95 dark:border-transparent dark:bg-destructive/15 dark:shadow-destructive/20 dark:hover:bg-destructive/20"
+                            disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
+                            onClick={() => {
+                              setSelected(solicitudRapida)
+                              setConfirmRechazar(true)
+                            }}
+                          >
+                            <X className="size-6 stroke-[2.5]" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Rechazar solicitud</TooltipContent>
+                      </Tooltip>
 
-                      <Button
-                        size="icon"
-                        className="quick-review-approve size-12 rounded-xl bg-emerald-500 text-white shadow-[0_2px_6px_rgba(0,0,0,0.12),0_6px_16px_-4px_rgba(5,150,105,0.55)] transition-all hover:scale-105 hover:bg-emerald-600 active:scale-95 dark:shadow-[0_2px_8px_rgba(0,0,0,0.35),0_6px_20px_-4px_rgba(52,211,153,0.45)]"
-                        disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
-                        onClick={() => {
-                          setSelected(solicitudRapida)
-                          setConfirmAprobar(true)
-                        }}
-                        title="Aprobar solicitud"
-                      >
-                        {accionCurp === String(solicitudRapida.folio).toUpperCase() ? (
-                          <Loader2 className="size-6 animate-spin" />
-                        ) : (
-                          <Check className="size-6 shrink-0" strokeWidth={2.5} aria-hidden />
-                        )}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            className="quick-review-approve size-12 rounded-xl bg-emerald-500 text-white shadow-[0_2px_6px_rgba(0,0,0,0.12),0_6px_16px_-4px_rgba(5,150,105,0.55)] transition-all hover:scale-105 hover:bg-emerald-600 active:scale-95 dark:shadow-[0_2px_8px_rgba(0,0,0,0.35),0_6px_20px_-4px_rgba(52,211,153,0.45)]"
+                            disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
+                            onClick={() => {
+                              setSelected(solicitudRapida)
+                              setConfirmAprobar(true)
+                            }}
+                          >
+                            {accionCurp === String(solicitudRapida.folio).toUpperCase() ? (
+                              <Loader2 className="size-6 animate-spin" />
+                            ) : (
+                              <Check className="size-6 shrink-0" strokeWidth={2.5} aria-hidden />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Aprobar solicitud</TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>

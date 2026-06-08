@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -68,14 +69,19 @@ function Field({
           )}
         />
         {isPassword && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setShow((s) => !s)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShow((s) => !s)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{show ? "Ocultar contraseña" : "Mostrar contraseña"}</TooltipContent>
+          </Tooltip>
         )}
       </div>
       {error && <p className="text-[11px] text-destructive">{error}</p>}
@@ -330,13 +336,17 @@ export function AdministradoresSection() {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => void load()}
-              className="flex size-8 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              title="Recargar"
-            >
-              <RefreshCw className="size-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => void load()}
+                  className="flex size-8 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <RefreshCw className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Recargar</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -401,31 +411,43 @@ export function AdministradoresSection() {
                     </td>
                     <td className="py-3 pr-5">
                       <div className="flex items-center justify-end gap-0.5">
-                        <button
-                          title="Editar"
-                          disabled={admin.activo !== 1}
-                          onClick={() => openEdit(admin)}
-                          className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              disabled={admin.activo !== 1}
+                              onClick={() => openEdit(admin)}
+                              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar</TooltipContent>
+                        </Tooltip>
                         {admin.activo === 1 && (
-                          <button
-                            title="Cambiar contraseña"
-                            onClick={() => openResetPw(admin)}
-                            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          >
-                            <KeyRound className="size-3.5" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => openResetPw(admin)}
+                                className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              >
+                                <KeyRound className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Cambiar contraseña</TooltipContent>
+                          </Tooltip>
                         )}
                         {admin.activo === 1 && admin.idAdmin !== session?.idAdmin && (
-                          <button
-                            title="Desactivar"
-                            onClick={() => setDeactivateTarget(admin)}
-                            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <ShieldOff className="size-3.5" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => setDeactivateTarget(admin)}
+                                className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <ShieldOff className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Desactivar cuenta</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </td>
