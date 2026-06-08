@@ -8,11 +8,16 @@ import { CAPITALES_ESTADOS } from '../utils/municipiosAMM.js';
 // y llenar con los IDs correctos antes del primer despliegue.
 export const ESTUDIOS_IDS = [];
 
+// Precalculado una vez al cargar el módulo: CAPITALES_ESTADOS es constante.
+// Evita regenerar los 32 placeholders/binds en cada petición de reporte.
+const { placeholders: AMM_PH, binds: AMM_BINDS } = buildInClause(CAPITALES_ESTADOS, 'm');
+
 // ── 1. Resumen estadístico del periodo ────────────────────────────────────────
 // Nota: usa :ff (fecha fin del periodo) para grupos de edad — NO SYSDATE.
 // Un paciente que cumplió 18 en febrero no debe aparecer como Adulto en enero.
 export const getResumenPeriodo = (fechaInicio, fechaFin) => {
-  const { placeholders: ammPH, binds: ammBinds } = buildInClause(CAPITALES_ESTADOS, 'm');
+  const ammPH    = AMM_PH;
+  const ammBinds = AMM_BINDS;
 
   // Todas las comparaciones usan TO_DATE con strings para evitar el bug de timezone:
   // new Date("YYYY-MM-DD") crea midnight UTC → node-oracledb lo envía como día
@@ -23,7 +28,7 @@ export const getResumenPeriodo = (fechaInicio, fechaFin) => {
   const credPromise = withConnection(conn =>
     conn.execute(
       `SELECT COUNT(DISTINCT CURP) AS CANT_CREDENCIALES FROM CREDENCIALES
-       WHERE TRUNC(FECHA_VIGENCIA_INICIO) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')`,
+       WHERE FECHA_VIGENCIA_INICIO >= TO_DATE(:fi, 'YYYY-MM-DD') AND FECHA_VIGENCIA_INICIO < TO_DATE(:ff, 'YYYY-MM-DD') + 1`,
       { fi: fechaInicio, ff: fechaFin },
       { outFormat: oracledb.OUT_FORMAT_OBJECT }
     ).then(r => r.rows[0]?.CANT_CREDENCIALES ?? 0)
@@ -62,7 +67,7 @@ export const getResumenPeriodo = (fechaInicio, fechaFin) => {
 
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
     `,
     { fi: fechaInicio, ff: fechaFin, ffr: fechaFin, ...ammBinds },
     { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -85,7 +90,7 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
         FROM SERVICIO_ARTICULOS SA
         JOIN ARTICULOS A ON SA.ID_ARTICULO = A.ID_ARTICULO
         JOIN SERVICIOS S  ON SA.ID_SERVICIO = S.ID_SERVICIO
-        WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+        WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
         GROUP BY A.DESCRIPCION, A.UNIDAD
 
         UNION ALL
@@ -93,8 +98,8 @@ export const getDetalleServicios = (fechaInicio, fechaFin) =>
         SELECT SC.NOMBRE, COUNT(S.ID_SERVICIO) AS CANTIDAD, 'CITA' AS UNIDAD
         FROM SERVICIOS S
         JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-        WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
-          AND S.ID_SERVICIO NOT IN (SELECT ID_SERVICIO FROM SERVICIO_ARTICULOS)
+        WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
+          AND NOT EXISTS (SELECT 1 FROM SERVICIO_ARTICULOS SA2 WHERE SA2.ID_SERVICIO = S.ID_SERVICIO)
           -- Excluir membresías: ya se cuentan en CANT_CREDENCIALES del resumen
           AND UPPER(SC.NOMBRE) NOT LIKE '%MEMBRES%'
         GROUP BY SC.NOMBRE
@@ -113,7 +118,7 @@ export const getDistribucionCiudades = (fechaInicio, fechaFin) =>
       SELECT NVL(B.MUNICIPIO, 'Sin datos') AS CIUDAD, COUNT(DISTINCT B.CURP) AS CANTIDAD
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       GROUP BY NVL(B.MUNICIPIO, 'Sin datos')
       ORDER BY CANTIDAD DESC
     `,
@@ -131,7 +136,7 @@ export const getAtencionesPorMes = (fechaInicio, fechaFin) =>
         COUNT(DISTINCT S.CURP)                    AS PACIENTES,
         COUNT(S.ID_SERVICIO)                      AS SERVICIOS
       FROM SERVICIOS S
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       GROUP BY TRUNC(S.FECHA, 'MM')
       ORDER BY TRUNC(S.FECHA, 'MM')
     `,
@@ -151,7 +156,7 @@ export const getEstudios = (fechaInicio, fechaFin) => {
       SELECT SC.NOMBRE, COUNT(S.ID_SERVICIO) AS CANTIDAD
       FROM SERVICIOS S
       JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
         AND S.ID_TIPO_SERVICIO IN (${placeholders})
       GROUP BY SC.NOMBRE
       ORDER BY CANTIDAD DESC
@@ -177,7 +182,7 @@ export const getBeneficiariosPeriodo = (fechaInicio, fechaFin) =>
         B.ESTATUS
       FROM BENEFICIARIOS B
       JOIN SERVICIOS S ON B.CURP = S.CURP
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       ORDER BY B.APELLIDO_PATERNO, B.NOMBRES
     `,
     { fi: fechaInicio, ff: fechaFin },
@@ -205,9 +210,9 @@ export const getMembresias = (fechaInicio, fechaFin) =>
         END AS ESTADO
       FROM CREDENCIALES C
       JOIN BENEFICIARIOS B ON C.CURP = B.CURP
-      WHERE TRUNC(C.FECHA_VIGENCIA_INICIO) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
-         OR TRUNC(C.FECHA_VIGENCIA_FIN)    BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
-         OR (TRUNC(C.FECHA_VIGENCIA_INICIO) <= TO_DATE(:fi, 'YYYY-MM-DD') AND TRUNC(C.FECHA_VIGENCIA_FIN) >= TO_DATE(:ff, 'YYYY-MM-DD'))
+      WHERE (C.FECHA_VIGENCIA_INICIO >= TO_DATE(:fi, 'YYYY-MM-DD') AND C.FECHA_VIGENCIA_INICIO < TO_DATE(:ff, 'YYYY-MM-DD') + 1)
+         OR (C.FECHA_VIGENCIA_FIN    >= TO_DATE(:fi, 'YYYY-MM-DD') AND C.FECHA_VIGENCIA_FIN    < TO_DATE(:ff, 'YYYY-MM-DD') + 1)
+         OR (C.FECHA_VIGENCIA_INICIO <= TO_DATE(:fi, 'YYYY-MM-DD') AND C.FECHA_VIGENCIA_FIN    >= TO_DATE(:ff, 'YYYY-MM-DD'))
       ORDER BY C.FECHA_VIGENCIA_FIN DESC
     `,
     { fi: fechaInicio, ff: fechaFin },
@@ -230,7 +235,7 @@ export const getServiciosPeriodo = (fechaInicio, fechaFin) =>
       FROM SERVICIOS S
       JOIN BENEFICIARIOS B ON S.CURP = B.CURP
       JOIN SERVICIOS_CATALOGO SC ON S.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE TRUNC(S.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE S.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND S.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       ORDER BY S.FECHA DESC
     `,
     { fi: fechaInicio, ff: fechaFin },
@@ -271,7 +276,7 @@ export const getMovimientosPeriodo = (fechaInicio, fechaFin) =>
         M.MOTIVO
       FROM MOVIMIENTOS_INVENTARIO M
       JOIN ARTICULOS A ON M.ID_ARTICULO = A.ID_ARTICULO
-      WHERE TRUNC(M.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE M.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND M.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       ORDER BY M.FECHA DESC
     `,
     { fi: fechaInicio, ff: fechaFin },
@@ -293,7 +298,7 @@ export const getCitasPeriodo = (fechaInicio, fechaFin) =>
       FROM CITAS C
       JOIN BENEFICIARIOS B ON C.CURP = B.CURP
       JOIN SERVICIOS_CATALOGO SC ON C.ID_TIPO_SERVICIO = SC.ID_TIPO_SERVICIO
-      WHERE TRUNC(C.FECHA) BETWEEN TO_DATE(:fi, 'YYYY-MM-DD') AND TO_DATE(:ff, 'YYYY-MM-DD')
+      WHERE C.FECHA >= TO_DATE(:fi, 'YYYY-MM-DD') AND C.FECHA < TO_DATE(:ff, 'YYYY-MM-DD') + 1
       ORDER BY C.FECHA DESC
     `,
     { fi: fechaInicio, ff: fechaFin },
