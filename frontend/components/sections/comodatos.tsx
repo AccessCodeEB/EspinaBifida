@@ -253,7 +253,7 @@ function AltaComodatoDialog({
           {error && <p className="text-xs text-destructive">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
+            <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               Cancelar
             </button>
             <button
@@ -474,7 +474,7 @@ function PagoDialog({
             {error && <p className="text-xs text-destructive">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
+              <button onClick={handleClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                 Cancelar
               </button>
               <button
@@ -654,7 +654,7 @@ export function ComodatosSection() {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadData} className="flex items-center gap-1.5 rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground hover:bg-muted">
+          <button onClick={loadData} className="flex items-center gap-1.5 rounded-lg border border-border/70 px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
             <RefreshCw className="size-3.5" />
             Actualizar
           </button>
@@ -1135,7 +1135,7 @@ function DetalleComodatoDialog({
                 )}
               </div>
               <div className="flex gap-2">
-                <button onClick={onClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted">
+                <button onClick={onClose} className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
                   Cerrar
                 </button>
                 {data.estatus === "Activo" && !data.fechaDevolucionReal && (

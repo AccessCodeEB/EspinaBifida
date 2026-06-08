@@ -1005,7 +1005,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
               <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
                 <button
                   onClick={() => setShowPrecioConfirmDialog(false)}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1065,7 +1065,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
                   tipoMovimientoToggle === "ENTRADA"
                     ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Plus className="size-3.5" /> Entrada
@@ -1076,7 +1076,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
                 className={`flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-semibold transition-colors ${
                   tipoMovimientoToggle === "SALIDA"
                     ? "border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/40 dark:text-red-400"
-                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted"
+                    : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Minus className="size-3.5" /> Salida
@@ -1118,7 +1118,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
             <div className="flex justify-end gap-2">
               <button onClick={closeStockDialog} disabled={savingMovimiento}
-                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={handleGuardarStock} disabled={savingMovimiento}
@@ -1198,7 +1198,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
 
             <div className="flex justify-end gap-2">
               <button onClick={closeConfigDialog} disabled={savingStockMinimo}
-                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50">
                 Cancelar
               </button>
               <button onClick={handleGuardarConfig} disabled={savingStockMinimo}
@@ -1296,7 +1296,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             {articuloError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{articuloError}</p>}
             <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
               <button onClick={() => setShowAgregarDialog(false)} disabled={savingArticulo}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">Cancelar</button>
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50">Cancelar</button>
               <button onClick={handleAgregarArticulo} disabled={savingArticulo}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: NAVY }}>
@@ -1359,7 +1359,7 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             {articuloError && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{articuloError}</p>}
             <div className="flex justify-end gap-2 border-t border-border/40 pt-3">
               <button onClick={() => setShowEliminarDialog(false)} disabled={savingArticulo}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">Cancelar</button>
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50">Cancelar</button>
               <button onClick={handleEliminarArticulo} disabled={savingArticulo}
                 className="rounded-lg border border-red-300 bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                 {savingArticulo ? "Eliminando..." : "Eliminar artículo"}
