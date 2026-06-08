@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -161,9 +162,27 @@ export function EspecialidadesConfigSection() {
 
   if (loading) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-        <p className="text-xs text-muted-foreground">Cargando especialidades...</p>
+      <div className="flex flex-col gap-6 pb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
       </div>
     )
   }
