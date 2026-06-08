@@ -386,6 +386,7 @@ export function PreregistroSection() {
                           <Button
                             size="icon"
                             variant="outline"
+                            aria-label="Rechazar solicitud"
                             className="quick-review-reject size-12 rounded-xl border-transparent bg-destructive/10 text-destructive shadow-md shadow-destructive/15 transition-all hover:scale-105 hover:border-transparent hover:bg-destructive/15 hover:text-destructive active:scale-95 dark:border-transparent dark:bg-destructive/15 dark:shadow-destructive/20 dark:hover:bg-destructive/20"
                             disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
                             onClick={() => {
@@ -403,6 +404,7 @@ export function PreregistroSection() {
                         <TooltipTrigger asChild>
                           <Button
                             size="icon"
+                            aria-label="Aprobar solicitud"
                             className="quick-review-approve size-12 rounded-xl bg-emerald-500 text-white shadow-[0_2px_6px_rgba(0,0,0,0.12),0_6px_16px_-4px_rgba(5,150,105,0.55)] transition-all hover:scale-105 hover:bg-emerald-600 active:scale-95 dark:shadow-[0_2px_8px_rgba(0,0,0,0.35),0_6px_20px_-4px_rgba(52,211,153,0.45)]"
                             disabled={accionCurp === String(solicitudRapida.folio).toUpperCase()}
                             onClick={() => {
