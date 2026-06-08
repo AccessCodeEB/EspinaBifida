@@ -1,12 +1,16 @@
 import { jest } from "@jest/globals";
 import {
-  mockExecute, mockClose, dbModuleMock, resetMocks,
+  mockExecute, mockClose, mockCommit, dbModuleMock, resetMocks,
 } from "./helpers/mockDb.js";
 
 // ─── Mock de la BD (antes del import del servicio) ────────────────────────────
 jest.unstable_mockModule("../config/db.js", () => dbModuleMock);
 
-const { getResumenFinanciero } = await import("../services/configuracion.service.js");
+const {
+  getResumenFinanciero,
+  getValorNumerico,
+  updateValor,
+} = await import("../services/configuracion.service.js");
 
 beforeEach(() => resetMocks());
 
@@ -176,6 +180,94 @@ describe("getResumenFinanciero — errores de BD", () => {
     mockExecute.mockRejectedValueOnce(new Error("ORA-00600: internal error"));
 
     await expect(getResumenFinanciero("2026-06")).rejects.toThrow("ORA-00600");
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// getValorNumerico
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("getValorNumerico", () => {
+  test("retorna el número cuando la clave existe", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ VALOR: "250" }] });
+
+    const result = await getValorNumerico("PRECIO_MEMBRESIA_NUEVO_INGRESO");
+
+    expect(result).toBe(250);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("retorna null cuando la clave no existe en BD", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    const result = await getValorNumerico("CLAVE_INEXISTENTE");
+
+    expect(result).toBeNull();
+  });
+
+  test("retorna null cuando el valor almacenado no es numérico", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [{ VALOR: "no-es-numero" }] });
+
+    const result = await getValorNumerico("PRECIO_MEMBRESIA_NUEVO_INGRESO");
+
+    expect(result).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateValor
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateValor — validaciones previas a la BD", () => {
+  test("lanza badRequest si la clave no está en CLAVES_EDITABLES", async () => {
+    await expect(updateValor("CLAVE_NO_EDITABLE", 100))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("lanza badRequest si el valor es NaN", async () => {
+    await expect(updateValor("PRECIO_MEMBRESIA_NUEVO_INGRESO", "abc"))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  test("lanza badRequest si el valor es <= 0", async () => {
+    await expect(updateValor("PRECIO_MEMBRESIA_NUEVO_INGRESO", -10))
+      .rejects.toMatchObject({ statusCode: 400 });
+
+    await expect(updateValor("PRECIO_MEMBRESIA_REINSCRIPCION", 0))
+      .rejects.toMatchObject({ statusCode: 400 });
+  });
+});
+
+describe("updateValor — operaciones de BD", () => {
+  test("lanza notFound si la clave no existe en CONFIGURACION", async () => {
+    mockExecute.mockResolvedValueOnce({ rows: [] });
+
+    await expect(updateValor("PRECIO_MEMBRESIA_NUEVO_INGRESO", 300))
+      .rejects.toMatchObject({ statusCode: 404 });
+
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("actualiza el valor y retorna {clave, valor}", async () => {
+    // SELECT → clave encontrada
+    mockExecute.mockResolvedValueOnce({ rows: [{ CLAVE: "PRECIO_MEMBRESIA_NUEVO_INGRESO" }] });
+    // UPDATE
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const result = await updateValor("PRECIO_MEMBRESIA_NUEVO_INGRESO", 300);
+
+    expect(result).toEqual({ clave: "PRECIO_MEMBRESIA_NUEVO_INGRESO", valor: 300 });
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("cierra conexión aunque la BD lance error", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-12154"));
+
+    await expect(updateValor("PRECIO_MEMBRESIA_NUEVO_INGRESO", 200))
+      .rejects.toThrow("ORA-12154");
 
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
