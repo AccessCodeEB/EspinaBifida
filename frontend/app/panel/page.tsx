@@ -87,6 +87,7 @@ function normalizeRoleLabel(rawRole: string): string {
   return rawRole
     .replace(/RecepciÃ³n/gi, "Recepcion")
     .replace(/Recepción/gi, "Recepcion")
+    .replace(/Super\s+Administrador/gi, "Administrador")
 }
 
 function PanelHomeContent() {
@@ -217,8 +218,8 @@ function PanelHomeContent() {
         {/* ── Main ── */}
         <div className="flex flex-1 flex-col overflow-hidden">
 
-          {/* Header */}
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-5 backdrop-blur supports-backdrop-filter:bg-background/60">
+          {/* Header — z-10 para que su stacking context quede sobre el <main> */}
+          <header className="relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-5 backdrop-blur supports-backdrop-filter:bg-background/60">
             <div className="flex-1" />
 
             <div className="flex items-center gap-2">
