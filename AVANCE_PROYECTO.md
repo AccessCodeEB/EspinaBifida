@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-07 (Sábado) — Fix Estudio Médico en citas completado; membresías: editor de tarifas en progreso
+**Actualización:** 2026-06-07 (Sábado) — Editor de tarifas de membresías, Error Boundary y fix TypeScript completados; proyecto listo para entrega
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -368,6 +368,21 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 
 ---
 
+### Cambios 2026-06-07 — Editor de tarifas de membresías
+
+- Migración 035: inserta `PRECIO_MEMBRESIA_NUEVO_INGRESO=200` y `PRECIO_MEMBRESIA_REINSCRIPCION=150` en `CONFIGURACION` (MERGE INTO idempotente)
+- `configuracion.service.js`: `getValorNumerico(clave)` y `updateValor(clave, valor)` con whitelist de claves editables
+- `PATCH /configuracion/:clave`: requiere `verifyToken` + `checkRole(1)` — solo Administrador
+- `membresias.service.js`: lee precios desde CONFIGURACION con `Promise.allSettled` y fallback $200/$150
+- Frontend: botón "Tarifas" en barra de acciones (solo admin), dialog de edición con selector de tarifa + campo de monto, AlertDialog de confirmación cuadrado con icono de alerta
+
+### Cambios 2026-06-07 — Error Boundary y fix TypeScript
+
+- `frontend/components/error-boundary.tsx`: componente clase con `getDerivedStateFromError` / `componentDidCatch`; muestra mensaje amigable y botón "Reintentar" si una sección falla en el render
+- `key={activeSection}` en el wrapper: el boundary se resetea automáticamente al cambiar de sección
+- `frontend/services/beneficiarios.ts`: `tipo: string` → `tipo?: string` — corrige error de TypeScript preexistente (campo puede ser `undefined` cuando el beneficiario no tiene tipo de espina bífida registrado)
+- TypeScript: **0 errores** en todo el frontend
+
 ## 🔄 En progreso / Parcialmente terminado
 
 | Área | Detalle | Prioridad |
@@ -607,8 +622,8 @@ Limpieza arquitectural del flujo viejo de préstamos-via-servicios y rediseño c
 
 | Tarea | Descripción |
 |---|---|
-| Error Boundaries en frontend | Sin componente de fallback para errores inesperados en React |
-| Estrategia de respaldo de BD | No está documentado un plan de backups Oracle |
+| ~~Error Boundaries en frontend~~ | ✅ Completado 2026-06-07 |
+| Estrategia de respaldo de BD | Pendiente — Oracle Cloud tiene backups automáticos; documentación formal por confirmar con el socio formador |
 
 ---
 
