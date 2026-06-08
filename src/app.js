@@ -54,7 +54,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 mountProfilePhotosRemoteFallback(app);
 app.use("/uploads", express.static(path.join(REPO_ROOT, "uploads")));
 
