@@ -7,6 +7,7 @@ import {
   Hash, User, DollarSign, Banknote, Gift, Tag,
   ArrowUpDown, ChevronUp, Check, ChevronsUpDown, RotateCcw,
 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -601,8 +602,17 @@ export function ComodatosSection() {
   }
 
   if (loading) return (
-    <div className="flex h-64 items-center justify-center">
-      <p className="text-sm text-muted-foreground">Cargando comodatos...</p>
+    <div className="flex flex-col gap-6 pb-8">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-7 w-36" />
+        <Skeleton className="h-9 w-36" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
     </div>
   )
   if (error) return (

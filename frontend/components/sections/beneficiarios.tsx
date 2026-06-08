@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { useBeneficiarios } from "@/hooks/useBeneficiarios"
 import type { Beneficiario } from "@/services/beneficiarios"
 import { BeneficiariosEditDialog } from "@/components/beneficiarios-edit-dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import { BeneficiariosTable } from "./beneficiarios/BeneficiariosTable"
 import { BeneficiarioDetailPanel } from "./beneficiarios/BeneficiarioDetailPanel"
 import { BeneficiarioFormDialog } from "./beneficiarios/BeneficiarioFormDialog"
@@ -57,8 +58,17 @@ export function BeneficiariosSection({
   }, [openEditCurp, beneficiarios, loading, error, onConsumedOpenEditCurp])
 
   if (loading) return (
-    <div className="flex h-64 items-center justify-center">
-      <p className="text-muted-foreground text-sm">Cargando…</p>
+    <div className="flex flex-col gap-6 pb-8">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="h-9 w-36" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
     </div>
   )
 

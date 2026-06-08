@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getCitas, createCita, COSTO_PRIMERA_CITA, COSTO_SUBSECUENTE_CITA, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { createServicio, getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
@@ -539,8 +540,17 @@ export function CitasSection() {
 
       {/* ── Main view (con fade) ── */}
       {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground text-sm">Cargando citas...</p>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
         </div>
       ) : error ? (
         <div className="flex h-64 items-center justify-center">

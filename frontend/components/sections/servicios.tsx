@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -616,8 +617,20 @@ export function ServiciosSection() {
   // ── Loading / error states ──
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground text-sm">Cargando servicios...</p>
+      <div className="flex flex-col gap-6 pb-8">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-36" />
+          <Skeleton className="h-9 w-36" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 flex-1" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </div>
       </div>
     )
   }

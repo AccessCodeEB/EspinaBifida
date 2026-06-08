@@ -7,6 +7,7 @@ import {
   Hash, Ruler, DollarSign, Layers, ArrowUpDown, MoreHorizontal, Settings2, TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -130,7 +131,24 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
       .finally(() => setLoadingLog(false))
   }
 
-  if (loading) return <div className="flex h-64 items-center justify-center"><p className="text-sm text-muted-foreground">Cargando inventario...</p></div>
+  if (loading) return (
+    <div className="flex flex-col gap-6 pb-8">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-7 w-36" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-28" />
+        <Skeleton className="h-10 w-28" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  )
   if (error)   return <div className="flex h-64 items-center justify-center"><p className="text-sm text-destructive">{error}</p></div>
 
   const EXCLUDED_UNITS = ["UNIDAD", "CITA"]
