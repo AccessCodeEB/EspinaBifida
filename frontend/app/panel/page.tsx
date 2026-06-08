@@ -114,21 +114,26 @@ function PanelHomeContent() {
     const s = searchParams.get("section")
     if (!s || !VALID_SECTIONS.has(s)) return
     if (s === "administradores" && !isAdmin) {
+      // Wait for auth to finish loading before redirecting — avoids falsely
+      // locking out super-admins who arrive via a bookmarked direct URL.
+      if (authLoading) return
       router.replace("/panel?section=dashboard", { scroll: false })
       return
     }
     setActiveSection(s)
-  }, [searchParams, isAdmin, router])
+  }, [searchParams, isAdmin, router, authLoading])
 
   // Bloquear back/forward del navegador para que no salgan del panel de administrador
   useEffect(() => {
     if (!isAuthenticated) return
 
-    // Empujar una entrada al historial para que siempre haya un "/panel" arriba del stack
-    window.history.pushState(null, '', '/panel')
+    // Empujar la URL actual (preservando ?section=...) para crear un "tope" en el historial
+    // que impide retroceder a la página de login u otras rutas fuera del panel.
+    // Se usa window.location.href en lugar de '/panel' para no perder el ?section=.
+    window.history.pushState(null, '', window.location.href)
 
     const preventLeave = () => {
-      window.history.pushState(null, '', '/panel')
+      window.history.pushState(null, '', window.location.href)
     }
 
     // capture: true para interceptar antes de que Next.js procese el evento
