@@ -24,9 +24,9 @@ function verifyJwt(token: string): boolean {
     if (parts.length !== 3) return false
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8")) as Record<string, unknown>
     if (typeof payload.exp === "number" && Date.now() / 1000 > payload.exp) return false
-    const computed = Buffer.from(
-      createHmac("sha256", secret).update(`${parts[0]}.${parts[1]}`).digest("base64url")
-    )
+    // digest() returns raw bytes; Buffer.from(parts[2], "base64url") also returns
+    // raw bytes — same length (32) so timingSafeEqual can compare them correctly.
+    const computed = createHmac("sha256", secret).update(`${parts[0]}.${parts[1]}`).digest()
     const provided = Buffer.from(parts[2], "base64url")
     if (computed.length !== provided.length) return false
     return timingSafeEqual(computed, provided)
