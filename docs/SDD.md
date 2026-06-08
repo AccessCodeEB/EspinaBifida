@@ -1,11 +1,11 @@
 # Documento de Diseño de Software (SDD)
 # Sistema de Gestión — Asociación de Espina Bífida de Nuevo León
 
-**Versión:** 1.1  
-**Fecha:** 2026-06-01  
+**Versión:** 1.2  
+**Fecha:** 2026-06-08  
 **Institución:** Tecnológico de Monterrey  
 **Equipo:** AccessCode EB  
-**Estado del sistema:** Producción — 9 módulos backend, 11 módulos frontend, 21 migraciones BD
+**Estado del sistema:** Producción — 9 módulos backend, 11 módulos frontend, 35 migraciones BD
 
 ---
 
@@ -155,7 +155,7 @@ La siguiente tabla lista los frameworks, librerías y estándares que conforman 
 | **Auditoría** | Registro persistente de operaciones sensibles realizadas por administradores (creación, modificación, baja de beneficiarios, cambios de contraseña, etc.) almacenado en `AUDITORIA_OPERACIONES`. |
 | **Scheduler / Cron** | Proceso automático que se ejecuta en momentos programados (p. ej., cada noche a medianoche) para generar reportes o enviar notificaciones de forma proactiva. |
 | **CR-80** | Estándar de tamaño para tarjetas de identificación (85.6 × 54 mm), equivalente al tamaño de una tarjeta de crédito. El sistema genera credenciales imprimibles en este formato. |
-| **Migración de BD** | Script SQL versionado que aplica cambios incrementales al esquema de la base de datos de forma reproducible. El sistema ejecuta las 12 migraciones automáticamente al iniciar. |
+| **Migración de BD** | Script SQL versionado que aplica cambios incrementales al esquema de la base de datos de forma reproducible. El sistema ejecuta las 35 migraciones automáticamente al iniciar. |
 
 ---
 
@@ -206,7 +206,7 @@ La siguiente tabla lista los frameworks, librerías y estándares que conforman 
 | **Nombre** | Equipo AccessCode EB — estudiantes de Ingeniería en Sistemas / Tecnologías |
 | **Rol** | Equipo de desarrollo (proyecto de formación profesional) |
 | **Intereses** | Entregar un sistema funcional y mantenible que resuelva los problemas reales del socio formador, aplicar buenas prácticas de ingeniería de software y documentar el trabajo para evaluación académica. |
-| **Responsabilidades** | Diseño, implementación, pruebas (Jest 1080 tests, Playwright E2E), documentación técnica, revisión de calidad con SonarCloud y entrega al socio formador antes de la semana del 2026-06-08. |
+| **Responsabilidades** | Diseño, implementación, pruebas (Jest 1451 tests, Playwright E2E), documentación técnica, revisión de calidad con SonarCloud y entrega al socio formador antes de la semana del 2026-06-08. |
 
 ---
 
@@ -281,8 +281,8 @@ La seguridad es una preocupación transversal que afecta todos los módulos del 
 - Los _controllers_ orquestan la llamada a services y formatean la respuesta HTTP.
 - Esta separación permite probar cada capa de forma independiente.
 
-**Cobertura de pruebas al 100%**
-- 50 archivos de prueba Jest, 1080 tests, cobertura 100% en statements, branches, functions y lines.
+**Cobertura de pruebas superior al 95%**
+- 58 archivos de prueba Jest, 1451 tests, cobertura 97.71% statements / 95.78% branches / 95.85% functions / 97.97% lines.
 - El CI/CD falla el build si la cobertura cae por debajo del umbral definido.
 
 **0 issues SonarCloud**
@@ -544,7 +544,7 @@ EspinaBifida/                        ← Raíz del monorepo
 │   │   ├── otpStore.js              ← Map en memoria para OTP con TTL
 │   │   ├── sms.js                   ← Wrapper Twilio
 │   │   └── email.js                 ← Wrapper nodemailer
-│   ├── migrations/                  ← 12 scripts SQL versionados
+│   ├── migrations/                  ← 35 scripts SQL versionados
 │   │   ├── 001_foto_perfil_clob.js
 │   │   ├── 002_reportes_generados.js
 │   │   ├── 003_administradores_foto_perfil_clob.js
@@ -556,8 +556,9 @@ EspinaBifida/                        ← Raíz del monorepo
 │   │   ├── 009_notificaciones.js
 │   │   ├── 010_fix_sequences.js
 │   │   ├── 011_refresh_tokens.js
-│   │   └── 012_auditoria_operaciones.js
-│   └── tests/                       ← 50 archivos Jest (1080 tests, 100% cobertura)
+│   │   ├── 012_auditoria_operaciones.js
+│   │   └── ... (013–035 — comodatos, cuota A/B, especialidades, citas, artículos log)
+│   └── tests/                       ← 58 archivos Jest (1451 tests, >95% cobertura)
 │
 ├── frontend/                        ← Next.js 14 + React + TypeScript
 │   ├── app/
@@ -646,7 +647,7 @@ EspinaBifida/                        ← Raíz del monorepo
                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │          BASE DE DATOS — Oracle Autonomous DB Cloud             │
-│  • 16 tablas, 12 migraciones versionadas                        │
+│  • 21+ tablas, 35 migraciones versionadas                       │
 │  • Sequences + BEFORE INSERT triggers para PKs                  │
 │  • Pool de conexiones con reconexión automática                 │
 │  • Alta disponibilidad gestionada por Oracle Cloud              │
@@ -654,8 +655,8 @@ EspinaBifida/                        ← Raíz del monorepo
 
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CI/CD — GitHub Actions                       │
-│  • test.yml: npm run test:coverage (Jest 1080 tests, 100% cov) │
-│  • e2e job: Playwright 44 tests contra Oracle Cloud             │
+│  • test.yml: npm run test:coverage (Jest 1451 tests, >95% cov) │
+│  • e2e job: Playwright 44 tests activos contra Oracle Cloud     │
 │  • SonarCloud analysis en cada PR                               │
 │  • Oracle Instant Client + Wallet en el runner de CI            │
 └─────────────────────────────────────────────────────────────────┘
@@ -726,6 +727,8 @@ erDiagram
         CLOB NOTAS
         NUMBER REFERENCIA_ID
         VARCHAR2_50 REFERENCIA_TIPO
+        VARCHAR2_20 ESTATUS
+        DATE FECHA_DEVOLUCION_ESPERADA
     }
 
     SERVICIO_ARTICULOS {
@@ -769,12 +772,14 @@ erDiagram
         TIMESTAMP FECHA
         VARCHAR2_50 ESTATUS
         CLOB NOTAS
+        NUMBER DURACION_MINUTOS
     }
 
     SERVICIOS_CATALOGO {
         NUMBER ID_TIPO_SERVICIO PK
         VARCHAR2_100 NOMBRE
         VARCHAR2_255 DESCRIPCION
+        VARCHAR2_20 TIPO_SERVICIO
     }
 
     ADMINISTRADORES {
@@ -831,6 +836,58 @@ erDiagram
         TIMESTAMP FECHA_CREACION
     }
 
+    COMODATOS {
+        NUMBER ID_COMODATO PK
+        VARCHAR2_18 CURP FK
+        NUMBER ID_ARTICULO FK
+        NUMBER_10_2 MONTO_TOTAL
+        NUMBER_10_2 MONTO_PAGADO
+        NUMBER_10_2 MONTO_EXENTO
+        VARCHAR2_20 ESTATUS
+        DATE FECHA_ALTA
+        DATE FECHA_DEVOLUCION_ESPERADA
+        DATE FECHA_DEVOLUCION_REAL
+        CLOB NOTAS
+    }
+
+    COMODATOS_PAGOS {
+        NUMBER ID_PAGO PK
+        NUMBER ID_COMODATO FK
+        NUMBER_10_2 MONTO
+        CHAR_1 ES_EXENTO
+        DATE FECHA
+        CLOB NOTAS
+    }
+
+    ARTICULOS_LOG {
+        NUMBER ID_LOG PK
+        NUMBER ID_ARTICULO
+        VARCHAR2_150 DESCRIPCION_ARTICULO
+        VARCHAR2_4 TIPO
+        VARCHAR2_500 MOTIVO
+        DATE FECHA
+    }
+
+    ESPECIALIDADES_HORARIO {
+        NUMBER ID_ESPECIALIDAD PK
+        VARCHAR2_100 NOMBRE
+        NUMBER_1 DIA_SEMANA
+        VARCHAR2_5 HORA_INICIO
+        VARCHAR2_5 HORA_FIN
+        NUMBER CAPACIDAD_MAX
+        VARCHAR2_30 TIPO_FRECUENCIA
+        NUMBER_1_0 ACTIVO
+        VARCHAR2_500 NOTAS
+    }
+
+    ESPECIALIDADES_EXCEPCIONES {
+        NUMBER ID_EXCEPCION PK
+        NUMBER ID_ESPECIALIDAD FK
+        DATE FECHA
+        VARCHAR2_500 MOTIVO
+        TIMESTAMP CREATED_AT
+    }
+
     BENEFICIARIOS ||--o{ CREDENCIALES : "tiene"
     BENEFICIARIOS ||--o{ SERVICIOS : "recibe"
     BENEFICIARIOS ||--o{ CITAS : "agenda"
@@ -845,6 +902,10 @@ erDiagram
     ROLES ||--o{ ADMINISTRADORES : "asigna"
     ADMINISTRADORES ||--o{ AUDITORIA_OPERACIONES : "genera"
     ADMINISTRADORES ||--o{ REFRESH_TOKENS : "posee"
+    BENEFICIARIOS ||--o{ COMODATOS : "recibe_equipo"
+    ARTICULOS ||--o{ COMODATOS : "prestado_en"
+    COMODATOS ||--o{ COMODATOS_PAGOS : "recibe_pagos"
+    ESPECIALIDADES_HORARIO ||--o{ ESPECIALIDADES_EXCEPCIONES : "tiene_excepcion"
 ```
 
 ---
@@ -878,6 +939,7 @@ Tabla central del sistema. Almacena a todos los beneficiarios registrados o en p
 | `NOTAS` | `CLOB` | — | Notas adicionales |
 | `FOTO_PERFIL` | `CLOB` | — | URL o base64 de foto de perfil |
 | `FECHA_ALTA` | `DATE` | DEFAULT `SYSDATE` | Fecha de registro en el sistema |
+| `TIPO_CUOTA` | `VARCHAR2(1)` | CHECK (`IN ('A','B')`), nullable | Clasificación de tarifa: `'A'` = estándar, `'B'` = reducida, `NULL` = sin asignar |
 
 ---
 
@@ -918,6 +980,8 @@ Registro de servicios prestados a beneficiarios. PK generada por `SEQ_SERVICIOS`
 | `NOTAS` | `CLOB` | — | Observaciones del servicio |
 | `REFERENCIA_ID` | `NUMBER` | — | ID del registro referenciado (polimórfico) |
 | `REFERENCIA_TIPO` | `VARCHAR2(50)` | — | Tipo de referencia: `'COMODATO'`, etc. |
+| `ESTATUS` | `VARCHAR2(20)` | DEFAULT `'COMPLETADO'`, CHECK (`IN ('COMPLETADO','PRESTADO','DEVUELTO')`) | Estado del servicio (relevante para comodatos) |
+| `FECHA_DEVOLUCION_ESPERADA` | `DATE` | — | Fecha esperada de devolución (solo para comodatos) |
 
 ---
 
@@ -949,6 +1013,7 @@ Catálogo de artículos del inventario. PK generada por `SEQ_ARTICULOS` + `TRG_A
 | `MANEJA_INVENTARIO` | `CHAR(1)` | CHECK (`IN ('S','N')`), DEFAULT `'S'` | Activa el seguimiento de stock |
 | `ACTIVO` | `NUMBER(1,0)` | DEFAULT `1` | 1 = activo, 0 = inactivo/baja |
 | `ID_CATEGORIA` | `NUMBER` | FK → `CATEGORIAS_ARTICULO` | Categoría del artículo |
+| `CUOTA_B` | `NUMBER(10,2)` | — | Precio especial para beneficiarios con Cuota B (`NULL` = usa cuota estándar) |
 
 ---
 
@@ -993,6 +1058,7 @@ Agendado de citas médicas o de consulta. PK generada por `SEQ_CITAS` + `TRG_CIT
 | `FECHA` | `TIMESTAMP` | NOT NULL | Fecha y hora de la cita |
 | `ESTATUS` | `VARCHAR2(50)` | CHECK (`IN ('Programada','Completada','Cancelada','No asistió')`) | Estado de la cita |
 | `NOTAS` | `CLOB` | — | Observaciones adicionales |
+| `DURACION_MINUTOS` | `NUMBER` | — | Duración esperada de la cita en minutos (migration 032) |
 
 ---
 
@@ -1005,6 +1071,7 @@ Catálogo de tipos de servicios disponibles.
 | `ID_TIPO_SERVICIO` | `NUMBER` | PK | Identificador del tipo de servicio |
 | `NOMBRE` | `VARCHAR2(100)` | NOT NULL | Nombre del tipo de servicio |
 | `DESCRIPCION` | `VARCHAR2(255)` | — | Descripción detallada |
+| `TIPO_SERVICIO` | `VARCHAR2(20)` | CHECK (`IN ('SERVICIO','CONSUMIBLE','COMODATO')`) | Clasificación del tipo de servicio |
 
 ---
 
@@ -1099,10 +1166,60 @@ Alertas generadas automáticamente por el scheduler nocturno.
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `ID_NOTIFICACION` | `NUMBER` | PK (secuencia) | Identificador de la notificación |
-| `TIPO` | `VARCHAR2(50)` | NOT NULL | Tipo de alerta: `'STOCK_BAJO'`, `'MEMBRESIA_VENCIDA'`, `'MEMBRESIA_POR_VENCER'` |
+| `TIPO` | `VARCHAR2(50)` | NOT NULL | Tipo de alerta: `'STOCK_BAJO'`, `'MEMBRESIA_VENCIDA'`, `'MEMBRESIA_POR_VENCER'`, `'COMODATO_POR_VENCER'`, `'SIN_STOCK'`, `'PREREGISTRO_PENDIENTE'` |
 | `MENSAJE` | `CLOB` | NOT NULL | Texto descriptivo de la alerta |
 | `LEIDA` | `NUMBER(1,0)` | DEFAULT `0`, CHECK (`IN (0,1)`) | 0 = no leída, 1 = leída |
 | `FECHA_CREACION` | `TIMESTAMP` | DEFAULT `SYSTIMESTAMP` | Fecha y hora de creación |
+
+---
+
+#### **COMODATOS**
+
+Préstamos de equipo médico a beneficiarios. PK generada por `SEQ_COMODATOS` + `TRG_COMODATOS_BI`.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `ID_COMODATO` | `NUMBER` | PK (secuencia) | Identificador del comodato |
+| `CURP` | `VARCHAR2(18)` | NOT NULL, FK → `BENEFICIARIOS` | Beneficiario que recibe el equipo |
+| `ID_ARTICULO` | `NUMBER` | NOT NULL, FK → `ARTICULOS` | Artículo prestado |
+| `MONTO_TOTAL` | `NUMBER(10,2)` | nullable | Monto total acordado (`NULL` = donación) |
+| `MONTO_PAGADO` | `NUMBER(10,2)` | DEFAULT `0`, NOT NULL | Monto acumulado pagado hasta la fecha |
+| `MONTO_EXENTO` | `NUMBER(10,2)` | DEFAULT `0`, NOT NULL | Monto exentado del pago |
+| `ESTATUS` | `VARCHAR2(20)` | DEFAULT `'Activo'`, CHECK (`IN ('Activo','Pagado','Cancelado')`) | Estado del comodato |
+| `FECHA_ALTA` | `DATE` | DEFAULT `SYSDATE` | Fecha de registro del comodato |
+| `FECHA_DEVOLUCION_ESPERADA` | `DATE` | nullable | Fecha esperada de devolución (migration 025) |
+| `FECHA_DEVOLUCION_REAL` | `DATE` | nullable | Fecha efectiva de devolución (migration 033) |
+| `NOTAS` | `CLOB` | — | Observaciones adicionales |
+
+---
+
+#### **COMODATOS_PAGOS**
+
+Historial de pagos parciales o totales de un comodato. PK generada por `SEQ_COMODATOS_PAGOS` + `TRG_COMODATOS_PAGOS_BI`.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `ID_PAGO` | `NUMBER` | PK (secuencia) | Identificador del pago |
+| `ID_COMODATO` | `NUMBER` | NOT NULL, FK → `COMODATOS` | Comodato al que corresponde |
+| `MONTO` | `NUMBER(10,2)` | NOT NULL, CHECK (`> 0`) | Monto del pago |
+| `ES_EXENTO` | `CHAR(1)` | DEFAULT `'N'`, CHECK (`IN ('S','N')`) | Indica si el pago es una exención |
+| `FECHA` | `DATE` | DEFAULT `SYSDATE` | Fecha del pago |
+| `NOTAS` | `CLOB` | — | Observaciones del pago |
+
+---
+
+#### **ARTICULOS_LOG**
+
+Bitácora del ciclo de vida de los artículos (altas y bajas). PK generada por `SEQ_ARTICULOS_LOG` + `TRG_ARTICULOS_LOG_BI`.
+
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `ID_LOG` | `NUMBER` | PK (secuencia) | Identificador del registro de log |
+| `ID_ARTICULO` | `NUMBER` | nullable | FK → `ARTICULOS` (puede ser `NULL` si el artículo fue eliminado) |
+| `DESCRIPCION_ARTICULO` | `VARCHAR2(150)` | NOT NULL | Snapshot del nombre del artículo en el momento del evento |
+| `TIPO` | `VARCHAR2(4)` | CHECK (`IN ('ALTA','BAJA')`) | Tipo de evento registrado |
+| `MOTIVO` | `VARCHAR2(500)` | — | Motivo del alta o baja |
+| `FECHA` | `DATE` | DEFAULT `SYSDATE` | Fecha del evento |
 
 ---
 
@@ -1171,6 +1288,13 @@ Esta transformación se aplica a todos los resultados de queries antes de retorn
 | `ADMINISTRADORES` | `ACTIVO` | `CHECK (ACTIVO IN (0, 1))` |
 | `NOTIFICACIONES` | `LEIDA` | `CHECK (LEIDA IN (0, 1))` |
 | `CITAS` | `ESTATUS` | `CHECK (ESTATUS IN ('Programada', 'Completada', 'Cancelada', 'No asistió'))` |
+| `COMODATOS` | `ESTATUS` | `CHECK (ESTATUS IN ('Activo', 'Pagado', 'Cancelado'))` |
+| `COMODATOS_PAGOS` | `MONTO` | `CHECK (MONTO > 0)` |
+| `COMODATOS_PAGOS` | `ES_EXENTO` | `CHECK (ES_EXENTO IN ('S', 'N'))` |
+| `ARTICULOS_LOG` | `TIPO` | `CHECK (TIPO IN ('ALTA', 'BAJA'))` |
+| `SERVICIOS_CATALOGO` | `TIPO_SERVICIO` | `CHECK (TIPO_SERVICIO IN ('SERVICIO', 'CONSUMIBLE', 'COMODATO'))` |
+| `SERVICIOS` | `ESTATUS` | `CHECK (ESTATUS IN ('COMPLETADO', 'PRESTADO', 'DEVUELTO'))` |
+| `BENEFICIARIOS` | `TIPO_CUOTA` | `CHECK (TIPO_CUOTA IN ('A', 'B'))` |
 
 #### Índices Relevantes
 
@@ -1182,10 +1306,15 @@ Esta transformación se aplica a todos los resultados de queries antes de retorn
 | `CREDENCIALES` | `CURP` | Membresías activas por beneficiario |
 | `REFRESH_TOKENS` | `TOKEN` | Búsqueda de token en renovación de sesión |
 | `AUDITORIA_OPERACIONES` | `ID_ADMIN` | Historial de operaciones por administrador |
+| `COMODATOS` | `CURP` | Comodatos activos por beneficiario |
+| `COMODATOS` | `ID_ARTICULO` | Comodatos por artículo |
+| `COMODATOS_PAGOS` | `ID_COMODATO` | Pagos por comodato |
+| `ARTICULOS_LOG` | `ID_ARTICULO` | Bitácora de eventos por artículo |
+| `ARTICULOS_LOG` | `FECHA` | Filtros por fecha en el log de artículos |
 
 ---
 
-*Documento generado el 2026-05-28. Versión 1.0. Equipo AccessCode EB — Tecnológico de Monterrey.*
+*Documento actualizado el 2026-06-08. Versión 1.2. Equipo AccessCode EB — Tecnológico de Monterrey.*
 
 ---
 

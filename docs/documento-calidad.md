@@ -2,8 +2,8 @@
 
 **Proyecto:** Sistema de Gestión para la Asociación de Espina Bífida  
 **Institución:** Tecnológico de Monterrey  
-**Fecha de emisión:** 2026-06-01  
-**Versión:** 1.1  
+**Fecha de emisión:** 2026-06-08  
+**Versión:** 1.2  
 **Estado del sistema:** Producción activa — 100% verde en CI/CD
 
 ---
@@ -71,7 +71,7 @@ Los siguientes elementos están fuera del alcance de las pruebas automatizadas e
 | **Refresh token flow completo** | Requiere cookies HttpOnly de producción con dominio real; no simulable en ambiente de CI sin infraestructura de navegador persistente. | El modelo `refreshTokens` tiene cobertura unitaria al 100% |
 | **Integración SMS real (Twilio)** | Sin credenciales Twilio configuradas en CI; el módulo SMS usa mock en `NODE_ENV=test` que retorna respuesta simulada. | `sms.test.js` verifica lógica interna con mock; flujo OTP validado en E2E con código `codigoDev` |
 | **Headers de seguridad HTTP** | Headers como `Strict-Transport-Security`, `X-Frame-Options` y `Content-Security-Policy` dependen de configuración del servidor de producción (Nginx/Cloudflare). | Skipped en `seguridad.spec.ts` (5 tests marcados `test.skip`) |
-| **Error Boundaries en frontend** | No se implementó componente de fallback React para errores inesperados en la UI. | Identificado como deuda técnica (DEF-008) |
+| **Error Boundaries en frontend** | Implementado en Ciclo 6 (2026-06-07). DEF-008 resuelto. | Cubierto — componente ErrorBoundary activo en producción |
 | **Manual de usuario** | Fuera del alcance técnico del sprint; corresponde a documentación para el socio formador. | Pendiente para entrega final |
 | **Estrategia de respaldo de BD Oracle** | Corresponde a infraestructura operativa del socio formador; no al sistema de software. | Documentado como nota técnica en AVANCE_PROYECTO.md |
 
@@ -95,7 +95,7 @@ Los siguientes elementos están fuera del alcance de las pruebas automatizadas e
 | Infraestructura | Unitaria | ~130 | Jest | Pasando |
 | Flujos integrados | Integración | ~80 | Jest + Supertest | Pasando |
 | Frontend (utilitarios) | Unitaria | ~10 | Jest (TypeScript) | Pasando |
-| **Subtotal Jest** | **Unitaria + Integración** | **1080** | **Jest** | **100% Pasando** |
+| **Subtotal Jest** | **Unitaria + Integración** | **1451** | **Jest** | **100% Pasando** |
 | Beneficiarios | E2E API | 8 | Playwright | Pasando |
 | Auth / Login | E2E API | 3 | Playwright | Pasando |
 | Administradores | E2E API | 5 | Playwright | Pasando |
@@ -111,7 +111,7 @@ Los siguientes elementos están fuera del alcance de las pruebas automatizadas e
 | Formulario público (UI) | E2E UI | 4 | Playwright | Pasando |
 | UAT flujos completos (UI) | E2E UI / Aceptación | 2 activos + 1 skipped | Playwright | Pasando / Skipped por diseño |
 | **Subtotal Playwright** | **E2E + Aceptación** | **44 activos, 7 skipped** | **Playwright** | **100% verde** |
-| **TOTAL** | | **1131** | | **100% Pasando** |
+| **TOTAL** | | **1495 (1451 Jest + 44 E2E)** | | **100% Pasando** |
 
 ### 2.2 Casos de prueba por módulo — QASE Project EBF
 
@@ -493,6 +493,7 @@ Validar que el sistema cumple los requerimientos del socio formador (Asociación
 | Ciclo 3 — E2E inicial | 2026-05-21 | E2E Playwright | 36 | 22 | 14 | 7 |
 | Ciclo 4 — E2E fixes #1 | 2026-05-28 | E2E Playwright | 51 | 12 | 28 | 7 |
 | Ciclo 5 — E2E fixes #2 | 2026-05-29 | E2E Playwright | 51 | 44 | 0 | 7 |
+| Ciclo 6 — Sprint 3 | 2026-06-01 a 2026-06-07 | Unitarias + Integración (Jest) + E2E Playwright | 1502 (1451 Jest + 51 E2E) | 1495 (1451 + 44) | 0 | 7 |
 
 > Los tests fallidos en los Ciclos 3 y 4 corresponden a defectos identificados y documentados en la Sección 7. Todos fueron resueltos antes del Ciclo 5.
 
@@ -502,6 +503,7 @@ La evolución de los resultados de prueba muestra una mejora continua y sistemá
 
 **Pruebas Jest (unitarias + integración):**
 - **Sprint 1 → Sprint 2:** Crecimiento de 420 a 1080 tests (+157%) manteniendo 100% de éxito. La expansión de cobertura se realizó sin introducir regresiones.
+- **Sprint 2 → Sprint 3:** Crecimiento de 1080 a 1451 tests (+34%) incorporando cobertura de comodatos, cuota A/B, restricciones de especialidades, auditoría de artículos y correcciones de defectos ISSUE-001/002/003. Cobertura final: 97.71% statements / 95.78% branches / 95.85% functions / 97.97% lines.
 
 **Pruebas E2E Playwright:**
 - **Ciclo 3 (22/36 pasando):** Primer intento de E2E. 14 tests fallidos reveló 7 defectos críticos (DEF-001 al DEF-007). La infraestructura de CI con Oracle Wallet funcionó correctamente; los fallos fueron todos de configuración o contratos de API.
@@ -516,8 +518,9 @@ La evolución de los resultados de prueba muestra una mejora continua y sistemá
 |---|---|---|---|---|
 | Sprint 1 (final) | 100% | 100% | 100% | 100% |
 | Sprint 2 (final) | 100% | 100% | 100% | 100% |
+| Sprint 3 (final) | 97.71% | 95.78% | 95.85% | 97.97% |
 
-La cobertura del 100% se mantuvo como requisito de calidad durante todo el desarrollo, configurada como umbral mínimo en `jest.config.js`.
+La cobertura se mantiene por encima del umbral mínimo de calidad (>95%) en todas las dimensiones, configurado en `jest.config.js`. La ligera reducción respecto al 100% del Sprint 2 refleja la adición de nuevas ramas de código en módulos complejos (comodatos, restricciones de especialidades) cuya cobertura completa requeriría tests de integración adicionales que se priorizaron para el siguiente ciclo.
 
 ---
 
@@ -534,6 +537,10 @@ La cobertura del 100% se mantuvo como requisito de calidad durante todo el desar
 | DEF-005 | Usuario `prueba@espina.com` tenía rol de Recepción (`ID_ROL=2`) en la base de datos de producción. Las pruebas E2E de admin-only fallaban con 403 porque el usuario de prueba no tenía privilegios suficientes. | Auth / BD | Crítico | Resuelto | 2026-05-29 | 2026-05-29 |
 | DEF-006 | 9 issues de mantenibilidad en SonarCloud: uso de `String.raw`, fracciones con valor cero, condiciones negadas simplificables, imports no utilizados en archivos de producción. | Varios (código) | Bajo | Resuelto | 2026-05-27 | 2026-05-28 |
 | DEF-007 | La operación de baja de beneficiario no cancelaba las membresías activas dentro de una transacción atómica. Si la cancelación de membresías fallaba después de hacer la baja, el sistema quedaba en estado inconsistente. | Beneficiarios / Membresías | Alto | Resuelto | 2026-05-26 | 2026-05-27 |
+| DEF-008 | Sin componente Error Boundary en frontend. Si un componente React lanzaba una excepción no manejada durante el render, la pantalla quedaba en blanco sin mensaje de error al usuario. | Frontend (React) | Bajo | Resuelto | 2026-05-29 | 2026-06-07 |
+| ISSUE-001 | Typo `diaSemanA` → `diaSemana` en el service y model de especialidades-horario. El typo impedía silenciosamente que `DIA_SEMANA` se actualizara en operaciones PATCH, devolviendo siempre el valor anterior sin error. | Especialidades / Citas | Medio | Resuelto | 2026-06-01 | 2026-06-01 |
+| ISSUE-002 | Missing optional chaining `r.rows[0]` → `r.rows?.[0] ?? null` en `findById` y `findExcepcionByFecha`. Sin el optional chaining, si Oracle devolvía un objeto sin propiedad `rows`, se lanzaba TypeError en lugar de retornar `null`. | Especialidades | Bajo | Resuelto | 2026-06-01 | 2026-06-01 |
+| ISSUE-003 | `updateCita` en `citas.service.js` no invocaba `validarSlotEspecialidad` al editar una cita existente. Un usuario podía crear una cita válida y luego hacer PATCH para moverla a un slot bloqueado sin ser rechazado. | Citas | Alto | Resuelto | 2026-06-01 | 2026-06-01 |
 
 #### Notas sobre resolución de defectos
 
@@ -547,13 +554,19 @@ La cobertura del 100% se mantuvo como requisito de calidad durante todo el desar
 
 **DEF-007:** Solución: envolver `UPDATE BENEFICIARIOS SET ESTATUS='Baja'` y `UPDATE CREDENCIALES SET ESTATUS='Cancelada'` en una única transacción Oracle con `COMMIT` / `ROLLBACK` explícito.
 
+**DEF-008:** Solución: implementar componente `ErrorBoundary` en React con fallback UI que muestra mensaje de error comprensible en lugar de pantalla en blanco. Resuelto el 2026-06-07.
+
+**ISSUE-001:** Solución: corregir el typo en todas las referencias al campo (`diaSemanA` → `diaSemana`) en el service y el model de especialidades-horario. Detectado mediante auditoría estática de código el 2026-06-01.
+
+**ISSUE-002:** Solución: aplicar optional chaining `r.rows?.[0] ?? null` para que la función retorne `null` de forma segura en lugar de lanzar TypeError. Patrón aplicado en `findById` y `findExcepcionByFecha`.
+
+**ISSUE-003:** Solución: agregar llamada explícita a `validarSlotEspecialidad(especialista, nuevaFecha, nuevaHora)` al inicio del flujo de `updateCita`, antes de ejecutar el UPDATE en BD. Esto garantiza que editar una cita existente aplica las mismas restricciones que crearla.
+
 ### 7.2 Defectos conocidos (pendientes)
 
-| ID | Descripción | Módulo | Severidad | Estado | Fecha detectado |
-|---|---|---|---|---|---|
-| DEF-008 | Sin componente Error Boundary en frontend. Si un componente React lanza una excepción no manejada durante el render, la pantalla queda en blanco sin mensaje de error al usuario. | Frontend (React) | Bajo | Pendiente | 2026-05-29 |
+**Sin defectos pendientes conocidos** al 2026-06-08.
 
-> DEF-008 no bloquea la funcionalidad actual; los errores de render son raros con la arquitectura actual. Se documenta como deuda técnica para el siguiente sprint.
+Todos los defectos documentados (DEF-001 al DEF-008 + ISSUE-001, ISSUE-002, ISSUE-003) han sido resueltos. DEF-008 fue el último pendiente; fue implementado el 2026-06-07 con el componente ErrorBoundary en el frontend.
 
 ---
 
@@ -565,16 +578,16 @@ La cobertura se mide con `istanbul` integrado en Jest, configurando umbrales mí
 
 | Métrica | Meta | Resultado | Estado |
 |---|---|---|---|
-| Statements (sentencias) | > 80% | **100%** | ✅ Supera meta |
-| Branches (ramas condicionales) | > 80% | **100%** | ✅ Supera meta |
-| Functions (funciones) | > 80% | **100%** | ✅ Supera meta |
-| Lines (líneas de código) | > 80% | **100%** | ✅ Supera meta |
+| Statements (sentencias) | > 80% | **97.71%** | ✅ Supera meta |
+| Branches (ramas condicionales) | > 80% | **95.78%** | ✅ Supera meta |
+| Functions (funciones) | > 80% | **95.85%** | ✅ Supera meta |
+| Lines (líneas de código) | > 80% | **97.97%** | ✅ Supera meta |
 
-**Archivos de prueba:** 50 suites de prueba  
-**Tests totales Jest:** 1080 pruebas  
+**Archivos de prueba:** 58 suites de prueba  
+**Tests totales Jest:** 1451 pruebas  
 **Tiempo de ejecución:** ~45 segundos en CI (Ubuntu Latest)
 
-La cobertura del 100% se logró mediante:
+La cobertura superior al 95% se logró mediante:
 1. Arquitectura MVC estricta — separación clara de routes/controllers/services/models facilita el testing aislado.
 2. Mocks granulares para dependencias externas (Oracle DB, Twilio SMS, Cloudflare Turnstile).
 3. Tests de ramas condicionales explícitos para todas las reglas de negocio críticas (membresía activa/inactiva, stock suficiente/insuficiente).
@@ -604,12 +617,12 @@ La meta es cubrir con al menos un caso de prueba el 90% de las historias de usua
 
 | Métrica | Meta | Valor | Estado |
 |---|---|---|---|
-| Total tests automatizados (Jest + Playwright) | — | 1131 | — |
+| Total tests automatizados (Jest + Playwright) | — | 1495 (1451 Jest + 44 E2E) | — |
 | Total tests manuales | — | 3 (UAT-001, UAT-002, UAT-003) | — |
 | Porcentaje automatizados | > 40% | **> 99%** | ✅ Supera meta |
 
 **Desglose:**
-- 1080 tests Jest (unitarios + integración) — 100% automatizados
+- 1451 tests Jest (unitarios + integración) — 100% automatizados
 - 51 tests Playwright E2E (44 activos + 7 skipped por diseño) — 100% automatizados
 - 3 flujos UAT manuales complementarios (verificación con usuario real en producción)
 
@@ -619,15 +632,15 @@ La meta es cubrir con al menos un caso de prueba el 90% de las historias de usua
 
 | Métrica | Valor |
 |---|---|
-| Defectos encontrados en testing | 8 (DEF-001 al DEF-008) |
+| Defectos encontrados en testing | 11 (DEF-001 a DEF-008 + ISSUE-001, ISSUE-002, ISSUE-003) |
 | Defectos críticos | 2 (DEF-001, DEF-005) |
-| Defectos de alto impacto | 2 (DEF-002, DEF-007) |
-| Defectos de bajo/medio impacto | 4 (DEF-003, DEF-004, DEF-006, DEF-008) |
-| Defectos resueltos | 7 (87.5%) |
-| Defectos pendientes | 1 (DEF-008 — bajo) |
-| Defectos encontrados por CI/CD (sin llegar a producción) | 6 (DEF-001 a DEF-006) |
+| Defectos de alto impacto | 3 (DEF-002, DEF-007, ISSUE-003) |
+| Defectos de bajo/medio impacto | 6 (DEF-003, DEF-004, DEF-006, DEF-008, ISSUE-001, ISSUE-002) |
+| Defectos resueltos | 11 (100%) |
+| Defectos pendientes | 0 |
+| Defectos encontrados por CI/CD (sin llegar a producción) | 9 (DEF-001 a DEF-006 + ISSUE-001, ISSUE-002, ISSUE-003) |
 
-**Impacto del CI/CD:** 6 de 8 defectos fueron detectados por la suite de pruebas automatizada antes de llegar a producción. Esto representa un **75% de defectos interceptados automáticamente**.
+**Impacto del CI/CD:** 9 de 11 defectos fueron detectados por la suite de pruebas automatizada o por auditoría estática antes de llegar a producción. Esto representa un **82% de defectos interceptados automáticamente**.
 
 ### 8.5 Métricas de SonarCloud
 
@@ -828,4 +841,4 @@ El flujo UAT-001 crea un beneficiario aprobado que tiene FKs en `CREDENCIALES`, 
 
 ---
 
-*Documento generado: 2026-05-29 | Versión 1.1 (actualizado 2026-06-01) | Sistema de Gestión Espina Bífida — Tecnológico de Monterrey*
+*Documento generado: 2026-05-29 | Versión 1.2 (actualizado 2026-06-08) | Sistema de Gestión Espina Bífida — Tecnológico de Monterrey*
