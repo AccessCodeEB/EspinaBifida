@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch"
 import { resolvePublicUploadUrl } from "@/lib/media-url"
 import { AiChatPanel, type AiAction } from "@/components/ai-chat-panel"
 import { NotificacionesPanel } from "@/components/notificaciones-panel"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 /** Secciones válidas de la SPA del panel */
 const VALID_SECTIONS = new Set([
@@ -348,12 +349,14 @@ function PanelHomeContent() {
 
           {/* Content */}
           <main className="flex-1 flex flex-col overflow-y-auto p-4 md:p-6">
-            <SectionContent
-              section={activeSection}
-              openEditBeneficiarioCurp={activeSection === "beneficiarios" ? editBeneficiarioParam : null}
-              onConsumedOpenEditBeneficiario={clearEditBeneficiarioParam}
-              onNavigate={handleSectionChange}
-            />
+            <ErrorBoundary key={activeSection}>
+              <SectionContent
+                section={activeSection}
+                openEditBeneficiarioCurp={activeSection === "beneficiarios" ? editBeneficiarioParam : null}
+                onConsumedOpenEditBeneficiario={clearEditBeneficiarioParam}
+                onNavigate={handleSectionChange}
+              />
+            </ErrorBoundary>
           </main>
 
         </div>
