@@ -258,7 +258,7 @@ export function PreregistroSection() {
           {/* Refrescar */}
           <button
             type="button"
-            className="flex flex-1 items-center gap-4 rounded-xl border border-border/70 bg-card px-5 py-4 shadow-sm transition-colors hover:bg-muted/40 active:scale-[.99]"
+            className="flex flex-1 items-center gap-4 rounded-xl border border-border/70 bg-card px-5 py-4 shadow-sm transition-colors hover:bg-muted hover:border-border active:scale-[.99]"
             onClick={() => void load()}
             aria-label="Recargar solicitudes"
           >
