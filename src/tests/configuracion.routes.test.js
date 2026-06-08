@@ -12,7 +12,7 @@ import express from "express";
 import request from "supertest";
 import jwt    from "jsonwebtoken";
 import {
-  TEST_SECRET, mockExecute, mockClose,
+  TEST_SECRET, mockExecute, mockClose, mockCommit,
   dbModuleMock, resetMocks,
 } from "./helpers/mockDb.js";
 
@@ -230,6 +230,76 @@ describe("GET /configuracion/resumen-financiero", () => {
     expect(res.body.desglosePorMetodo.efectivo).toBe(0);
     expect(res.body.desglosePorMetodo.transferencia).toBe(0);
     expect(res.body.desglosePorMetodo.tarjeta).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH /configuracion/:clave
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("PATCH /configuracion/:clave", () => {
+  it("requiere JWT — 401 sin token", async () => {
+    const res = await request(configApp)
+      .patch("/configuracion/PRECIO_MEMBRESIA_NUEVO_INGRESO")
+      .send({ valor: 250 });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("400 cuando falta el campo 'valor' en el body", async () => {
+    const res = await request(configApp)
+      .patch("/configuracion/PRECIO_MEMBRESIA_NUEVO_INGRESO")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it("400 cuando la clave no está en la lista de claves editables", async () => {
+    const res = await request(configApp)
+      .patch("/configuracion/CLAVE_DESCONOCIDA")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ valor: 100 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("400 cuando el valor es negativo", async () => {
+    const res = await request(configApp)
+      .patch("/configuracion/PRECIO_MEMBRESIA_NUEVO_INGRESO")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ valor: -50 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("200 actualiza correctamente y devuelve {data, message}", async () => {
+    // SELECT → clave encontrada
+    mockExecute.mockResolvedValueOnce({ rows: [{ CLAVE: "PRECIO_MEMBRESIA_NUEVO_INGRESO" }] });
+    // UPDATE
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+    const res = await request(configApp)
+      .patch("/configuracion/PRECIO_MEMBRESIA_NUEVO_INGRESO")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ valor: 250 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ clave: "PRECIO_MEMBRESIA_NUEVO_INGRESO", valor: 250 });
+    expect(res.body.message).toMatch(/actualizada/i);
+    expect(mockCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("500 cuando la BD lanza error inesperado", async () => {
+    mockExecute.mockRejectedValueOnce(new Error("ORA-00942"));
+
+    const res = await request(configApp)
+      .patch("/configuracion/PRECIO_MEMBRESIA_NUEVO_INGRESO")
+      .set("Authorization", `Bearer ${tokenAdmin}`)
+      .send({ valor: 250 });
+
+    expect(res.status).toBe(500);
+    expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });
 
