@@ -310,7 +310,7 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
                                 onClick={() => setDeleteConfirmId(cita.id)}
                               >
                                 <Trash2 className="mr-2 size-4 shrink-0" />
-                                <span className="truncate">Borrar permanentemente</span>
+                                <span className="truncate">Eliminar</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -334,7 +334,7 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar cita permanentemente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto borrará la cita de forma definitiva de la base de datos y ya no aparecerá en el historial ni en las métricas.
+              Esta acción no se puede deshacer. La cita se borrará de forma definitiva del sistema y ya no aparecerá en el historial ni en las métricas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -346,7 +346,7 @@ export function CitasListView({ citas, beneficiarios, onReload }: Props) {
               }}
               className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
             >
-              Borrar permanentemente
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

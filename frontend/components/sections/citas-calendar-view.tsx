@@ -614,7 +614,9 @@ function ActionCenter({
   onNavigate:(c:Cita)=>void
 }){
   const[page,setPage]=useState(0)
-  const pending=citas.filter(c=>c.estatus==="Pendiente"||c.estatus==="Confirmada")
+  const pending = citas
+    .filter(c => c.estatus === "Pendiente" || c.estatus === "Confirmada")
+    .sort((a, b) => `${a.fecha} ${a.hora || "00:00"}`.localeCompare(`${b.fecha} ${b.hora || "00:00"}`))
   const totalPages=Math.max(1,Math.ceil(pending.length/PAGE_SIZE))
   const safePage=Math.min(page,totalPages-1)
   const slice=pending.slice(safePage*PAGE_SIZE,(safePage+1)*PAGE_SIZE)
