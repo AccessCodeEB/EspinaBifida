@@ -39,26 +39,26 @@ function badge(estatus: string) {
   switch (estatus) {
     case "Activo":
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400">
-          <span className="size-1.5 rounded-full bg-blue-500" />Activo
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />Activo
         </span>
       )
     case "Pagado":
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-          <span className="size-1.5 rounded-full bg-emerald-500" />Pagado
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+          <span className="size-1.5 shrink-0 rounded-full bg-blue-500" />Pagado
         </span>
       )
     case "Cancelado":
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400">
-          <span className="size-1.5 rounded-full bg-red-500" />Cancelado
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
+          <span className="size-1.5 shrink-0 rounded-full bg-red-500" />Cancelado
         </span>
       )
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-slate-400" />{estatus || "—"}
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span className="size-1.5 shrink-0 rounded-full bg-slate-400" />{estatus || "—"}
         </span>
       )
   }
