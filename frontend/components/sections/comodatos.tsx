@@ -37,10 +37,30 @@ type Tab = "lista" | "reporte"
 
 function badge(estatus: string) {
   switch (estatus) {
-    case "Activo":    return "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
-    case "Pagado":    return "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-    case "Cancelado": return "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/30 dark:text-red-400"
-    default:          return "border-border/70 bg-muted text-muted-foreground"
+    case "Activo":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400">
+          <span className="size-1.5 rounded-full bg-blue-500" />Activo
+        </span>
+      )
+    case "Pagado":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+          <span className="size-1.5 rounded-full bg-emerald-500" />Pagado
+        </span>
+      )
+    case "Cancelado":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400">
+          <span className="size-1.5 rounded-full bg-red-500" />Cancelado
+        </span>
+      )
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-slate-400" />{estatus || "—"}
+        </span>
+      )
   }
 }
 
@@ -795,9 +815,7 @@ export function ComodatosSection() {
                       </span>
                     </td>
                     <td className="py-3 text-center">
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge(c.estatus)}`}>
-                        {c.estatus}
-                      </span>
+                      {badge(c.estatus)}
                     </td>
                     <td className="py-3 pr-5 text-center" onClick={e => e.stopPropagation()}>
                       {c.estatus === "Activo" && (
