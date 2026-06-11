@@ -36,32 +36,15 @@ const NAVY = "#0f4c81"
 type Tab = "lista" | "reporte"
 
 function badge(estatus: string) {
-  switch (estatus) {
-    case "Activo":
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />Activo
-        </span>
-      )
-    case "Pagado":
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-          <span className="size-1.5 shrink-0 rounded-full bg-blue-500" />Pagado
-        </span>
-      )
-    case "Cancelado":
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
-          <span className="size-1.5 shrink-0 rounded-full bg-red-500" />Cancelado
-        </span>
-      )
-    default:
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <span className="size-1.5 shrink-0 rounded-full bg-slate-400" />{estatus || "—"}
-        </span>
-      )
-  }
+  const dotColor =
+    estatus === "Activo"    ? "bg-emerald-500" :
+    estatus === "Pagado"    ? "bg-blue-500"    :
+    estatus === "Cancelado" ? "bg-red-500"     : "bg-slate-400"
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+      <span className={`size-1.5 shrink-0 rounded-full ${dotColor}`} />{estatus || "—"}
+    </span>
+  )
 }
 
 function fmt(n: number | null | undefined) {
