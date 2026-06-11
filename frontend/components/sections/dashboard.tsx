@@ -26,6 +26,7 @@ const AMBER = "#E8B043"
 const INVENTARIO_BAJO_UMBRAL = 3
 const PAGE_SIZE = 5
 const MEM_PAGE = 8
+const AGENDA_PAGE_SIZE = 4
 
 function fmtDate() {
   return new Date().toLocaleDateString("es-MX", {
@@ -185,6 +186,8 @@ export function DashboardSection() {
   const [servicios, setServicios]                     = useState<Servicio[]>([])
   const [loadingServicios, setLoadingServicios]       = useState(true)
   const [lastRefresh, setLastRefresh]                 = useState(new Date())
+  const [agendaPage, setAgendaPage]                   = useState(0)
+  const [solicitudesPage, setSolicitudesPage]         = useState(0)
 
   function loadData() {
     setLoadingBenef(true); setLoadingStock(true)
@@ -247,9 +250,12 @@ export function DashboardSection() {
   const citasHoy = useMemo(() => {
     const hoy = todayISO()
     return citas
-      .filter((c) => (c.fecha ?? "").startsWith(hoy))
+      .filter((c) => (c.fecha ?? "").startsWith(hoy) && c.estatus !== "Cancelada")
       .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
   }, [citas])
+
+  useEffect(() => { setAgendaPage(0) }, [citasHoy])
+  useEffect(() => { setSolicitudesPage(0) }, [listaSolicitudes])
 
   const stateCounts = useMemo(() => {
     const aprobados = beneficiarios.filter((b) => !esSolicitudPublicaPendiente(b))
@@ -333,113 +339,159 @@ export function DashboardSection() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
         {/* Solicitudes en espera */}
-        <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Solicitudes en espera</p>
-              <p className="text-[11px] text-muted-foreground">Pre-registros pendientes de revisión</p>
-            </div>
-            {!loadingBenef && listaSolicitudes.length > 0 && (
-              <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-                {listaSolicitudes.length} pendiente{listaSolicitudes.length !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-          <div className="flex-1 divide-y divide-border/40">
-            {loadingBenef ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-5 py-4">
-                  <div className="size-9 shrink-0 rounded-full bg-muted animate-pulse" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
-                    <div className="h-2 w-2/3 rounded bg-muted animate-pulse" />
-                  </div>
+        {(() => {
+          const totalSolPages = Math.max(1, Math.ceil(listaSolicitudes.length / AGENDA_PAGE_SIZE))
+          const solicitudesPaginadas = listaSolicitudes.slice(solicitudesPage * AGENDA_PAGE_SIZE, solicitudesPage * AGENDA_PAGE_SIZE + AGENDA_PAGE_SIZE)
+          return (
+            <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Solicitudes en espera</p>
+                  <p className="text-[11px] text-muted-foreground">Pre-registros pendientes de revisión</p>
                 </div>
-              ))
-            ) : listaSolicitudes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
-                <div className="flex size-11 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
-                  <Inbox className="size-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <p className="text-sm font-medium text-foreground">Sin solicitudes</p>
-                <p className="text-xs text-muted-foreground">No hay pre-registros en espera</p>
+                {!loadingBenef && listaSolicitudes.length > 0 && (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                    {listaSolicitudes.length} pendiente{listaSolicitudes.length !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
-            ) : (
-              listaSolicitudes.map((b) => {
-                const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
-                const inicial = nombre.charAt(0).toUpperCase()
-                const lugar   = [b.ciudad, b.estado].filter(Boolean).join(", ") || "—"
-                const tel     = b.telefonoCelular || null
-                return (
-                  <div key={b.curp ?? b.folio} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/20">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: NAVY }}>
-                      {inicial}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{nombre}</p>
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-1"><MapPin className="size-3 shrink-0" />{lugar}</span>
-                        {tel && <><span className="opacity-30">·</span><span className="flex items-center gap-1"><Phone className="size-3 shrink-0" />{tel}</span></>}
+              <div className="flex-1 divide-y divide-border/40">
+                {loadingBenef ? (
+                  Array.from({ length: AGENDA_PAGE_SIZE }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-5 py-4">
+                      <div className="size-9 shrink-0 rounded-full bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                        <div className="h-2 w-2/3 rounded bg-muted animate-pulse" />
                       </div>
                     </div>
-                    <span className="shrink-0 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
-                      Pendiente
-                    </span>
+                  ))
+                ) : listaSolicitudes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+                      <Inbox className="size-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Sin solicitudes</p>
+                    <p className="text-xs text-muted-foreground">No hay pre-registros en espera</p>
                   </div>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Agenda del día */}
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Agenda de hoy</p>
-              <p className="text-[11px] text-muted-foreground">
-                {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
-              </p>
-            </div>
-            <CalendarDays className="size-4 text-muted-foreground" />
-          </div>
-          <div className="divide-y divide-border/40">
-            {loadingCitas ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-5 py-3">
-                  <div className="h-8 w-10 rounded bg-muted animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
-                    <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
+                ) : (
+                  solicitudesPaginadas.map((b) => {
+                    const nombre  = `${b.nombres ?? ""} ${b.apellidoPaterno ?? ""}`.trim()
+                    const inicial = nombre.charAt(0).toUpperCase()
+                    const lugar   = [b.ciudad, b.estado].filter(Boolean).join(", ") || "—"
+                    const tel     = b.telefonoCelular || null
+                    return (
+                      <div key={b.curp ?? b.folio} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/20">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: NAVY }}>
+                          {inicial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">{nombre}</p>
+                          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span className="flex items-center gap-1"><MapPin className="size-3 shrink-0" />{lugar}</span>
+                            {tel && <><span className="opacity-30">·</span><span className="flex items-center gap-1"><Phone className="size-3 shrink-0" />{tel}</span></>}
+                          </div>
+                        </div>
+                        <span className="shrink-0 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
+                          Pendiente
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              {!loadingBenef && listaSolicitudes.length > AGENDA_PAGE_SIZE && (
+                <div className="flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+                  <span className="text-[11px] text-muted-foreground">
+                    {solicitudesPage * AGENDA_PAGE_SIZE + 1}–{Math.min((solicitudesPage + 1) * AGENDA_PAGE_SIZE, listaSolicitudes.length)} de {listaSolicitudes.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setSolicitudesPage(p => p - 1)} disabled={solicitudesPage === 0}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+                    <span className="min-w-[2.5rem] text-center text-[11px] font-medium text-foreground">{solicitudesPage + 1} / {totalSolPages}</span>
+                    <button onClick={() => setSolicitudesPage(p => p + 1)} disabled={solicitudesPage >= totalSolPages - 1}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronRight className="size-3.5" />
+                    </button>
                   </div>
                 </div>
-              ))
-            ) : citasHoy.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <CalendarDays className="size-8 text-muted-foreground opacity-30" />
-                <p className="text-xs text-muted-foreground">Sin citas programadas para hoy</p>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* Agenda del día */}
+        {(() => {
+          const totalAgendaPages = Math.max(1, Math.ceil(citasHoy.length / AGENDA_PAGE_SIZE))
+          const citasHoyPaginadas = citasHoy.slice(agendaPage * AGENDA_PAGE_SIZE, agendaPage * AGENDA_PAGE_SIZE + AGENDA_PAGE_SIZE)
+          return (
+            <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border/40 px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Agenda de hoy</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
+                </div>
+                <CalendarDays className="size-4 text-muted-foreground" />
               </div>
-            ) : (
-              citasHoy.map((c) => {
-                return (
-                  <div key={c.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
-                    <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-muted/50 py-1.5 text-center">
-                      <span className="text-xs font-bold tabular-nums text-foreground leading-none">{(c.hora ?? "--").slice(0, 5)}</span>
+              <div className="divide-y divide-border/40">
+                {loadingCitas ? (
+                  Array.from({ length: AGENDA_PAGE_SIZE }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-5 py-3">
+                      <div className="h-8 w-10 rounded bg-muted animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                        <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">{c.beneficiario}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">{c.especialista || "—"}</p>
-                    </div>
-                    <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${agendaStatusStyle[c.estatus] ?? "border-border/60 bg-muted/30 text-muted-foreground"}`}>
-                      {(() => { const Icon = agendaItemIcon[c.estatus] ?? AlertCircle; return <Icon className="size-3" /> })()}
-                      {c.estatus}
-                    </div>
+                  ))
+                ) : citasHoy.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                    <CalendarDays className="size-8 text-muted-foreground opacity-30" />
+                    <p className="text-xs text-muted-foreground">Sin citas programadas para hoy</p>
                   </div>
-                )
-              })
-            )}
-          </div>
-        </div>
+                ) : (
+                  citasHoyPaginadas.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/20">
+                      <div className="flex w-10 shrink-0 flex-col items-center rounded-lg bg-muted/50 py-1.5 text-center">
+                        <span className="text-xs font-bold tabular-nums text-foreground leading-none">{(c.hora ?? "--").slice(0, 5)}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-xs font-semibold text-foreground">{c.beneficiario}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{c.especialista || "—"}</p>
+                      </div>
+                      <div className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${agendaStatusStyle[c.estatus] ?? "border-border/60 bg-muted/30 text-muted-foreground"}`}>
+                        {(() => { const Icon = agendaItemIcon[c.estatus] ?? AlertCircle; return <Icon className="size-3" /> })()}
+                        {c.estatus}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              {!loadingCitas && citasHoy.length > AGENDA_PAGE_SIZE && (
+                <div className="flex items-center justify-between border-t border-border/40 px-5 py-2.5">
+                  <span className="text-[11px] text-muted-foreground">
+                    {agendaPage * AGENDA_PAGE_SIZE + 1}–{Math.min((agendaPage + 1) * AGENDA_PAGE_SIZE, citasHoy.length)} de {citasHoy.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setAgendaPage(p => p - 1)} disabled={agendaPage === 0}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronLeft className="size-3.5" />
+                    </button>
+                    <span className="min-w-[2.5rem] text-center text-[11px] font-medium text-foreground">{agendaPage + 1} / {totalAgendaPages}</span>
+                    <button onClick={() => setAgendaPage(p => p + 1)} disabled={agendaPage >= totalAgendaPages - 1}
+                      className="flex size-7 items-center justify-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30">
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       <BeneficiariosOrigenMapCard stateCounts={stateCounts} loading={loadingBenef} />
