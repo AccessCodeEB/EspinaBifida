@@ -43,7 +43,7 @@ const CURP = "GAEJ900101HMNRRL09";
 
 const citaBase = {
   ID_CITA: 1, CURP, ID_TIPO_SERVICIO: 1,
-  ESPECIALISTA: "Dr. Test", FECHA: new Date("2026-06-01"),
+  ESPECIALISTA: "Dr. Test", FECHA: "2026-06-01 00:00:00",
   ESTATUS: "PROGRAMADA", NOTAS: null, COSTO: 350,
 };
 
@@ -342,7 +342,7 @@ describe("deleteCita", () => {
     mockRemove.mockResolvedValue({ rowsAffected: 1 });
     const result = await Service.deleteCita(1);
     expect(mockRemove).toHaveBeenCalledWith(1);
-    expect(result).toEqual({ rowsAffected: 1 });
+    expect(result).toBe(true);
   });
 });
 
@@ -374,13 +374,12 @@ describe("hardDeleteCita", () => {
     mockHardRemove.mockResolvedValue({ rowsAffected: 1 });
     const result = await Service.hardDeleteCita(1);
     expect(mockHardRemove).toHaveBeenCalledWith(1);
-    expect(result).toEqual({ rowsAffected: 1 });
+    expect(result).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // updateCita — COMPLETADA con cita sin FECHA (CITA_SIN_FECHA)
-// updateCita — COMPLETADA mismo día pero hora futura (CITA_FUTURA)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("updateCita — COMPLETADA edge cases", () => {
@@ -392,14 +391,54 @@ describe("updateCita — COMPLETADA edge cases", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  test("cita mismo día pero hora futura → BAD_REQUEST CITA_FUTURA", async () => {
-    // Construye una fecha para hoy pero con hora dentro de 2 minutos
-    const futuro = new Date();
-    futuro.setMinutes(futuro.getMinutes() + 2);
-    mockFindById.mockResolvedValue({ ...citaBase, FECHA: futuro });
+  test("COMPLETADA → error al crear servicio revierte el estatus y propaga el error", async () => {
+    mockFindById.mockResolvedValue(citaBase);
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+
     await expect(
       Service.updateCita(1, { estatus: "COMPLETADA" })
-    ).rejects.toMatchObject({ statusCode: 400, code: "CITA_FUTURA" });
-    expect(mockUpdate).not.toHaveBeenCalled();
+    ).rejects.toThrow();
+
+    // 1) actualización a COMPLETADA, 2) reversión al estatus previo tras el error
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
+    expect(mockUpdate).toHaveBeenLastCalledWith(1, expect.objectContaining({ estatus: citaBase.ESTATUS }));
+  });
+
+  test("COMPLETADA con cita sin ESTATUS previo (null) y curp en body → revierte a estatus vacío", async () => {
+    mockFindById.mockResolvedValue({ ...citaBase, ESTATUS: null });
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+
+    await expect(
+      Service.updateCita(1, { estatus: "COMPLETADA", curp: CURP })
+    ).rejects.toThrow();
+
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
+    expect(mockUpdate).toHaveBeenLastCalledWith(1, expect.objectContaining({ estatus: "" }));
+  });
+
+  test("cita ya COMPLETADA → no vuelve a crear el servicio vinculado", async () => {
+    mockFindById.mockResolvedValue({ ...citaBase, ESTATUS: "COMPLETADA" });
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+
+    const result = await Service.updateCita(1, { estatus: "COMPLETADA" });
+
+    expect(result).toEqual({ idServicio: null });
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// updateCita — CANCELADA (auto-elimina el servicio vinculado)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("updateCita — CANCELADA", () => {
+  test("CANCELADA → intenta eliminar el servicio vinculado sin romper la actualización", async () => {
+    mockFindById.mockResolvedValue(citaBase);
+    mockUpdate.mockResolvedValue({ rowsAffected: 1 });
+
+    const result = await Service.updateCita(1, { estatus: "CANCELADA" });
+
+    expect(result).toEqual({ idServicio: null });
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 });
