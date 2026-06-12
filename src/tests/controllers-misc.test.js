@@ -400,6 +400,15 @@ describe("PUT /api/v1/citas/:id — actualizar cita", () => {
     mockExecute.mockResolvedValueOnce({ rows: [citaRow] });
     // UPDATE
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+    // findBeneficiarioActivoConMembresia (auto-creación de servicio al completar)
+    mockExecute.mockResolvedValueOnce({ rows: [{
+      ESTATUS: "Activo", NOMBRES: "Juan", APELLIDO_PATERNO: "Pérez",
+      TIPO_CUOTA: "A", ID_CREDENCIAL: 1, NUMERO_CREDENCIAL: "ABC123",
+    }] });
+    // SEQ_SERVICIOS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 100 }] });
+    // INSERT SERVICIOS
+    mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
       .put("/api/v1/citas/1")
@@ -909,6 +918,11 @@ describe("PUT /api/v1/citas/:id — actualizar con fecha provista", () => {
 
 describe("POST /api/v1/citas — createCita sin estatus (usa PROGRAMADA)", () => {
   test("crea cita sin campo estatus → usa PROGRAMADA por defecto (L40: || branch)", async () => {
+    // countCitasByCurp → 0 citas previas
+    mockExecute.mockResolvedValueOnce({ rows: [{ TOTAL: 0 }] });
+    // SEQ_CITAS.NEXTVAL
+    mockExecute.mockResolvedValueOnce({ rows: [{ NEXT_ID: 1 }] });
+    // INSERT cita
     mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
 
     const res = await request(app)
