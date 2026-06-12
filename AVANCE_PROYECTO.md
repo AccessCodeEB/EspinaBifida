@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-12 (Viernes) — Fix de historial de inventario (motivo de alta) y skeleton loaders agregados en Notificaciones, Inventario, Pre-registro, Administradores y Comodatos
+**Actualización:** 2026-06-12 (Viernes) — Fix de historial de inventario (motivo de alta), skeleton loaders en Notificaciones/Inventario/Pre-registro/Administradores/Comodatos, y fix de CI en citas.service (import faltante + sincronización de tests)
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -14,12 +14,12 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 |---|---|
 | Cobertura de pruebas (statements) | **97.71%** |
 | Cobertura de pruebas (funciones) | **95.85%** |
-| Cobertura de pruebas (ramas) | **95.78%** |
+| Cobertura de pruebas (ramas) | **95.03%** |
 | Módulos backend completados | 9 / 9 |
 | Módulos frontend completados | 11 / 11 |
 | Migraciones de BD | 30 / 30 |
 | Archivos de prueba Jest (suites) | 58 |
-| Tests Jest | 1451 |
+| Tests Jest | 1469 |
 | Pruebas E2E Playwright — API | 37 tests activos en 12 archivos |
 | Pruebas E2E Playwright — UI | 7 tests activos en 2 archivos |
 | Tests E2E skipped (esperados) | 7 (rate limit solo prod, headers seguridad, refresh token) |
@@ -396,6 +396,26 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - **Pre-registro** (`frontend/components/sections/preregistro.tsx`): tabla de solicitudes
 - **Administradores** (`frontend/components/sections/administradores.tsx`): tabla de cuentas
 - **Comodatos** (`frontend/components/sections/comodatos.tsx`): tab "Reporte de exenciones" — antes no mostraba ningún estado de carga mientras se generaba el reporte
+
+### Cambios 2026-06-12 (sesión 2) — Fix CI: import faltante en citas.service + sincronización de tests
+
+**Bug de producción corregido:**
+- `serviciosModel.deleteByReferencia` se usa en `citas.service.js` (`updateCita` con estatus CANCELADA, `deleteCita`, `hardDeleteCita`) para eliminar el servicio vinculado a una cita, pero el módulo nunca se importaba — lanzaba un `ReferenceError` silencioso capturado por el `catch`, por lo que la limpieza nunca se ejecutaba. Fix: se agrega `import * as serviciosModel from "../models/servicios.model.js"`.
+
+**Sincronización de tests con los cambios de citas.service del commit `1294dfc` (mismo día, otro desarrollador):**
+- `citaBase.FECHA` ahora es string `'YYYY-MM-DD HH24:MI:SS'` en los mocks de `citas.service.test.js`, igual que devuelve `findById` (la query usa `TO_CHAR`)
+- `deleteCita`/`hardDeleteCita` ahora retornan `true` en lugar de `{rowsAffected: 1}` — expectativas de los tests actualizadas (el controller no usa ese valor)
+- Test obsoleto de `CITA_FUTURA` eliminado: esa validación fue removida intencionalmente en `1294dfc` para permitir completar citas en pruebas/flexibilidad — decisión confirmada con el desarrollador
+- 4 tests nuevos de cobertura para la lógica agregada en `1294dfc`: auto-creación de servicio al completar una cita (incluyendo reversión de estatus si falla la creación del servicio), cita ya completada no vuelve a crear el servicio, auto-eliminación del servicio vinculado al cancelar una cita
+- `controllers-misc.test.js`: mocks de `conn.execute` faltantes agregados para PUT `/api/v1/citas/:id` (completar cita) y POST `/api/v1/citas` sin estatus — ambos flujos ahora disparan consultas adicionales (validación de beneficiario/membresía, `SEQ_SERVICIOS`/`SEQ_CITAS.NEXTVAL`, INSERT)
+
+**Resultado:** 58/58 suites, 1469/1469 tests, cobertura de ramas 95.03% (> umbral 95%)
+
+| Archivo | Qué cambió |
+|---|---|
+| `src/services/citas.service.js` | Import faltante de `serviciosModel` (fix de producción) |
+| `src/tests/citas.service.test.js` | Sincronización de mocks/expectativas + 4 tests nuevos |
+| `src/tests/controllers-misc.test.js` | Mocks faltantes para nuevas consultas de citas.service |
 
 ## 🔄 En progreso / Parcialmente terminado
 
