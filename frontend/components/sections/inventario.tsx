@@ -783,8 +783,17 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             </button>
           </div>
           {loadingMovimientos ? (
-            <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-muted-foreground">Cargando historial...</p>
+            <div className="divide-y divide-border/30">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-3">
+                  <Skeleton className="h-3 w-16 shrink-0" />
+                  <Skeleton className="h-3 flex-1" />
+                  <Skeleton className="h-4 w-16 shrink-0 rounded-full" />
+                  <Skeleton className="h-3 w-10 shrink-0" />
+                  <Skeleton className="hidden h-3 w-10 shrink-0 md:block" />
+                  <Skeleton className="h-3 flex-1" />
+                </div>
+              ))}
             </div>
           ) : movimientos.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2">
@@ -860,8 +869,15 @@ export function InventarioSection({ onNavigate }: { onNavigate?: (section: strin
             </button>
           </div>
           {loadingLog ? (
-            <div className="flex h-40 items-center justify-center">
-              <p className="text-xs text-muted-foreground">Cargando historial…</p>
+            <div className="divide-y divide-border/30">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-3">
+                  <Skeleton className="h-3 w-16 shrink-0" />
+                  <Skeleton className="h-3 flex-1" />
+                  <Skeleton className="h-4 w-16 shrink-0 rounded-full" />
+                  <Skeleton className="h-3 flex-1" />
+                </div>
+              ))}
             </div>
           ) : articulosLog.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2">
