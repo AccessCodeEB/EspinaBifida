@@ -1,4 +1,5 @@
 import * as citasModel from "../models/citas.model.js";
+import * as serviciosModel from "../models/servicios.model.js";
 import { validarSlotEspecialidad } from "./especialidades-horario.service.js";
 import { createConValidacion as crearServicio } from "./servicios.service.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
