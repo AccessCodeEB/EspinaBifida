@@ -13,6 +13,7 @@ import {
 } from "@/services/notificaciones"
 import { getInventario, type ArticuloInventario } from "@/services/inventario"
 import { getComodatos, type Comodato } from "@/services/comodatos"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const TIPO_CONFIG: Record<TipoNotificacion, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   STOCK_BAJO:         { label: "Stock bajo",           icon: Package,       color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -213,8 +214,11 @@ export function NotificacionesPanel() {
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {detailNotif.tipo === "STOCK_BAJO" ? (
                 loadingDetail ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  <div className="space-y-1">
+                    <Skeleton className="mb-3 h-3 w-40" />
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                    ))}
                   </div>
                 ) : detailArticulos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
@@ -252,8 +256,11 @@ export function NotificacionesPanel() {
                 )
               ) : detailNotif.tipo === "SIN_STOCK" ? (
                 loadingDetail ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  <div className="space-y-1">
+                    <Skeleton className="mb-3 h-3 w-40" />
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                    ))}
                   </div>
                 ) : detailArticulos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
@@ -279,8 +286,11 @@ export function NotificacionesPanel() {
                 )
               ) : detailNotif.tipo === "COMODATO_POR_VENCER" ? (
                 loadingDetail ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  <div className="space-y-1">
+                    <Skeleton className="mb-3 h-3 w-40" />
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                    ))}
                   </div>
                 ) : detailComodatos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
@@ -384,9 +394,18 @@ export function NotificacionesPanel() {
           {/* Lista */}
           <div className="max-h-80 overflow-y-auto">
             {loadingItems ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
+              <ul className="divide-y divide-border">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <li key={i} className="flex gap-3 px-4 py-3">
+                    <Skeleton className="mt-0.5 size-4 shrink-0 rounded-full" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-2 w-16" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
                 <Bell className="size-7 opacity-30" />
