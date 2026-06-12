@@ -25,6 +25,7 @@ function mapServicio(row) {
     estatus:           r.estatusServicio ?? "COMPLETADO",
     membresia:         r.membresiaEstatus ?? "Sin membresia",
     notas:             safeClobString(r.notas),
+    referenciaId:      r.referenciaId ?? null,
     referenciaTipo:    r.referenciaTipo ?? null,
     articuloEntregado: r.articuloEntregado ?? null,
     cantidadArticulo:  r.cantidadArticulo == null ? null : Number(r.cantidadArticulo),

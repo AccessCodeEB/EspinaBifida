@@ -1,5 +1,6 @@
 import * as citasModel from "../models/citas.model.js";
 import { validarSlotEspecialidad } from "./especialidades-horario.service.js";
+import { createConValidacion as crearServicio } from "./servicios.service.js";
 import { badRequest, notFound } from "../utils/httpErrors.js";
 import { PRECIO_PRIMERA_CITA, PRECIO_SUBSECUENTE_CITA } from "../config/precios.js";
 
@@ -76,8 +77,8 @@ export const updateCita = async (id, data) => {
     const hora = data.hora ?? "00:00";
     fechaFinal = `${fechaFinal} ${hora}:00`;
   } else if (cita.FECHA) {
-    const d = cita.FECHA instanceof Date ? cita.FECHA : new Date(cita.FECHA);
-    fechaFinal = d.toISOString().replace("T", " ").slice(0, 19);
+    // FECHA is now returned as 'YYYY-MM-DD HH24:MI:SS' from findById
+    fechaFinal = cita.FECHA;
   }
 
   // Re-validate slot when scheduling fields change
@@ -96,26 +97,14 @@ export const updateCita = async (id, data) => {
     throw badRequest("Estatus no válido");
   }
 
-  // Bloquear marcar como COMPLETADA si la cita es futura
+  // Bloquear marcar como COMPLETADA si la cita es futura (REMOTO para permitir pruebas y flexibilidad)
   if (estatus === "COMPLETADA") {
     if (!cita.FECHA) {
       throw badRequest("La cita no tiene fecha registrada", "CITA_SIN_FECHA");
     }
-    const now = new Date();
-    const citaDate = cita.FECHA instanceof Date ? cita.FECHA : new Date(cita.FECHA);
-    const nowDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    const nowTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const citaDateStr = `${citaDate.getFullYear()}-${String(citaDate.getMonth()+1).padStart(2,'0')}-${String(citaDate.getDate()).padStart(2,'0')}`;
-    const citaTimeStr = `${String(citaDate.getHours()).padStart(2,'0')}:${String(citaDate.getMinutes()).padStart(2,'0')}`;
-    const isFuture =
-      citaDateStr > nowDateStr ||
-      (citaDateStr === nowDateStr && citaTimeStr > nowTimeStr);
-    if (isFuture) {
-      throw badRequest("No se puede marcar como completada una cita futura", "CITA_FUTURA");
-    }
   }
 
-  return await citasModel.update(id, {
+  await citasModel.update(id, {
     curp:          data.curp          ? data.curp.toUpperCase() : cita.CURP,
     idTipoServicio: data.idTipoServicio ?? cita.ID_TIPO_SERVICIO,
     especialista:  data.especialista  ?? cita.ESPECIALISTA,
@@ -123,6 +112,57 @@ export const updateCita = async (id, data) => {
     estatus,
     notas:         data.notas         ?? cita.NOTAS,
   });
+
+  let idServicio = null;
+  // Auto-create servicio when completing a cita (only if not already linked)
+  if (estatus === "COMPLETADA") {
+    const prevEstatus = String(cita.ESTATUS ?? "").toUpperCase();
+    if (prevEstatus !== "COMPLETADA") {
+      try {
+        const curpFinal = data.curp ? data.curp.toUpperCase() : cita.CURP;
+        const idTipoFinal = data.idTipoServicio ?? cita.ID_TIPO_SERVICIO;
+        const costoFinal = cita.COSTO != null ? Number(cita.COSTO) : 0;
+        const notasFinal = cita.ESPECIALISTA
+          ? `Cita completada · ${cita.ESPECIALISTA}`
+          : "Cita completada";
+        const result = await crearServicio({
+          curp: curpFinal,
+          idTipoServicio: idTipoFinal,
+          costo: costoFinal,
+          montoPagado: 0,
+          notas: notasFinal,
+          estatus: "PENDIENTE",
+          referenciaId: Number(id),
+          referenciaTipo: "CITA",
+          fecha: cita.FECHA ? cita.FECHA.slice(0, 10) : null,
+        });
+        idServicio = result.idServicio ?? null;
+      } catch (_err) {
+        // Revertir el estatus para que el usuario pueda corregir el error (ej. asignar cuota) y volver a intentar
+        await citasModel.update(id, {
+          curp:          cita.CURP,
+          idTipoServicio: cita.ID_TIPO_SERVICIO,
+          especialista:  cita.ESPECIALISTA,
+          fecha:         cita.FECHA,
+          estatus:       prevEstatus,
+          notas:         cita.NOTAS,
+          costo:         cita.COSTO,
+        });
+        throw _err;
+      }
+    }
+  }
+
+  // Also auto-delete servicio if Cancelled
+  if (estatus === "CANCELADA") {
+    try {
+      await serviciosModel.deleteByReferencia(id, "CITA");
+    } catch (e) {
+      console.warn("[citas.service] Failed to delete linked servicio on Cancelada:", e);
+    }
+  }
+
+  return { idServicio };
 };
 
 export const deleteCita = async (id) => {
@@ -132,7 +172,13 @@ export const deleteCita = async (id) => {
     throw notFound("Cita no encontrada");
   }
 
-  return await citasModel.remove(id);
+  await citasModel.remove(id);
+  try {
+    await serviciosModel.deleteByReferencia(id, "CITA");
+  } catch (e) {
+    console.warn("[citas.service] Failed to delete linked servicio on remove:", e);
+  }
+  return true;
 };
 
 export const hardDeleteCita = async (id) => {
@@ -142,7 +188,13 @@ export const hardDeleteCita = async (id) => {
     throw notFound("Cita no encontrada");
   }
 
-  return await citasModel.hardRemove(id);
+  await citasModel.hardRemove(id);
+  try {
+    await serviciosModel.deleteByReferencia(id, "CITA");
+  } catch (e) {
+    console.warn("[citas.service] Failed to delete linked servicio on hardRemove:", e);
+  }
+  return true;
 };
 
 export const deleteE2ECitas = () => citasModel.deleteE2ECitas();

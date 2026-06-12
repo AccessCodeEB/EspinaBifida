@@ -86,16 +86,25 @@ export const countCitasFuturasActivas = (nombre) =>
 
 /** Cuenta citas activas en un slot específico (especialidad + fecha + hora).
  *  excludeId: omite esa cita del conteo (para reprogramación sin falso "lleno"). */
-export const countCitasBySlot = (nombre, fecha, hora, excludeId = null) =>
+export const countCitasBySlot = (nombre, fecha, hora, duracionCita, excludeId = null) =>
   withConnection(conn => {
+    const [h, m] = hora.split(':').map(Number);
+    const slotStartMins = h * 60 + m;
+    const duracion = duracionCita || 30;
+
     const sql = `SELECT COUNT(1) AS TOTAL
        FROM CITAS
        WHERE UPPER(ESPECIALISTA) = UPPER(:nombre)
          AND TRUNC(FECHA) = TO_DATE(:fecha, 'YYYY-MM-DD')
-         AND TO_CHAR(FECHA, 'HH24:MI') = LPAD(TRIM(:hora), 5, '0')
          AND ESTATUS NOT IN ('CANCELADA','COMPLETADA')
+         AND (
+           (TO_NUMBER(TO_CHAR(FECHA, 'HH24')) * 60 + TO_NUMBER(TO_CHAR(FECHA, 'MI'))) < (:slotStartMins + :duracion)
+         )
+         AND (
+           (TO_NUMBER(TO_CHAR(FECHA, 'HH24')) * 60 + TO_NUMBER(TO_CHAR(FECHA, 'MI')) + :duracion) > :slotStartMins
+         )
          ${excludeId != null ? "AND ID_CITA != :excludeId" : ""}`;
-    const binds = { nombre, fecha, hora, ...(excludeId != null ? { excludeId } : {}) };
+    const binds = { nombre, fecha, slotStartMins, duracion, ...(excludeId != null ? { excludeId } : {}) };
     return conn.execute(sql, binds).then(r => Number(r.rows?.[0]?.TOTAL ?? 0));
   });
 

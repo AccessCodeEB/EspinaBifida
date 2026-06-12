@@ -10,6 +10,7 @@ import {
   Plus,
   User, Package, Clock,
   BarChart2, ClipboardList,
+  CheckCircle2, Trash2, X,
 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectContent,
@@ -60,6 +62,8 @@ const PIE_COLORS = ["#005bb5", "#eab308", "#ef4444", "#10b981", "#9333ea", "#fb9
 const NAVY = "#0f4c81"
 const SERVICIO_DRAFT_KEY = "servicioDraftFromCita"
 const CITA_PREFILL_KEY = "prefillCitaFromServicio"
+
+const GLOBAL_OPTIMISTIC_DELETED_SERVICIOS = new Set<number>()
 
 function monthKey(date: Date): string {
   const y = date.getFullYear()
@@ -170,18 +174,19 @@ export function ServiciosSection() {
   const estatusCicloFiltro: EstatusCiclo = ESTATUS_CICLO[estatusCicloIdx]
   const [page, setPage] = useState(1)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [selectionMode, setSelectionMode] = useState(false)
 
   const router = useRouter()
 
   // ── Dialogs ──
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
-  const [bannerCita, setBannerCita] = useState<{ curp: string; nombre: string; idTipoServicio: number; fecha: string } | null>(null)
   const [bannerEliminarServicio, setBannerEliminarServicio] = useState<{ nombre: string; servicio: string } | null>(null)
   const [servicioDetalle, setServicioDetalle] = useState<ServicioDetallado | null>(null)
   const [servicioParaEliminar, setServicioParaEliminar] = useState<ServicioDetallado | null>(null)
   const [eliminandoServicio, setEliminandoServicio] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [updatingServicioId, setUpdatingServicioId] = useState<number | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkConfirm, setBulkConfirm] = useState<"delete"|"complete" | null>(null)
 
   // ── Form state ──
   const [busquedaBeneficiario, setBusquedaBeneficiario] = useState("")
@@ -200,13 +205,14 @@ export function ServiciosSection() {
   // ── Effects ──
   useEffect(() => {
     getServicios()
-      .then((data) => setServiciosRegistrados(data))
+      .then((data) => setServiciosRegistrados(data.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id))))
       .catch((err) => setError(err?.message ?? "Error al cargar servicios"))
       .finally(() => setLoading(false))
     getCatalogoServicios()
       .then(setCatalogoServicios)
       .catch(() => {})
   }, [])
+
 
   useEffect(() => {
     try {
@@ -225,7 +231,7 @@ export function ServiciosSection() {
 
       setFechaError("")
       setRegistroError("")
-      setShowRegistroDialog(true)
+      // No abrimos el modal de forma automática
       sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
     } catch {
       // ignore malformed draft payloads
@@ -242,11 +248,7 @@ export function ServiciosSection() {
       .finally(() => setLoadingBeneficiarios(false))
   }, [showRegistroDialog, beneficiarios.length])
 
-  useEffect(() => {
-    return () => {
-      if (pendingDelete) clearTimeout(pendingDelete.timerId)
-    }
-  }, [pendingDelete])
+
 
   useEffect(() => {
     setPage(1)
@@ -327,6 +329,33 @@ export function ServiciosSection() {
       return { ...s, fechaDate, montoNumero: parseMoney(s.monto), mesClave: fechaDate ? monthKey(fechaDate) : "" }
     })
   }, [serviciosRegistrados])
+
+  // Auto-open service detail when navigated from Citas (openServicioId in sessionStorage)
+  const [pendingOpenServicioId, setPendingOpenServicioId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null
+    try {
+      const raw = sessionStorage.getItem("openServicioId")
+      if (raw) {
+        sessionStorage.removeItem("openServicioId")
+        const num = Number(raw)
+        return Number.isFinite(num) && num > 0 ? num : null
+      }
+    } catch {}
+    return null
+  })
+
+  useEffect(() => {
+    if (!pendingOpenServicioId || loading) return
+    const found = serviciosConFecha.find(s => s.id === pendingOpenServicioId)
+    if (found) {
+      setPendingOpenServicioId(null) // Only trigger once
+      setActiveTab("tabla")
+      if (found.mesClave) setSelectedMonth(found.mesClave)
+      // Small delay to let tab/month state settle before opening dialog
+      setTimeout(() => setServicioDetalle(found), 50)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingOpenServicioId, loading, serviciosConFecha])
 
   const serviciosMes = useMemo(
     () => serviciosConFecha.filter((s) => s.mesClave === selectedMonth),
@@ -458,7 +487,43 @@ export function ServiciosSection() {
     if (requiereDescripcionOtro && !descripcionOtro.trim()) { setRegistroError("Debe especificar en que consiste el servicio para la opcion 'Otros'"); return }
     if (fechaEsFutura) { setFechaError("No se permiten fechas futuras. Solo hoy o fechas anteriores."); return }
 
-    
+    const esConsulta = tipoServicioSeleccionadoLabel.toLowerCase().includes("consulta")
+    const esEstudio = tipoServicioSeleccionadoLabel.toLowerCase().includes("estudio")
+
+    if (esConsulta || esEstudio) {
+      try {
+        sessionStorage.setItem(
+          "CITA_PREFILL_KEY",
+          JSON.stringify({
+            curp: beneficiarioEncontrado.curp,
+            nombre: beneficiarioEncontrado.nombre,
+            idTipoServicio: idTipoServicioNumerico,
+            fecha: fechaServicio,
+          })
+        )
+      } catch {}
+      
+      setShowRegistroDialog(false)
+      setBeneficiarioEncontrado(null)
+      setBusquedaBeneficiario("")
+      setTipoServicioSeleccionado("")
+      setMontoServicio("")
+      setCantidadArticulo("1")
+      setDescripcionOtro("")
+      setTipoEstudio("")
+      setFechaServicio(hoy)
+      setIdArticuloSeleccionado("")
+      setArticulosInventario([])
+
+      toast.info("Redirigiendo a Citas...", {
+        description: "Las consultas y estudios deben agendarse como cita primero. El servicio se registrará automáticamente cuando la cita sea completada."
+      })
+      
+      const evt = new CustomEvent("section-change", { detail: "citas" })
+      window.dispatchEvent(evt)
+      router.push("/panel?section=citas")
+      return
+    }
 
     try {
       setRegistroLoading(true)
@@ -478,14 +543,7 @@ export function ServiciosSection() {
         costo: montoNum > 0 ? montoNum : undefined,
       })
       const updated = await getServicios()
-      setServiciosRegistrados(updated)
-
-      // Capturar antes del reset para el banner de cita
-      const esConsulta = tipoServicioSeleccionadoLabel.toLowerCase().includes("consulta")
-      const snapCurp = beneficiarioEncontrado?.curp ?? ""
-      const snapNombre = beneficiarioEncontrado?.nombre ?? ""
-      const snapIdTipo = idTipoServicioNumerico
-      const snapFecha = fechaServicio
+      setServiciosRegistrados(updated.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))
 
       setShowRegistroDialog(false)
       setBeneficiarioEncontrado(null)
@@ -499,15 +557,7 @@ export function ServiciosSection() {
       setIdArticuloSeleccionado("")
       setArticulosInventario([])
 
-      if (result.warning) {
-        toast.warning("Servicio registrado", { description: result.warning })
-      } else {
-        toast.success("Servicio registrado correctamente")
-      }
-
-      if (esConsulta && snapCurp) {
-        setBannerCita({ curp: snapCurp, nombre: snapNombre, idTipoServicio: snapIdTipo, fecha: snapFecha })
-      }
+      toast.success("Servicio registrado correctamente")
     } catch (err) {
       setRegistroError(friendlyError(err, "No se pudo registrar el servicio"))
     } finally {
@@ -517,38 +567,150 @@ export function ServiciosSection() {
 
   const handleEliminarServicio = async () => {
     if (!servicioParaEliminar) return
-    try {
-      setEliminandoServicio(true)
-      if (pendingDelete) clearTimeout(pendingDelete.timerId)
-      const servicio = servicioParaEliminar
-      setServiciosRegistrados((prev) => prev.filter((s) => s.id !== servicio.id))
-      const timerId = setTimeout(async () => {
-        try {
-          await deleteServicio(servicio.id)
-          const updated = await getServicios()
-          setServiciosRegistrados(updated)
-        } catch (err) {
-          console.error("Error al confirmar eliminación:", err)
-          const updated = await getServicios()
-          setServiciosRegistrados(updated)
-          toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
-        } finally {
-          setPendingDelete(null)
-        }
-      }, 8000)
-      setPendingDelete({ servicio, timerId })
-      setServicioParaEliminar(null)
-      toast.success("Servicio eliminado", { description: "Tienes 8 segundos para deshacer." })
+    const servicio = servicioParaEliminar
+    setEliminandoServicio(true)
 
-      const esConsulta = servicio.servicio?.toLowerCase().includes("consulta")
-      if (esConsulta) {
-        setBannerEliminarServicio({ nombre: servicio.nombre, servicio: servicio.servicio })
+    // Eliminación optimista
+    GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.add(servicio.id)
+    setServiciosRegistrados(prev => prev.filter(s => s.id !== servicio.id))
+    setServicioParaEliminar(null)
+    setSelectedIds(prev => { const n = new Set(prev); n.delete(servicio.id); return n })
+
+    let seconds = 10
+    let intervalId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout
+
+    const undo = () => {
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
+      GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(servicio.id)
+      getServicios().then(data => setServiciosRegistrados(data.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))).catch(() => {})
+    }
+
+    const toastId = toast.warning(`Eliminando servicio de ${servicio.nombre}...`, {
+      description: `Tienes ${seconds} segundos para deshacer esta acción.`,
+      duration: 10500,
+      action: { label: "Deshacer", onClick: undo }
+    })
+
+    intervalId = setInterval(() => {
+      seconds--
+      if (seconds <= 0) {
+        clearInterval(intervalId)
+      } else {
+        toast.warning(`Eliminando servicio de ${servicio.nombre}...`, {
+          id: toastId,
+          description: `Tienes ${seconds} segundos para deshacer esta acción.`,
+          duration: seconds * 1000 + 500,
+          action: { label: "Deshacer", onClick: undo }
+        })
       }
+    }, 1000)
+
+    timeoutId = setTimeout(async () => {
+      try {
+        await deleteServicio(servicio.id)
+        GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(servicio.id)
+        const updated = await getServicios()
+        setServiciosRegistrados(updated.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))
+        
+        const esCita = servicio.referenciaTipo?.toUpperCase() === "CITA"
+        if (esCita) {
+          setBannerEliminarServicio({ nombre: servicio.nombre, servicio: servicio.servicio })
+        }
+      } catch (err) {
+        console.error("Error al eliminar servicio:", err)
+        toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
+        GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(servicio.id)
+        const updated = await getServicios()
+        setServiciosRegistrados(updated.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))
+      }
+    }, 10000)
+
+    setEliminandoServicio(false)
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    const count = ids.length
+    
+    // Optimistic delete
+    ids.forEach(id => GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.add(id))
+    setServiciosRegistrados(prev => prev.filter(s => !ids.includes(s.id)))
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+
+    let seconds = 10
+    let intervalId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout
+
+    const undo = () => {
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
+      ids.forEach(id => GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(id))
+      getServicios().then(data => setServiciosRegistrados(data.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))).catch(() => {})
+    }
+
+    const toastId = toast.warning(`Eliminando ${count} servicios...`, {
+      description: `Tienes ${seconds} segundos para deshacer esta acción.`,
+      duration: 10500,
+      action: { label: "Deshacer", onClick: undo }
+    })
+
+    intervalId = setInterval(() => {
+      seconds--
+      if (seconds <= 0) {
+        clearInterval(intervalId)
+      } else {
+        toast.warning(`Eliminando ${count} servicios...`, {
+          id: toastId,
+          description: `Tienes ${seconds} segundos para deshacer esta acción.`,
+          duration: seconds * 1000 + 500,
+          action: { label: "Deshacer", onClick: undo }
+        })
+      }
+    }, 1000)
+
+    timeoutId = setTimeout(async () => {
+      try {
+        for (const id of ids) {
+          await deleteServicio(id).catch(console.error)
+          GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(id)
+        }
+        const updated = await getServicios()
+        setServiciosRegistrados(updated.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))
+      } catch (err) {
+        console.error("Error en eliminación masiva:", err)
+        ids.forEach(id => GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.delete(id))
+        toast.error("Hubo un error al eliminar algunos servicios")
+        const updated = await getServicios()
+        setServiciosRegistrados(updated.filter(s => !GLOBAL_OPTIMISTIC_DELETED_SERVICIOS.has(s.id)))
+      }
+    }, 10000)
+  }
+
+  const handleBulkComplete = async () => {
+    if (selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    const count = ids.length
+    
+    setServiciosRegistrados(prev => prev.map(s => ids.includes(s.id) ? { ...s, estatus: "COMPLETADO" } : s))
+    setSelectedIds(new Set())
+    setSelectionMode(false)
+    
+    const toastId = toast.loading(`Marcando ${count} servicios como completados...`)
+    try {
+      for (const id of ids) {
+        await updateServicio(id, { estatus: "COMPLETADO" }).catch(console.error)
+      }
+      toast.success(`${count} servicios marcados como completados`, { id: toastId })
+      const updated = await getServicios()
+      setServiciosRegistrados(updated)
     } catch (err) {
-      console.error("Error al eliminar servicio:", err)
-      toast.error(friendlyError(err, "No se pudo eliminar el servicio"))
-    } finally {
-      setEliminandoServicio(false)
+      toast.error("Hubo un error al actualizar algunos servicios", { id: toastId })
+      const updated = await getServicios()
+      setServiciosRegistrados(updated)
     }
   }
 
@@ -563,18 +725,6 @@ export function ServiciosSection() {
       toast.error(friendlyError(err, "No se pudo actualizar el estatus"))
     } finally {
       setUpdatingServicioId(null)
-    }
-  }
-
-  const handleUndoDelete = async () => {
-    if (!pendingDelete) return
-    clearTimeout(pendingDelete.timerId)
-    setPendingDelete(null)
-    try {
-      const updated = await getServicios()
-      setServiciosRegistrados(updated)
-    } catch (err) {
-      console.error("Error al restaurar lista tras deshacer:", err)
     }
   }
 
@@ -645,7 +795,8 @@ export function ServiciosSection() {
 
   // ── Render ──
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <>
+      <div className="flex flex-col gap-6 pb-8">
 
       {/* Header */}
       <div>
@@ -746,52 +897,6 @@ export function ServiciosSection() {
         </div>
       </div>
 
-      {/* Dialog: agendar cita post-consulta */}
-      <Dialog open={Boolean(bannerCita)} onOpenChange={(open) => { if (!open) setBannerCita(null) }}>
-        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <CalendarDays className="size-4 text-[#0f4c81]" />
-              ¿Agendar cita?
-            </DialogTitle>
-          </DialogHeader>
-          {bannerCita && (
-            <div className="flex flex-col gap-4 pt-1">
-              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servicio registrado</p>
-                <p className="mt-1 text-sm font-medium text-foreground">{bannerCita.nombre}</p>
-                <p className="text-xs text-muted-foreground">Consulta médica · {bannerCita.fecha}</p>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                ¿Quieres programar también la cita en el calendario?
-              </p>
-              <div className="flex justify-end gap-2 border-t border-border/40 pt-2">
-                <button
-                  onClick={() => setBannerCita(null)}
-                  className="rounded-lg border border-border/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
-                >
-                  No, gracias
-                </button>
-                <button
-                  onClick={() => {
-                    sessionStorage.setItem(CITA_PREFILL_KEY, JSON.stringify({
-                      curp: bannerCita.curp,
-                      idTipoServicio: bannerCita.idTipoServicio,
-                      fecha: bannerCita.fecha,
-                    }))
-                    router.push("/panel?section=citas")
-                    setBannerCita(null)
-                  }}
-                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#0f4c81" }}
-                >
-                  Sí, agendar cita
-                </button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* KPIs + Charts */}
       {activeTab === "resumen" && <ServiciosChartsKpis
@@ -836,10 +941,56 @@ export function ServiciosSection() {
 
         onRowClick={setServicioDetalle}
         setPage={setPage}
-        pendingDeleteFolio={pendingDelete?.servicio.folio ?? null}
-        onUndoDelete={handleUndoDelete}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        selectionMode={selectionMode}
+        onSelectionModeToggle={() => {
+          setSelectionMode(prev => !prev)
+          setSelectedIds(new Set())
+        }}
       />}
+      </div>
 
+      {/* Barra de acción masiva */}
+      {selectedIds.size > 0 && activeTab === "tabla" && (
+        <div className="sticky bottom-0 h-0 w-full overflow-visible pointer-events-none">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max z-50 flex items-center gap-4 rounded-full border border-border/40 bg-background/95 px-6 py-3 shadow-xl backdrop-blur-md pointer-events-auto">
+            <span className="text-sm font-semibold text-foreground">
+              {selectedIds.size} {selectedIds.size === 1 ? "seleccionado" : "seleccionados"}
+            </span>
+            <div className="flex items-center gap-2 border-l border-border/50 pl-4">
+            <button
+              onClick={() => setBulkConfirm("complete")}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 transition-colors"
+            >
+              <CheckCircle2 className="size-4" />
+              Completar
+            </button>
+            <button
+              onClick={() => {
+                if (selectedIds.size === 1) {
+                  const id = selectedIds.values().next().value
+                  const servicio = serviciosRegistrados.find(s => s.id === id)
+                  if (servicio) setServicioParaEliminar(servicio)
+                } else {
+                  setBulkConfirm("delete")
+                }
+              }}
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40 transition-colors"
+            >
+              <Trash2 className="size-4" />
+              Eliminar
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="flex items-center justify-center rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors ml-1"
+            >
+              <X className="size-4" />
+            </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Dialog: Detalle */}
       <Dialog open={Boolean(servicioDetalle)} onOpenChange={(open) => !open && setServicioDetalle(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -922,22 +1073,31 @@ export function ServiciosSection() {
               )}
 
               {/* Cambiar estatus */}
-              <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cambiar estatus</p>
-                <Select
-                  value={String(servicioDetalle.estatus ?? "").toUpperCase() === "PENDIENTE" ? "PENDIENTE" : "COMPLETADO"}
-                  onValueChange={(value) => handleActualizarEstatusServicio(servicioDetalle.id, value)}
-                  disabled={updatingServicioId === servicioDetalle.id}
-                >
-                  <SelectTrigger className="h-8 w-32 text-[11px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                    <SelectItem value="COMPLETADO">Completado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {servicioDetalle.referenciaTipo === "CITA" && String(servicioDetalle.estatus ?? "").toUpperCase() === "COMPLETADO" ? (
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estatus</p>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />Completado
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cambiar estatus</p>
+                  <Select
+                    value={String(servicioDetalle.estatus ?? "").toUpperCase() === "PENDIENTE" ? "PENDIENTE" : "COMPLETADO"}
+                    onValueChange={(value) => handleActualizarEstatusServicio(servicioDetalle.id, value)}
+                    disabled={updatingServicioId === servicioDetalle.id}
+                  >
+                    <SelectTrigger className="h-8 w-32 text-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                      <SelectItem value="COMPLETADO">Completado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Acciones */}
               <div className="flex justify-between gap-2 border-t border-border/40 pt-2">
@@ -947,12 +1107,26 @@ export function ServiciosSection() {
                 >
                   Eliminar servicio
                 </button>
-                <button
-                  onClick={() => setServicioDetalle(null)}
-                  className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
-                >
-                  Cerrar
-                </button>
+                <div className="flex gap-2">
+                  {servicioDetalle.referenciaTipo === "CITA" && (
+                    <button
+                      onClick={() => {
+                        setServicioDetalle(null)
+                        try { sessionStorage.setItem("openCitaId", String(servicioDetalle.referenciaId)) } catch {}
+                        router.push("/panel?section=citas")
+                      }}
+                      className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                    >
+                      Ver en citas
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setServicioDetalle(null)}
+                    className="rounded-lg border border-border/70 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1038,6 +1212,9 @@ export function ServiciosSection() {
                 </button>
                 <button
                   onClick={() => {
+                    if (bannerEliminarServicio.idCita) {
+                      try { sessionStorage.setItem("openCitaId", String(bannerEliminarServicio.idCita)) } catch {}
+                    }
                     router.push("/panel?section=citas")
                     setBannerEliminarServicio(null)
                   }}
@@ -1056,8 +1233,19 @@ export function ServiciosSection() {
       <Dialog open={Boolean(servicioParaEliminar)} onOpenChange={(open) => !open && setServicioParaEliminar(null)}>
         <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Eliminar servicio</DialogTitle>
-            <DialogDescription className="text-xs">Esta acción no se puede deshacer.</DialogDescription>
+            <DialogTitle className="text-base font-bold text-destructive">¿Eliminar servicio?</DialogTitle>
+            <DialogDescription className="text-xs">
+              {servicioParaEliminar && (
+                <>
+                  ¿Deseas eliminar este servicio de forma permanente aunque esté en estado <strong>{servicioParaEliminar.estatus?.toUpperCase()}</strong>?
+                  {servicioParaEliminar.referenciaTipo?.toUpperCase() === "CITA" && (
+                    <span className="block mt-1 font-bold">¡Atención! Este servicio proviene de una cita.</span>
+                  )}
+                  <br className="mt-1" />
+                  Al confirmar, tendrás 10 segundos para deshacer esta acción antes de que se elimine de forma permanente y definitiva del sistema.
+                </>
+              )}
+            </DialogDescription>
           </DialogHeader>
           {servicioParaEliminar && (
             <div className="space-y-4 pt-1">
@@ -1094,6 +1282,36 @@ export function ServiciosSection() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+
+      <AlertDialog open={bulkConfirm !== null} onOpenChange={(o) => !o && setBulkConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkConfirm === "delete" ? "¿Eliminar servicios permanentemente?" :
+               "¿Completar servicios seleccionados?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkConfirm === "delete" ? "Al confirmar, tendrás 10 segundos para deshacer esta acción antes de que los servicios se eliminen de forma permanente y definitiva del sistema." :
+               "¿Estás seguro que deseas marcar como completados los servicios seleccionados?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Volver</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                const action = bulkConfirm
+                setBulkConfirm(null)
+                if (action === "delete") handleBulkDelete()
+                else if (action === "complete") handleBulkComplete()
+              }}
+              className={bulkConfirm === "delete" ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

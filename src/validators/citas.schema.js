@@ -11,7 +11,7 @@ const estatusEnum = z.preprocess(
 
 export const crearCitaSchema = z.object({
   curp:        z.string().regex(CURP_REGEX, "CURP inválida"),
-  especialista: z.string().min(1, "especialista es obligatorio").max(100),
+  especialista: z.string().min(1, "especialista es obligatorio").max(100).optional(),
   fecha:       z.string().regex(FECHA_REGEX, "fecha debe ser YYYY-MM-DD"),
   hora:        z.string().regex(HORA_REGEX, "hora debe ser HH:MM").optional(),
   estatus:     estatusEnum.optional(),

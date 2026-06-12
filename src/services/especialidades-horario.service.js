@@ -89,7 +89,7 @@ export const updateEspecialidad = async (id, data) => {
   const existing = await model.findById(id);
   if (!existing) throw notFound(`Especialidad con ID ${id} no encontrada`);
 
-  const { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas } = data;
+  const { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas, duracionCita } = data;
 
   // Validación básica de formato
   if (horaInicio !== undefined && !/^\d{2}:\d{2}$/.test(horaInicio)) {
@@ -120,7 +120,7 @@ export const updateEspecialidad = async (id, data) => {
     }
   }
 
-  await model.update(id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas });
+  await model.update(id, { diaSemana, horaInicio, horaFin, capacidadMax, tipoFrecuencia, activo, notas, duracionCita });
   return model.findById(id).then(mapEspecialidad);
 };
 
@@ -184,7 +184,7 @@ export const deleteExcepcion = async (idExcepcion) => {
 async function validarCapacidad(esp, fecha, hora, excludeId = null) {
   if (esp.CAPACIDAD_MAX == null) return;
   if (!hora) return; // sin hora = sin validación de slot
-  const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, excludeId);
+  const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, esp.DURACION_CITA, excludeId);
   if (ocupados >= esp.CAPACIDAD_MAX) {
     throw badRequest(
       `${esp.NOMBRE} ya tiene el máximo de ${esp.CAPACIDAD_MAX} paciente(s) para el slot de las ${hora} del ${fecha}.`,
@@ -285,7 +285,7 @@ export const getSlotsConDisponibilidad = async (idEspecialidad, fecha, excludeId
 
   const slots = await Promise.all(
     slotHoras.map(async (hora) => {
-      const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, excludeId);
+      const ocupados = await model.countCitasBySlot(esp.NOMBRE, fecha, hora, esp.DURACION_CITA, excludeId);
       const capacidad = esp.CAPACIDAD_MAX ?? null;
       const lleno = capacidad != null && ocupados >= capacidad;
       return { hora, ocupados, capacidad, lleno };

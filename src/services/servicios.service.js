@@ -151,6 +151,7 @@ export async function createConValidacion(data) {
     montoPagado,
     referenciaId,
     referenciaTipo,
+    fecha:                   data.fecha ?? null,
     notas:                   data.notas ?? null,
     estatus:                 data.estatus ?? "COMPLETADO",
     fechaDevolucionEsperada: data.fechaDevolucionEsperada ?? null,

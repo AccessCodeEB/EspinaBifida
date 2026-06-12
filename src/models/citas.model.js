@@ -8,9 +8,11 @@ export const findAll = () =>
         TO_CHAR(c.FECHA, 'YYYY-MM-DD') AS FECHA,
         TO_CHAR(c.FECHA, 'HH24:MI')    AS HORA,
         c.ESTATUS, c.NOTAS, c.COSTO,
-        b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO
+        b.NOMBRES || ' ' || b.APELLIDO_PATERNO || ' ' || NVL(b.APELLIDO_MATERNO,'') AS NOMBRE_BENEFICIARIO,
+        s.ID_SERVICIO
       FROM CITAS c
       LEFT JOIN BENEFICIARIOS b ON b.CURP = c.CURP
+      LEFT JOIN SERVICIOS s ON s.REFERENCIA_ID = c.ID_CITA AND s.REFERENCIA_TIPO = 'CITA'
       ORDER BY c.FECHA DESC
     `).then(r => r.rows)
   );
@@ -18,7 +20,9 @@ export const findAll = () =>
 export const findById = (id) =>
   withConnection(conn =>
     conn.execute(
-      `SELECT ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA, FECHA, ESTATUS, NOTAS, COSTO
+      `SELECT ID_CITA, CURP, ID_TIPO_SERVICIO, ESPECIALISTA, 
+       TO_CHAR(FECHA, 'YYYY-MM-DD HH24:MI:SS') AS FECHA, 
+       ESTATUS, NOTAS, COSTO
        FROM CITAS WHERE ID_CITA = :id`,
       { id }
     ).then(r => r.rows[0])

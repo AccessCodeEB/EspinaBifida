@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Check, ChevronsUpDown } from "lucide-react"
+import { Search, Check, ChevronsUpDown, CalendarDays } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -198,6 +198,7 @@ export function ServicioFormDialog({
       // ignore storage errors
     }
 
+    onOpenChange(false)
     router.push("/panel?section=citas")
   }
   
@@ -232,6 +233,10 @@ export function ServicioFormDialog({
                   <Search className="size-4" />
                 </button>
               </div>
+
+              {!beneficiarioEncontrado && (
+                <p className="mt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>
+              )}
 
               {showSugerencias && busquedaBeneficiario.trim().toLowerCase() && (
                 <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-md border bg-background shadow-lg">
@@ -320,242 +325,202 @@ export function ServicioFormDialog({
               </SelectContent>
             </Select>
           </div>
-
-          {/* Selector de artículo con búsqueda — CONSUMIBLE */}
-          {requiereArticulo && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Artículo a entregar</label>
-              {loadingArticulos ? (
-                <p className="text-xs text-muted-foreground">Cargando inventario...</p>
-              ) : articulosFiltrados.length === 0 ? (
-                <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Sin artículos disponibles en inventario para este tipo de servicio.
-                </p>
-              ) : (
-                <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      role="combobox"
-                      className={`flex h-10 w-full items-center justify-between rounded-lg border px-3 text-sm text-foreground hover:bg-muted transition-colors ${
-                        intentoEnvio && !idArticuloSeleccionado
-                          ? "border-red-400 bg-red-50/50 dark:bg-red-950/10"
-                          : "border-border/70 bg-background"
-                      }`}
-                    >
-                      <span className="truncate text-left">{articuloLabel}</span>
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[440px] max-h-[280px] p-0 overflow-hidden" align="start" onWheel={e => e.stopPropagation()}>
-                    <Command shouldFilter>
-                      <CommandInput placeholder="Buscar por nombre..." />
-                      <CommandList className="max-h-[240px] overflow-y-auto">
-                        <CommandEmpty>No se encontraron artículos.</CommandEmpty>
-                        <CommandGroup>
-                          {articulosFiltrados.map(a => (
-                            <CommandItem
-                              key={String(a.clave)}
-                              value={normalizeForSearch(a.descripcion)}
-                              keywords={[normalizeForSearch(a.descripcion)]}
-                              onSelect={() => {
-                                setIdArticuloSeleccionado(String(a.clave))
-                                setArticuloPickerOpen(false)
-                              }}
-                            >
-                              <Check className={cn("mr-2 size-4", idArticuloSeleccionado === String(a.clave) ? "opacity-100" : "opacity-0")} />
-                              <span className="flex-1">{a.descripcion}</span>
-                              <span className="ml-3 text-[10px] text-muted-foreground">{a.cantidad} disp.</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          )}
-
-          {requiereArticulo && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
-              <Input
-                type="number"
-                min="1"
-                step="1"
-                placeholder="1"
-                className="h-10 text-sm"
-                value={cantidadArticulo}
-                onChange={(e) => {
-                  setCantidadArticulo(e.target.value)
-                  if (registroError) setRegistroError("")
-                }}
-              />
-              {!cantidadValida && intentoEnvio && (
-                <p className="text-xs font-medium text-destructive">La cantidad debe ser un entero mayor a 0.</p>
-              )}
-            </div>
-          )}
-
-          {/* Chips de precio — cuando hay artículo seleccionado */}
-          {requiereArticulo && idArticuloSeleccionado && (() => {
-            const art = articulosFiltrados.find(a => String(a.clave) === idArticuloSeleccionado)
-            if (!art) return null
-            const cuotaRec = parseFloat(String(art.cuota).replace(/[^0-9.]/g, "")) || 0
-            const precioLista = art.cuotaB != null ? Number(art.cuotaB) : null
-            const fmt = (v: number) => `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            return (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Seleccionar precio</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMontoServicio(String(cuotaRec))}
-                    className={`flex-1 rounded-lg border px-3 py-2.5 text-left text-xs transition-colors ${
-                      montoServicio === String(cuotaRec)
-                        ? "border-[#0f4c81] bg-[#0f4c81]/8 text-[#0f4c81] dark:border-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
-                        : "border-border/70 bg-muted/20 hover:border-[#0f4c81]/50"
-                    }`}
-                  >
-                    <p className="font-semibold text-foreground">Cuota de recuperación</p>
-                    <p className="mt-0.5 text-muted-foreground">{fmt(cuotaRec)}</p>
-                  </button>
-                  {precioLista != null && (
-                    <button
-                      type="button"
-                      onClick={() => setMontoServicio(String(precioLista))}
-                      className={`flex-1 rounded-lg border px-3 py-2.5 text-left text-xs transition-colors ${
-                        montoServicio === String(precioLista)
-                          ? "border-[#0f4c81] bg-[#0f4c81]/8 text-[#0f4c81] dark:border-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
-                          : "border-border/70 bg-muted/20 hover:border-[#0f4c81]/50"
-                      }`}
-                    >
-                      <p className="font-semibold text-foreground">Precio de lista</p>
-                      <p className="mt-0.5 text-muted-foreground">{fmt(precioLista)}</p>
-                    </button>
-                  )}
+          {requiereCita ? (
+            <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+              <div className="flex gap-3">
+                <CalendarDays className="size-5 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5" />
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-sky-900 dark:text-sky-300">
+                    Agendar desde Citas
+                  </p>
+                  <p className="text-xs text-sky-800/80 dark:text-sky-400/80">
+                    Las consultas y estudios médicos deben agendarse directamente desde el calendario de citas para mantener el control de horarios de los especialistas.
+                  </p>
                 </div>
               </div>
-            )
-          })()}
-
-          {/* Tipo de estudio médico */}
-          {esEstudioMedico && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de estudio</label>
-              <Popover open={estudioPickerOpen} onOpenChange={setEstudioPickerOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    role="combobox"
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-border/70 bg-background px-3 text-sm text-left outline-none hover:border-[#0f4c81]/50 focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
-                  >
-                    <span className={tipoEstudio ? "text-foreground" : "text-muted-foreground"}>
-                      {tipoEstudio || "Ej. Biometría hemática, TAC, Ultrasonido..."}
-                    </span>
-                    <span className="ml-2 shrink-0 text-muted-foreground">▼</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[440px] max-h-[280px] p-0 overflow-hidden" align="start">
-                  <Command shouldFilter>
-                    <CommandInput
-                      placeholder="Buscar o escribir tipo de estudio..."
-                      value={tipoEstudio}
-                      onValueChange={setTipoEstudio}
-                    />
-                    <CommandList className="max-h-[240px] overflow-y-auto">
-                      <CommandEmpty>
-                        <span className="text-xs text-muted-foreground">Se usará el texto ingresado</span>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {[
-                          "Biometría hemática",
-                          "Biometría hemática completa",
-                          "Química sanguínea",
-                          "Cistograma",
-                          "TAC",
-                          "Resonancia magnética",
-                          "Ultrasonido",
-                          "Rayos X",
-                          "Electrocardiograma",
-                          "Urocultivo",
-                          "Examen general de orina",
-                        ].map((estudio) => (
-                          <CommandItem
-                            key={estudio}
-                            value={estudio}
-                            onSelect={(val) => { setTipoEstudio(val); setEstudioPickerOpen(false) }}
-                          >
-                            {estudio}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Selector de artículo con búsqueda — CONSUMIBLE */}
+              {requiereArticulo && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Artículo a entregar</label>
+                  {loadingArticulos ? (
+                    <p className="text-xs text-muted-foreground">Cargando inventario...</p>
+                  ) : articulosFiltrados.length === 0 ? (
+                    <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                      Sin artículos disponibles en inventario para este tipo de servicio.
+                    </p>
+                  ) : (
+                    <Popover open={articuloPickerOpen} onOpenChange={setArticuloPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          role="combobox"
+                          className={`flex h-10 w-full items-center justify-between rounded-lg border px-3 text-sm text-foreground hover:bg-muted transition-colors ${
+                            intentoEnvio && !idArticuloSeleccionado
+                              ? "border-red-400 bg-red-50/50 dark:bg-red-950/10"
+                              : "border-border/70 bg-background"
+                          }`}
+                        >
+                          <span className="truncate text-left">{articuloLabel}</span>
+                          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[440px] max-h-[280px] p-0 overflow-hidden" align="start" onWheel={e => e.stopPropagation()}>
+                        <Command shouldFilter>
+                          <CommandInput placeholder="Buscar por nombre..." />
+                          <CommandList className="max-h-[240px] overflow-y-auto">
+                            <CommandEmpty>No se encontraron artículos.</CommandEmpty>
+                            <CommandGroup>
+                              {articulosFiltrados.map(a => (
+                                <CommandItem
+                                  key={String(a.clave)}
+                                  value={normalizeForSearch(a.descripcion)}
+                                  keywords={[normalizeForSearch(a.descripcion)]}
+                                  onSelect={() => {
+                                    setIdArticuloSeleccionado(String(a.clave))
+                                    setArticuloPickerOpen(false)
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 size-4", idArticuloSeleccionado === String(a.clave) ? "opacity-100" : "opacity-0")} />
+                                  <span className="flex-1">{a.descripcion}</span>
+                                  <span className="ml-3 text-[10px] text-muted-foreground">{a.cantidad} disp.</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              )}
 
-          {/* Descripción para "Otros" */}
-          {requiereDescripcionOtro && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especificar servicio</label>
-              <Input
-                placeholder="Describe qué servicio se brindó..."
-                className="h-10 text-sm"
-                value={descripcionOtro}
-                required
-                onChange={(e) => {
-                  setDescripcionOtro(e.target.value)
-                  if (registroError) setRegistroError("")
-                }}
-              />
-              <p className="text-sm text-muted-foreground">
-                Campo obligatorio para registrar la informacion del servicio de tipo "Otros".
-              </p>
-            </div>
-          )}
+              {requiereArticulo && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Cantidad</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="1"
+                    className="h-10 text-sm"
+                    value={cantidadArticulo}
+                    onChange={(e) => {
+                      setCantidadArticulo(e.target.value)
+                      if (registroError) setRegistroError("")
+                    }}
+                  />
+                  {!cantidadValida && intentoEnvio && (
+                    <p className="text-xs font-medium text-destructive">La cantidad debe ser un entero mayor a 0.</p>
+                  )}
+                </div>
+              )}
 
-          {/* Fecha y monto */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
-              <Input
-                type="date"
-                className="h-10 text-sm"
-                max={hoy}
-                value={fechaServicio}
-                onChange={(e) => {
-                  setFechaServicio(e.target.value)
-                  if (fechaError) setFechaError("")
-                }}
-              />
-              {fechaError && <p className="text-sm font-medium text-destructive">{fechaError}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="$0.00"
-                className="h-10 text-sm"
-                value={montoServicio}
-                onChange={(e) => {
-                  setMontoServicio(e.target.value)
-                  if (registroError) setRegistroError("")
-                }}
-              />
-            </div>
-          </div>
+              {/* Chips de precio — cuando hay artículo seleccionado */}
+              {requiereArticulo && idArticuloSeleccionado && (() => {
+                const art = articulosFiltrados.find(a => String(a.clave) === idArticuloSeleccionado)
+                if (!art) return null
+                const cuotaRec = parseFloat(String(art.cuota).replace(/[^0-9.]/g, "")) || 0
+                const precioLista = art.cuotaB != null ? Number(art.cuotaB) : null
+                const fmt = (v: number) => `$${v.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Seleccionar precio</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMontoServicio(String(cuotaRec))}
+                        className={`flex-1 rounded-lg border px-3 py-2.5 text-left text-xs transition-colors ${
+                          montoServicio === String(cuotaRec)
+                            ? "border-[#0f4c81] bg-[#0f4c81]/8 text-[#0f4c81] dark:border-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
+                            : "border-border/70 bg-muted/20 hover:border-[#0f4c81]/50"
+                        }`}
+                      >
+                        <p className="font-semibold text-foreground">Cuota de recuperación</p>
+                        <p className="mt-0.5 text-muted-foreground">{fmt(cuotaRec)}</p>
+                      </button>
+                      {precioLista != null && (
+                        <button
+                          type="button"
+                          onClick={() => setMontoServicio(String(precioLista))}
+                          className={`flex-1 rounded-lg border px-3 py-2.5 text-left text-xs transition-colors ${
+                            montoServicio === String(precioLista)
+                              ? "border-[#0f4c81] bg-[#0f4c81]/8 text-[#0f4c81] dark:border-blue-600 dark:bg-blue-950/30 dark:text-blue-400"
+                              : "border-border/70 bg-muted/20 hover:border-[#0f4c81]/50"
+                          }`}
+                        >
+                          <p className="font-semibold text-foreground">Precio de lista</p>
+                          <p className="mt-0.5 text-muted-foreground">{fmt(precioLista)}</p>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
-          {/* Error de registro */}
-          {registroError && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
-              {registroError}
-            </p>
+
+              {/* Descripción para "Otros" */}
+              {requiereDescripcionOtro && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Especificar servicio</label>
+                  <Input
+                    placeholder="Describe qué servicio se brindó..."
+                    className="h-10 text-sm"
+                    value={descripcionOtro}
+                    required
+                    onChange={(e) => {
+                      setDescripcionOtro(e.target.value)
+                      if (registroError) setRegistroError("")
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Campo obligatorio para registrar la informacion del servicio de tipo "Otros".
+                  </p>
+                </div>
+              )}
+
+              {/* Fecha y monto */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
+                  <Input
+                    type="date"
+                    className="h-10 text-sm"
+                    max={hoy}
+                    value={fechaServicio}
+                    onChange={(e) => {
+                      setFechaServicio(e.target.value)
+                      if (fechaError) setFechaError("")
+                    }}
+                  />
+                  {fechaError && <p className="text-sm font-medium text-destructive">{fechaError}</p>}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Monto</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="$0.00"
+                    className="h-10 text-sm"
+                    value={montoServicio}
+                    onChange={(e) => {
+                      setMontoServicio(e.target.value)
+                      if (registroError) setRegistroError("")
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Error de registro */}
+              {registroError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+                  {registroError}
+                </p>
+              )}
+            </>
           )}
 
           {/* Acciones */}
@@ -566,23 +531,36 @@ export function ServicioFormDialog({
             >
               Cancelar
             </button>
-            <button
-              disabled={
-                registroLoading ||
-                !beneficiarioEncontrado ||
-                expedienteBloqueado ||
-                fechaEsFutura ||
-                !Number.isInteger(idTipoServicioNumerico) ||
-                idTipoServicioNumerico <= 0 ||
-                (!requiereArticulo && !montoEsValido) ||
-                (requiereArticulo && !cantidadValida)
-              }
-              onClick={() => { setIntentoEnvio(true); onRegistrar() }}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: NAVY }}
-            >
-              {registroLoading ? "Registrando..." : "Registrar servicio"}
-            </button>
+            {requiereCita ? (
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={!beneficiarioEncontrado}
+                  onClick={guardarBorradorYProgramar}
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  Ir a Citas
+                </button>
+              </div>
+            ) : (
+              <button
+                disabled={
+                  registroLoading ||
+                  !beneficiarioEncontrado ||
+                  expedienteBloqueado ||
+                  fechaEsFutura ||
+                  !Number.isInteger(idTipoServicioNumerico) ||
+                  idTipoServicioNumerico <= 0 ||
+                  (!requiereArticulo && !montoEsValido) ||
+                  (requiereArticulo && !cantidadValida)
+                }
+                onClick={() => { setIntentoEnvio(true); onRegistrar() }}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: NAVY }}
+              >
+                {registroLoading ? "Registrando..." : "Registrar servicio"}
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

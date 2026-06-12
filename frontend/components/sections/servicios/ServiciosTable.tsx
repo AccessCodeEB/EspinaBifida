@@ -80,10 +80,12 @@ interface ServiciosTableProps {
   onRowClick: (s: ServicioDetallado) => void
   setPage: (fn: (p: number) => number) => void
 
-  pendingDeleteFolio: string | null
-  onUndoDelete: () => void
   estatusCicloIdx: number
   onCicloEstatus: () => void
+
+  selectedIds: Set<number>
+  onSelectionChange: (s: Set<number>) => void
+  selectionMode: boolean
 }
 
 export function ServiciosTable({
@@ -112,11 +114,13 @@ export function ServiciosTable({
   onSortPreset,
   onRowClick,
   setPage,
-  pendingDeleteFolio,
-  onUndoDelete,
   estatusCicloIdx,
   onCicloEstatus,
-}: ServiciosTableProps) {
+  selectedIds,
+  onSelectionChange,
+  selectionMode,
+  onSelectionModeToggle,
+}: ServiciosTableProps & { onSelectionModeToggle: () => void }) {
   const CICLO_LABELS = ["TODOS", "PENDIENTE", "COMPLETADO"] as const
   const containerRef = useRef<HTMLDivElement>(null)
   const [tooltip, setTooltip] = useState<{ s: ServicioDetallado; x: number; y: number } | null>(null)
@@ -124,18 +128,6 @@ export function ServiciosTable({
   return (
     <div ref={containerRef} className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
 
-      {/* Alerta undo */}
-      {pendingDeleteFolio && (
-        <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 dark:border-amber-800 dark:bg-amber-950/30">
-          <AlertTriangle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="flex-1 text-xs text-amber-800 dark:text-amber-300">
-            Servicio <span className="font-semibold">{pendingDeleteFolio}</span> eliminado. Puedes deshacer en 8 segundos.
-          </p>
-          <button onClick={onUndoDelete} className="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400">
-            Deshacer
-          </button>
-        </div>
-      )}
 
       {/* Toolbar */}
       <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-4">
@@ -194,9 +186,19 @@ export function ServiciosTable({
           </select>
           <button
             onClick={() => { setFechaInicioFiltro(""); setFechaFinFiltro(""); setSearchTerm(""); setTipoServicioFiltro("") }}
-            className="ml-auto rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-lg border border-border/70 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Limpiar
+          </button>
+          <button
+            onClick={onSelectionModeToggle}
+            className={`ml-auto flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${
+              selectionMode
+                ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                : "border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {selectionMode ? "Cancelar selección" : "Seleccionar"}
           </button>
         </div>
       </div>
@@ -206,7 +208,27 @@ export function ServiciosTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/40 bg-muted/20">
-              <th className="py-2.5 pl-5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
+              {selectionMode && (
+                <th className="py-2.5 pl-4 pr-2 text-center w-8">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded-sm border-border/50 text-[#0f4c81] focus:ring-[#0f4c81] cursor-pointer"
+                    checked={paginated.length > 0 && paginated.every(s => selectedIds.has(s.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const newSet = new Set(selectedIds)
+                        paginated.forEach(s => newSet.add(s.id))
+                        onSelectionChange(newSet)
+                      } else {
+                        const newSet = new Set(selectedIds)
+                        paginated.forEach(s => newSet.delete(s.id))
+                        onSelectionChange(newSet)
+                      }
+                    }}
+                  />
+                </th>
+              )}
+              <th className={`py-2.5 ${selectionMode ? 'px-2' : 'pl-5 pr-4'} text-left text-[10px] font-bold uppercase tracking-widest text-foreground`}>
                 <span className="inline-flex items-center gap-1"><User className="size-3" />BENEFICIARIO</span>
               </th>
               <th className="py-2.5 pr-4 text-left text-[10px] font-bold uppercase tracking-widest text-foreground">
@@ -245,7 +267,7 @@ export function ServiciosTable({
           <tbody className="divide-y divide-border/30">
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-xs text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-xs text-muted-foreground">
                   No hay servicios para los filtros seleccionados.
                 </td>
               </tr>
@@ -253,7 +275,16 @@ export function ServiciosTable({
               paginated.map((s) => (
                 <tr
                   key={s.id}
-                  onClick={() => onRowClick(s)}
+                  onClick={() => {
+                    if (selectionMode) {
+                      const newSet = new Set(selectedIds)
+                      if (newSet.has(s.id)) newSet.delete(s.id)
+                      else newSet.add(s.id)
+                      onSelectionChange(newSet)
+                    } else {
+                      onRowClick(s)
+                    }
+                  }}
                   onMouseEnter={(e) => {
                     const rect = containerRef.current?.getBoundingClientRect()
                     if (!rect) return
@@ -265,9 +296,24 @@ export function ServiciosTable({
                     setTooltip(prev => prev ? { ...prev, x: e.clientX - rect.left, y: e.clientY - rect.top } : null)
                   }}
                   onMouseLeave={() => setTooltip(null)}
-                  className="cursor-pointer transition-colors hover:bg-muted/20"
+                  className={`cursor-pointer transition-colors hover:bg-muted/30 ${selectedIds.has(s.id) ? "bg-[#0f4c81]/5 dark:bg-[#0f4c81]/20" : ""}`}
                 >
-                  <td className="py-3 pl-5 pr-4 max-w-[12rem]">
+                  {selectionMode && (
+                    <td className="py-3 pl-4 pr-2 text-center w-8" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="size-3.5 rounded-sm border-border/50 text-[#0f4c81] focus:ring-[#0f4c81] cursor-pointer"
+                        checked={selectedIds.has(s.id)}
+                        onChange={(e) => {
+                          const newSet = new Set(selectedIds)
+                          if (e.target.checked) newSet.add(s.id)
+                          else newSet.delete(s.id)
+                          onSelectionChange(newSet)
+                        }}
+                      />
+                    </td>
+                  )}
+                  <td className={`py-3 ${selectionMode ? 'px-2' : 'pl-5 pr-4'} max-w-[12rem]`}>
                     <p className="truncate text-xs font-medium text-foreground" title={s.nombre}>{s.nombre}</p>
                     <p className="text-[10px] text-muted-foreground font-mono">{s.folio}</p>
                   </td>

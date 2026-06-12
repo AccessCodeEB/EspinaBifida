@@ -1,7 +1,8 @@
 "use client"
 import { useState, useMemo, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle, CheckCircle2, Clock, XCircle, AlertTriangle, CalendarClock } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ChevronLeft, ChevronRight, CalendarDays, X, Check, AlertCircle, CheckCircle2, Clock, XCircle, AlertTriangle, CalendarClock, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { updateEstatusCita, updateCita, type Cita } from "@/services/citas"
@@ -41,9 +42,15 @@ function getWeek(mon:Date):Date[]{return Array.from({length:7},(_,i)=>{const d=n
 function getDIM(y:number,m:number){return new Date(y,m+1,0).getDate()}
 function getFDOW(y:number,m:number){const d=new Date(y,m,1).getDay();return d===0?6:d-1}
 function toMins(h:string){const[hr,m]=(h||"08:00").split(":").map(Number);return hr*60+m}
-function snap30(m:number){return Math.round(m/30)*30}
 function minsToTop(m:number):number{return((m-GRID_START*60)/60)*CELL_H}
 function durToH(m:number):number{return(m/60)*CELL_H}
+
+function formatMinToTime(mins: number): string {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+}
+
 function citasDay(list:Cita[],y:number,mo:number,d:number):Cita[]{
   return list.filter(c=>{if(!c.fecha)return false;const dt=new Date(c.fecha+"T12:00:00");return dt.getFullYear()===y&&dt.getMonth()===mo&&dt.getDate()===d})
     .sort((a,b)=>(a.hora||"").localeCompare(b.hora||""))
@@ -53,9 +60,17 @@ function citasDay(list:Cita[],y:number,mo:number,d:number):Cita[]{
 interface LItem{cita:Cita;top:number;height:number;left:number;widthPct:number}
 type Item={cita:Cita;s:number;e:number}
 
-function buildLayout(dayCitas:Cita[]):LItem[]{
+function buildLayout(dayCitas:Cita[], especialidades: EspecialidadHorario[] = []):LItem[]{
   if(!dayCitas.length)return[]
-  const items:Item[]=dayCitas.map(c=>({cita:c,s:snap30(toMins(c.hora||"08:00")),e:snap30(toMins(c.hora||"08:00"))+DEFAULT_MINS}))
+  const items:Item[]=dayCitas.map(c=>{
+    let mins = DEFAULT_MINS
+    if (c.especialista) {
+      const esp = especialidades.find(e => e.nombre === c.especialista)
+      if (esp && esp.duracionCita) mins = esp.duracionCita
+    }
+    const s = toMins(c.hora||"08:00")
+    return {cita:c,s,e:s+mins, duration: mins}
+  })
   const visited=new Set<number>()
   const clusters:Item[][]=[]
   for(let i=0;i<items.length;i++){
@@ -79,7 +94,7 @@ function buildLayout(dayCitas:Cita[]):LItem[]{
     const N=cols.length
     cols.forEach((col,ci)=>col.forEach(item=>result.push({
       cita:item.cita,top:Math.max(0,minsToTop(item.s)),
-      height:Math.max(durToH(DEFAULT_MINS),32),left:(ci/N)*100,widthPct:(1/N)*100,
+      height:Math.max(durToH((item as any).duration ?? DEFAULT_MINS),32),left:(ci/N)*100,widthPct:(1/N)*100,
     })))
   }
   return result
@@ -97,22 +112,27 @@ function isCitaFutura(cita: Cita): boolean {
 }
 
 // ── Validator ─────────────────────────────────────────────────────────────────
-export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string,espSeleccionada?:EspecialidadHorario|null):string|null{
-  const s=snap30(toMins(hora)),e=s+DEFAULT_MINS
+export function validateSlot(citas:Cita[],fecha:string,hora:string,especialista:string,curp:string,espSeleccionada?:EspecialidadHorario|null,ignoreCitaId?:number):string|null{
+  const duration = espSeleccionada?.duracionCita || DEFAULT_MINS
+  const s=toMins(hora),e=s+duration
   if(s/60<WORK_START||s/60>=WORK_END)return`Horario fuera del rango (${WORK_START}:00–${WORK_END}:00)`
   if(espSeleccionada&&!esHoraValidaFrontend(espSeleccionada,hora)){
     const hasta=espSeleccionada.horaFin?` a ${espSeleccionada.horaFin}`:" en adelante"
     return`${espSeleccionada.nombre} atiende desde las ${espSeleccionada.horaInicio}${hasta}`
   }
-  // FIX #3: both doctor AND patient checked with range intersection
+  // FIX #3: both doctor AND patient checked with range intersection, respecting capacidadMax
   const day=citas.filter(c=>c.fecha===fecha&&c.estatus!=="Cancelada")
+  const doctorCitas = []
   for(const c of day){
-    const cs=snap30(toMins(c.hora)),ce=cs+DEFAULT_MINS
+    const cs=toMins(c.hora||"08:00"),ce=cs+duration
     const overlaps=s<ce&&e>cs
     if(!overlaps)continue
-    if(especialista&&c.especialista===especialista)return`El doctor ya tiene una cita en este horario`
+    if(ignoreCitaId!=null&&c.id===ignoreCitaId)continue
     if(curp&&c.folio&&c.folio===curp)return`El paciente ya tiene una cita en este horario`
+    if(especialista&&c.especialista===especialista) doctorCitas.push(c)
   }
+  const cap = espSeleccionada?.capacidadMax ?? 1
+  if (doctorCitas.length >= cap) return `El doctor ya tiene el máximo de citas en este horario`
   return null
 }
 
@@ -161,7 +181,7 @@ function AppBlock({cita,height,onSelect}:{cita:Cita;height:number;onSelect:(c:Ci
 }
 
 // ── Doble confirmación ────────────────────────────────────────────────────────
-type PendingAction = { id: number; estatus: Cita["estatus"] } | null
+type PendingAction = { id: number; estatus: Cita["estatus"] | "VerServicios" } | null
 
 const CONFIRM_META: Record<string, { label: string; icon: React.ReactNode; btnClass: string; hint: string }> = {
   Confirmada: {
@@ -171,16 +191,22 @@ const CONFIRM_META: Record<string, { label: string; icon: React.ReactNode; btnCl
     hint: "La cita quedará marcada como Confirmada.",
   },
   Cancelada: {
-    label: "Cancelar cita",
+    label: "Sí, cancelar",
     icon: <X className="size-4" />,
-    btnClass: "bg-[#ef4444] hover:opacity-90 text-white",
-    hint: "La cita quedará marcada como Cancelada. Esta acción es difícil de deshacer.",
+    btnClass: "bg-red-500 hover:opacity-90 text-white",
+    hint: "La cita quedará cancelada permanentemente.",
   },
   Completada: {
     label: "Completar cita",
     icon: <Check className="size-4" />,
     btnClass: "bg-[#7FB6FF] hover:opacity-90 text-gray-800",
     hint: "La cita quedará marcada como Completada.",
+  },
+  VerServicios: {
+    label: "Ir a Servicios",
+    icon: <List className="size-4" />,
+    btnClass: "bg-[#0f4c81] hover:opacity-90 text-white",
+    hint: "¿Redirigir al módulo de servicios para ver esta cita?",
   },
 }
 
@@ -190,19 +216,19 @@ function DoubleConfirmBody({
   onConfirm,
   onCancel,
 }: {
-  estatus: Cita["estatus"]
+  estatus: Cita["estatus"] | "VerServicios"
   onConfirm: () => void
   onCancel: () => void
 }) {
   const meta = CONFIRM_META[estatus]
   return (
     <div className="px-4 py-4 flex flex-col items-center gap-3">
-      <div className="flex size-9 items-center justify-center rounded-full bg-orange-300/20 border border-orange-300/40">
-        <AlertTriangle className="size-4.5 text-orange-400" />
+      <div className={`flex size-10 items-center justify-center rounded-full border ${estatus === "Cancelada" ? "bg-red-500/10 border-red-500/20 text-red-500" : estatus === "Confirmada" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-sky-500/10 border-sky-500/20 text-sky-500"}`}>
+        {meta?.icon}
       </div>
-      <div className="text-center space-y-0.5">
-        <p className="text-sm font-bold text-foreground">¿Estás seguro?</p>
-        <p className="text-[11px] text-muted-foreground leading-snug">{meta?.hint}</p>
+      <div className="text-center space-y-1">
+        <p className="text-[13px] font-bold text-foreground">¿Estás seguro?</p>
+        <p className="text-[11px] text-muted-foreground leading-snug max-w-[200px] mx-auto">{meta?.hint}</p>
       </div>
       <div className="flex w-full gap-2">
         <button
@@ -224,16 +250,18 @@ function DoubleConfirmBody({
   )
 }
 
-// ── Posponer Dialog ───────────────────────────────────────────────────────────
+// ── Reagendar Dialog ───────────────────────────────────────────────────────────
 const DIAS_NOMBRE_ESP = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"]
 
-function PosponerDialog({
+function ReagendarDialog({
   cita,
+  citas,
   onClose,
   onConfirm,
   loading,
 }: {
   cita: Cita
+  citas: Cita[]
   onClose: () => void
   onConfirm: (fecha: string, hora: string) => void
   loading: boolean
@@ -245,6 +273,14 @@ function PosponerDialog({
   const [slots, setSlots] = useState<SlotDisponibilidad[] | null>(null)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [dayError, setDayError] = useState<string | null>(null)
+
+  function isSlotInPastLocal(f: string, h: string): boolean {
+    if (!f || !h) return false
+    const [y, m, d] = f.split("-").map(Number)
+    const [hr, min] = h.split(":").map(Number)
+    const target = new Date(y, m - 1, d, hr, min)
+    return target < new Date()
+  }
 
   const esp = especialidades.find(e => e.nombre === cita.especialista) ?? null
   const tieneEsp = !!cita.especialista?.trim()
@@ -263,7 +299,16 @@ function PosponerDialog({
     setHora("")
     setSlots(null)
     setDayError(null)
-    if (!esp || !tieneEsp) return
+    if (!esp || !tieneEsp) {
+      const TIME_SLOTS = Array.from({length: 25}, (_,i) => {
+        const h = 8 + Math.floor(i / 2), m = i % 2 === 0 ? "00" : "30"
+        return `${String(h).padStart(2,"0")}:${m}`
+      }).filter(t => {
+        const [h] = t.split(":").map(Number); return h < 17
+      })
+      setSlots(TIME_SLOTS.map(hora => ({ hora, lleno: false, capacidad: null, ocupados: 0 })))
+      return
+    }
 
     if (!esFechaValidaFrontend(esp, fecha)) {
       const txt = esp.tipoFrecuencia === "MENSUAL_PRIMER_DIA"
@@ -297,7 +342,7 @@ function PosponerDialog({
           <div className="flex items-center justify-between bg-sky-400/10 px-4 py-3 border-b border-border/30">
             <div>
               <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                <CalendarClock className="size-4 text-sky-400" />Posponer cita
+                <CalendarClock className="size-4 text-sky-400" />Reagendar cita
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 {cita.beneficiario}{cita.especialista ? ` · ${cita.especialista}` : ""}
@@ -328,7 +373,7 @@ function PosponerDialog({
                 onChange={e => setFecha(e.target.value)}
                 className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
-              {dayError && <p className="mt-1.5 text-[11px] text-red-400">{dayError}</p>}
+              {dayError && <p className="mt-1.5 text-[11px] text-red-500">{dayError}</p>}
               {esp && !dayError && (
                 <p className="mt-1 text-[10px] text-muted-foreground/60">{descripcionHorario(esp)}</p>
               )}
@@ -337,8 +382,8 @@ function PosponerDialog({
               )}
             </div>
 
-            {/* Slot grid — shown when especialidad is configured */}
-            {showSlots && !dayError && fecha && (
+            {/* Time slots */}
+            {!dayError && fecha && (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-foreground">Selecciona un horario</label>
                 {loadingSlots ? (
@@ -346,44 +391,47 @@ function PosponerDialog({
                 ) : slots === null ? null : slots.length === 0 ? (
                   <p className="text-[11px] text-muted-foreground/60">No hay horarios configurados para este día.</p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {slots.map(s => {
-                      const isSel = s.hora === hora
-                      return (
-                        <button
-                          key={s.hora}
-                          disabled={s.lleno}
-                          onClick={() => setHora(s.hora)}
-                          className={`rounded-lg border py-2 text-xs font-semibold transition-all
-                            ${s.lleno
-                              ? "cursor-not-allowed border-border/20 bg-muted/10 text-muted-foreground/30 line-through"
-                              : isSel
-                                ? "border-[#0f4c81] bg-[#0f4c81]/10 text-[#0f4c81]"
-                                : "border-border/40 bg-muted/20 text-foreground hover:border-[#0f4c81]/50 hover:bg-[#0f4c81]/5"
-                            }`}
-                        >
-                          {s.hora}
-                          {s.capacidad != null && (
-                            <span className="block text-[9px] font-normal opacity-60">{s.ocupados}/{s.capacidad}</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {slots.map(s => {
+                        const isSel = s.hora === hora
+                        const slotError = validateSlot(citas, fecha, s.hora, cita.especialista||"", cita.folio||"", esp, cita.id)
+                        const pasado = isSlotInPastLocal(fecha, s.hora)
+                        const isLleno = s.lleno || !!slotError || pasado
+                        
+                        let displayLabel = s.hora
+                        if (s.lleno) displayLabel += " (Lleno)"
+                        else if (pasado) displayLabel += " (Pasado)"
+                        
+                        return (
+                          <button
+                            key={s.hora}
+                            disabled={isLleno}
+                            onClick={() => setHora(s.hora)}
+                            title={slotError || (pasado ? "Horario pasado" : undefined)}
+                            className={`rounded-lg border py-2 text-xs font-semibold transition-all
+                              ${isLleno
+                                ? "cursor-not-allowed border-border/20 bg-muted/10 text-muted-foreground/30 line-through"
+                                : isSel
+                                  ? "border-[#0f4c81] bg-[#0f4c81]/10 text-[#0f4c81]"
+                                  : "border-border/40 bg-muted/20 text-foreground hover:border-[#0f4c81]/50 hover:bg-[#0f4c81]/5"
+                              }`}
+                          >
+                            {displayLabel}
+                            {s.capacidad != null && (
+                              <span className="block text-[9px] font-normal opacity-60">{s.ocupados}/{s.capacidad}</span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {slots.some(s => validateSlot(citas, fecha, s.hora, cita.especialista||"", cita.folio||"", esp, cita.id)?.includes("paciente")) && (
+                      <p className="mt-2 text-[11px] text-red-400">
+                        * Algunos horarios están bloqueados porque el paciente ya tiene una cita.
+                      </p>
+                    )}
+                  </>
                 )}
-              </div>
-            )}
-
-            {/* Free time input — no especialidad or not configured */}
-            {showFreeTime && (
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-foreground">Hora</label>
-                <input
-                  type="time"
-                  value={hora}
-                  onChange={e => setHora(e.target.value)}
-                  className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
               </div>
             )}
           </div>
@@ -412,13 +460,33 @@ function PosponerDialog({
 }
 
 // ── Anchored Popover ─────────────────────────────────────────────────────────
-function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
+function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId,beneficiarios=[],especialidades=[]}:{
   cita:Cita;blockRect:DOMRect;onClose:()=>void
   onAction:(id:number,e:Cita["estatus"])=>void
   onPosponer:(cita:Cita)=>void
   updatingId:number|null
+  beneficiarios?: import("@/services/beneficiarios").Beneficiario[]
+  especialidades?: EspecialidadHorario[]
 }){
+  const router = useRouter()
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  
+  useEffect(() => {
+    setPendingAction(null)
+  }, [cita.id])
+
+  // Outside click listener
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        if (!pendingAction) onClose()
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [pendingAction, onClose])
+
   // Force a re-render tick after mount so any scroll animation has time to settle
   const [, setTick] = useState(0)
   useEffect(()=>{
@@ -468,30 +536,38 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
     }
   }
 
-  // Alineación vertical usando rect viva del elemento
-  // Clamp dentro de los límites del calendario si está disponible
-  const calTop = calRect ? calRect.top + 4 : 12
-  const calBottom = calRect ? calRect.bottom - 4 : (typeof window !== "undefined" ? window.innerHeight - 12 : 600)
+  // Clamp dentro de los límites visibles (calendario y viewport)
+  const windowH = typeof window !== "undefined" ? window.innerHeight : 600
+  const calTop = calRect ? Math.max(calRect.top + 4, 12) : 12
+  const calBottom = calRect ? Math.min(calRect.bottom - 4, windowH - 12) : (windowH - 12)
   let top = liveRect.top
   if (top + popH > calBottom) top = calBottom - popH
   if (top < calTop) top = calTop
 
   const isUpdating = updatingId === cita.id
 
-  function requestAction(id: number, estatus: Cita["estatus"]) {
+  function requestAction(id: number, estatus: Cita["estatus"] | "VerServicios") {
     setPendingAction({ id, estatus })
   }
 
   function handleConfirmed() {
     if (!pendingAction) return
-    onAction(pendingAction.id, pendingAction.estatus)
+    if (pendingAction.estatus === "VerServicios") {
+      if (cita.idServicio) {
+        try { sessionStorage.setItem("openServicioId", String(cita.idServicio)) } catch {}
+      }
+      router.push("/panel?section=servicios")
+      onClose()
+      return
+    }
+    onAction(pendingAction.id, pendingAction.estatus as Cita["estatus"])
     setPendingAction(null)
   }
 
   const content = (
     <>
-      <div className="fixed inset-0 z-[100]" onClick={() => { if (!pendingAction) onClose() }}/>
       <div
+        ref={popoverRef}
         className="fixed z-[110] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
         style={{left:`${left}px`,top:`${top}px`,width:`${popW}px`}}
       >
@@ -503,7 +579,9 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold ${accentText}`}>{cita.hora}</span>
+            <span className={`text-xs font-bold ${accentText}`}>
+              {cita.hora} - {formatMinToTime(toMins(cita.hora || "08:00") + (especialidades.find(e => e.nombre === cita.especialista)?.duracionCita || DEFAULT_MINS))}
+            </span>
             <button onClick={onClose} className={`rounded-full p-0.5 opacity-60 hover:opacity-100 hover:bg-black/10 transition-colors ${accentText}`}>
               <X className="size-3.5"/>
             </button>
@@ -533,17 +611,34 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
               </p>
             )}
 
+            {(() => {
+              const benef = beneficiarios.find(b => b.folio === cita.folio)
+              const isBaja = benef?.estatus === "Baja"
+              return isBaja && (
+                <div className="rounded-md border border-destructive/50 bg-destructive/5 p-2 mt-1">
+                  <p className="text-[10px] font-medium text-destructive">
+                    Atención: El beneficiario tiene estatus Baja. No se pueden agendar ni completar servicios.
+                  </p>
+                </div>
+              )
+            })()}
+
             {/* Acciones */}
             <div className="flex flex-col gap-1.5 pt-1 border-t border-border/40">
               <div className="flex gap-2">
                 {cita.estatus === "Pendiente" && <>
-                  <button
-                    disabled={isUpdating}
-                    onClick={() => requestAction(cita.id, "Confirmada")}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    <Check className="size-3.5"/>Confirmar
-                  </button>
+                  {(() => {
+                    const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+                    return !isBaja && (
+                      <button
+                        disabled={isUpdating}
+                        onClick={() => requestAction(cita.id, "Confirmada")}
+                        className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        <Check className="size-3.5"/>Confirmar
+                      </button>
+                    )
+                  })()}
                   <button
                     disabled={isUpdating}
                     onClick={() => requestAction(cita.id, "Cancelada")}
@@ -553,15 +648,18 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
                   </button>
                 </>}
                 {cita.estatus === "Confirmada" && <>
-                  {!isCitaFutura(cita) && (
-                    <button
-                      disabled={isUpdating}
-                      onClick={() => requestAction(cita.id, "Completada")}
-                      className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
-                    >
-                      <Check className="size-3.5"/>Completar
-                    </button>
-                  )}
+                  {(() => {
+                    const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+                    return !isBaja && (
+                      <button
+                        disabled={isUpdating}
+                        onClick={() => requestAction(cita.id, "Completada")}
+                        className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        <Check className="size-3.5"/>Completar
+                      </button>
+                    )
+                  })()}
                   <button
                     disabled={isUpdating}
                     onClick={() => requestAction(cita.id, "Cancelada")}
@@ -570,7 +668,15 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
                     <X className="size-3.5"/>Cancelar
                   </button>
                 </>}
-                {(cita.estatus === "Completada" || cita.estatus === "Cancelada") && (
+                {cita.estatus === "Completada" && (
+                  <button
+                    onClick={() => requestAction(cita.id, "VerServicios")}
+                    className="flex-1 rounded-lg border border-[#0f4c81]/30 bg-[#0f4c81]/5 py-2 text-xs font-semibold text-[#0f4c81] transition-colors hover:bg-[#0f4c81]/10 dark:text-sky-400 dark:border-sky-400/30 dark:bg-sky-400/10 dark:hover:bg-sky-400/20"
+                  >
+                    Ver en servicios
+                  </button>
+                )}
+                {cita.estatus === "Cancelada" && (
                   <button
                     onClick={onClose}
                     className="flex-1 rounded-lg border border-border/60 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
@@ -579,15 +685,18 @@ function CitaPopover({cita,blockRect,onClose,onAction,onPosponer,updatingId}:{
                   </button>
                 )}
               </div>
-              {(cita.estatus === "Pendiente" || cita.estatus === "Confirmada") && isCitaFutura(cita) && (
-                <button
-                  disabled={isUpdating}
-                  onClick={() => { onClose(); onPosponer(cita) }}
-                  className="flex w-full items-center justify-center gap-1 rounded-lg border border-sky-400/30 bg-sky-400/10 py-1.5 text-[11px] font-medium text-sky-500 transition-colors hover:bg-sky-400/20 disabled:opacity-50"
-                >
-                  <CalendarClock className="size-3"/>Posponer cita
-                </button>
-              )}
+              {(() => {
+                const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+                return !isBaja && (cita.estatus === "Pendiente" || cita.estatus === "Confirmada") && isCitaFutura(cita) && (
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => { onClose(); onPosponer(cita) }}
+                    className="flex w-full items-center justify-center gap-1 rounded-lg border border-sky-400/30 bg-sky-400/10 py-1.5 text-[11px] font-medium text-sky-500 transition-colors hover:bg-sky-400/20 disabled:opacity-50"
+                  >
+                    <CalendarClock className="size-3"/>Reagendar cita
+                  </button>
+                )
+              })()}
             </div>
           </div>
         )}
@@ -682,17 +791,18 @@ function ActionCenter({
 }
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
-function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId}:{
+function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId,beneficiarios=[]}:{
   selected:{cita:Cita}|null
   onClose:()=>void
   onAction:(id:number,e:Cita["estatus"])=>void
   onPosponer:(cita:Cita)=>void
   updatingId:number|null
+  beneficiarios?: import("@/services/beneficiarios").Beneficiario[]
 }){
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
 
   // Reset pending when selected cita changes
-  useEffect(() => { setPendingAction(null) }, [selected])
+  useEffect(() => { setPendingAction(null) }, [selected?.cita.id])
 
   if(!selected){
     return(
@@ -706,13 +816,13 @@ function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId}:{
   const accentBg=POPUP_BG[cita.estatus]??"bg-slate-500"
   const isUpdating=updatingId===cita.id
 
-  function requestAction(id: number, estatus: Cita["estatus"]) {
+  function requestAction(id: number, estatus: Cita["estatus"] | "VerServicios") {
     setPendingAction({ id, estatus })
   }
 
   function handleConfirmed() {
     if (!pendingAction) return
-    onAction(pendingAction.id, pendingAction.estatus)
+    onAction(pendingAction.id, pendingAction.estatus as Cita["estatus"])
     setPendingAction(null)
   }
 
@@ -724,7 +834,9 @@ function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId}:{
           {POPUP_LABEL[cita.estatus]??cita.estatus}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-white">{cita.hora}</span>
+          <span className="text-xs font-bold text-white">
+            {cita.hora} - {formatMinToTime(toMins(cita.hora || "08:00") + (especialidades.find(e => e.nombre === cita.especialista)?.duracionCita || DEFAULT_MINS))}
+          </span>
           <button onClick={onClose} className="rounded-full p-0.5 text-white/70 hover:text-white hover:bg-white/20 transition-colors">
             <X className="size-3.5"/>
           </button>
@@ -747,43 +859,83 @@ function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId}:{
           {cita.notas&&(
             <p className="text-[11px] italic text-muted-foreground border-t border-border/40 pt-2">"{cita.notas}"</p>
           )}
+
+          {(() => {
+            const benef = beneficiarios.find(b => b.folio === cita.folio)
+            const isBaja = benef?.estatus === "Baja"
+            return isBaja && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/5 p-2 mt-1">
+                <p className="text-[10px] font-medium text-destructive">
+                  Atención: El beneficiario tiene estatus Baja. No se pueden agendar ni completar servicios.
+                </p>
+              </div>
+            )
+          })()}
+
           <div className="flex flex-col gap-1.5 pt-1 border-t border-border/40">
             <div className="flex gap-2">
               {cita.estatus==="Pendiente"&&<>
-                <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Confirmada")}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
-                  <Check className="size-3.5"/>Confirmar
-                </button>
+                {(() => {
+                  const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+                  return !isBaja && (
+                    <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Confirmada")}
+                      className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#6FD6A8] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
+                      <Check className="size-3.5"/>Confirmar
+                    </button>
+                  )
+                })()}
                 <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Cancelada")}
                   className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                   <X className="size-3.5"/>Cancelar
                 </button>
               </>}
               {cita.estatus==="Confirmada"&&<>
-                {!isCitaFutura(cita)&&(
-                  <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Completada")}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
-                    <Check className="size-3.5"/>Completar
-                  </button>
-                )}
+                {(() => {
+                  const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+                  return !isBaja && (
+                    <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Completada")}
+                      className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#7FB6FF] py-2 text-xs font-semibold text-gray-800 transition-opacity hover:opacity-90 disabled:opacity-50">
+                      <Check className="size-3.5"/>Completar
+                    </button>
+                  )
+                })()}
                 <button disabled={isUpdating} onClick={()=>requestAction(cita.id,"Cancelada")}
                   className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#ef4444] py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                   <X className="size-3.5"/>Cancelar
                 </button>
               </>}
               {(cita.estatus==="Completada"||cita.estatus==="Cancelada")&&(
-                <button onClick={onClose}
-                  className="flex-1 rounded-lg border border-border/60 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted">
-                  Cerrar
-                </button>
+                <div className="flex gap-2 w-full">
+                  {cita.estatus === "Completada" && (
+                    <button
+                      onClick={() => {
+                        if (cita.idServicio) {
+                          try { sessionStorage.setItem("openServicioId", String(cita.idServicio)) } catch {}
+                        }
+                        router.push("/panel?section=servicios")
+                        onClose()
+                      }}
+                      className="flex-1 rounded-lg border border-[#0f4c81]/30 bg-[#0f4c81]/5 py-2 text-xs font-semibold text-[#0f4c81] transition-colors hover:bg-[#0f4c81]/10 dark:text-sky-400 dark:border-sky-400/30 dark:bg-sky-400/10 dark:hover:bg-sky-400/20"
+                    >
+                      Ver en servicios
+                    </button>
+                  )}
+                  <button onClick={onClose}
+                    className="flex-1 rounded-lg border border-border/60 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted">
+                    Cerrar
+                  </button>
+                </div>
               )}
             </div>
-            {(cita.estatus==="Pendiente"||cita.estatus==="Confirmada")&&isCitaFutura(cita)&&(
-              <button disabled={isUpdating} onClick={()=>{onClose();onPosponer(cita)}}
-                className="flex w-full items-center justify-center gap-1 rounded-lg border border-sky-400/30 bg-sky-400/10 py-1.5 text-[11px] font-medium text-sky-500 transition-colors hover:bg-sky-400/20 disabled:opacity-50">
-                <CalendarClock className="size-3"/>Posponer cita
-              </button>
-            )}
+            {(() => {
+              const isBaja = beneficiarios.find(b => b.folio === cita.folio)?.estatus === "Baja"
+              return !isBaja && (cita.estatus==="Pendiente"||cita.estatus==="Confirmada")&&isCitaFutura(cita)&&(
+                <button disabled={isUpdating} onClick={()=>{onClose();onPosponer(cita)}}
+                  className="flex w-full items-center justify-center gap-1 rounded-lg border border-sky-400/30 bg-sky-400/10 py-1.5 text-[11px] font-medium text-sky-500 transition-colors hover:bg-sky-400/20 disabled:opacity-50">
+                  <CalendarClock className="size-3"/>Reagendar cita
+                </button>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -799,13 +951,16 @@ function CitaDetailPanel({selected,onClose,onAction,onPosponer,updatingId}:{
 
 interface Props{
   citas:Cita[]
+  beneficiarios?: import("@/services/beneficiarios").Beneficiario[]
+  especialidades?: EspecialidadHorario[]
   onReload:()=>void
   /** Called after a successful status update — updates parent citas array without setLoading(true) */
   onSilentUpdate:(updater:(prev:Cita[])=>Cita[])=>void
   onCitaCancelada?:()=>void
 }
 
-export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCitaCancelada}:Props){
+export function CitasCalendarView({citas:citasProp,beneficiarios=[],especialidades=[],onReload,onSilentUpdate,onCitaCancelada}:Props){
+  const router=useRouter()
   // Local optimistic state — initialised from props, updated immediately on action
   const[citas,setCitas]=useState<Cita[]>(citasProp)
   useEffect(()=>{
@@ -853,29 +1008,35 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
     const all=citasDay(citas,d.getFullYear(),d.getMonth(),d.getDate())
     // FIX #1: only non-cancelled for the grid; citasDay already sorted
     const visible=all.filter(c=>c.estatus!=="Cancelada")
-    return{date:d,layout:buildLayout(visible)}
-  }),[citas,weekDates])
+    return{date:d,layout:buildLayout(visible, especialidades)}
+  }),[citas,weekDates,especialidades])
 
-  // Navigate to cita's exact day AND open its popover
   function navigateToCita(c:Cita){
     const d=new Date(c.fecha+"T12:00:00")
     handleDay(d)
     // Close any open popover first, then wait for layout to settle
     setSelected(null)
-    setTimeout(()=>{
-      const el=document.getElementById(`cita-block-${c.id}`)
-      const container=document.getElementById("citas-grid")
-      if(el && container) {
-        const elRect=el.getBoundingClientRect()
-        const containerRect=container.getBoundingClientRect()
-        const target=container.scrollTop + (elRect.top - containerRect.top) - container.clientHeight/2 + el.clientHeight/2
+    
+    let attempts = 0
+    const tryFindAndOpen = () => {
+      const el = document.getElementById(`cita-block-${c.id}`)
+      const container = document.getElementById("citas-grid")
+      if (el && container) {
+        const elRect = el.getBoundingClientRect()
+        const containerRect = container.getBoundingClientRect()
+        const target = container.scrollTop + (elRect.top - containerRect.top) - container.clientHeight/2 + el.clientHeight/2
         // Use instant scroll so the element is at its final position before we capture the rect
         container.scrollTo({ top: Math.max(0, target), behavior: "instant" })
         // Now the element is at its final position — capture rect immediately
-        const rect=el.getBoundingClientRect()
-        setSelected({cita:c,rect})
+        const rect = el.getBoundingClientRect()
+        setSelected({cita:c, rect})
+      } else if (attempts < 10) {
+        attempts++
+        setTimeout(tryFindAndOpen, 50)
       }
-    },150)
+    }
+    
+    setTimeout(tryFindAndOpen, 50)
   }
 
   function handleOpenPosponer(cita:Cita){
@@ -885,6 +1046,12 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
 
   async function doPosponer(fecha:string,hora:string){
     if(!posponerTarget)return
+    const espSeleccionada = especialidades.find(e => e.nombre === posponerTarget.especialista)
+    const errorMsg = validateSlot(citas, fecha, hora, posponerTarget.especialista||"", posponerTarget.folio||"", espSeleccionada, posponerTarget.id)
+    if (errorMsg) {
+      toast.error("No se puede reagendar", { description: errorMsg })
+      return
+    }
     setPosponiendo(true)
     try{
       await updateCita(posponerTarget.id,{fecha,hora})
@@ -910,19 +1077,73 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
     onSilentUpdate(updater)
     setUpdatingId(id)
     try{
-      await updateEstatusCita(id,estatus)
-      toast.success(`Cita marcada como ${estatus}`)
-      if(estatus==="Cancelada") onCitaCancelada?.()
-    }catch{
+      const res=await updateEstatusCita(id,estatus)
+      if(estatus==="Completada"){
+        const idServicio=res?.idServicio
+        if(res?.errorServicio){
+          // Cita is completed but servicio failed to create
+          setCitas(prev=>prev.map(c=>c.id===id?{...c,idServicio:null}:c))
+          onSilentUpdate(prev=>prev.map(c=>c.id===id?{...c,idServicio:null}:c))
+          toast.warning("Cita completada, pero sin servicio", {
+            description: res.errorServicio,
+            duration: 8000,
+          })
+        }else if(idServicio){
+          // Persist idServicio in cita state for the "Ver en servicios" popover button
+          setCitas(prev=>prev.map(c=>c.id===id?{...c,idServicio}:c))
+          onSilentUpdate(prev=>prev.map(c=>c.id===id?{...c,idServicio}:c))
+          toast.success("Cita marcada como Completada",{
+            description:"El servicio se registró automáticamente.",
+            action:{
+              label:"Ver en servicios",
+              onClick:()=>{
+                try { sessionStorage.setItem("openServicioId", String(idServicio)) } catch {}
+                router.push(`/panel?section=servicios`)
+              },
+            },
+            duration:8000,
+          })
+        } else {
+          toast.success("Cita marcada como Completada")
+        }
+      } else if (estatus === "Cancelada") {
+        toast.success(`Cita cancelada correctamente`, {
+          description: "Eliminada automáticamente de Servicios.",
+          action: {
+            label: "Ir a servicios",
+            onClick: () => router.push(`/panel?section=servicios`),
+          },
+          duration: 8000,
+        })
+        onCitaCancelada?.()
+      } else {
+        toast.success(`Cita marcada como ${estatus}`)
+      }
+    }catch(err: any){
       // Revert both
       const revert=(prev:Cita[])=>prev.map(c=>c.id===id?{...c,estatus:citasProp.find(x=>x.id===id)?.estatus??c.estatus}:c)
       setCitas(revert)
       onSilentUpdate(revert)
-      toast.error("No se pudo actualizar. Cambio revertido.")
+      toast.error(err?.message || "Ocurrió un error inesperado")
     }finally{
       setUpdatingId(null)
     }
   }
+
+  useEffect(() => {
+    if (!citas.length) return
+    try {
+      const openId = sessionStorage.getItem("openCitaId")
+      if (openId) {
+        sessionStorage.removeItem("openCitaId")
+        const id = Number(openId)
+        const cita = citas.find(c => c.id === id)
+        if (cita) {
+          setTimeout(() => navigateToCita(cita), 300)
+        }
+      }
+    } catch {}
+  }, [citas])
 
   return(
     <>
@@ -1039,12 +1260,12 @@ export function CitasCalendarView({citas:citasProp,onReload,onSilentUpdate,onCit
 
       {/* Popover */}
       {selected&&(
-        <CitaPopover cita={selected.cita} blockRect={selected.rect} onClose={()=>setSelected(null)} onAction={doUpdate} onPosponer={handleOpenPosponer} updatingId={updatingId}/>
+        <CitaPopover cita={selected.cita} blockRect={selected.rect} onClose={()=>setSelected(null)} onAction={doUpdate} onPosponer={handleOpenPosponer} updatingId={updatingId} beneficiarios={beneficiarios} especialidades={especialidades}/>
       )}
 
       {/* Posponer Dialog */}
       {posponerTarget&&(
-        <PosponerDialog cita={posponerTarget} onClose={()=>setPosponerTarget(null)} onConfirm={doPosponer} loading={posponiendo}/>
+        <ReagendarDialog cita={posponerTarget} citas={citas} onClose={()=>setPosponerTarget(null)} onConfirm={doPosponer} loading={posponiendo}/>
       )}
     </>
   )

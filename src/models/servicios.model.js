@@ -4,15 +4,7 @@ import { applyMovimientoConConexion } from "./inventario.model.js";
 import { internal } from "../utils/httpErrors.js";
 
 function buildEstatusServicioSql(citaAlias = "cita") {
-  return `
-              CASE
-                WHEN UPPER(NVL(s.ESTATUS, 'COMPLETADO')) = 'PENDIENTE'
-                 AND UPPER(NVL(s.REFERENCIA_TIPO, '')) = 'CITA'
-                 AND ${citaAlias}.ID_CITA IS NOT NULL
-                 AND ${citaAlias}.FECHA <= SYSTIMESTAMP
-                THEN 'COMPLETADO'
-                ELSE UPPER(NVL(s.ESTATUS, 'COMPLETADO'))
-              END AS ESTATUS_SERVICIO`;
+  return `UPPER(NVL(s.ESTATUS, 'COMPLETADO')) AS ESTATUS_SERVICIO`;
 }
 
 export const findAll = () =>
@@ -26,6 +18,7 @@ export const findAll = () =>
               s.COSTO,
               s.MONTO_PAGADO,
               s.NOTAS,
+              s.REFERENCIA_ID,
               s.REFERENCIA_TIPO,
               ${buildEstatusServicioSql("cita")},
               NVL(b.ESTATUS, 'Activo') AS ESTATUS_BENEFICIARIO,
@@ -139,6 +132,9 @@ export async function create(data) {
     const fechaSQL = data.fechaDevolucionEsperada
       ? `TO_DATE(:fechaDevolucion, 'YYYY-MM-DD')`
       : `NULL`;
+    const fechaServicioSQL = data.fecha
+      ? `TO_DATE(:fechaServicio, 'YYYY-MM-DD')`
+      : `SYSDATE`;
     const insertBinds = {
       idServicio,
       curp:           data.curp,
@@ -151,13 +147,14 @@ export async function create(data) {
       estatus:        data.estatus ?? "COMPLETADO",
     };
     if (data.fechaDevolucionEsperada) insertBinds.fechaDevolucion = data.fechaDevolucionEsperada;
+    if (data.fecha) insertBinds.fechaServicio = data.fecha;
 
     await conn.execute(
       `INSERT INTO SERVICIOS (
          ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO, MONTO_PAGADO,
          REFERENCIA_ID, REFERENCIA_TIPO, NOTAS, ESTATUS, FECHA_DEVOLUCION_ESPERADA
        ) VALUES (
-         :idServicio, :curp, :idTipoServicio, SYSDATE, :costo, :montoPagado,
+         :idServicio, :curp, :idTipoServicio, ${fechaServicioSQL}, :costo, :montoPagado,
          :referenciaId, :referenciaTipo, :notas, :estatus, ${fechaSQL}
        )`,
       insertBinds,
@@ -201,6 +198,9 @@ export async function createWithInventarioTransaction(data, consumos) {
     const fechaSQL = data.fechaDevolucionEsperada
       ? `TO_DATE(:fechaDevolucion, 'YYYY-MM-DD')`
       : `NULL`;
+    const fechaServicioSQL = data.fecha
+      ? `TO_DATE(:fechaServicio, 'YYYY-MM-DD')`
+      : `SYSDATE`;
     const insertBinds = {
       idServicio,
       curp:           data.curp,
@@ -213,13 +213,14 @@ export async function createWithInventarioTransaction(data, consumos) {
       estatus:        data.estatus         ?? "COMPLETADO",
     };
     if (data.fechaDevolucionEsperada) insertBinds.fechaDevolucion = data.fechaDevolucionEsperada;
+    if (data.fecha) insertBinds.fechaServicio = data.fecha;
 
     await conn.execute(
       `INSERT INTO SERVICIOS (
          ID_SERVICIO, CURP, ID_TIPO_SERVICIO, FECHA, COSTO, MONTO_PAGADO,
          REFERENCIA_ID, REFERENCIA_TIPO, NOTAS, ESTATUS, FECHA_DEVOLUCION_ESPERADA
        ) VALUES (
-         :idServicio, :curp, :idTipoServicio, SYSDATE, :costo, :montoPagado,
+         :idServicio, :curp, :idTipoServicio, ${fechaServicioSQL}, :costo, :montoPagado,
          :referenciaId, :referenciaTipo, :notas, :estatus, ${fechaSQL}
        )`,
       insertBinds
@@ -454,3 +455,11 @@ export async function deleteById(idServicio) {
   }
 }
 
+export const deleteByReferencia = (referenciaId, referenciaTipo) =>
+  withConnection(conn =>
+    conn.execute(
+      `DELETE FROM SERVICIOS WHERE REFERENCIA_ID = :referenciaId AND REFERENCIA_TIPO = :referenciaTipo`,
+      { referenciaId, referenciaTipo },
+      { autoCommit: true }
+    )
+  );

@@ -28,6 +28,7 @@ function mapCita(row) {
     estatus,
     notas:        safeClobString(r.notas),
     costo:        r.costo == null ? null : Number(r.costo),
+    idServicio:   r.idServicio == null ? null : Number(r.idServicio),
   };
 }
 
@@ -63,7 +64,7 @@ export const updateCita = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await citasService.updateCita(id, req.body);
-    res.status(200).json({ message: "Cita actualizada correctamente", result });
+    res.status(200).json({ message: "Cita actualizada correctamente", idServicio: result?.idServicio ?? null, errorServicio: result?.errorServicio });
   } catch (error) {
     next(error);
   }

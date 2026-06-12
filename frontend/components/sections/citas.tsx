@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X, Pencil } from "lucide-react"
+import { Plus, CalendarDays, List, AlertCircle, ChevronDown, Sparkles, Clock, Users, X, Pencil, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,15 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { getCitas, createCita, COSTO_PRIMERA_CITA, COSTO_SUBSECUENTE_CITA, type Cita } from "@/services/citas"
 import { getBeneficiarios, type Beneficiario } from "@/services/beneficiarios"
 import { createServicio, getCatalogoServicios, type TipoServicioCompleto } from "@/services/servicios"
@@ -110,6 +119,8 @@ export function CitasSection() {
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [apiSlots, setApiSlots] = useState<SlotDisponibilidad[] | null>(null)
   const [slotsError, setSlotsError] = useState<string | null>(null)
+  const [tipoEstudio, setTipoEstudio] = useState("")
+  const [estudioPickerOpen, setEstudioPickerOpen] = useState(false)
 
   // Beneficiarios
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
@@ -140,7 +151,7 @@ export function CitasSection() {
     getEspecialidadesHorario().then(setEspecialidades).catch(() => {})
   }, [loadCitas])
 
-  const bloqueadoDesdeServicios = Boolean(origenServicio?.registrarServicio)
+  const bloqueadoDesdeServicios = false
 
   useEffect(() => {
     if (!form.curp || buscaBenef) return
@@ -149,6 +160,15 @@ export function CitasSection() {
       setBuscaBenef(`${beneficiario.nombres} ${beneficiario.apellidoPaterno} ${beneficiario.apellidoMaterno}`.replace(/\s+/g, " ").trim())
     }
   }, [beneficiarios, buscaBenef, form.curp])
+
+  // Force calendar view if openCitaId is present so that CitasCalendarView can handle it
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("openCitaId")) {
+        setActiveView("calendar")
+      }
+    } catch {}
+  }, [])
 
   // Prefill desde otro flujo (por ejemplo: registrar servicio → programar cita)
   useEffect(() => {
@@ -227,11 +247,15 @@ export function CitasSection() {
       .then(data => {
         if (cancelled) return
         if (data.bloqueada) {
-          setSlotsError(`${espSeleccionada.nombre} no atiende el ${form.fecha}${data.motivo ? ': ' + data.motivo : ''}`)
-          setApiSlots([])
+          toast.error(`Esa fecha no está disponible`, { description: `${espSeleccionada.nombre} no atiende el ${form.fecha}${data.motivo ? ': ' + data.motivo : ''}` })
+          setForm(f => ({...f, fecha: "", hora: ""}))
+          setSlotsError(null)
+          setApiSlots(null)
         } else if (data.inactiva) {
-          setSlotsError(`${espSeleccionada.nombre} no está activa actualmente`)
-          setApiSlots([])
+          toast.error(`Esa fecha no está disponible`, { description: `${espSeleccionada.nombre} no está activa actualmente` })
+          setForm(f => ({...f, fecha: "", hora: ""}))
+          setSlotsError(null)
+          setApiSlots(null)
         } else {
           setApiSlots(data.slots ?? [])
         }
@@ -301,11 +325,15 @@ export function CitasSection() {
     setCostoOverride(null)
     setShowCostoDialog(false)
     setCostoInput("")
+    setTipoEstudio("")
+    setEstudioPickerOpen(false)
+    setOrigenServicio(null)
     setShowDialog(true)
   }
 
-  function handleSuggestSmartSlot() {
-    if (!form.curp || !form.especialista) return
+  async function handleSuggestSmartSlot() {
+    if (!form.curp) return
+    if (esConsulta && !form.especialista) return
 
     setIsFindingSlot(true)
     setSmartSuggestion(null)
@@ -314,21 +342,13 @@ export function CitasSection() {
     const now = new Date()
     const todayStart = startOfDayLocal(now)
 
-    // Slots de hora válidos para esta especialidad
-    const slotsHora = apiSlots !== null
-      ? apiSlots.filter(s => !s.lleno).map(s => s.hora)
-      : espSeleccionada
-        ? TIME_SLOTS.filter(t => esHoraValidaFrontend(espSeleccionada, t))
-        : TIME_SLOTS
-
     let found = false
     let fechasEvaluadas = 0
 
-    // Iterar día a día pero solo evaluar fechas válidas según reglas de la especialidad
-    // Límite: DISPONIBILIDAD_MAX_DIAS días naturales O DISPONIBILIDAD_MAX_FECHAS_VALIDAS fechas válidas
+    // Iterar día a día
     for (
       let dayOffset = 0;
-      dayOffset < DISPONIBILIDAD_MAX_DIAS && !found && fechasEvaluadas < DISPONIBILIDAD_MAX_FECHAS_VALIDAS;
+      dayOffset < 365 && !found;
       dayOffset++
     ) {
       const d = new Date(todayStart)
@@ -343,6 +363,22 @@ export function CitasSection() {
       if (espSeleccionada && !esFechaValidaFrontend(espSeleccionada, fechaStr)) continue
 
       fechasEvaluadas++
+
+      let slotsHora: string[] = []
+
+      if (espSeleccionada) {
+        try {
+          const data = await getSlotsDisponibles(espSeleccionada.idEspecialidad, fechaStr)
+          if (data.bloqueada || data.inactiva) continue // Skip blocked dates completely!
+          slotsHora = data.slots?.filter(s => !s.lleno).map(s => s.hora) || []
+        } catch (e) {
+          continue
+        }
+      } else {
+        slotsHora = TIME_SLOTS
+      }
+
+      if (slotsHora.length === 0) continue
 
       for (const hora of slotsHora) {
         if (isSlotInPast(fechaStr, hora, now)) continue
@@ -365,8 +401,7 @@ export function CitasSection() {
     }
 
     if (!found) {
-      const semanas = Math.round(DISPONIBILIDAD_MAX_DIAS / 7)
-      toast.error(`No se encontró disponibilidad en los próximos ${semanas} semanas.`)
+      toast.error(`No se encontró disponibilidad futura.`)
       setSmartSuggestion(null)
     }
 
@@ -378,9 +413,21 @@ export function CitasSection() {
     if (!form.curp) missing.push("beneficiario")
     if (!form.idTipoServicio) missing.push("tipo de servicio")
     if (esConsulta && !form.especialista) missing.push("especialidad")
+    if (esEstudio && !tipoEstudio) missing.push("tipo de estudio")
     if (!form.fecha) missing.push("fecha")
     if (!form.hora) missing.push("hora")
     if (missing.length > 0) { setSaveError(`Selecciona: ${missing.join(", ")}.`); return }
+    
+    const benef = beneficiarios.find(b => String(b.curp ?? b.folio ?? "").trim() === String(form.curp).trim())
+    if (benef?.estatus === "Baja") {
+      setSaveError("No puedes agendar una cita porque el beneficiario está inactivo.")
+      return
+    }
+    if (!benef?.tipo) {
+      setSaveError("El beneficiario no tiene cuota asignada (A o B). Asígnale una cuota antes de agendar.")
+      return
+    }
+
     if (isSlotInPast(form.fecha, form.hora)) {
       setSaveError("No puedes agendar una cita en un horario que ya pasó.")
       return
@@ -391,13 +438,17 @@ export function CitasSection() {
     }
     setSaving(true); setSaveError(null)
     try {
+      const notasBase = form.notas?.trim() || ""
+      const notasConEstudio = esEstudio && tipoEstudio.trim()
+        ? (notasBase ? `Estudio: ${tipoEstudio.trim()} | ${notasBase}` : `Estudio: ${tipoEstudio.trim()}`)
+        : notasBase || undefined
       const citaCreada = await createCita({
         curp: form.curp,
         idTipoServicio: Number(form.idTipoServicio),
         especialista: form.especialista || undefined,
         fecha: form.fecha,
         hora: form.hora,
-        notas: form.notas || undefined,
+        notas: notasConEstudio,
         ...(costoOverride !== null && { costo: costoOverride }),
       })
 
@@ -421,48 +472,11 @@ export function CitasSection() {
       }
       setCitas(prev => [...prev, optimisticCita])
 
-      let servicioRegistrado = false
-      let servicioWarning: string | null = null
-
-      if (origenServicio?.registrarServicio && origenServicio.idTipoServicio) {
-        if (citaId > 0) {
-          const tipoServicio = catalogoServicios.find((tipo) => tipo.idTipoServicio === origenServicio.idTipoServicio)
-          const costo = tipoServicio?.montoSugerido ?? 0
-
-          try {
-            await createServicio({
-              curp: form.curp,
-              idTipoServicio: origenServicio.idTipoServicio,
-              costo,
-              montoPagado: 0,
-              notas: buildNotasServicioDesdeCita(form),
-              estatus: "PENDIENTE",
-              referenciaId: citaId,
-              referenciaTipo: "CITA",
-            })
-            servicioRegistrado = true
-            sessionStorage.removeItem(SERVICIO_DRAFT_KEY)
-          } catch (err) {
-            servicioWarning = friendlyError(err, "Se guardó la cita, pero no se pudo registrar el servicio")
-          }
-        } else {
-          servicioWarning = "Se guardó la cita, pero no se pudo vincular el servicio porque faltó el ID de cita."
-        }
-      }
-
       setShowDialog(false)
       loadCitas(true)
-      if (servicioRegistrado) {
-        toast.success("Cita agendada y servicio registrado correctamente", {
-          description: `${form.fecha} · ${form.hora}`,
-        })
-      } else if (servicioWarning) {
-        toast.warning("Cita agendada", { description: servicioWarning })
-      } else {
-        toast.success("Cita agendada correctamente", {
-          description: `${form.fecha} · ${form.hora}`,
-        })
-      }
+      toast.success("Cita agendada correctamente", {
+        description: `${form.fecha} · ${form.hora}`,
+      })
       setOrigenServicio(null)
     } catch (err: unknown) {
       const msg = friendlyError(err, "No se pudo guardar la cita")
@@ -564,6 +578,8 @@ export function CitasSection() {
           {activeView === "calendar" ? (
             <CitasCalendarView
               citas={citas}
+              beneficiarios={beneficiarios}
+              especialidades={especialidades}
               onReload={()=>loadCitas(true)}
               onSilentUpdate={silentUpdate}
               onCitaCancelada={() => setBannerCancelarServicio(true)}
@@ -605,10 +621,8 @@ export function CitasSection() {
                 <Input
                   placeholder="Buscar por folio o nombre..."
                   className="h-10 pr-8 text-sm"
-                  disabled={bloqueadoDesdeServicios}
                   value={buscaBenef}
                   onChange={e => {
-                    if (bloqueadoDesdeServicios) return
                     setBuscaBenef(e.target.value)
                     setForm(f => ({ ...f, curp: "" }))
                     setShowBenefList(true)
@@ -616,8 +630,7 @@ export function CitasSection() {
                     setSmartSuggestion(null)
                   }}
                 />
-                {!bloqueadoDesdeServicios ? (
-                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => {
                       setShowBenefList(v => !v)
                       // Al reabrir para cambiar, limpiamos la seleccion previa
@@ -629,7 +642,6 @@ export function CitasSection() {
                     }}>
                     <ChevronDown className="size-4" />
                   </button>
-                ) : null}
               </div>
               {showBenefList && benefFiltrados.length > 0 && (
                 <div className="absolute z-20 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-border/60 bg-background shadow-lg">
@@ -645,9 +657,6 @@ export function CitasSection() {
               )}
               {form.curp && <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">✓ Seleccionado: {form.curp}</p>}
               {!form.curp && buscaBenef && <p className="text-[11px] text-amber-600 dark:text-amber-400">Selecciona un beneficiario de la lista</p>}
-              {bloqueadoDesdeServicios && (
-                <p className="text-[11px] text-muted-foreground">Estos datos vienen heredados desde el módulo de servicios y no pueden modificarse aquí.</p>
-              )}
             </div>
 
             {/* Costo auto-detectado — solo para Consulta Médica */}
@@ -769,15 +778,12 @@ export function CitasSection() {
             {/* Tipo de Servicio */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Tipo de servicio</label>
-              <Select value={form.idTipoServicio} onValueChange={v => { if (bloqueadoDesdeServicios) return; setForm(f => ({ ...f, idTipoServicio: v, especialista: "", hora: "" })); setCostoOverride(null); setSaveError(null) }} disabled={bloqueadoDesdeServicios}>
+              <Select value={form.idTipoServicio} onValueChange={v => { setForm(f => ({ ...f, idTipoServicio: v, especialista: "", hora: "" })); setCostoOverride(null); setSaveError(null); setTipoEstudio(""); setEstudioPickerOpen(false) }}>
                 <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                 <SelectContent>
                   {catalogoServicios.filter(t => /consulta/i.test(t.nombre) || /estudio/i.test(t.nombre)).map(t => <SelectItem key={t.idTipoServicio} value={String(t.idTipoServicio)}>{t.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {bloqueadoDesdeServicios && (
-                <p className="text-[11px] text-muted-foreground">El tipo de servicio ya fue definido en el módulo de servicios.</p>
-              )}
             </div>
 
             {/* Especialidad — solo Consulta Médica */}
@@ -839,17 +845,81 @@ export function CitasSection() {
               </div>
             )}
 
+            {/* Tipo de estudio — solo Estudio Médico */}
+            {esEstudio && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Tipo de estudio
+                </label>
+                <Popover open={estudioPickerOpen} onOpenChange={setEstudioPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      className="flex h-10 w-full items-center justify-between rounded-lg border border-border/70 bg-background px-3 text-sm outline-none hover:border-[#0f4c81]/50 focus:border-[#0f4c81] focus:ring-2 focus:ring-[#0f4c81]/10"
+                    >
+                      <span className={tipoEstudio ? "text-foreground" : "text-muted-foreground"}>
+                        {tipoEstudio || "Ej. Biometría hemática, TAC, Ultrasonido..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[420px] max-h-[280px] p-0 overflow-hidden" align="start">
+                    <Command shouldFilter>
+                      <CommandInput
+                        placeholder="Buscar o escribir tipo de estudio..."
+                        value={tipoEstudio}
+                        onValueChange={setTipoEstudio}
+                      />
+                      <CommandList className="max-h-[240px] overflow-y-auto">
+                        <CommandEmpty>
+                          <span className="text-xs text-muted-foreground">Se usará el texto ingresado</span>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {[
+                            "Biometría hemática",
+                            "Biometría hemática completa",
+                            "Química sanguínea",
+                            "Cistograma",
+                            "TAC",
+                            "Resonancia magnética",
+                            "Ultrasonido",
+                            "Rayos X",
+                            "Electrocardiograma",
+                            "Urocultivo",
+                            "Examen general de orina",
+                          ].map((estudio) => (
+                            <CommandItem
+                              key={estudio}
+                              value={estudio}
+                              onSelect={(val) => { setTipoEstudio(val); setEstudioPickerOpen(false) }}
+                            >
+                              <Check className={`mr-2 size-4 ${tipoEstudio === estudio ? "opacity-100" : "opacity-0"}`} />
+                              {estudio}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+
             {/* Fecha y Hora + Smart Slot */}
             <div className="space-y-2">
-              {/* Botón IA — solo para Consulta Médica */}
-              {esConsulta && (() => {
-                const isUnlocked = !!(form.curp && form.especialista)
+              {/* Botón IA — para Consulta Médica o Estudio Médico */}
+              {(esConsulta || esEstudio) && (() => {
+                const isUnlocked = esEstudio ? !!(form.curp && tipoEstudio) : !!(form.curp && form.especialista)
                 return (
                   <button
                     type="button"
                     onClick={() => {
                       if (!isUnlocked) {
-                        toast.warning("Selecciona un beneficiario y especialista primero para buscar disponibilidad.")
+                        toast.warning(esEstudio 
+                          ? "Selecciona un beneficiario primero para buscar disponibilidad." 
+                          : "Selecciona un beneficiario y especialista primero para buscar disponibilidad.")
                         return
                       }
                       handleSuggestSmartSlot()
@@ -900,12 +970,22 @@ export function CitasSection() {
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Fecha</label>
                   <Input type="date" className="h-10 text-sm" value={form.fecha}
-                    onChange={e => { setForm(f => ({ ...f, fecha: e.target.value, hora: "" })); setSaveError(null); setSmartSuggestion(null) }} />
-                  {fechaFueraDeRango && (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                      ⚠ Esta fecha no corresponde al horario de la especialidad ({fechaFueraDeRango})
-                    </p>
-                  )}
+                    min={new Date().toLocaleDateString("en-CA")}
+                    onChange={e => {
+                      const newDate = e.target.value;
+                      const todayStr = new Date().toLocaleDateString("en-CA");
+                      if (newDate && newDate < todayStr) {
+                        toast.error(`Esa fecha ya pasó`, { description: "No puedes agendar citas en fechas anteriores a hoy." })
+                        setForm(f => ({ ...f, fecha: "", hora: "" }))
+                      } else if (newDate && espSeleccionada && !esFechaValidaFrontend(espSeleccionada, newDate)) {
+                        toast.error(`Esa fecha no está disponible`, { description: descripcionHorario(espSeleccionada) })
+                        setForm(f => ({ ...f, fecha: "", hora: "" }))
+                      } else {
+                        setForm(f => ({ ...f, fecha: newDate, hora: "" }))
+                      }
+                      setSaveError(null)
+                      setSmartSuggestion(null)
+                    }} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Hora</label>

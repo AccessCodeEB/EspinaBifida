@@ -13,6 +13,7 @@ export interface Cita {
   estatus: "Confirmada" | "Pendiente" | "Completada" | "Cancelada"
   notas?: string
   costo?: number | null
+  idServicio?: number | null
 }
 
 export interface NuevaCitaPayload {
@@ -44,7 +45,7 @@ export function createCita(data: NuevaCitaPayload) {
 
 /** PATCH /citas/:id — actualiza el estatus */
 export function updateEstatusCita(id: number, estatus: Cita["estatus"]) {
-  return apiClient.patch<{ message: string }>(`/citas/${id}`, { estatus })
+  return apiClient.patch<{ message: string; idServicio: number | null; errorServicio?: string }>(`/citas/${id}`, { estatus })
 }
 
 export function updateCita(id: number, data: Partial<NuevaCitaPayload & { estatus: string }>) {
