@@ -82,6 +82,8 @@ Las rutas v1 pueden incluir funcionalidades adicionales documentadas en los tags
       { name: 'Catálogos', description: 'Catálogos de solo lectura (servicios-catálogo, especialistas)' },
       { name: 'Roles', description: 'Listado de roles del sistema' },
       { name: 'Configuración', description: 'Configuración general (solo rol 1)' },
+      { name: 'Comodatos', description: 'Préstamos de equipo médico: alta, pagos, devolución, reporte de exenciones' },
+      { name: 'Especialidades', description: 'Horarios, excepciones y slots de especialidades médicas' },
     ],
   },
   apis: [

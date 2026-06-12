@@ -117,14 +117,49 @@ export const schemas = {
     required: ['ID_CITA', 'CURP', 'ESPECIALISTA', 'FECHA', 'ESTATUS'],
   },
 
+  Comodato: {
+    type: 'object',
+    properties: {
+      ID_COMODATO: { type: 'integer', example: 15 },
+      CURP: { type: 'string', description: 'FK → BENEFICIARIOS', example: 'GOCL900101HDFNRN09' },
+      ID_ARTICULO: { type: 'integer', description: 'FK → ARTICULOS (solo Equipos Médicos)', example: 3 },
+      MONTO_TOTAL: { type: 'number', format: 'float', nullable: true, description: 'null = donación sin costo', example: 500 },
+      MONTO_PAGADO: { type: 'number', format: 'float', example: 200 },
+      MONTO_EXENTO: { type: 'number', format: 'float', example: 0 },
+      ESTATUS: { type: 'string', enum: ['Activo', 'Cancelado'], example: 'Activo' },
+      NOTAS: { type: 'string', nullable: true, example: 'Paciente de bajos recursos' },
+      FECHA_ALTA: { type: 'string', format: 'date-time' },
+      FECHA_DEVOLUCION_ESPERADA: { type: 'string', format: 'date', nullable: true, example: '2025-12-31' },
+      FECHA_DEVOLUCION_REAL: { type: 'string', format: 'date', nullable: true },
+      BENEFICIARIO: { type: 'string', description: 'Nombre completo (JOIN)', example: 'Juan González' },
+      ARTICULO: { type: 'string', description: 'Descripción del artículo (JOIN)', example: 'Silla de ruedas estándar' },
+    },
+    required: ['ID_COMODATO', 'CURP', 'ID_ARTICULO', 'ESTATUS'],
+  },
+
+  EspecialidadHorario: {
+    type: 'object',
+    properties: {
+      ID_ESPECIALIDAD: { type: 'integer', example: 1 },
+      NOMBRE: { type: 'string', example: 'Gastroenterología' },
+      DIA_SEMANA: { type: 'integer', minimum: 0, maximum: 6, description: '0=Dom … 6=Sáb', example: 4 },
+      HORA_INICIO: { type: 'string', example: '10:00' },
+      HORA_FIN: { type: 'string', nullable: true, example: '12:00' },
+      CAPACIDAD: { type: 'integer', example: 2 },
+      FRECUENCIA: { type: 'string', enum: ['SEMANAL', 'MENSUAL_PRIMER_DIA'], example: 'SEMANAL' },
+      ACTIVO: { type: 'integer', enum: [0, 1], example: 1 },
+    },
+    required: ['ID_ESPECIALIDAD', 'NOMBRE', 'DIA_SEMANA', 'HORA_INICIO', 'CAPACIDAD', 'FRECUENCIA'],
+  },
+
   Notificacion: {
     type: 'object',
     properties: {
       ID: { type: 'integer', example: 1 },
       TIPO: {
         type: 'string',
-        enum: ['stock_bajo', 'membresia_proxima', 'membresia_vencida'],
-        example: 'stock_bajo',
+        enum: ['STOCK_BAJO', 'SIN_STOCK', 'MEMBRESIA_PROXIMA', 'MEMBRESIA_VENCIDA', 'CITA_HOY', 'COMODATO_POR_VENCER'],
+        example: 'STOCK_BAJO',
       },
       MENSAJE: { type: 'string', example: 'Stock de Silla de ruedas por debajo del mínimo (2 unidades)' },
       LEIDA: { type: 'boolean', example: false },
