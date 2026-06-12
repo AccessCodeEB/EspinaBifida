@@ -865,7 +865,18 @@ export function ComodatosSection() {
             </div>
           </div>
 
-          {reporte.length === 0 ? (
+          {loadingReporte ? (
+            <div className="divide-y divide-border/30">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-3">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-3 flex-1" />
+                  <Skeleton className="ml-auto h-3 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : reporte.length === 0 ? (
             <div className="py-12 text-center text-xs text-muted-foreground">
               {fechaInicio ? "Sin exenciones en el período seleccionado." : "Selecciona un rango de fechas para generar el reporte."}
             </div>
