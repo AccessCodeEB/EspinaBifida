@@ -197,8 +197,6 @@ export async function createWithInventarioTransaction(data, consumos) {
     if (!Number.isInteger(idServicio) || idServicio <= 0) {
       throw internal("No se pudo generar ID_SERVICIO");
     }
-    console.log(`[createWithInventario] STEP 1: idServicio=${idServicio}`);
-
     // 2. INSERT directo en SERVICIOS (mismo patrón que create(), sin SP)
     const fechaSQL = data.fechaDevolucionEsperada
       ? `TO_DATE(:fechaDevolucion, 'YYYY-MM-DD')`
@@ -226,7 +224,6 @@ export async function createWithInventarioTransaction(data, consumos) {
        )`,
       insertBinds
     );
-    console.log(`[createWithInventario] STEP 2: SERVICIOS insert OK`);
 
     // 3. Procesar consumos: movimiento de inventario + SERVICIO_ARTICULOS con ID explícito
     const nombreBeneficiario = await getNombreBeneficiario(conn, data.curp);
@@ -237,8 +234,6 @@ export async function createWithInventarioTransaction(data, consumos) {
         cantidad:   consumo.cantidad,
         motivo:     normalizeConsumoMotivo(consumo, nombreBeneficiario),
       });
-      console.log(`[createWithInventario] STEP 3a: movimiento inventario OK (artículo ${consumo.idProducto})`);
-
       const idSaResult = await conn.execute(
         `SELECT SEQ_SERVICIO_ARTICULOS.NEXTVAL AS NEXT_ID FROM DUAL`
       );
@@ -248,11 +243,9 @@ export async function createWithInventarioTransaction(data, consumos) {
          VALUES (:id, :idServicio, :idArticulo, :cantidad)`,
         { id: idSA, idServicio, idArticulo: consumo.idProducto, cantidad: consumo.cantidad }
       );
-      console.log(`[createWithInventario] STEP 3b: SERVICIO_ARTICULOS OK (id=${idSA})`);
     }
 
     await conn.commit();
-    console.log("[createWithInventario] commit OK");
     return { idServicio };
   } catch (err) {
     console.error("[createWithInventario] ERROR:", err?.message ?? err);

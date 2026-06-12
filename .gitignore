@@ -50,6 +50,7 @@ wallet.b64
 claude.md
 .claude/
 .gstack/
+.superpowers/
 
 # Playwright
 /test-results/
