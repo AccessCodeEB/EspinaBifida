@@ -1,6 +1,6 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-07 (Sábado) — Editor de tarifas de membresías, Error Boundary y fix TypeScript completados; proyecto listo para entrega
+**Actualización:** 2026-06-12 (Viernes) — Fix de historial de inventario (motivo de alta) y skeleton loaders agregados en Notificaciones, Inventario, Pre-registro, Administradores y Comodatos
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -382,6 +382,20 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 - `key={activeSection}` en el wrapper: el boundary se resetea automáticamente al cambiar de sección
 - `frontend/services/beneficiarios.ts`: `tipo: string` → `tipo?: string` — corrige error de TypeScript preexistente (campo puede ser `undefined` cuando el beneficiario no tiene tipo de espina bífida registrado)
 - TypeScript: **0 errores** en todo el frontend
+
+### Cambios 2026-06-12 — Fix historial de inventario + Skeleton loaders
+
+**Bug fix — motivo de alta no se guardaba en el historial de Inventario:**
+- Causa raíz: `crearArticuloSchema` (`src/validators/articulos.schema.js`) no declaraba el campo `motivoAlta`; el middleware `validate()` reemplaza `req.body` con el resultado parseado de Zod, que por defecto descarta cualquier campo no declarado en el schema
+- Las bajas (`DELETE /articulos/:id`) sí mostraban el motivo correctamente porque esa ruta no pasa por `validate()`
+- Fix: se agrega `motivoAlta: z.string().max(500).nullable().optional()` al schema — sin cambios en service, modelo ni frontend
+
+**Skeleton loaders — consistencia de UI en pantallas con `Loader2`/texto "Cargando...":**
+- **Notificaciones** (`frontend/components/notificaciones-panel.tsx`): panel de lista y modal de detalle (stock bajo, sin stock, comodatos por vencer)
+- **Inventario** (`frontend/components/sections/inventario.tsx`): tabs "Historial de movimientos" y "Altas/Bajas"
+- **Pre-registro** (`frontend/components/sections/preregistro.tsx`): tabla de solicitudes
+- **Administradores** (`frontend/components/sections/administradores.tsx`): tabla de cuentas
+- **Comodatos** (`frontend/components/sections/comodatos.tsx`): tab "Reporte de exenciones" — antes no mostraba ningún estado de carga mientras se generaba el reporte
 
 ## 🔄 En progreso / Parcialmente terminado
 
