@@ -10,6 +10,7 @@ export const crearArticuloSchema = z.object({
   idCategoria:       z.number({ coerce: true }).int().positive().optional(),
   stockMinimo:       z.number({ coerce: true }).nonnegative("stockMinimo debe ser >= 0").optional(),
   cuotaB:            z.number({ coerce: true }).nonnegative("cuotaB debe ser >= 0").nullable().optional(),
+  motivoAlta:        z.string().max(500).nullable().optional(),
 });
 
 export const actualizarArticuloSchema = z.object({
