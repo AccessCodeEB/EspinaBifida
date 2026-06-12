@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Dialog, DialogContent, DialogTitle, DialogDescription,
@@ -351,9 +352,18 @@ export function AdministradoresSection() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">Cargando…</p>
+          <div className="divide-y divide-border/30">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3">
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="hidden h-3 w-44 md:block" />
+                </div>
+                <Skeleton className="h-4 w-14 rounded-md" />
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="ml-auto h-7 w-16 rounded-md" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
