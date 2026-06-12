@@ -22,6 +22,7 @@ import { toast } from "sonner"
 import { friendlyError } from "@/lib/friendly-error"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   Dialog,
@@ -501,9 +502,19 @@ export function PreregistroSection() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-14">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">Cargando solicitudes...</p>
+          <div className="divide-y divide-border/30">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="hidden h-3 w-28 md:block" />
+                <Skeleton className="hidden h-3 flex-1 lg:block" />
+                <Skeleton className="hidden h-3 w-24 lg:block" />
+                <div className="ml-auto flex gap-1.5">
+                  <Skeleton className="h-7 w-14 rounded-lg" />
+                  <Skeleton className="h-7 w-14 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
