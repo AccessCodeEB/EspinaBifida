@@ -180,7 +180,7 @@ export function ServiciosSection() {
 
   // ── Dialogs ──
   const [showRegistroDialog, setShowRegistroDialog] = useState(false)
-  const [bannerEliminarServicio, setBannerEliminarServicio] = useState<{ nombre: string; servicio: string } | null>(null)
+  const [bannerEliminarServicio, setBannerEliminarServicio] = useState<{ nombre: string; servicio: string; idCita?: number | null } | null>(null)
   const [servicioDetalle, setServicioDetalle] = useState<ServicioDetallado | null>(null)
   const [servicioParaEliminar, setServicioParaEliminar] = useState<ServicioDetallado | null>(null)
   const [eliminandoServicio, setEliminandoServicio] = useState(false)
@@ -616,7 +616,7 @@ export function ServiciosSection() {
         
         const esCita = servicio.referenciaTipo?.toUpperCase() === "CITA"
         if (esCita) {
-          setBannerEliminarServicio({ nombre: servicio.nombre, servicio: servicio.servicio })
+          setBannerEliminarServicio({ nombre: servicio.nombre, servicio: servicio.servicio, idCita: servicio.referenciaId })
         }
       } catch (err) {
         console.error("Error al eliminar servicio:", err)
@@ -970,7 +970,7 @@ export function ServiciosSection() {
               onClick={() => {
                 if (selectedIds.size === 1) {
                   const id = selectedIds.values().next().value
-                  const servicio = serviciosRegistrados.find(s => s.id === id)
+                  const servicio = serviciosConFecha.find(s => s.id === id)
                   if (servicio) setServicioParaEliminar(servicio)
                 } else {
                   setBulkConfirm("delete")

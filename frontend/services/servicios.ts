@@ -21,6 +21,7 @@ export interface Servicio {
   membresia: string
   estatus: string
   notas?: string
+  referenciaId?: number | null
   referenciaTipo?: string | null
   articuloEntregado?: string | null
   cantidadArticulo?: number | null
