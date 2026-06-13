@@ -1,6 +1,8 @@
 # Reporte de Avance — Sistema de Gestión Espina Bífida
 
-**Actualización:** 2026-06-12 (Viernes) — Fix de historial de inventario (motivo de alta), skeleton loaders en Notificaciones/Inventario/Pre-registro/Administradores/Comodatos, y fix de CI en citas.service (import faltante + sincronización de tests)
+**Actualización:** 2026-06-13 (Sábado) — Revisión final pre-entrega: fix de 9 errores TypeScript en citas/servicios (componente muerto con `ReferenceError` potencial, tipos faltantes), verificación de cobertura (1469/1469 tests verde) y sincronización de Jira/README
+
+**Actualización anterior:** 2026-06-12 (Viernes) — Fix de historial de inventario (motivo de alta), skeleton loaders en Notificaciones/Inventario/Pre-registro/Administradores/Comodatos, y fix de CI en citas.service (import faltante + sincronización de tests)
 **Próxima entrega:** 2026-06-05 (Jueves)
 **Entrega final al socio formador:** ~semana del 2026-06-08 (una semana antes del cierre de clase)
 
@@ -416,6 +418,30 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | `src/services/citas.service.js` | Import faltante de `serviciosModel` (fix de producción) |
 | `src/tests/citas.service.test.js` | Sincronización de mocks/expectativas + 4 tests nuevos |
 | `src/tests/controllers-misc.test.js` | Mocks faltantes para nuevas consultas de citas.service |
+
+### Cambios 2026-06-13 — Revisión final pre-entrega: fix de errores TypeScript
+
+**Hallazgo:** `npx tsc --noEmit` reportaba 9 errores en 3 archivos del frontend. No bloqueaban CI (solo corre `npm run test:coverage`) ni el build (`next.config.js` tiene `typescript.ignoreBuildErrors: true`), pero dos de ellos eran bugs reales con potencial `ReferenceError` en runtime.
+
+- **`citas-calendar-view.tsx`**: eliminado `CitaDetailPanel`, componente muerto introducido en un refactor anterior y nunca importado/usado (la UI real usa `CitaPopover`). Referenciaba `especialidades` y `router` fuera de scope — de haberse usado, habría lanzado `ReferenceError` al abrir el detalle de una cita o al hacer clic en "Ver en servicios".
+- **`citas-list-view.tsx`**: `{ ...c, estatus: "Cancelada" }` → `{ ...c, estatus: "Cancelada" as const }` (el spread sin `as const` ensanchaba el tipo a `string`, rompiendo el filtro `FilterEstatus`); `setDeleteConfirmId(selectedIds.values().next().value ?? null)` para manejar el `undefined` que devuelve `Set.values().next().value`.
+- **`services/servicios.ts`**: agregado `referenciaId?: number | null` a la interfaz `Servicio` — el backend ya lo devuelve (`SERVICIOS.REFERENCIA_ID`), pero faltaba en el tipo.
+- **`servicios.tsx`**: el botón "Eliminar" en la barra de selección múltiple ahora busca el servicio en `serviciosConFecha` (tipo `ServicioDetallado`, con `fechaDate`/`montoNumero`/`mesClave`) en lugar de `serviciosRegistrados` (tipo `Servicio` incompleto para el diálogo de detalle). `bannerEliminarServicio` ahora incluye `idCita: servicio.referenciaId` — antes el botón "Ir a Citas" tras eliminar un servicio de tipo CITA guardaba la cadena `"undefined"` en `sessionStorage` en vez del ID real.
+
+**Resultado:** `npx tsc --noEmit` → 0 errores. `npm run test:coverage` → 58/58 suites, 1469/1469 tests, sin cambios en cobertura.
+
+**Otras verificaciones de la revisión final:**
+- `git pull` — repo sincronizado con `origin/main` (último commit `7f60cef`)
+- README.md: corregido conteo de tests Jest (1451 → 1469) para reflejar el estado actual
+- Jira: `SCRUM-221` (fix de CI en citas.service, ya implementado en commits `bd6e773`/`4b01c50`/`0a5949d` pero seguía en "Por hacer") movido a "Finalizado"; nueva subtask `SCRUM-222` creada y cerrada para el fix de TypeScript de hoy
+
+| Archivo | Qué cambió |
+|---|---|
+| `frontend/components/sections/citas-calendar-view.tsx` | Eliminado componente muerto `CitaDetailPanel` (bug potencial de `ReferenceError`) |
+| `frontend/components/sections/citas-list-view.tsx` | Fix de tipos: `as const` en filtro de estatus, `?? null` en `setDeleteConfirmId` |
+| `frontend/services/servicios.ts` | Agregado `referenciaId?: number \| null` a `Servicio` |
+| `frontend/components/sections/servicios.tsx` | Fix `ServicioDetallado` en eliminación múltiple + `idCita` en banner post-eliminación |
+| `README.md` | Conteo de tests Jest actualizado a 1469 |
 
 ## 🔄 En progreso / Parcialmente terminado
 

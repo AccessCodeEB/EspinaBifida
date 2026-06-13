@@ -148,7 +148,7 @@ npx playwright test --config=e2e/playwright.config.ts --project=ui
 
 | Métrica | Valor |
 |---|---|
-| Tests Jest | **1 451** en 58 suites |
+| Tests Jest | **1 469** en 58 suites |
 | Cobertura statements | **97.71%** |
 | Cobertura branches | **95.78%** |
 | Cobertura funciones | **95.85%** |
