@@ -106,7 +106,7 @@ export function CitasListView({ citas: initialCitas, beneficiarios, onReload }: 
 
   const filtered = useMemo(() => {
     let list = citas
-      .map(c => optimisticCancelledIds.has(c.id) ? { ...c, estatus: "Cancelada" } : c)
+      .map(c => optimisticCancelledIds.has(c.id) ? { ...c, estatus: "Cancelada" as const } : c)
       
     if (!filterStatuses.has("Todos")) {
       list = list.filter(c => filterStatuses.has(c.estatus))
@@ -721,7 +721,7 @@ export function CitasListView({ citas: initialCitas, beneficiarios, onReload }: 
             <button
               onClick={() => {
                 if (selectedIds.size === 1) {
-                  setDeleteConfirmId(selectedIds.values().next().value)
+                  setDeleteConfirmId(selectedIds.values().next().value ?? null)
                 } else {
                   setBulkConfirm("delete")
                 }
