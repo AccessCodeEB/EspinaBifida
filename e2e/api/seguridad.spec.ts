@@ -99,10 +99,11 @@ test(qase(29, 'TC-017: POST /auth/logout revoca el refresh token'), async () => 
 });
 
 // ── TC-013: Rate limiting bloquea tras 5 intentos fallidos ───────────────────
-test(qase(25, 'TC-013: 5 intentos fallidos bloquean IP con 429'), async () => {
+test(qase(25, 'TC-013: 5 intentos fallidos bloquean IP con 429'), async ({}, testInfo) => {
+  testInfo.setTimeout(60000);
   test.skip(isLocalhost, 'Rate limiter desactivado en localhost (NODE_ENV != production)');
 
-  const ctx = await request.newContext({ baseURL: RATE_LIMIT_URL });
+  const ctx = await request.newContext({ baseURL: RATE_LIMIT_URL, timeout: 10000 });
 
   for (let i = 0; i < 5; i++) {
     await ctx.post('/administradores/login', {

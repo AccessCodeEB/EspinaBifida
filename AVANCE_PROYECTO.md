@@ -443,6 +443,17 @@ Sistema web de gestión para la Asociación de Espina Bífida. Reemplaza flujos 
 | `frontend/components/sections/servicios.tsx` | Fix `ServicioDetallado` en eliminación múltiple + `idCita` en banner post-eliminación |
 | `README.md` | Conteo de tests Jest actualizado a 1469 |
 
+### Cambios 2026-06-13 (sesión 2) — Fix CI: timeout en TC-013 (E2E seguridad)
+
+**Hallazgo:** `e2e/api/seguridad.spec.ts` — TC-013 (5 intentos fallidos bloquean IP con 429) fallaba por timeout de 30s en CI. El test hace 6 requests secuenciales contra el rate limiter de producción y, bajo carga, el tiempo total podía superar el límite default de Playwright.
+
+- Aumentado el timeout del test a 60s con `testInfo.setTimeout(60000)`
+- Agregado `timeout: 10000` al `request.newContext` para evitar que un request individual cuelgue indefinidamente
+
+| Archivo | Qué cambió |
+|---|---|
+| `e2e/api/seguridad.spec.ts` | TC-013: timeout de test a 60s + timeout de 10s por request |
+
 ## 🔄 En progreso / Parcialmente terminado
 
 | Área | Detalle | Prioridad |
